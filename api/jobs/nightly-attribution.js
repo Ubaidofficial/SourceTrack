@@ -14,7 +14,6 @@ import { normalizePath } from '../lib/url-normalization.js'
 const isReprocess = process.argv.includes('--reprocess-all') || process.argv.some(arg => arg.startsWith('--reprocess-site='));
 const confirmDestructive = process.argv.includes('--confirm-destructive');
 const reprocessSiteKey = process.argv.find(arg => arg.startsWith('--reprocess-site='))?.split('=')[1];
-const reprocessSuffixFilter = process.argv.find(arg => arg.startsWith('--reprocess-suffix-filter='))?.split('=')[1];
 
 // ── Per-site historical backfill (NEW; separate from --reprocess-site) ────────
 // Uses the SAME per-row upsert as nightly (onConflict site_id,conversion_event_id),
@@ -443,13 +442,6 @@ export async function processSite(site) {
 
   const lookbackInterval = isReprocess ? '90 DAY' : '24 HOUR'
 
-  let suffixFilterClause = ''
-  if (reprocessSuffixFilter) {
-    suffixFilterClause = `AND distinct_id LIKE '%${esc(reprocessSuffixFilter)}'`
-  } else if (site.site_key === 'de400000-babe-41d4-a716-446655440000') {
-    suffixFilterClause = "AND distinct_id LIKE '%_mv'"
-  }
-
   const conversionsQuery = `
     SELECT
       uuid,
@@ -470,7 +462,6 @@ export async function processSite(site) {
     WHERE event = '$conversion'
       AND properties.site_id = '${esc(site.id)}'
       AND timestamp >= now() - INTERVAL ${lookbackInterval}
-      ${suffixFilterClause}
     ORDER BY timestamp ASC
     LIMIT 1000
   `
@@ -479,12 +470,12 @@ export async function processSite(site) {
 
   // CONVERSION READ CUTOVER → Tinybird. All producers write $conversion to Tinybird
   // only (Wave-1 cutover); PostHog is a dead store for new events. The pipe cannot
-  // express the '_mv' suffix filter or the reprocess LIKE, so those two paths keep the
-  // HogQL query. `served`/`fellBack` feed the dead-store guard (computeTerminalStatus).
+  // express the reprocess 90-day LIKE window, so the reprocess path keeps the HogQL
+  // query. `served`/`fellBack` feed the dead-store guard (computeTerminalStatus).
   let rows = null
   let served = false
   let fellBack = false
-  const usePipe = _tbReadEnabled() && !suffixFilterClause && !isReprocess
+  const usePipe = _tbReadEnabled() && !isReprocess
   if (usePipe) {
     const { from, to } = conversionPipeWindow(1) // non-reprocess cron = 24h = 1 day (usePipe excludes reprocess)
     const pipeRows = await _queryPipe('nightly_conversions_by_site', { site_id: String(site.id), date_from: from, date_to: to })
@@ -496,15 +487,14 @@ export async function processSite(site) {
     }
   }
   // B0 (D2) — FAIL CLOSED before any WRITE, and BEFORE touching the dead store. The reprocess path
-  // DELETEs all of a site's attributed_conversions then re-INSERTs; the suffix/_mv path upserts.
-  // Both bypass the Tinybird pipe (usePipe excludes reprocess + suffix), so their read would resolve
-  // to the HogQL fallback — which post-D3 is the DEAD PostHog store. Deleting/writing the money rail
-  // off a dead read would silently wipe or corrupt it. Until B2 migrates these reads onto Tinybird,
-  // refuse to proceed unless the conversions were POSITIVELY pipe-served (served === true). A
-  // non-pipe-served reprocess/suffix read is untrusted — abort loudly (the caller counts this as a
-  // hard failure) rather than read HogQL and write off it.
-  if ((isReprocess || suffixFilterClause) && !served) {
-    throw new Error(`[nightly] FAIL-CLOSED: ${isReprocess ? 'reprocess' : 'suffix-filter'} write for site ${site.site_key} would run off a NON-pipe-served read (served=${served}, fellBack=${fellBack}) — the HogQL fallback is the dead PostHog store. Refusing to delete/write the money rail off an untrusted read; migrate this read onto Tinybird (D2 B2) first.`)
+  // DELETEs all of a site's attributed_conversions then re-INSERTs. It bypasses the Tinybird pipe
+  // (usePipe excludes reprocess), so its read would resolve to the HogQL fallback — which post-D3 is
+  // the DEAD PostHog store. Deleting/writing the money rail off a dead read would silently wipe or
+  // corrupt it. Until reprocess is migrated onto Tinybird, refuse to proceed unless the conversions
+  // were POSITIVELY pipe-served (served === true). A non-pipe-served reprocess read is untrusted —
+  // abort loudly (the caller counts this as a hard failure) rather than read HogQL and write off it.
+  if (isReprocess && !served) {
+    throw new Error(`[nightly] FAIL-CLOSED: reprocess write for site ${site.site_key} would run off a NON-pipe-served read (served=${served}, fellBack=${fellBack}) — the HogQL fallback is the dead PostHog store. Refusing to delete/write the money rail off an untrusted read; migrate this read onto Tinybird first.`)
   }
   if (rows === null) {
     try {

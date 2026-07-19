@@ -13,7 +13,7 @@ process.env.POSTHOG_PROJECT_ID = '416017'
 process.env.POSTHOG_PERSONAL_API_KEY = 'mock-key'
 
 const {
-  fetchBackfillConversions, conversionPipeWindow, processConversion, processSite,
+  fetchBackfillConversions, conversionPipeWindow, processConversion,
   mapConversionPipeRow, __setNightlyReadDeps, __resetNightlyReadDeps
 } = await import('../jobs/nightly-attribution.js')
 
@@ -84,7 +84,11 @@ test('conversionPipeWindow honours the caller days (1d vs 90d spread)', () => {
   assert.ok(spreadDays > 88 && spreadDays < 90, `90d window starts ~89d earlier than 1d, got ${spreadDays.toFixed(2)}d`)
 })
 
-// ── silent-fallback visibility + reprocess exclusion intact ──────────────────
+// ── silent-fallback visibility ───────────────────────────────────────────────
+// (The reprocess pipe-exclusion + B0 fail-closed path is covered in
+// api/tests/nightly-reprocess-fail-closed.test.js. The parallel `_mv` suffix path was
+// deleted in D2·B2 — hardcoded synthetic test site, no producer, zero rows — so its test
+// went with it.)
 
 test('backfill fell-back signal is set when the pipe returns null (silent dead-store fallback is VISIBLE)', async (t) => {
   t.after(__resetNightlyReadDeps)
@@ -92,17 +96,4 @@ test('backfill fell-back signal is set when the pipe returns null (silent dead-s
   // hogqlQuery is a harmless SELECT; the PostHog fallback hits the invalid host and throws —
   // proving fell-back is surfaced (and not silently reported as an empty backfill).
   await assert.rejects(fetchBackfillConversions({ site: SITE, days: 30, hogqlQuery: 'SELECT 1' }))
-})
-
-test('reprocess/suffix exclusion + B0 fail-closed — processSite skips the pipe AND aborts for the _mv test site', async (t) => {
-  t.after(__resetNightlyReadDeps)
-  const calls = []
-  __setNightlyReadDeps({ tbReadEnabled: () => true, queryPipe: async (pipe) => { calls.push(pipe); return [] } })
-  // The suffix-filter test site sets suffixFilterClause → usePipe=false (the same clause as
-  // `!isReprocess`), so the conversion read must NOT hit the pipe. Post-B0 (D2), a non-pipe-served
-  // suffix read FAILS CLOSED — it throws before reading the dead HogQL store, instead of silently
-  // processing off it. (Full B0 coverage: api/tests/nightly-suffix-fail-closed.test.js.)
-  const suffixSite = { id: 'test-mv', site_key: 'de400000-babe-41d4-a716-446655440000', attribution_window_days: 30 }
-  await assert.rejects(processSite(suffixSite), /FAIL-CLOSED:.*suffix-filter/, 'suffix path fails closed (B0)')
-  assert.ok(!calls.includes('nightly_conversions_by_site'), 'suffix/reprocess path must NOT use the conversion pipe')
 })
