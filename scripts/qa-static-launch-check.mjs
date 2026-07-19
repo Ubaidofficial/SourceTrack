@@ -71,7 +71,6 @@ const backendFiles = [
   'api/routes/sites.js',
   'api/routes/saved-reports.js',
   'api/routes/attribution.js',
-  'api/routes/ai-analytics.js',
   'api/routes/campaign-costs.js'
 ];
 
@@ -312,7 +311,6 @@ if (checkFileExists('api/routes/saved-reports.js')) {
 const gatedFiles = [
   'api/routes/attribution.js',
   'api/routes/saved-reports.js',
-  'api/routes/ai-analytics.js',
   'api/routes/campaign-costs.js'
 ];
 for (const file of gatedFiles) {

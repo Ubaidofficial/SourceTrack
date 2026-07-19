@@ -138,7 +138,7 @@ async function handleSubscriptionEvent(event, site, siteKey) {
     // Release the claim so Stripe's retry re-attempts instead of dropping.
     try { await rollbackIdempotencyKeys(siteKey, 'stripe', keys) } catch (_) { /* best-effort */ }
     console.error('[stripe-webhook] Subscription event capture failed:', err.message)
-    await logIngestionEvent(siteKey, 'stripe', { providerEventId, orderId: invoiceId || subscriptionId, value, currency, status: 'error', errorMessage: err.message || 'PostHog capture failed' })
+    await logIngestionEvent(siteKey, 'stripe', { providerEventId, orderId: invoiceId || subscriptionId, value, currency, status: 'error', errorMessage: err.message || 'event ingestion failed' })
     return { status: 500, body: { error: 'Temporary processing failure' } }
   }
 }

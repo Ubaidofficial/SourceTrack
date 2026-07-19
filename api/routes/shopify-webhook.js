@@ -280,7 +280,7 @@ router.post('/:site_key', async (req, res) => {
       value,
       currency,
       status: 'error',
-      errorMessage: phErr.message || 'PostHog capture failed'
+      errorMessage: phErr.message || 'event ingestion failed'
     })
     return res.status(500).json({ error: 'Temporary processing failure' })
   }

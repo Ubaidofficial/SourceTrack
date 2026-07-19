@@ -31,7 +31,6 @@ const SURFACES = [
   { file: 'Leads.jsx',       emptyMarker: 'No leads yet' },
   { file: 'Dashboard.jsx',   emptyMarker: 'No attribution data yet' },
   { file: 'Analytics.jsx',   emptyMarker: 'No pageviews yet' },
-  { file: 'AIAnalytics.jsx', emptyMarker: 'No AI traffic detected yet' },
   { file: 'SEORevenue.jsx',  emptyMarker: 'No organic search traffic' },
   { file: 'Campaigns.jsx',   emptyMarker: 'No campaign data yet' }
 ]
