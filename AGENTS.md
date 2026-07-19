@@ -87,18 +87,18 @@ Then use `DOCS_INDEX.md` to find task-specific docs.
 
 ## 4. Architecture (verified — do not "fix" intentional designs)
 
-**Stack:** Node.js **ESM** (`import`/`export` only — never `require()`), Express, React + Vite, Supabase, PostHog, Railway, Stripe (two separate webhooks — see §6).
+**Stack:** Node.js **ESM** (`import`/`export` only — never `require()`), Express, React + Vite, Supabase, Tinybird (ClickHouse read layer), Railway, Stripe (two separate webhooks — see §6). *(PostHog is fully decommissioned — no code, env, or project remains.)*
 
 **Hybrid data model (do not collapse):**
-- **PostHog** = events / analytics **read** layer (pageviews, sessions, HogQL).
+- **Tinybird** (ClickHouse) = events / analytics **read** layer (pageviews, sessions, aggregations), served by deployed pipes in `tinybird/pipes/`. Reads go through `api/lib/tinybird-read.js` (`queryTinybirdPipe`): retries transient failures (429/5xx/network, ≤3 attempts), returns `null` on exhaustion, never throws. **No PostHog/HogQL fallback exists (deleted)** — a `null` read fails **CLOSED** (readers/engine throw; nightly aborts), never a fake zero or another store.
 - **Supabase (Postgres)** = source of truth for **attribution, conversions, revenue, billing/entitlements**.
-- OLTP/OLAP split: Postgres + ClickHouse.
-- The `pageviews` table is **empty by design** — analytics reads come from PostHog. Do not "repair" it.
+- OLTP/OLAP split: Postgres + ClickHouse (Tinybird).
+- The `pageviews` table is **empty by design** — analytics reads come from Tinybird. Do not "repair" it.
 
 **Environments & refs (these are project refs, NOT secrets — never put keys in any committed file):**
 - Repo: `Ubaidofficial/SourceTrack`.
 - Supabase: prod `zxjjjsipafojhzkkumvh`, staging `nrsvpwzekfrdrzkoecfk`.
-- PostHog: prod `416017`, staging `469905`.
+- Tinybird workspaces: prod `SourceTrack`, staging `ST_Staging`.
 - Railway: prod env `dc68ba7b`, staging `74a58dbc`.
 - URLs: app `app.sourcetrack.ai`, API `api.srctk.com`, staging dashboard `sourcetrack-dashboard-staging.up.railway.app`.
 
@@ -107,7 +107,7 @@ Then use `DOCS_INDEX.md` to find task-specific docs.
 - `dotenv.config()` must be the **first line** in all job/cron files.
 - Tracker URL is `/tracker/tracker.min.js` — never `/tracker/loader.min.js`.
 - PostHog HogQL interpolations must use `esc()` — never raw `${variable}`. Use `toFloatOrZero`, never `toFloat64OrZero`. Prefer `countIf(...)` over `COUNT(CASE WHEN ...)`. Qualify `distinct_id` in joins — never leave it ambiguous.
-- Channel classifier: `ORGANIC_SEARCH_ENGINE_HOSTS` / `ORGANIC_SEARCH_SOURCES` are the single exported source of truth, shared between the HogQL query and `channelFromEvent` — don't fork it.
+- Channel classifier: `ORGANIC_SEARCH_ENGINE_HOSTS` / `ORGANIC_SEARCH_SOURCES` are the single exported source of truth, shared between the Tinybird pipe SQL (e.g. `seo_revenue_landing_pages.pipe`) and `channelFromEvent` — don't fork it.
 - **Attribution accuracy > speed.** Verify the math before committing. When unsure about attribution logic, read `nightly-attribution.js` and `attribution-engine.js` before changing anything.
 
 ---
@@ -196,7 +196,7 @@ Plus:
 
 ## 11. Agent Roles & Dispatch
 
-- **Orchestrator (planning chat)** — plans, dispatches, verifies. Read-only Supabase + PostHog MCP. Reviews SQL and hand-applies migrations on human go. Doesn't write code.
+- **Orchestrator (planning chat)** — plans, dispatches, verifies. Read-only Supabase + Tinybird MCP. Reviews SQL and hand-applies migrations on human go. Doesn't write code.
 - **Claude Code (CC)** — executes: files, logic, DB-migration *files*. No Railway, no browser. Subject to §0, §7, §8.
 - **Browser E2E agent (Antigravity)** — visual verification only. **Browser tooling + read-only MCP only** — no DB writes, no secret/Railway access (post-incident lockdown). If blocked on login, it stops and reports; it never works around auth.
 - **Worktree Isolation Mandatory:** Each agent operates exclusively in its own designated git worktree to prevent branch switching or commit collisions. The 4 mandatory worktrees are:

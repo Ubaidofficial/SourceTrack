@@ -85,18 +85,18 @@ For multi-step tasks, state a brief plan with a verify step per item.
 
 ## 5. Architecture (verified — do not "fix" intentional designs)
 
-**Stack:** Node.js ESM (`import`/`export` only — never `require()`), Express, React + Vite, Supabase (auth, RLS, attribution/conversions/revenue/billing), PostHog (event store, HogQL), Railway (deploy), Stripe (two separate webhooks — see §7).
+**Stack:** Node.js ESM (`import`/`export` only — never `require()`), Express, React + Vite, Supabase (auth, RLS, attribution/conversions/revenue/billing), Tinybird (ClickHouse — events/analytics read layer via deployed pipes), Railway (deploy), Stripe (two separate webhooks — see §7). *(PostHog is fully decommissioned — no code, env, or project remains.)*
 
 **Hybrid data model (do not collapse):**
-- **PostHog** = events / analytics **read** layer (pageviews, sessions, HogQL aggregations).
+- **Tinybird** (ClickHouse) = events / analytics **read** layer (pageviews, sessions, aggregations), served by deployed pipes in `tinybird/pipes/`. Reads go through `api/lib/tinybird-read.js` (`queryTinybirdPipe`): it retries transient failures (429/5xx/network, up to 3 attempts) and returns `null` on exhaustion — it never throws (and returns `[]` for a served-empty result). **There is no PostHog/HogQL fallback — it is deleted.** A `null` read fails **CLOSED**: the reader helper and the engine legs throw, and the nightly aborts the write rather than reading a dead store — never a fake zero, never another data source.
 - **Supabase (Postgres)** = source of truth for **attribution, conversions, revenue, billing/entitlements**.
-- OLTP/OLAP split: Postgres + ClickHouse.
-- The `pageviews` table is **empty by design** — analytics reads come from PostHog. Do not "repair" it or repoint reads at it.
+- OLTP/OLAP split: Postgres + ClickHouse (Tinybird).
+- The `pageviews` table is **empty by design** — analytics reads come from Tinybird. Do not "repair" it or repoint reads at it.
 
 **Environments & refs (these are project refs, NOT secrets — never put keys in this file):**
 - Repo: `Ubaidofficial/SourceTrack`.
 - Supabase: prod `zxjjjsipafojhzkkumvh`, staging `nrsvpwzekfrdrzkoecfk`.
-- PostHog: prod `416017`, staging `469905`.
+- Tinybird workspaces: prod `SourceTrack`, staging `ST_Staging`.
 - Railway: prod env `dc68ba7b`, staging `74a58dbc`.
 - URLs: app `app.sourcetrack.ai`, API `api.srctk.com`, staging dashboard `sourcetrack-dashboard-staging.up.railway.app`.
 
@@ -198,7 +198,7 @@ Plus:
 - **Jobs:** `dotenv.config()` must be the **first line** in all job/cron files.
 - **Tracker URL** is `/tracker/tracker.min.js` — never `/tracker/loader.min.js`.
 - **PostHog HogQL:** all string interpolations must use `esc()` — never raw `${variable}`. Use `toFloatOrZero`, never `toFloat64OrZero`. Prefer `countIf(...)` over `COUNT(CASE WHEN ...)`. Qualify `distinct_id` in joins — never leave it ambiguous.
-- **Channel classifier:** `ORGANIC_SEARCH_ENGINE_HOSTS` / `ORGANIC_SEARCH_SOURCES` are the single exported source of truth, shared between the HogQL query and `channelFromEvent`. Don't fork or duplicate this logic.
+- **Channel classifier:** `ORGANIC_SEARCH_ENGINE_HOSTS` / `ORGANIC_SEARCH_SOURCES` are the single exported source of truth, shared between the Tinybird pipe SQL (e.g. `seo_revenue_landing_pages.pipe`) and `channelFromEvent`. Don't fork or duplicate this logic.
 - **Attribution accuracy > speed** — verify the math before committing. When in doubt about attribution logic, **read `nightly-attribution.js` and `attribution-engine.js` before changing anything.**
 
 ---
@@ -216,7 +216,7 @@ Plus:
 
 ## 13. Agent Roles (who does what)
 
-- **Orchestrator (planning chat)** — plans, dispatches, verifies. Read-only Supabase + PostHog MCP. Reviews SQL and hand-applies migrations on human go. Does not write code.
+- **Orchestrator (planning chat)** — plans, dispatches, verifies. Read-only Supabase + Tinybird MCP. Reviews SQL and hand-applies migrations on human go. Does not write code.
 - **Claude Code (CC)** — executes: files, logic, DB-migration *files*. No Railway access, no browser. Subject to §0, §8, §9.
 - **Browser E2E agent** — visual verification only. **Browser + read-only MCP only** — no DB writes, no secret/Railway access (post-incident lockdown). If blocked on login, it stops and reports; it never works around auth.
 - **Worktree Isolation Mandatory:** Each agent operates exclusively in its own designated git worktree to prevent branch switching or commit collisions. The 4 mandatory worktrees are:
