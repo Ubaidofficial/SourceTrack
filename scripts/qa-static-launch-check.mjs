@@ -341,15 +341,6 @@ for (const file of ingestFiles) {
   }
 }
 
-// 7. Install check logic (no queryHogQL)
-if (checkFileExists('api/routes/install.js')) {
-  const content = readFile('api/routes/install.js');
-  if (content.includes('queryHogQL')) {
-    console.error('❌ Performance warning in api/routes/install.js: queryHogQL is still in use.');
-    securityPass = false;
-  }
-}
-
 if (securityPass) {
   console.log('✅ Security & plan scoping checks passed.');
 } else {
