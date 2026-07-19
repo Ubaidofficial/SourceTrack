@@ -19,7 +19,6 @@ const HERO = {
 const ROWS = [
   ['Supabase', 'Database, authentication, storage (core customer data)', 'EU'],
   ['Railway', 'Application hosting & deployment (core customer data)', 'EU'],
-  ['PostHog', 'Product/event analytics (read layer)', 'US'],
   ['Stripe', 'Payments & billing', 'US / global'],
   ['Resend', 'Transactional email delivery', 'US'],
   ['Amazon SES', 'Authentication email delivery (signup / reset)', 'US / region'],

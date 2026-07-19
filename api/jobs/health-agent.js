@@ -11,9 +11,9 @@ const API_URL = process.env.API_URL || 'http://localhost:3000'
 // Everything else is warning-level. The money-rail business-logic checks
 // (nightly_job, conversions) are CRITICAL: a job that "succeeds" while processing
 // nothing must be able to turn this monitor red.
-// `posthog` was RETIRED (D2): it probed the PostHog query API, a store being
-// decommissioned by D5 — once POSTHOG_* is stripped it would alarm 🔴 on every run
-// forever, with nothing to replace (there is no PostHog to be reachable). Exported so
+// `posthog` was RETIRED (D2): it probed the PostHog query API. PostHog is now fully
+// decommissioned (D5 done — POSTHOG_* stripped from Railway, project deleted), so a
+// posthog check would alarm 🔴 on every run forever with nothing to reach. Exported so
 // a test can assert `posthog` is no longer a critical check.
 export const CRITICAL_CHECKS = new Set(['supabase', 'nightly_job', 'conversions', 'tinybird_quarantine'])
 
