@@ -3,8 +3,8 @@ DESCRIPTION >
     `$pageview` rows — NOT filtered per-visitor (matches today's behavior exactly).
     Replaces the HogQL `pvSql` in `getMultiTouchAttributionLive`
     (api/lib/attribution-engine.js:1478), shared by linear/u_shaped/time_decay/
-    w_shaped — see tinybird/PHASE4_BUILD_PLAN.md §0 for why these 4 models share
-    one pipe pair, and tinybird/PHASE4_4A_FIELD_MAPPING.md §2/§4 for the verified
+    w_shaped — see tinybird/archive/PHASE4_BUILD_PLAN.md §0 for why these 4 models share
+    one pipe pair, and tinybird/archive/PHASE4_4A_FIELD_MAPPING.md §2/§4 for the verified
     column mapping and the window-pin requirement (guardrail 4).
     Caller MUST compute `lookback_from` using the exact ternary at
     api/lib/attribution-engine.js:1464-1467 (reusing serializeHogQLDateTime/

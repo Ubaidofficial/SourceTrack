@@ -6,9 +6,9 @@ DESCRIPTION >
     detectAiPlatformFromEvent (channel-classifier.js:103-134) — both confirmed
     by reading the code to be single-row JS selection (no per-column argMax,
     no fusion-across-rows risk the way Pattern A's last_touch had; see
-    tinybird/PHASE4_4D_PLAN.md §1). This pipe's job is row-pull parity only.
+    tinybird/archive/PHASE4_4D_PLAN.md §1). This pipe's job is row-pull parity only.
 
-    CHUNKING KEPT, not removed (tinybird/PHASE4_4D_PLAN.md §2.3 / 4d report):
+    CHUNKING KEPT, not removed (tinybird/archive/PHASE4_4D_PLAN.md §2.3 / 4d report):
     Tinybird's documented SQL-length limit is 128KB
     (https://www.tinybird.co/docs/forward/pricing/limits). {{Array(...)}}
     interpolates into the final SQL text, so a large visitor_id array inflates
