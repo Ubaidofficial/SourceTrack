@@ -11,13 +11,22 @@ const API_URL = process.env.API_URL || 'http://localhost:3000'
 // Everything else is warning-level. The money-rail business-logic checks
 // (nightly_job, conversions) are CRITICAL: a job that "succeeds" while processing
 // nothing must be able to turn this monitor red.
-const CRITICAL_CHECKS = new Set(['supabase', 'posthog', 'nightly_job', 'conversions', 'tinybird_quarantine'])
+// `posthog` was RETIRED (D2): it probed the PostHog query API, a store being
+// decommissioned by D5 — once POSTHOG_* is stripped it would alarm 🔴 on every run
+// forever, with nothing to replace (there is no PostHog to be reachable). Exported so
+// a test can assert `posthog` is no longer a critical check.
+export const CRITICAL_CHECKS = new Set(['supabase', 'nightly_job', 'conversions', 'tinybird_quarantine'])
+
+// Required env for the monitor to function. POSTHOG_* were removed (D2): no check reads
+// them anymore (the posthog liveness check is deleted and data_flow reads Tinybird).
+// Exported so a test can assert POSTHOG_* is no longer required.
+export const REQUIRED_ENV_VARS = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY']
 
 // Sum recent $conversion rows across the monitored sites via the SAME pipe + token the
 // nightly reads (nightly_conversions_by_site) — so the monitor can NEVER measure a
 // different store than the thing it monitors. Returns a number, or null when NOT ONE
 // site was pipe-served (store unreachable → "unknown"; the evaluators do not assert the
-// silent-zero rule on null, and the `posthog`/connectivity checks cover reachability).
+// silent-zero rule on null, and the `supabase`/`data_flow` checks cover reachability).
 // Exported + dependency-injected so a test can assert it hits nightly_conversions_by_site.
 export async function sumStoreConversions({ sites, queryPipe, date_from, date_to }) {
   let total = 0
@@ -29,17 +38,51 @@ export async function sumStoreConversions({ sites, queryPipe, date_from, date_to
   return served === 0 ? null : total
 }
 
+// The SAME site set the nightly attends to (nightly-attribution.js:218-227): paid plan,
+// active in the last 7 days OR never-seen. Single source so the monitor and the nightly
+// can never drift onto different site sets. Returns [] (never null).
+async function getMonitoredSites(supabase) {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()
+  const { data: sites } = await supabase.from('sites')
+    .select('id')
+    .not('plan', 'in', '(free,inactive,archived)')
+    .or(`last_seen_at.gte.${sevenDaysAgo},last_seen_at.is.null`)
+  return sites || []
+}
+
+// Data-flow canary ("is tracking working at all?"). Fans out the events_health_day pipe
+// over the monitored sites and aggregates. SEMANTIC CHANGE (D2): the retired PostHog check
+// counted `$pageview`s in the last 24h GLOBALLY; events_health_day counts ANY event in the
+// last 24h PER SITE (no exact-parity pipe exists; authoring one is a founder-gated deploy).
+// So this now reads "any tracked event", not "pageviews", and fans out instead of one global
+// query — see KNOWN_ISSUES. Alarm semantics preserved from the old global count===0 check:
+//   • zero qualifying sites            → { _status: 'skipped' }  (explicit, NOT a silent pass)
+//   • ANY site's pipe read FAILS (null) → throw → check() reports status 'error'
+//   • ALL qualifying sites 0 events    → { _status: 'warning' }  (analog of global count===0)
+//   • otherwise                        → ok, with the aggregate event count
+// Exported + dependency-injected (sites + queryPipe) so it is unit-testable, token-free.
+export async function evaluateDataFlow({ sites, queryPipe }) {
+  if (!sites || sites.length === 0) {
+    return { _status: 'skipped', reason: 'no qualifying sites', sites_checked: 0 }
+  }
+  let total = 0
+  for (const s of sites) {
+    const rows = await queryPipe('events_health_day', { site_id: String(s.id) })
+    if (rows === null) throw new Error(`events_health_day read failed for site ${s.id}`)
+    total += Number(rows?.[0]?.cnt) || 0
+  }
+  if (total === 0) {
+    return { _status: 'warning', events_24h: 0, sites_checked: sites.length, warning: 'Zero tracked events across all monitored sites in last 24h — verify tracker is installed' }
+  }
+  return { events_24h: total, sites_checked: sites.length }
+}
+
 // Count $conversion events the SAME Tinybird store the nightly reads received in the
 // last 48h. Deterministic; no LLM; never throws.
 async function storeConversionCount() {
   try {
-    const supabase = getSupabase()
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()
-    const { data: sites } = await supabase.from('sites')
-      .select('id')
-      .not('plan', 'in', '(free,inactive,archived)')
-      .or(`last_seen_at.gte.${sevenDaysAgo},last_seen_at.is.null`)
-    if (!sites || sites.length === 0) return 0
+    const sites = await getMonitoredSites(getSupabase())
+    if (sites.length === 0) return 0
     const now = Date.now()
     const fmt = (m) => new Date(m).toISOString().slice(0, 19).replace('T', ' ')
     return await sumStoreConversions({
@@ -132,22 +175,7 @@ async function collectSnapshot() {
       return { rows: data?.length ?? 0 }
     }),
 
-    // 2. PostHog connectivity — CRITICAL
-    check('posthog', async () => {
-      const host = (process.env.POSTHOG_HOST || '').replace(/\/$/, '')
-      if (!host) throw new Error('POSTHOG_HOST not set')
-      const url = `${host}/api/projects/${process.env.POSTHOG_PROJECT_ID}/query/`
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${process.env.POSTHOG_PERSONAL_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: { kind: 'HogQLQuery', query: 'SELECT 1' } }),
-        signal: AbortSignal.timeout(10000)
-      })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      return {}
-    }),
-
-    // 3. API health endpoint — warning only (may not be accessible from job runner)
+    // 2. API health endpoint — warning only (may not be accessible from job runner)
     check('api_health', async () => {
       const res = await fetch(`${API_URL}/health`, { signal: AbortSignal.timeout(5000) })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -155,7 +183,7 @@ async function collectSnapshot() {
       return { status_reported: data.status }
     }),
 
-    // 4. Nightly attribution job — CRITICAL assertion (not a passive observation).
+    // 3. Nightly attribution job — CRITICAL assertion (not a passive observation).
     // Red on: no run, non-success status, or staleness (>26h). RUN HEALTH ONLY — the
     // outcome (are conversions actually landing?) is the `conversions` check below, which
     // still reports store_conversions_48h. No storeConversionCount() fanout here.
@@ -171,32 +199,22 @@ async function collectSnapshot() {
       return { last_run: run.ran_at, hours_ago: verdict.hoursAgo, conversions: run.conversions_processed, job_status: run.status }
     }),
 
-    // 5. Active sites count
+    // 4. Active sites count
     check('sites_count', async () => {
       const { count } = await getSupabase().from('sites').select('*', { count: 'exact', head: true })
       return { total_sites: count ?? 0 }
     }),
 
-    // 6. Recent pageviews — queries PostHog directly (events never go to Supabase)
+    // 5. Recent tracked events — canary that tracking is flowing. Reads Tinybird (the live
+    // event store) via events_health_day, fanned out over the monitored sites. SEE the
+    // evaluateDataFlow header for the pageviews-24h→any-event-24h + global→per-site semantic
+    // change (D2). Warning on all-zero; error on any read failure; skipped on no sites.
     check('data_flow', async () => {
-      const host = (process.env.POSTHOG_HOST || '').replace(/\/$/, '')
-      if (!host) throw new Error('POSTHOG_HOST not set')
-      const url = `${host}/api/projects/${process.env.POSTHOG_PROJECT_ID}/query/`
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${process.env.POSTHOG_PERSONAL_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: { kind: 'HogQLQuery', query: "SELECT count() FROM events WHERE event = '$pageview' AND timestamp >= now() - INTERVAL 24 HOUR" } }),
-        signal: AbortSignal.timeout(15000)
-      })
-      if (!res.ok) throw new Error(`PostHog HTTP ${res.status}`)
-      const data = await res.json()
-      const count = Number(data.results?.[0]?.[0]) || 0
-      // warn but don't error — could be a legitimate quiet period
-      if (count === 0) return { _status: 'warning', pageviews_24h: 0, warning: 'Zero pageviews in last 24h — verify tracker is installed' }
-      return { pageviews_24h: count }
+      const sites = await getMonitoredSites(getSupabase())
+      return evaluateDataFlow({ sites, queryPipe: queryTinybirdPipe })
     }),
 
-    // 7. Recent conversions in attributed_conversions — CRITICAL assertion.
+    // 6. Recent conversions in attributed_conversions — CRITICAL assertion.
     // Red when zero land in 48h while the event store has conversions to attribute.
     check('conversions', async () => {
       const since = new Date(Date.now() - 48 * 3_600_000).toISOString().split('T')[0]
@@ -208,21 +226,19 @@ async function collectSnapshot() {
       return { attributed_conversions_48h: count ?? 0, store_conversions_48h: storeConversions ?? 'unknown' }
     }),
 
-    // 8. Required env vars — CRITICAL
+    // 7. Required env vars — CRITICAL
     check('env_vars', async () => {
-      const required = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'POSTHOG_API_KEY',
-        'POSTHOG_PERSONAL_API_KEY', 'POSTHOG_PROJECT_ID', 'POSTHOG_HOST']
-      const missing = required.filter(k => !process.env[k])
+      const missing = REQUIRED_ENV_VARS.filter(k => !process.env[k])
       if (missing.length > 0) throw new Error(`Missing: ${missing.join(', ')}`)
       return { all_present: true }
     }),
 
-    // 9. Tinybird conversion-quarantine alarm — CRITICAL when a $conversion is
+    // 8. Tinybird conversion-quarantine alarm — CRITICAL when a $conversion is
     // quarantined (silent revenue loss, SCOPE_v3 §11; see lib/quarantine-alarm.js).
     // An unreachable/misconfigured Tinybird warns (not critical) via runQuarantineCheck.
     check('tinybird_quarantine', () => runQuarantineCheck()),
 
-    // 10. Health agent process memory — NOT the API server.
+    // 9. Health agent process memory — NOT the API server.
     // Measures this script's own Node.js process. Values will always be low (~20-60MB).
     // Flag only extreme values that suggest a runaway script.
     check('agent_memory', async () => {
@@ -283,7 +299,7 @@ async function run() {
   const snap = await collectSnapshot()
 
   for (const c of snap.checks) {
-    const icon = c.status === 'ok' ? '✅' : c.status === 'warning' ? '⚠️' : '❌'
+    const icon = c.status === 'ok' ? '✅' : c.status === 'warning' ? '⚠️' : c.status === 'skipped' ? '⏭️' : '❌'
     const slow = c.ms > 2000 ? ' SLOW' : ''
     const detail = c.error ? ` — ${c.error}` : c.warning ? ` — ${c.warning}` : c.ms ? ` (${c.ms}ms)` : ''
     const extras = Object.entries(c)
