@@ -282,7 +282,9 @@
 
 **ROUTES: zero bare sites.** All 11 route files that call HogQL (`sessions`, `alerts`, `leads-server`, `events`, `hygiene`, `seo-revenue`, `dashboard`, `admin`, `live`, `integrations`, `journey`) + `api/lib/setup-doctor.js` call it **only** as the `readTb()`/inline fallback after a pipe attempt — executed check: each file has exactly **1** `queryHogQL(` and **≥1** `_queryTinybirdPipe(`.
 
-## 24. 🔻 PostHog TOUCH-POINT MAP — D1–D6 (✅ verified @ `fc00e406`)
+## 24. 🔻 PostHog TOUCH-POINT MAP (✅ verified @ `fc00e406`)
+
+> **Numbering note:** the rows below (1–6) are a TOUCH-POINT enumeration (six independent places PostHog is reached) — they are **NOT** the `POSTHOG_MIGRATION_HANDOFF.md` **D0–D6 decommission steps** and do not map 1:1. In particular, the frontend `posthog-js` removal (row 6) is the handoff's **D4** (shipped in #312); the handoff's **D6** is the ai-analytics/annotations orphan cleanup. Use the handoff's numbering as canonical.
 
 > 🔴 **PostHog is reached from FOUR independent places, not one.** Deleting `api/lib/posthog.js` does **NOT** remove PostHog: `nightly-attribution.js` and `health-agent.js` each `fetch()` PostHog's query API **directly**, bypassing that module entirely. A `queryHogQL`-only inventory misses both — and the nightly **is** the money-rail.
 
@@ -293,7 +295,7 @@
 | D3 | **`posthog-node`** — imported ONLY at `api/lib/posthog.js:1`; dep `package.json:36` (`^4.3.0`). | grep | — |
 | D4 | 🔴 **`api/jobs/nightly-attribution.js` — its OWN PostHog reader.** `queryPostHog()` at **:1350** is a **direct `fetch`** to `${POSTHOG_HOST}/api/projects/${POSTHOG_PROJECT_ID}/query/` with `Bearer POSTHOG_PERSONAL_API_KEY` (+ 429/5xx retry) — **does not import `api/lib/posthog.js`**. Call sites **:495**, **:616**, **:768**, all Tinybird-first fallbacks (`if (rows === null)`). Env read at :155–157. | read | 🔴 **YES — this is the attribution/revenue pre-agg writer** |
 | D5 | 🔴 **`api/jobs/health-agent.js` — its OWN PostHog check.** `check('posthog', …)` at **:136**: direct `fetch` to the same query API with `POSTHOG_PERSONAL_API_KEY`, body `SELECT 1`, marked **CRITICAL**. Env at :137/:139/:142 and again :182/:184/:187 (a second check). **Deleting PostHog while this check stays CRITICAL will red the health agent.** | read | ⚪ no (health) |
-| D6 | **Frontend — product analytics on the dashboard app itself (NOT the tracker).** `dashboard/src/lib/posthog.js` (`import posthog from 'posthog-js'` :1, `posthog.init` :31, `export default posthog` :44); single consumer `dashboard/src/App.jsx:8` (`initPostHog`). Dep `dashboard/package.json:23` (`posthog-js ^1.203.0`). ⚠️ **Distinct from the customer tracker** — do not conflate; §6 cookieless rules apply to the tracker, this is first-party app analytics. | grep | ⚪ no |
+| 6 (= handoff **D4**, #312) | **Frontend — product analytics on the dashboard app itself (NOT the tracker).** `dashboard/src/lib/posthog.js` (`import posthog from 'posthog-js'` :1, `posthog.init` :31, `export default posthog` :44); single consumer `dashboard/src/App.jsx:8` (`initPostHog`). Dep `dashboard/package.json:23` (`posthog-js ^1.203.0`). ⚠️ **Distinct from the customer tracker** — do not conflate; §6 cookieless rules apply to the tracker, this is first-party app analytics. **✅ REMOVED in #312 (handoff D4).** | grep | ⚪ no |
 
 **`POSTHOG_*` env references — CODE ONLY (env var VALUES are not visible to CC; this is the reference list for D1–D6):**
 **Server (6):** `POSTHOG_API_KEY` (`posthog.js:13`, `index.js:264`) · `POSTHOG_HOST` (`posthog.js:14,27`, `nightly-attribution.js:157`, `health-agent.js:137,182`) · `POSTHOG_PROJECT_ID` (`posthog.js:28`, `index.js:266`, `nightly-attribution.js:156`, `health-agent.js:139,184`) · `POSTHOG_PERSONAL_API_KEY` (`posthog.js:37`, `index.js:265`, `nightly-attribution.js:155`, `health-agent.js:142,187`) · `POSTHOG_FLUSH_AT` (`posthog.js:5,6`) · `POSTHOG_FLUSH_INTERVAL_MS` (`posthog.js:9,10`).

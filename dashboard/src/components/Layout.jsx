@@ -41,7 +41,6 @@ const PAGE_TITLES = {
   '/campaigns': 'Campaigns',
   '/report-builder': 'Report Builder',
   '/journey': 'Visitor Journeys',
-  '/ai-analytics': 'AI Analytics',
   '/app/integrations': 'Integrations',
   '/snippet': 'Install Tracking',
   '/debugger': 'Live Events',
