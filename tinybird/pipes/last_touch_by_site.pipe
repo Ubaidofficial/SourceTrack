@@ -10,7 +10,7 @@ DESCRIPTION >
     can synthesize credit from DIFFERENT touchpoints for different fields when
     the chronologically-last touch has a null in one field but an earlier touch
     doesn't (verified empirically on the 4c fixture's visitor Y, see
-    tinybird/PHASE4_4C_PLAN.md and the 4c report — NOT a hypothesis, confirmed
+    tinybird/archive/PHASE4_4C_PLAN.md and the 4c report — NOT a hypothesis, confirmed
     against real fired data both in PostHog and via two failed/passed Tinybird
     query shapes). A single ASOF JOIN picking one whole touchpoint row does NOT
     reproduce this and was empirically WRONG on that case. This is a faithful,
