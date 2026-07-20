@@ -191,16 +191,17 @@ Use this guide to verify production health, investigate incidents, and monitor b
 
 ### 2. Cron & Job Monitoring Expectations
 
-The background sync cron jobs run on the backend API container. Monitor their execution status by querying the `job_runs` table in the production Supabase database:
+Each background job is **its own Railway cron service** with `restartPolicyType: NEVER` — a crashed run is **not** retried until the next fire. They do **not** run on the API container and do **not** inherit the API service's ON_FAILURE retries. Schedules below are verified against production Railway config (`railway environment config --environment production --json`, 2026-07-20). Monitor via the `job_runs` table **except where noted**.
 
-| Job Name | Schedule / Frequency | Expected Action | Error Visibility |
+| Job (Railway service) | Schedule (UTC) | Expected Action | Error Visibility |
 | --- | --- | --- | --- |
-| `nightly-attribution` | Daily at ~01:00 UTC | Attributes visitor touchpoints to conversions for paid-plan sites | Slack alerts may be sent via `SLACK_WEBHOOK_URL` if configured/verified. Records status in `job_runs` table. |
-| `health-agent` | Hourly | Runs system-wide checks (Supabase, PostHog, `/health`, data flow) | May post warning/critical alerts to Slack if `SLACK_WEBHOOK_URL` is configured/verified. |
-| `email-reports-weekly` | Weekly | Sends HTML attribution performance reports to site owners | Records status in `job_runs` table. Check database for logs. |
-| `email-reports-monthly` | Monthly | Sends monthly HTML attribution reports to site owners | Records status in `job_runs` table. Check database for logs. |
-| `usage-threshold-emails`| Daily at ~14:00 UTC | Audits pageview caps vs plans; sends emails at 50%, 80%, and 100% caps | Records status in `job_runs` table and records logs in `usage_email_log`. |
-| `data-quality-check` | Daily | Audits UTM coverage, duplicate conversion rates, and freshness | Records status in `job_runs`, `data_quality_reports`, and `data_quality_alerts` tables. |
+| `nightly-attribution` | `0 2 * * *` (02:00) | Attributes touchpoints → conversions for paid-plan sites; runs `gsc-daily-sync` + retention purges inline | Records status in `job_runs`. Slack alerts **if configured/verified** — but `SLACK_WEBHOOK_URL` is **UNSET in prod, so none are delivered** (`KNOWN_ISSUES` 29). |
+| `gsc-daily-sync` | runs **inside** `nightly-attribution` (not a separate service) | Daily GSC SEO-revenue sync per connected site | Writes a `gsc-daily-sync` `job_runs` row (status **derived** since #332, no longer hardcoded `success`) + `gsc_sync_runs`. |
+| `health-agent` | `*/30 * * * *` (every 30 min) | System checks: Supabase, nightly_job, conversions, `data_flow` (**Tinybird** — the PostHog check was RETIRED in D2), tinybird_quarantine | ⚠️ Posts to Slack **if configured/verified** — but `SLACK_WEBHOOK_URL` is **UNSET in prod, so no alert is ever delivered**. Writes **no `job_runs` row** — its own runs are unobservable (`KNOWN_ISSUES` 29). |
+| `email-reports` | `0 8 * * 1` (Mon 08:00) | Sends HTML attribution reports to site owners | ❌ **MISCONFIGURED — has never sent an email.** The job sits in the service's `buildCommand` (runs at build time; ~255 "success" `job_runs` rows) with a null `startCommand`, so the Monday cron boots `bootstrap.js` and crashes (`KNOWN_ISSUES` 21). It is the only email-report cron service. |
+| `usage-threshold-emails` | **scheduled nowhere** (not staging, not prod) | (would email at 50/80/100% pageview caps) | Never runs. The daily-14:00-UTC schedule once written in this table — and propagated into `README.md` before #330 corrected it — **does not exist**. |
+| `data-quality-check` | `0 0 * * *` (00:00) | Audits UTM coverage, duplicate conversion rates, freshness | Records status in `job_runs`, `data_quality_reports`, `data_quality_alerts`. |
+| `anomaly-watcher` | **not scheduled in production** — staging only (`0 3 * * *`) | (would flag traffic/conversion anomalies → `site_alerts`) | Its former GitHub-Actions cron (#70) no longer exists (`.github/workflows/` has only `ci.yml`, no schedule). Has never run in prod. |
 
 ---
 
