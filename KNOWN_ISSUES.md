@@ -460,6 +460,24 @@ After the 19:54 failures, status flipped to `'error'` with `last_error_code = 's
 
 `api_keys` has **no `scopes`/`permissions` column** — every issued key is all-powerful **per-site**. Today's only consumer is write-ingest (`POST /api/server/event`), but the roadmap is a **read REST API → MCP server**. With **0 keys issued in prod**, the migration cost to add scopes is **zero and will never be lower** — add a scope/permission model **before** the key authenticates anything beyond ingest (retrofitting scopes onto already-issued all-access keys is the painful path). Also: **revoke = hard `DELETE`** (no `revoked_at`/`is_active`), so `last_used_at` audit history is destroyed on revoke; and there is **no rate-limit or per-site cap** on `POST /api/integrations/api-keys` generation. (Not `KI-34` class — keys are hashed, not `ENCRYPTION_KEY`-encrypted, so rotation doesn't cascade.)
 
+**Plan (LOCKED 2026-07-20 — build after the 02:00 verdicts, full ceremony; nothing built yet).** ONE migration file, ONE apply window (apply-then-merge, §8 — founder applies staging→prod before merging code that reads the columns): `ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS scopes text[] NOT NULL DEFAULT '{}'` — **fail-closed backstop** (a non-app INSERT grants nothing; the app defaults omitted scopes to `['write:events']`) — plus `ADD COLUMN IF NOT EXISTS revoked_at timestamptz` (harmless while unread). MVP scopes = exactly **`write:events`** and **`read:analytics`** (an array, not a permission system). **App-only validation** (unknown scope fails closed via the `write:events` membership check; a test MUST assert an unrecognised scope is DENIED, not ignored). Then three small PRs off the applied migration: **PR A** — scope enforcement (`server-events` requires `write:events`) + generate/list `scopes` + UI selector + tests (**this is the one that blocks the read REST API → MCP**); **PR B** — soft revoke (`DELETE` → set `revoked_at`, exclude revoked from auth); **PR C** — gen rate-limit + per-site key cap (no DDL). ⚠️ **Scope enforcement is a BREAKING CHANGE for any existing key** (a key lacking `write:events` starts getting 403) — **safe ONLY because zero keys exist in prod; not safe generically.** If any key is issued before PR A ships, a grant-migration is required first.
+
+### 44. Stripe subscription-lifecycle handlers silently no-op on a zero-row match (money rail, P0)
+
+**Discovered (Antigravity prod audit):** techrupt.pk's subscription `sub_1TmNs5…` was **CANCELED 2026-06-26T01:19:27Z** (36 min after creation), yet the prod `sites` row still reads `plan='growth'`, `pv_limit=150000` with both Stripe IDs set — **24 days later**. A cancellation never reached entitlements. Silent, on the money rail, indistinguishable from a healthy paid site.
+
+**June delivery — traced, now permanently unrecoverable:** the `customer.subscription.deleted` event fired (`evt_1TmOQW…`); the webhook endpoint `we_1TmIJ2…` was created 2026-06-25T18:47:20Z — **6.5h before** the event — and was enabled; Stripe's dashboard confirms the event **was sent** to it. So **not** a registration gap. Stripe retains delivery-attempt records 15 days; the event is 25 days old — the response code is **gone**. **Do not plan any task that depends on the June delivery record.**
+
+**The code defect (a CLASS, and it stands regardless of what reproduction shows):** four handlers in `billing.js` — `customer.subscription.updated` (:217), `.deleted` (:237), `invoice.payment_succeeded` (:262), `invoice.payment_failed` (:282) — all `.eq('stripe_customer_id', customerId)` and all destructure **only `{ error }`**, capturing no affected-row count. In PostgREST a **zero-row `UPDATE` is not an error**, so all four return 200 to Stripe, log a success line, and change nothing — they cannot distinguish "downgraded a site" from "found no site to downgrade." Same silent-success class as the 148ms GSC no-op (**KI-39**), on the money rail. **The UPDATE logic is correct; the zero-row DETECTION is missing** — different claims. (Independently code-verified 2026-07-20.)
+
+**Asymmetry to record:** `checkout.session.completed` (:189) keys off site **metadata** and works (it *sets* `stripe_customer_id`); all four lifecycle handlers key off `stripe_customer_id`, which only exists **if checkout landed first**. Stripe does **not** guarantee event ordering — a lifecycle event arriving before/without a landed checkout matches zero rows and silently no-ops.
+
+**Reproduction running:** Antigravity is cancelling staging `sub_1TvOPG…` against today's code with delivery records intact; staging restore is held (that row is the fixture).
+
+**Product decision (not a defect), flagged for later:** the handler sets `plan='inactive'`, `pv_limit=0` — tracking **stops dead** on cancellation rather than downgrading to free tier. May be deliberate.
+
+**P0 — outranks KI-14/35/40. HELD pending the 02:00 UTC verdicts** (do not start).
+
 ---
 ## Recently fixed
 
