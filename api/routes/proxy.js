@@ -25,23 +25,12 @@ import {
   conversionSiteLimit,
   conversionGlobalIpLimit
 } from '../middleware/rate-limit.js'
+// Single source of truth for AI-source classification (CLAUDE.md §11). This route previously kept
+// its own 8-host AI_DOMAINS map (a third divergent copy) and accepted properties.ai_source
+// verbatim; both are gone — KI-32.
+import { detectAiPlatformFromReferrer, resolveAiSource } from '../lib/channel-classifier.js'
 
 const router = express.Router()
-
-const AI_DOMAINS = {
-  'chatgpt.com': 'ChatGPT', 'chat.openai.com': 'ChatGPT',
-  'claude.ai': 'Claude', 'perplexity.ai': 'Perplexity',
-  'gemini.google.com': 'Gemini', 'grok.com': 'Grok',
-  'copilot.microsoft.com': 'Copilot', 'deepseek.com': 'DeepSeek'
-}
-
-function getAiSource(referrer) {
-  if (!referrer) return null
-  try {
-    const host = new URL(referrer).hostname.replace('www.', '')
-    return AI_DOMAINS[host] || null
-  } catch { return null }
-}
 
 function enrichFromRequest(req) {
   const headers = req.headers || {}
@@ -113,7 +102,7 @@ router.post('/e',
       device_type: enriched.device_type,
       browser: enriched.browser,
       server_timestamp: enriched.server_timestamp,
-      ai_source: getAiSource(sanitizedReferrer) || sanitizedProperties.ai_source || null,
+      ai_source: detectAiPlatformFromReferrer(sanitizedReferrer) || resolveAiSource(sanitizedProperties.ai_source),
       proxy: true,
     }
 

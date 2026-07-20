@@ -1,65 +1,28 @@
-const AI_HOST_MAP = {
-  'chat.openai.com': 'ChatGPT',
-  'chatgpt.com': 'ChatGPT',
-  'claude.ai': 'Claude',
-  'anthropic.com': 'Claude',
-  'perplexity.ai': 'Perplexity',
-  'gemini.google.com': 'Gemini',
-  'bard.google.com': 'Gemini',
-  'aistudio.google.com': 'Gemini',
-  'grok.x.com': 'Grok',
-  'grok.com': 'Grok',
-  'copilot.microsoft.com': 'Copilot',
-  'deepseek.com': 'DeepSeek',
-  'meta.ai': 'Meta AI',
-  'you.com': 'You.com',
-  'phind.com': 'Phind',
-  'kagi.com': 'Kagi',
-  'mistral.ai': 'Mistral',
-  'poe.com': 'Poe'
-}
+import { detectAiPlatformFromReferrer, AI_UTM_SOURCES_MAP, resolveAiSource } from '../lib/channel-classifier.js'
 
-const AI_UTM_SOURCES = new Set([
-  'chatgpt','chat.openai.com','openai',
-  'claude','claude.ai','anthropic',
-  'perplexity','perplexity.ai',
-  'gemini','bard','google-gemini',
-  'grok','xai',
-  'copilot','bing-copilot','microsoft-copilot',
-  'deepseek','deep-seek',
-  'meta-ai','meta.ai'
-])
-
+// AI-platform detection for the ingest path. Single source of truth is
+// api/lib/channel-classifier.js (CLAUDE.md §11) — this middleware imports its maps + helpers and
+// MUST NOT redefine them. The two path-based referrer cases (bing.com/chat -> Copilot,
+// x.com/i/grok -> Grok) live in detectAiPlatformFromReferrer, so ingest and read emit one
+// canonical string per source. (Previously a divergent AI_HOST_MAP + title-cased UTM path; KI-32.)
 export function detectAIPlatform(req, _res, next) {
   try {
     const referer = req.headers.referer || req.headers.referrer
-    if (referer) {
-      try {
-        const url = new URL(referer)
-        const hostname = url.hostname.replace('www.', '')
-        if (hostname === 'bing.com' &&
-           (url.pathname.startsWith('/chat') || url.pathname.startsWith('/search'))) {
-          req.ai_source = 'Copilot'
-          return next()
-        }
-        if (hostname === 'x.com' && url.pathname.includes('/i/grok')) {
-          req.ai_source = 'Grok'
-          return next()
-        }
-        const mapped = AI_HOST_MAP[hostname]
-        if (mapped) { req.ai_source = mapped; return next() }
-      } catch (_urlErr) {}
-    }
+    const fromRef = detectAiPlatformFromReferrer(referer)
+    if (fromRef) { req.ai_source = fromRef; return next() }
+
     const utmSource = String(
       req.body?.utm_source || req.query?.utm_source || ''
     ).toLowerCase().trim()
-    if (utmSource && AI_UTM_SOURCES.has(utmSource)) {
-      req.ai_source = utmSource.charAt(0).toUpperCase() + utmSource.slice(1)
+    if (utmSource && AI_UTM_SOURCES_MAP[utmSource]) {
+      req.ai_source = AI_UTM_SOURCES_MAP[utmSource]
       return next()
     }
-    const explicit = req.body?.ai_source || null
-    if (explicit) { req.ai_source = explicit; return next() }
-    req.ai_source = null
+
+    // Explicit body value: canonicalize, reject-unknown. Never trust an arbitrary caller value —
+    // verbatim acceptance here was the origin of the 'chatgpt.com'/'Chatgpt' junk rows and let any
+    // site_key holder write arbitrary ai_source (§6.5 ingest-integrity boundary; KI-32).
+    req.ai_source = resolveAiSource(req.body?.ai_source)
   } catch (_err) {
     req.ai_source = null
   }
