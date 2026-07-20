@@ -83,6 +83,25 @@ jobs:
           cd dashboard
           npm run build
 
+      # Detection existed; nothing surfaced it. #335 sat RED on main for ~5h and every
+      # open PR inherited the failure (pull_request CI runs on the merge commit). Branch
+      # protection is unavailable on Free/private, so this alerts instead of blocking.
+      - name: Alert on red main
+        if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "::error::SLACK_WEBHOOK_URL secret is unset — red main would go unannounced"
+            exit 1
+          fi
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\":\"main is RED — build-and-test failed on ${GITHUB_SHA:0:7}. Every open PR will inherit this until it is fixed. ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}" \
+            "$SLACK_WEBHOOK_URL")
+          echo "slack http $code"
+          [ "$code" = "200" ] || { echo "::error::alert POST returned $code"; exit 1; }
+
   # ────────────────────────────────────────────────────────────────────────────
   # SCHEMA DRIFT / MIGRATIONS — the cure for hand-applied, per-env migration drift.
   #
