@@ -6,18 +6,27 @@ function monthStart() {
   return new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 }
 
-// classify: higher is better (coverage/rate metrics)
-function classify(value, ok, warn) {
+// classify: higher is better (coverage/rate metrics). Exported for the honest-reporting test (KI-45).
+export function classify(value, ok, warn) {
   if (value >= ok) return 'ok'
   if (value >= warn) return 'warning'
   return 'critical'
 }
 
-// classifyMax: lower is better (error/noise metrics)
-function classifyMax(value, ok, warn) {
+// classifyMax: lower is better (error/noise metrics).
+export function classifyMax(value, ok, warn) {
   if (value <= ok) return 'ok'
   if (value <= warn) return 'warning'
   return 'critical'
+}
+
+// Min attributed conversions this month before ratio checks are meaningful. Below this the
+// substantive checks are SKIPPED — and a skip is recorded as status 'skipped', NOT 'ok' (KI-45:
+// a check that did not run is 'unknown', not 'healthy'). Sibling precedent: health-agent.js:59/66,
+// anomaly-watcher.js:27/32 already report skip/failure honestly.
+export const DATA_SUFFICIENCY_MIN = 5
+export function insufficientDataStatus(total) {
+  return total < DATA_SUFFICIENCY_MIN ? 'skipped' : null
 }
 
 async function run() {
@@ -90,9 +99,10 @@ async function run() {
 
     const total = totalThisMonth ?? 0
 
-    if (total < 5) {
+    const skipStatus = insufficientDataStatus(total)
+    if (skipStatus) {
       console.log(`  ⬜ Insufficient data (${total} conversions this month) — skipping ratio checks`)
-      await insert(supabase, 'insufficient_data', 'ok', total, null,
+      await insert(supabase, 'insufficient_data', skipStatus, total, null,
         `Only ${total} attributed conversion(s) this month — ratio checks skipped`, site.id)
       continue
     }
@@ -301,7 +311,12 @@ async function insertGlobal(supabase, checkName, status, value, threshold, messa
   console.log(`  [${status === "ok" ? "✅" : status === "warning" ? "⚠️" : "❌"} ${checkName}]`);
 }
 
-run().catch(err => {
-  console.error('[data-quality-check] Fatal:', err)
-  process.exit(1)
-})
+// Auto-run only when executed directly (cron), NOT when imported by a test — so the exported
+// pure helpers (classify/classifyMax/insufficientDataStatus) can be unit-tested without hitting
+// the network. Mirrors the health-agent.js run-guard.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  run().catch(err => {
+    console.error('[data-quality-check] Fatal:', err)
+    process.exit(1)
+  })
+}
