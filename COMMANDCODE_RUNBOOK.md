@@ -195,9 +195,9 @@ Each background job is **its own Railway cron service** with `restartPolicyType:
 
 | Job (Railway service) | Schedule (UTC) | Expected Action | Error Visibility |
 | --- | --- | --- | --- |
-| `nightly-attribution` | `0 2 * * *` (02:00) | Attributes touchpoints → conversions for paid-plan sites; runs `gsc-daily-sync` + retention purges inline | Records status in `job_runs`. Slack alerts **if configured/verified** — but `SLACK_WEBHOOK_URL` is **UNSET in prod, so none are delivered** (`KNOWN_ISSUES` 29). |
+| `nightly-attribution` | `0 2 * * *` (02:00) | Attributes touchpoints → conversions for paid-plan sites; runs `gsc-daily-sync` + retention purges inline | Records status in `job_runs`. Slack alerting is **broken, not merely off**: `SLACK_WEBHOOK_URL` holds a **truthy placeholder**, so alerts are POSTed to a dead Slack path and the 404 is swallowed by an unchecked `fetch` — none are delivered (`KNOWN_ISSUES` 29). |
 | `gsc-daily-sync` | runs **inside** `nightly-attribution` (not a separate service) | Daily GSC SEO-revenue sync per connected site | Writes a `gsc-daily-sync` `job_runs` row (status **derived** since #332, no longer hardcoded `success`) + `gsc_sync_runs`. |
-| `health-agent` | `*/30 * * * *` (every 30 min) | System checks: Supabase, nightly_job, conversions, `data_flow` (**Tinybird** — the PostHog check was RETIRED in D2), tinybird_quarantine | ⚠️ Posts to Slack **if configured/verified** — but `SLACK_WEBHOOK_URL` is **UNSET in prod, so no alert is ever delivered**. Writes **no `job_runs` row** — its own runs are unobservable (`KNOWN_ISSUES` 29). |
+| `health-agent` | `*/30 * * * *` (every 30 min) | System checks: Supabase, nightly_job, conversions, `data_flow` (**Tinybird** — the PostHog check was RETIRED in D2), tinybird_quarantine | ⚠️ Alerting is **broken, not off**: `SLACK_WEBHOOK_URL` holds a **truthy placeholder**, so `notify()` does not short-circuit at `:283` — it POSTs to a dead Slack path (`:289`) whose 404 is swallowed by an unchecked `fetch` (no `.ok`, no `try/catch`). A genuinely unset var would instead drop the alert at `:283`; **both lose every critical result.** `notify()` is unwrapped, so a network throw masks the exit verdict (`:322`/`:328`). Writes **no `job_runs` row** — its own runs are unobservable (`KNOWN_ISSUES` 29). |
 | `email-reports` | `0 8 * * 1` (Mon 08:00) | Sends HTML attribution reports to site owners | ❌ **MISCONFIGURED — has never sent an email.** The job sits in the service's `buildCommand` (runs at build time; ~255 "success" `job_runs` rows) with a null `startCommand`, so the Monday cron boots `bootstrap.js` and crashes (`KNOWN_ISSUES` 21). It is the only email-report cron service. |
 | `usage-threshold-emails` | **scheduled nowhere** (not staging, not prod) | (would email at 50/80/100% pageview caps) | Never runs. The daily-14:00-UTC schedule once written in this table — and propagated into `README.md` before #330 corrected it — **does not exist**. |
 | `data-quality-check` | `0 0 * * *` (00:00) | Audits UTM coverage, duplicate conversion rates, freshness | Records status in `job_runs`, `data_quality_reports`, `data_quality_alerts`. |
@@ -349,9 +349,9 @@ Before starting production mail operations, ensure the sending domain is fully v
 > Resend domain verification and DNS records cannot be validated programmatically by the SourceTrack application. Operators must verify domain status directly within the Resend Dashboard.
 
 ### 2. Operational Monitoring (Database & Resend Logs)
-- **Check Cron Job Runs:** Verify that `email-reports-weekly`, `email-reports-monthly`, and `usage-threshold-emails` jobs are executing successfully by inspecting the `job_runs` table:
+- **Check Cron Job Runs:** Inspect the `job_runs` table for recent run status. The only email job that actually runs writes `job_name = 'email-reports-weekly'` (the Mon 08:00 cron; the same file's `email-reports-monthly` path and the separate `usage-threshold-emails` job are **scheduled nowhere** per the §2 cron table, so neither produces any `job_runs` rows). A `status = 'success'` row for `email-reports-weekly` **does NOT mean an email was sent**: the job is misconfigured and has never delivered, yet ~255 build-time "success" rows exist, each with an `error_message` like `'Sent 0, …'` (`KNOWN_ISSUES` 21). Verify email work by its **effect** — the **Resend Dashboard** logs and the `usage_email_log` table — never by the `status` column:
   ```sql
-  SELECT job_name, status, details, ran_at FROM job_runs ORDER BY ran_at DESC LIMIT 10;
+  SELECT job_name, status, error_message, duration_ms, ran_at FROM job_runs ORDER BY ran_at DESC LIMIT 10;
   ```
 - **Check Sent Usage Alerts:** Track monthly usage alerts sent to clients in the `usage_email_log` table:
   ```sql
@@ -412,9 +412,9 @@ Before starting production mail operations, ensure the sending domain is fully v
   railway logs -s api
   ```
 - **Inspect Database Status:** Monitor Postgres logs in the Supabase console under Database -> Logs.
-- **Check Cron Job Execution:** Query the `job_runs` table in the Supabase SQL editor to inspect recent run statuses and errors:
+- **Check Cron Job Execution:** Query the `job_runs` table in the Supabase SQL editor to inspect recent run statuses and errors. Note: for `email-reports-weekly`, a `status = 'success'` row is **not** proof of work — the job has never delivered an email (`KNOWN_ISSUES` 21); confirm delivery by its effect (Resend logs / `usage_email_log`), not this column:
   ```sql
-  SELECT job_name, status, details, ran_at FROM job_runs ORDER BY ran_at DESC LIMIT 10;
+  SELECT job_name, status, error_message, duration_ms, ran_at FROM job_runs ORDER BY ran_at DESC LIMIT 10;
   ```
 
 ### 2. External Webhook & Email Inquiries
