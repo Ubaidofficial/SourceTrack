@@ -130,10 +130,10 @@ Verify these environment variables are set in the Railway console:
 2. [ ] Monitor deployment in the Railway project dashboard for the `api` and `dashboard` services.
 
 ### Phase 5: Post-Deploy Smoke Checklist
-1. [ ] Verify API health endpoint: `curl -i https://api.sourcetrack.ai/health` returns 200.
+1. [ ] Verify API health endpoint: `curl -i https://api.srctk.com/health` returns 200.
 2. [ ] Verify tracker delivery:
-   - Standard: `curl -I https://api.sourcetrack.ai/tracker.min.js` returns 200.
-   - Cookieless: `curl -I https://api.sourcetrack.ai/tracker.cookieless.min.js` returns 200.
+   - Standard: `curl -I https://api.srctk.com/tracker.min.js` returns 200.
+   - Cookieless: `curl -I https://api.srctk.com/tracker.cookieless.min.js` returns 200.
 3. [ ] Open `https://app.sourcetrack.ai` and verify that the dashboard loads.
 4. [ ] Verify that user login functions correctly.
 5. [ ] Confirm that the sites list loads successfully without errors.
@@ -179,7 +179,7 @@ Use this guide to verify production health, investigate incidents, and monitor b
 - Navigate to the GitHub repository, click on the **Actions** tab, and select the latest run of the CI workflow to view build checks, whitespace validation, and static linting logs.
 
 #### Stripe Webhook Logs
-- Log in to the Stripe Dashboard, navigate to **Developers -> Webhooks**, select the SourceTrack endpoint (`https://api.sourcetrack.ai/api/webhooks/stripe` or `/api/billing/webhook`), and inspect the **Event history** list. Here you can view status codes, request bodies, and signature headers for every Stripe webhook event dispatched.
+- Log in to the Stripe Dashboard, navigate to **Developers -> Webhooks**, select the SourceTrack endpoint (`https://api.srctk.com/api/webhooks/stripe` or `/api/billing/webhook`), and inspect the **Event history** list. Here you can view status codes, request bodies, and signature headers for every Stripe webhook event dispatched.
 
 #### Supabase Database Logs
 - Log in to the Supabase Console, select the project, and navigate to **Database -> Logs -> Postgres Logs** or **API Gateway** logs to debug query execution times, connection pools, and database error states.
@@ -405,7 +405,7 @@ Before starting production mail operations, ensure the sending domain is fully v
 ### 1. Health Verification & Log Inspection
 - **Process Health Check:** Verify the Express server is running and responding by sending a request to `/health`.
   ```bash
-  curl -i https://api.sourcetrack.ai/health
+  curl -i https://api.srctk.com/health
   ```
 - **Inspect Application Logs:** Use the Railway Console or CLI to view container stdout/stderr. Trace uncaught exceptions or unhandled rejections:
   ```bash

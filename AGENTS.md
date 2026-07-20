@@ -196,9 +196,10 @@ Plus:
 
 ## 11. Agent Roles & Dispatch
 
-- **Orchestrator (planning chat)** — plans, dispatches, verifies. Read-only Supabase + Tinybird MCP. Reviews SQL and hand-applies migrations on human go. Doesn't write code.
+- **Orchestrator (planning chat)** — plans, dispatches, verifies. Read-only MCP: **Supabase + PostHog (PROD project 416017 only) + Railway + Tinybird + GitHub**. Reviews SQL and hand-applies migrations on human go. Doesn't write code.
 - **Claude Code (CC)** — executes: files, logic, DB-migration *files*. No Railway, no browser. Subject to §0, §7, §8.
-- **Browser E2E agent (Antigravity)** — visual verification only. **Browser tooling + read-only MCP only** — no DB writes, no secret/Railway access (post-incident lockdown). If blocked on login, it stops and reports; it never works around auth.
+- **Browser E2E agent (Antigravity)** — visual verification only. Installed panel (screenshot-confirmed 2026-07-03): **chrome-devtools-mcp, posthog, railway, supabase — all enabled; stripe present but DISABLED; NO Tinybird MCP** (supersedes the earlier "may have Tinybird" note, which was incorrect). **No GitHub MCP entry visible** — prior git/`gh` work went through raw terminal + CLI, so "Antigravity has GitHub MCP" is a possible mischaracterization of CLI access; recorded as **UNCONFIRMED** (do not assert either direction). Read-only MCP only — no DB writes, no secret access (post-incident lockdown). If blocked on login, it stops and reports; it never works around auth.
+- **Three orchestrator MCP constraints** (each invalidates a whole class of check — agent output must be independently corroborated): (1) **Tinybird MCP is ST_Staging ONLY** — prod events are unreachable from the orchestrator. (2) **Railway MCP has NO env-var read tool** — `ENCRYPTION_KEY` / `SLACK_WEBHOOK_URL` and similar can only be checked by the founder in the Railway UI; code-only audits miss live env state entirely (`TINYBIRD_READ_ENABLED` is the standing example). (3) **GitHub MCP authenticates as `Ubaidofficial` but returns 404 on the private `SourceTrack` repo** — PR contents, diffs, and file lists are NOT orchestrator-verifiable; every PR check must route through the founder's terminal or CC.
 - **Worktree Isolation Mandatory:** Each agent operates exclusively in its own designated git worktree to prevent branch switching or commit collisions. The 4 mandatory worktrees are:
   - `~/Desktop/trackiq` (Founder use, **MERGES ONLY**)
   - `~/Desktop/trackiq-ccdesktop` (Claude Desktop Agent)
