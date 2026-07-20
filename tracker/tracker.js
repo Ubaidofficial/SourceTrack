@@ -115,6 +115,53 @@
     }
   }
 
+  // ── Identity persistence + erasure ─────────────────────────────────────────
+  // persistAid() is the ONE place that writes st_aid (incl. the data-cookie-domain branch).
+  // init and consent(true) both go through mintIdentity()/persistAid(), so the mint logic is
+  // never duplicated (the AI_HOST_MAP-vs-AI_DOMAINS_MAP drift lesson).
+  var PRESERVE_ON_WITHDRAWAL = ['st_consent']  // the withdrawal record itself must survive
+  function persistAid() {
+    ls('st_aid', AID)
+    if (validCookieDomain) setCookie('st_aid', AID, validCookieDomain)
+  }
+  function mintIdentity() {
+    AID = uid(); persistAid()
+    SID = uid(); ss('st_sid', SID)
+  }
+  // consent(false) erasure. Best-effort-COMPLETE: per-key try/catch so one throw (Safari private
+  // mode) can't abort the sweep and strand identifiers. PREFIX sweep, not a const key-list, so a
+  // future st_* key is erased by default — fail toward erasure. Preserve-list is the ONLY exception.
+  function clearStoredIdentity() {
+    ;[localStorage, sessionStorage].forEach(function (store) {
+      try {
+        var keys = []
+        for (var i = 0; i < store.length; i++) { var sk = store.key(i); if (sk) keys.push(sk) }
+        for (var j = 0; j < keys.length; j++) {
+          if (keys[j].indexOf('st_') === 0 && PRESERVE_ON_WITHDRAWAL.indexOf(keys[j]) === -1) {
+            try { store.removeItem(keys[j]) } catch (_) {}
+          }
+        }
+      } catch (_) {}
+    })
+    try {
+      document.cookie.split(';').forEach(function (c) {
+        var name = c.split('=')[0].trim()
+        if (name.indexOf('st_') === 0 && PRESERVE_ON_WITHDRAWAL.indexOf(name) === -1) {
+          // st_aid was set with domain=<validCookieDomain>; path=/, OR host-only when unset —
+          // expire BOTH variants (a domain cookie from an earlier visit persists otherwise).
+          try { document.cookie = name + '=; path=/; max-age=0' } catch (_) {}
+          if (validCookieDomain) {
+            try { document.cookie = name + '=; path=/; domain=' + validCookieDomain + '; max-age=0' } catch (_) {}
+          }
+        }
+      })
+    } catch (_) {}
+    // In-memory identity: every send path + getToken() reads these vars, not storage. Nulling them
+    // stops the erased id from resurrecting into outbound events after a same-page optIn().
+    AID = null
+    SID = null
+  }
+
   var AID = ls('st_aid')
   if (!AID && validCookieDomain) {
     AID = getCookie('st_aid')
@@ -139,11 +186,7 @@
     AID = uid()
   }
 
-  ls('st_aid', AID)
-
-  if (validCookieDomain) {
-    setCookie('st_aid', AID, validCookieDomain)
-  }
+  persistAid()
 
   if (!ls('st_ft_src') && urlFt && urlFt.length <= 300) {
     var decodedFt = base64urlDecode(urlFt)
@@ -450,9 +493,13 @@
       _consentGiven = !!granted
       try { localStorage.setItem(CONSENT_KEY, String(_consentGiven)) } catch (_) {}
       if (_consentGiven) {
+        // Re-consent after withdrawal: AID/SID were nulled by the erasure, so mint a FRESH
+        // identity — never resurrect the erased one. Same mint path as init.
+        if (AID === null) mintIdentity()
         _flushQueue()
       } else {
-        _queue.length = 0  // clear queued events — do not send
+        _queue.length = 0        // clear queued events — do not send
+        clearStoredIdentity()    // GDPR withdrawal: delete stored identifiers + null in-memory AID/SID
       }
     },
 
