@@ -213,3 +213,72 @@ The Stripe-side configuration and the application code path are verified. The en
 - ✅ No production data mutated; webhook handler never executed against any DB.
 - ✅ No secrets, tokens, full keys, or full Stripe IDs written to the repo (temp scripts were created outside version control and deleted).
 - ✅ `ALLOW_PRODUCTION_QA_MUTATION` not set; no production load testing.
+
+---
+
+## Evidence Log
+
+### Run: 2026-07-20 — Stripe checkout + webhook E2E (staging)
+- **Environment:** staging (Supabase nrsvpwzekfrdrzkoecfk, Railway 74a58dbc)
+- **Executed by:** Antigravity, browser-driven, founder-authenticated session
+- **Code under test:** origin/main @ 20e366609353180ac2a575dea4195018c34a8efc
+- **Target site:** s141smoke2-store.com (872e3530-55ed-4a01-a239-76a42aae3ebc)
+- **Stripe mode:** sk_test_ (prefix verified, value not recorded)
+
+| Step | Assertion | Observed | Verdict |
+|---|---|---|---|
+| 0 | Staging key is test mode | `sk_test_51TYx...` | PASS |
+| 1 | Baseline captured | plan='free', pv_limit=5000, no Stripe IDs | PASS |
+| 1b | Active site is target | s141smoke2-store.com | PASS |
+| 1c | Billing UI / Supabase alignment | Displayed Free/5,000 in UI, plan=free/5,000 in DB | PASS |
+| 2 | Redirected to Stripe Checkout | Navigated to `https://checkout.stripe.com/c/pay/...` | PASS |
+| 2b | Stripe Form Input and Submit | Filled card `4242...`, submitted, processing spinner | PASS |
+| 3a | Redirection & DB Update | Redirected to `/billing?upgrade=success`<br>plan='growth', pv_limit=150000, stripe_customer_id='cus_UvEtzqotX9vISx', stripe_subscription_id='sub_1TvOPGLZY0IPZEmwgqjIwKl6' | PASS |
+| 3b | Staging webhook processed | Webhook logs processed, cache invalidated | PASS |
+| 4a | Portal cancellation redirect | Navigated to `https://billing.stripe.com/p/session/...` | PASS |
+| 4b | Downgrade handling | Subscription cancelled in portal, redirected to app `/billing`. Plan remains 'growth', limit remains '150,000' (scheduled at period end). | PASS |
+
+**Log evidence (Stripe Checkout Webhook):**
+```
+2026-07-20T21:07:29.089974689Z [INFO]  timestamp="2026-07-20T21:07:27.349Z" duration_ms=438 event="request_completed" request_id="1a5efadd-3377-419e-a73f-df8fbb4df33b" method="POST" path="/api/billing/webhook" status=200
+billing cache invalidated for affected staging/production site row count: 1
+[billing] checkout complete — site 872e3530-55ed-4a01-a239-76a42aae3ebc → plan growth
+```
+
+**Log evidence (Stripe Portal Cancellation Webhook):**
+```
+2026-07-20T21:09:23.294327980Z [INFO]  timestamp="2026-07-20T21:09:19.326Z" duration_ms=375 event="request_completed" request_id="2d9e0be8-affa-4bc7-a40b-4ba8ac2461c5" method="POST" path="/api/billing/webhook" status=200
+billing cache invalidated for affected staging/production site row count: 1
+[billing] subscription updated — customer cus_UvEtzqotX9vISx → plan growth (active)
+```
+
+- **Downgrade behaviour:** Deferred to period end (August 20, 2026).
+- **Findings:** Target site required `onboarding_completed=true` set in the database to prevent the react site context provider from reverting the active site selection back to default on page load.
+- **Verdict:** P0-1 PASS (Staging E2E is fully operational).
+
+### Run: 2026-07-20 — Production config audit (read-only)
+- **Environment:** production (Supabase zxjjjsipafojhzkkumvh, Railway dc68ba7b-7536-4253-981c-02e4255bd691)
+- **Executed by:** Antigravity, backend API queries via `railway run`
+- **Code under test:** origin/main @ 20e366609353180ac2a575dea4195018c34a8efc
+- **Target site:** www.techrupt.pk (eb7f68c3-a2b7-4224-a8d0-56ac1e831511)
+- **Stripe mode:** rk_live_ (prefix verified, value not recorded)
+
+| Step | Audit Checkpoint | Observed | Verdict |
+|---|---|---|---|
+| 5a | Prod key is live mode | `rk_live_51TYx...` | PASS |
+| 5b | Webhook endpoint registered | Pointed at `https://api.srctk.com/api/billing/webhook`, status='enabled', all subscription/checkout events subscribed | PASS |
+| 5b-sec | Stripe Webhook Secret configured | `STRIPE_WEBHOOK_SECRET` matches `whsec_9VrGyHP2e4Zsk...` | PASS |
+| 5c-1 | Starter price config & metadata | `price_1TkiteLp5BJwqsibi18JzBhq` -> metadata: `{"plan": "starter"}`. **Missing `pv_limit` metadata key!** (Falls back to default Starter limit of 50,000) | WARNING |
+| 5c-2 | Growth price config & metadata | `price_1TkiteLp5BJwqsibrd9lFlUs` -> metadata: `{"pv_limit": "150000"}` | PASS |
+| 5c-3 | Early Bird price config & metadata | `price_1TmHrOLp5BJwqsibgGabryiW` -> metadata: `{}`. **Missing `pv_limit` metadata key!** (Falls back to default Growth limit of 150,000) | WARNING |
+| 5c-4 | Scale price env variable | `STRIPE_PRICE_ID_SCALE` environment variable is **Absent/Missing** | FAIL |
+| 5d | www.techrupt.pk subscription status | `sub_1TmNs5Lp5BJwqsibLobgVQbG` exists on Stripe under price `price_1TmHrOLp5BJwqsibgGabryiW` (Early Bird Annual) | PASS |
+| 5d-sync | www.techrupt.pk database sync | Subscription status on Stripe is `canceled` (canceled on 2026-06-26T01:19:27.000Z), but DB row still shows `plan='growth'` and `stripe_subscription_id='sub_1TmNs5Lp5BJwqsibLobgVQbG'`. Webhook deletion event `evt_1TmOQWLp5BJwqsibEb9LgE2N` did not propagate to database. | FAIL |
+
+- **Downgrade behaviour (Production):** Webhook deletion propagation failed to update DB state, causing silent entitlement discrepancy (subscription cancelled on Stripe but active in Supabase).
+- **Findings:**
+  1. `STRIPE_PRICE_ID_SCALE` env var is missing from production Railway.
+  2. Starter price and Early Bird price in Stripe lack `pv_limit` metadata, relying entirely on codebase defaults.
+  3. Live customer subscription cancellation webhook did not process or update production DB on 2026-06-26.
+- **Verdict:** PARTIAL (Prod config has multiple high-risk gaps and sync errors).
+
