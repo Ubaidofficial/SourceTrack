@@ -124,8 +124,9 @@ The placeholder was introduced while trying to **unset** the variable (the insta
 `--unset`), and it made the failure **less** visible, not more: a genuinely unset var would take the
 `!SLACK` branch at `:283` and drop the alert — an honest, visible gate — whereas the truthy
 placeholder turned that into a **silent false-delivery** to a dead endpoint. **Env fixed 2026-07-20:**
-a real webhook is now set on all three readers (health, nightly, anomaly) and delivery is
-curl-verified (HTTP 200) — replaced with a real URL, not re-unset. The **code** defect is untouched:
+a real webhook is now set and read-back verified on all four services that carried the placeholder
+(health, nightly, anomaly, dq); delivery is curl-verified (HTTP 200) — replaced with a real URL, not
+re-unset. The **code** defect is untouched:
 the unchecked `fetch` (`:289`) and unwrapped `notify()` (`:320`) mean delivery holds only while that
 URL stays valid — a revoke, outage, or transient throw would fail silently again.
 

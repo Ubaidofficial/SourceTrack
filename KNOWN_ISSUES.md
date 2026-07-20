@@ -327,11 +327,12 @@ branch at `:283` — it POSTed every critical alert to that dead Slack path at `
 `fetch` has no `.ok` check and no `try/catch`, so the 404 was swallowed and the run looked clean.
 The honest drop-when-unset gate had become a **silent false-delivery**.
 
-**Env fixed 2026-07-20 — code path still unguarded.** A real incoming webhook is now set on all
-three readers (health, nightly, anomaly) and delivery is curl-verified (HTTP 200) — replaced with a
-real URL, not re-unset. But the `fetch` at `:289` still has no `.ok` check and no `try/catch`, and
-`notify()` is unwrapped, so a revoked URL, a Slack outage, or a transient throw fails silently again
-— delivery holds only while that URL stays valid.
+**Env fixed 2026-07-20 — code path still unguarded.** A real incoming webhook is now set and
+read-back verified on all four services that carried the placeholder (health-agent,
+nightly-attribution, anomaly-watcher, and data-quality-check); delivery is curl-verified (HTTP 200)
+— replaced with a real URL, not re-unset. But the `fetch` at `:289` still has no `.ok` check and no
+`try/catch`, and `notify()` is unwrapped, so a revoked URL, a Slack outage, or a transient throw
+fails silently again — delivery holds only while that URL stays valid.
 
 **Compounding problem — the monitors are themselves unobservable.** `job_runs` contains only
 three job names (checked 2026-07-20): `email-reports-weekly` (255 runs), `nightly-attribution`
@@ -344,7 +345,7 @@ direct-spike, source-silent and coverage-drop, and alerts through this same unse
 also **not scheduled in production** (staging only, `0 3 * * *`). Scheduling it before the channel
 works only adds a third silent watcher.
 
-**Actions, in order:** *(Update 2026-07-20: real webhook set + curl-verified HTTP 200 on the three `notify()` readers — health-agent, nightly-attribution, anomaly-watcher. Step 3's `sourcetrack-dq` target is moot: `data-quality-check.js` does not read `SLACK_WEBHOOK_URL`, so its env value has no delivery impact and it was never remediated. Steps 4–6 remain.)*
+**Actions, in order:** *(Update 2026-07-20: steps 1–3 done — real webhook set and read-back verified on all four services (health-agent, nightly-attribution, anomaly-watcher, data-quality-check), delivery curl-verified HTTP 200. Steps 4–6 remain.)*
 
 1. Create a real incoming webhook (Slack, or Discord with `/slack` appended to the URL — that
    endpoint accepts the Slack payload shape `health-agent.js:292` sends).
