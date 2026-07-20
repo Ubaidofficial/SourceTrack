@@ -108,14 +108,27 @@ Verify with: `railway variables --json | jq -r '.ENCRYPTION_KEY' | shasum`
 ### Alerting gap (`KNOWN_ISSUES` 29 — high severity)
 
 `health-agent.js:109 evaluateNightlyJob` detection is **built and correct**;
-`CRITICAL_CHECKS = {supabase, nightly_job, conversions, tinybird_quarantine}`. But `notify()`
-(`:280`) returns early — `if (!SLACK || severity==='ok') return` — and `SLACK_WEBHOOK_URL` is
-**unset in prod**. Months of critical results discarded, including `evaluateConversions` firing on
-three days of `conversions_processed: 0`.
+`CRITICAL_CHECKS = {supabase, nightly_job, conversions, tinybird_quarantine}`. The delivery
+defect splits in two — **env fixed 2026-07-20, code not** (see below): `notify()` gates at `:283` on
+`if (!SLACK || dx.severity === 'ok') return`, and `SLACK_WEBHOOK_URL` was **set to the literal
+placeholder** `https://hooks.slack.com/services/YOUR/REAL/URL` (verified 2026-07-20) — a **truthy**
+value. So `notify()` did **NOT** return early at `:283`; it POSTed every critical alert to a dead
+Slack path at `:289`, where the `fetch` **still** has no `.ok` check and no `try/catch`, so the 404 was
+swallowed and the run looked clean. (A network *throw* rather than a 404 would be worse: `notify()`
+is unwrapped at `:320`, so it would reject `run()`, the top-level `.catch` at `:328` would log a
+generic crash, and `process.exit(snap.overall === 'critical' ? 1 : 0)` at `:322` would never run —
+masking the verdict.) Months of critical results discarded, including `evaluateConversions` firing
+on three days of `conversions_processed: 0`.
 
-⚠️ A **placeholder** `SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/REAL/URL` is
-currently set (the CLI's `--unset` isn't supported in the installed version). No crash risk —
-`fetch` doesn't throw on 404 — but it must be replaced with a real URL, not left.
+The placeholder was introduced while trying to **unset** the variable (the installed CLI lacks
+`--unset`), and it made the failure **less** visible, not more: a genuinely unset var would take the
+`!SLACK` branch at `:283` and drop the alert — an honest, visible gate — whereas the truthy
+placeholder turned that into a **silent false-delivery** to a dead endpoint. **Env fixed 2026-07-20:**
+a real webhook is now set and read-back verified on all four services that carried the placeholder
+(health, nightly, anomaly, dq); delivery is curl-verified (HTTP 200) — replaced with a real URL, not
+re-unset. The **code** defect is untouched:
+the unchecked `fetch` (`:289`) and unwrapped `notify()` (`:320`) mean delivery holds only while that
+URL stays valid — a revoke, outage, or transient throw would fail silently again.
 
 `health-agent` and `data-quality-check` write **no `job_runs` row at all** — only
 `email-reports-weekly`, `nightly-attribution` and `gsc-daily-sync` do.
