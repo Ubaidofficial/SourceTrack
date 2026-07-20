@@ -401,6 +401,21 @@ support is fully removed. **Fix:** bump the action versions in `.github/workflow
 (`actions/checkout`, `actions/setup-node`, and any other `@v*` actions on the Node 20 runtime) to
 Node-24-compatible releases. Not urgent; no functional impact today.
 
+### 32. AI-source maps diverged across the INGEST path — KI-11's class, never covered there
+
+Session 97-98 (KI-11) unified AI classification — but only the **read** side (`attribution-engine.js` + the nightly job import canonical `channel-classifier.js`). The **ingest** path never did, so the same "diverged AI maps" class recurred on the write side and sat uncaught. Verified against `origin/main` `65b9340`:
+
+- **Two write-ingress originators, three divergent maps.** `ai-platform.js` (`detectAIPlatform`, on `/track` + `/conversion`) had its own `AI_HOST_MAP` (18) + a **title-cased** UTM path (`charAt(0).toUpperCase()` → only **5 of 20** UTM keys landed on the canonical label; `chatgpt`→`Chatgpt`, not `ChatGPT`). `proxy.js` (`/sp/e` custom-subdomain proxy) had a third `AI_DOMAINS` map (8 hosts). Canonical `AI_DOMAINS_MAP` (23) is a superset of both.
+- **Two verbatim ingresses.** `ai-platform.js:61` (`req.body.ai_source`) and `proxy.js:116` (`properties.ai_source`) accepted arbitrary caller values unvalidated — any `site_key` holder could write an arbitrary `ai_source`. Origin of the lowercase-hostname rows (staging shows ~184k each of `chatgpt.com`/`gemini.google.com`/`perplexity.ai`, likely seed; **prod unverified** — the analytics MCP is staging-bound).
+- **Two propagation sites, NOT changed here (self-correct once ingress is canonical).** `webhook.js:225` (outbound egress forwards the stored value) and `channel-classifier.js:111` (read-side `detectAiPlatformFromEvent` trusts a stored `ai_source` verbatim).
+- **A bing-organic ingest defect.** `ai-platform.js` stamped `ai_source='Copilot'` on `bing.com/search` — an `ORGANIC_SEARCH_ENGINE_HOST` — inflating the AI-attribution metric with organic Bing search. Introduced in the same never-canonical commit (`a3edd0b`, 2026-05-18) as the title-casing, no rationale.
+
+**Fixed (2026-07-21):** `channel-classifier.js` extended (9 orphan UTM keys — incl. Meta AI, which had none — folded in so a naive import drops nothing) + new `resolveAiSource(value)` (reject-unknown) and `detectAiPlatformFromReferrer(referrer)` (shared by all paths; `bing` narrowed to `/chat`-only). `ai-platform.js` and `proxy.js` import the single source and route their explicit branch through `resolveAiSource`. Parity test (`ai-source-canonical.test.js`, `qa:tracker:unit`) pins that referrer/UTM/explicit emit one canonical string per source across **both** originators — the assertion whose absence let this drift.
+
+**History note (corrects KI-11):** `a3edd0b` added the middleware's maps + title-case path the day after the S97 commit, touching only `ai-platform.js`. The middleware and proxy were **never part of** the 97-98 unification.
+
+**Data impact (deferred — do not act):** existing rows carry split labels (`Chatgpt`/`ChatGPT`), verbatim hostnames, and inflated `Copilot` from organic Bing. Go-forward is fixed; the read-normalization/backfill of history is a separate decision pending the AI Sources check.
+
 ---
 ## Recently fixed
 
@@ -531,6 +546,7 @@ U-shaped / W-shaped / Time Decay / Linear models showed blank charts with no exp
 
 ### 11. Duplicate channelFromEvent — AI domains diverged (FIXED Session 97–98)
 attribution-engine.js had 14 AI domains; nightly job had 8. Canonical `api/lib/channel-classifier.js` created with 21 domains; both consumers import from it.
+**Read-side only — the class was NOT fully closed (see KI-32):** this unification covered the read/attribution consumers; the ingest path (`ai-platform.js`, `proxy.js`) was never part of it and diverged the same way. Fixed 2026-07-21.
 
 
 ## New Known Gaps (Session 140P-RB-FIX-4, not yet fixed)

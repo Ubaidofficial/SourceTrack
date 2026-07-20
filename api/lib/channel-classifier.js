@@ -97,7 +97,62 @@ export const AI_UTM_SOURCES_MAP = {
   'phind': 'Phind',
   'mistral': 'Mistral',
   'poe': 'Poe',
-  'kagi': 'Kagi'
+  'kagi': 'Kagi',
+  // Aliases folded in from the (now-deleted) ai-platform.js / proxy.js duplicate maps so this
+  // single source covers every UTM key the ingest middleware previously caught — a naive import
+  // would otherwise have dropped these 9, incl. Meta AI entirely (KI-32).
+  'chat.openai.com': 'ChatGPT',
+  'claude.ai': 'Claude',
+  'perplexity.ai': 'Perplexity',
+  'google-gemini': 'Gemini',
+  'bing-copilot': 'Copilot',
+  'microsoft-copilot': 'Copilot',
+  'deep-seek': 'DeepSeek',
+  'meta-ai': 'Meta AI',
+  'meta.ai': 'Meta AI'
+}
+
+// Canonical labels (the values of the maps above) — used by resolveAiSource to accept a value
+// that is already canonical. All AI_UTM_SOURCES_MAP values are also AI_DOMAINS_MAP values, so the
+// domain map's value set is the full canonical label set.
+const AI_CANONICAL_LABELS = new Set(Object.values(AI_DOMAINS_MAP))
+
+// Classify an AI platform from a referrer URL: the two PATH-based special cases that a
+// hostname-keyed map cannot express, then the host map. bing.com is an ORGANIC_SEARCH_ENGINE_HOST,
+// so ONLY its /chat surface is Copilot — /search is organic Bing, not AI (KI-32 narrowing).
+// Shared by detectAiPlatformFromEvent (read side), the ingest middleware, and the proxy so all
+// three emit one canonical string for the same referrer.
+export function detectAiPlatformFromReferrer(referrer) {
+  const raw = String(referrer || '').toLowerCase().trim()
+  if (!raw) return null
+  try {
+    const u = new URL(raw.includes('://') ? raw : 'https://' + raw)
+    const host = u.hostname.replace(/^www\./i, '').toLowerCase()
+    const path = u.pathname || ''
+    if (host === 'bing.com' && path.startsWith('/chat')) return 'Copilot'
+    if (host === 'x.com' && path.includes('/i/grok')) return 'Grok'
+    for (const [domain, name] of Object.entries(AI_DOMAINS_MAP)) {
+      if (host === domain || host.endsWith('.' + domain)) return name
+    }
+    return null
+  } catch { return null }
+}
+
+// Canonicalize an already-supplied ai_source value (request body / stored props) to the single
+// canonical label, or null if unrecognized. Accepts a canonical label ('ChatGPT'), a host
+// ('chatgpt.com'), or a utm-style key ('chatgpt'). REJECT-UNKNOWN: no map hit -> null, so an
+// arbitrary caller-supplied value never lands in ai_source (the §6.5 ingest-integrity boundary).
+export function resolveAiSource(value) {
+  const v = String(value || '').trim()
+  if (!v) return null
+  if (AI_CANONICAL_LABELS.has(v)) return v
+  const lower = v.toLowerCase()
+  if (AI_UTM_SOURCES_MAP[lower]) return AI_UTM_SOURCES_MAP[lower]
+  const host = lower.replace(/^www\./i, '')
+  for (const [domain, name] of Object.entries(AI_DOMAINS_MAP)) {
+    if (host === domain || host.endsWith('.' + domain)) return name
+  }
+  return null
 }
 
 export function detectAiPlatformFromEvent(props = {}) {
@@ -116,21 +171,10 @@ export function detectAiPlatformFromEvent(props = {}) {
     return AI_UTM_SOURCES_MAP[utmSource]
   }
 
-  // 3. Check referrer
+  // 3. Check referrer — shared detector (path cases + host map; /chat-only for bing)
   if (ref) {
-    try {
-      let refUrl = ref
-      if (!refUrl.includes('://')) refUrl = 'https://' + refUrl
-      const host = new URL(refUrl).hostname.replace(/^www\./i, '').toLowerCase() || ''
-      if (host === 'bing.com' && refUrl.indexOf('/chat') > -1) return 'Copilot'
-      if (host === 'x.com' && refUrl.indexOf('/i/grok') > -1) return 'Grok'
-
-      for (const [domain, name] of Object.entries(AI_DOMAINS_MAP)) {
-        if (host === domain || host.endsWith('.' + domain)) {
-          return name
-        }
-      }
-    } catch (_) {}
+    const fromRef = detectAiPlatformFromReferrer(ref)
+    if (fromRef) return fromRef
   }
 
   // 4. Check referrer_domain
