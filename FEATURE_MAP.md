@@ -37,7 +37,7 @@
 - ✅ Google Ads ValueTrack params (`st_campaign_id`, `st_adgroup_id`, `st_ad_id`, `st_target_id`, `st_network`, `st_device`, `st_matchtype`)
 - ✅ **AI-referrer detection** — 22 named domains (ChatGPT, Gemini, Claude, Perplexity, Copilot, DeepSeek, Grok, +more)
 - ✅ First-touch fields stored (source/medium/campaign)
-- ✅ `sourcetrack.getToken()` — client accessor for payment↔visitor stitching
+- ✅ `sourcetrack.getToken()` — client accessor for payment↔visitor stitching; **returns `null` while consent is withdrawn** (breaking change to a shipped API — safe at zero external customers; KI-33)
 - ✅ Second tracker `tracker/analytics.js` — Plausible-style pageview analytics, **bundled into our own dashboard** (internal), not customer-installed
 - ⚠️❓ Full cross-device identity stitching — DATA_CAPTURE lists as not-built; `identity-links.js` exists (partial)
 - ⛔ Predictive LTV — not built (DATA_CAPTURE "not yet built")
@@ -151,6 +151,7 @@
 - ✅ Install & connect, conversion-event config, timezone/currency, IP exclusion, bot filtering, data retention, webhook secret, danger zone
 - ⛔ **Workspace/team member invites — NOT BUILT** (✅ verified @ `cb17cc2`, see §22). No invite/member endpoints, no route file, no Settings UI; `company_members` is read-only (role lookup only). Membership is *enforced* (`requireSiteMembership`) but members can only be provisioned out-of-band. The 139M "present in Settings" claim was a **spec-leak**; design.md's "Team = V2" stands.
 - ✅ GDPR: DB hard-delete + per-visitor erase (Tinybird); privacy suppression list; retention purge (now covers `custom_events`, PR #88)
+- ✅ **Consent-withdrawal client-side erasure ENFORCED** (`consent(false)`): prefix-sweep of `st_*` localStorage/sessionStorage/cookies (preserve `st_consent`), in-memory `AID`/`SID` nulled, re-consent mints fresh (KI-33). **Client-side only — server-side GDPR erasure is Phase 7, NOT STARTED. This is NOT full compliance.**
 - ⚠️📜 Account/full-erasure historically left raw events in PostHog (P1-4) — changing with Tinybird migration; re-verify
 - ⚠️ **`data_retention_days = NULL` = keep-forever by design** (paid sites) — naive null→default would silently delete promised data
 - ⛔ "GDPR compliant" badge — gated behind full EU migration + DPA + lawyer review (not claimable)
