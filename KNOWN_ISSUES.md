@@ -482,6 +482,24 @@ After the 19:54 failures, status flipped to `'error'` with `last_error_code = 's
 
 **P0 — outranks KI-14/35/40. HELD pending the 02:00 UTC verdicts** (do not start).
 
+### 45. THE SILENT-SUCCESS CLASS — "OK must mean verified" (data-quality-check is the 4th instance)
+
+**Name the class once, prominently:** a job reports success/OK for work it did **not** do. Four instances surfaced 2026-07-20, and it is *the* failure mode for a product whose pitch is "the numbers are real":
+- **KI-39** — `gsc-daily-sync` logged `success` on a 148ms no-op early exit.
+- **KI-44** — four `billing.js` webhook handlers return 200 OK on a zero-row `UPDATE`.
+- **This job, defect (a):** `data-quality-check.js:95` writes `status='ok'` for a site whose ratio checks were **skipped** (`total < 5` → `continue`). A skip recorded as healthy — verified on prod (site `eb7f68c3…`, **12 consecutive days** of `insufficient_data`/`ok`).
+- **This job, defect (b) — worse:** the per-check `catch` (`:103-197`) logs to console and **writes NO row** when a check *throws*. A missing row is **invisible** — indistinguishable from "not applicable," and with the sole UI consumer reading only one check (below), nobody would ever see it. A false `'ok'` at least leaves an auditable trace; a missing row leaves none.
+
+**The correct pattern already exists in the repo — cite it so this reads as canonical, not three independent inventions:** `health-agent.js:59/66` (`_status: 'skipped'`, comment *"explicit, NOT a silent pass"*) and `anomaly-watcher.js:27/32` (`_scanFailures` + *"a swallowed failure must not report success"*). **`data-quality-check.js` is the lone outlier.**
+
+**Reviewed and INTENTIONAL — do NOT "fix":** `data-quality-check.js:196` `ai_detection_rate` writes `'ok'` as a **neutral signal** — that check *ran*, and a site legitimately having 0% AI traffic is not a health problem. Recorded here so a future reader doesn't turn it into a false warning.
+
+**Consumer reality (corrects the original premise):** the **only** reader of `/analytics/data-quality/latest` is `Integrations.jsx:671`, which reads a **single** field (`duplicate_conversion_rate === 'warning'`). There is **no per-check status grid** — so `'ok'`-on-skip is a **data-layer lie, not a rendered green tick.** **UI requirement recorded for when a DQ panel IS built:** `'skipped'` must render visually distinct from `'ok'` and **must NOT be green** (it means *unknown*, not *healthy*).
+
+**Blocker:** `data_quality_reports_status_check` = `CHECK (status = ANY (ARRAY['ok','warning','critical']))` (baseline `:578`, unaltered by any later migration) — `'skipped'` throws on insert.
+
+**Fix plan (apply-then-merge, §8 — founder applies the CHECK change staging→prod BEFORE either PR merges, else the nightly throws for every site):** ONE migration (allow `'skipped'`), then **PR A** — `:95` `'ok'`→`'skipped'`, message unchanged, tests (under-threshold → `skipped`; over-threshold → `ok/warning/critical` unchanged) — and **PR B** — per-check `catch` writes a row `status='skipped'` with the error text in `message` and a distinct `check_name` (suffix) so a thrown check is **visible**, not absent. **NO backfill** of the 12 historical `'ok'` rows — cutover is 2026-07-20; a documented discontinuity beats rewriting history.
+
 ---
 ## Recently fixed
 
