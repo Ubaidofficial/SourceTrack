@@ -1,65 +1,68 @@
 # Docs Index
 
-## Start Here
+Trust tier per doc. **Precedence when sources conflict:** code → `KNOWN_ISSUES.md` → the doc. `KNOWN_ISSUES.md` outranks every other doc; **code outranks `KNOWN_ISSUES.md`.**
 
-| File | Purpose | When to Read | Status |
-|---|---|---|---|
-| `RULES.md` | 10 coding behavior rules for every session | Every session | Current |
-| `AGENT_BRIEF.md` | Product, stack, ports, commands, core rules | Every session | Current |
-| `AGENTS.md` | AI agent context — read order, session procedures, key files table | Every session | Current |
-| `PROJECT_CONTEXT_COMPACT.md` | Condensed product/stack/design/guardrails overview | Every session | Current |
-| `SESSION_STATE.md` | Current session, branch, blockers, active work | Every session | Current |
-| `SESSION_HANDOFF.md` | Last completed work, pending QA | Every session | Handoff |
-| `KNOWN_ISSUES.md` | Verified bugs/gaps only | Every session | Current |
-| `SESSION_STATE.md (replaces AI_SESSION_PLAN)` | Upcoming session roadmap and priorities | Every session | Current |
+- **Authoritative** — verified against current code; safe to act on.
+- **Maintained** — kept current, but verify a load-bearing claim against code.
+- **Reference** — context/navigation; not proof a feature exists.
+- **Historical** — point-in-time; do not treat as current.
 
-## Session Tracking
+## Authoritative
 
-| File | Purpose | When to Read | Status |
-|---|---|---|---|
-| `SESSION_LOG.md` | Running log of sessions 75+ with dates, branches, summaries, QA status | Sometimes | Current |
-| `IMPLEMENTATION_GAP_LIST.md` | Structured inventory — implemented vs design-required vs missing | Sometimes | Current |
-| `BUG_REVIEW_LOG.md` | Code review issues, potential regressions, risk assessments | Before handoff | Current |
-| `POSTHOG_MIGRATION_HANDOFF.md` | PostHog to Tinybird handoff log for current session | Every session | Current |
-| `POSTHOG_DECOMMISSION_SCAN.md` | Chronological scanning, verification, and positioning log for PostHog removal | Every session | Current |
+| File | Purpose | Tier |
+|---|---|---|
+| `KNOWN_ISSUES.md` | Verified bugs/gaps. **Outranks every other doc.** | Authoritative |
+| `SYSTEM.md` | Backend contract — Tinybird read contract, pipe conventions, two Stripe webhooks, cookie spec, HTTP codes. (Rewritten 2026-07 — PostHog gone.) | Authoritative |
+| `ARCHITECTURE.md` | Codebase map — routes (39), middleware, jobs/crons, data stores, pages. | Authoritative |
+| `tinybird/SCOPE_v3.md` | Typed-column reference §2.6 for pipe SQL. **Not archived — stays in place.** | Authoritative |
+| `CLAUDE.md` / `AGENTS.md` | Standing agent contract — safety limits, data-truth, pipe SQL rules, verification principles. | Authoritative |
 
-## Current Source of Truth
+## Maintained
 
-| File | Purpose | When to Read | Status |
-|---|---|---|---|
-| `SYSTEM.md` | Global guardrails, API shape, PostHog/HogQL invariants, cookie spec, AI detection | Every session (invariants) | Current |
-| `ATTRIBUTION.md` | Attribution truthfulness contract — 13 parts governing source credit, metrics, LTV, sessions, channels | Attribution/reporting work | Current |
-| `DATA_CAPTURE_SPEC.md` | Canonical list of captured fields, tracker behavior, enrichment, PostHog properties, verified vs roadmap | Attribution/data work | Current |
-| `SUPABASE_SCHEMA.md` | Expected Supabase tables, migrations, RLS policies, verification queries | Supabase/schema work | Current |
-| `IDENTITY_DESIGN.md` | Identity stitching architecture, identify flow, alias strategy, edge cases | Identity/data work | Current |
+| File | Purpose | Tier |
+|---|---|---|
+| `README.md` | Product overview, env vars, data residency, crons. | Maintained |
+| `FEATURE_MAP.md` | What actually ships. ⚠️ **Can drift — its own §21 lesson ("verify against current code, not any inventory doc, including this one") applies to itself.** Corrected 2026-07 (funnels reframed as a dormant entitlement, not "sold"; §21 orphan-file receipts marked resolved with PR numbers). | Maintained |
+| `docs/SourceTrack_GTM.md` | GTM & positioning. **Content frozen 2026-06-28**; never committed until #327. `FEATURE_MAP.md` §5 gates a **public revenue claim** on it — losing it risks an unverifiable marketing claim. Corrections log appended. | Maintained |
+| `ATTRIBUTION.md` | Attribution truthfulness contract. | Maintained |
+| `SUPABASE_SCHEMA.md` | Supabase tables/RLS/verification queries. | Maintained |
+| `.env.example` | Canonical env template (includes the Tinybird block since #328). | Maintained |
+| `IDENTITY_DESIGN.md` | Identity-stitching architecture. | Maintained |
 
-## Design / Figma / Dashboard Specs
+## ⚠️ Stale — trust code / `KNOWN_ISSUES` / `FEATURE_MAP` over it
 
-| File | Purpose | When to Read | Status | Warning |
-|---|---|---|---|---|
-| `FIGMA_DESIGN_SYSTEM.md` | Design tokens — typography (Switzer), colors (lime/charcoal/neutral), grid, sidebar, cards, tables, badges, charts | Design/dashboard work | Generated spec | Design reference only; verify implementation in code |
-| `FIGMA_TOKEN_IMPLEMENTATION_PLAN.md` | Repo-verified plan for font, color tokens, grid, and new shared components (Session 83.2) | Before Session 83.2 | Implementation plan | Do not implement until 83.2 starts |
-| `BUSINESS_DASHBOARDS_SPEC.md` | 4 dashboard variants (Revenue, E-commerce, Lead Gen, SaaS), KPI rows, widget matrices | Design/dashboard work | Generated spec | Design-confirmed; implementation status unverified |
-| `COMPETITOR_PARITY.md` | Gap analysis between codebase and Figma/competitor benchmarks | Design/dashboard work | Planning doc | Not proof features exist; verify code before claiming |
-| `ONBOARDING_FLOW_SPEC.md` | 5-step Figma onboarding flow spec | Design/dashboard work | Generated spec | Design-confirmed; implementation status unverified |
+| File | Why | Tier |
+|---|---|---|
+| `DATA_CAPTURE_SPEC.md` | Its "PostHog properties" section describes a **deleted** store, and its "not built" list claims click-IDs are unbuilt — contradicted by `KNOWN_ISSUES.md §3` (click-IDs ARE captured) and `FEATURE_MAP.md §1`. A field-by-field re-audit against `tracker.js` + `tinybird/SCOPE_v3.md` §2.6 is a separate task. **Trust `KNOWN_ISSUES` + `FEATURE_MAP` over it.** | ⚠️ Stale |
 
-## QA / Runbooks
+## Reference (context / navigation — not proof)
 
-| File | Purpose | When to Read | Status |
-|---|---|---|---|
-| `QA_RUNBOOK.md` | Standard QA commands, per-feature checklists, pre-commit steps | When QA-ing | Current |
-| `MANUAL_QA_BACKLOG.md` | Per-session manual QA items, all currently pending | When QA-ing | Current |
-| `COMMANDCODE_RUNBOOK.md` | Standard procedures — start, checks, session end, emergency | When QA-ing | Current |
+`AGENT_BRIEF.md` · `PROJECT_CONTEXT_COMPACT.md` · `DEVELOPER_CONTEXT.md` · `RULES.md` · `DEV_SESSION_CHECKLIST.md` · `NEXT_SESSION_PROMPT.md` · `COMMANDCODE_RUNBOOK.md` · `QA_RUNBOOK.md` · `MANUAL_QA_BACKLOG.md` · `BUG_REVIEW_LOG.md` · `IMPLEMENTATION_GAP_LIST.md` · `IMPLEMENTATION_STATUS.md` · `CHANGELOG.md` — plus design/spec docs (verify implementation in code before claiming): `FIGMA_DESIGN_SYSTEM.md` · `FIGMA_TOKEN_IMPLEMENTATION_PLAN.md` · `BUSINESS_DASHBOARDS_SPEC.md` · `ONBOARDING_FLOW_SPEC.md` · `COMPETITOR_PARITY.md`.
 
-## Architecture / Navigation
+## Session tracking
 
-| File | Purpose | When to Read | Status |
-|---|---|---|---|
-| `ARCHITECTURE.md` | Codebase map — directories, route files, middleware, data stores, frontend pages | Sometimes (codebase navigation) | Reference |
+| File | Purpose | Tier |
+|---|---|---|
+| `SESSION_STATE.md` | Current session, branch, blockers, active work. | Maintained |
+| `SESSION_HANDOFF.md` | Last completed work + carried-forward items. | Maintained |
+| `SESSION_LOG.md` | Running one-line log of sessions 75+. Append-only. | Maintained |
 
-## Historical Archives
+## Historical (point-in-time — not current)
 
-| File | Purpose | When to Read | Status | Warning |
-|---|---|---|---|---|
-| `PROGRESS.md` | Session-by-session implementation history from Session 1 through current | Archive only | Historical | Do not treat as proof of current implementation. Unchecked items may be stale. |
-| `DEEPSEEK.md` | Session history from DeepSeek's perspective with guardrails and TODOs | Archive only | Historical | Do not treat as proof of current implementation. TODOs may be resolved but not cleaned up. |
+- **Migration (complete):** `POSTHOG_MIGRATION_HANDOFF.md`, `POSTHOG_DECOMMISSION_SCAN.md` — the PostHog→Tinybird migration is **done** (2026-07-19); these are the record, not live guidance.
+- **Session history:** `PROGRESS.md`, `DEEPSEEK.md`.
+- **Point-in-time audits / plans:** `AUDIT_PROD_READINESS_V2.md` · `AUDIT_S97.md` · `PAID_BETA_SESSION_PLAN.md` · `SELF_SERVE_PAID_BETA_AUDIT.md` · `SESSION_132_ATTRIBUTION_AUDIT.md` · `SESSION_132D_MARKETER_TEST_PLAN.md` · `SOURCETRACK_COMPETITIVE_READINESS_AUDIT.md` · `SOURCETRACK_PRIVACY_ANALYTICS_AND_GA4_READINESS_AUDIT.md` · `SOURCETRACK_SEGMENT_LAUNCH_READINESS_AUDIT.md` · `implementation_plan.md`.
+
+## Archives — cited by live code; DO NOT delete
+
+| Path | Why kept |
+|---|---|
+| `docs/archive/qa/` | 172 frozen sprint QA reports (#324). `api/middleware/tier-check.js` cites `pageview_limit_enforcement_140G-4.md` as the rationale for live quota enforcement. |
+| `tinybird/archive/` | 15 migration-planning docs (#325). 8 are cited in deployed `.pipe` descriptions + code comments (e.g. `PHASE4_4C_PLAN.md` is the evidence for the argMax null-skip in `last_touch_by_site.pipe`). |
+
+## Maintenance rules
+
+1. **Update docs in the same PR as the behaviour change** — a doc that lags the code is how these went stale.
+2. **`KNOWN_ISSUES.md` outranks the docs; code outranks `KNOWN_ISSUES.md`.** Verify against code for anything load-bearing.
+3. **A new root `*.md` needs an entry here** in the same PR.
+4. **Archive, don't delete — and grep the bare filename repo-wide when you do.** Citations live in code comments, test asserts, JSON prose, and other docs, in at least three formats (the #326 lesson).
