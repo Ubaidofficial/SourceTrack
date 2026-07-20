@@ -106,7 +106,7 @@ Then use `DOCS_INDEX.md` to find task-specific docs.
 - Use `getSupabase()` from `api/lib/supabase.js` only — never call `createClient()` directly in routes. Every `createClient()` must use `{ realtime: { transport: WebSocket } }`.
 - `dotenv.config()` must be the **first line** in all job/cron files.
 - Tracker URL is `/tracker/tracker.min.js` — never `/tracker/loader.min.js`.
-- PostHog HogQL interpolations must use `esc()` — never raw `${variable}`. Use `toFloatOrZero`, never `toFloat64OrZero`. Prefer `countIf(...)` over `COUNT(CASE WHEN ...)`. Qualify `distinct_id` in joins — never leave it ambiguous.
+- Tinybird pipe SQL (`tinybird/pipes/*.pipe`, ClickHouse; `tb --cloud deploy --check` is the mandatory pre-deploy gate): parameterize with template params — `site_id` required, never raw `${variable}`. `{{DateTime(p, required=True)}}` takes no `toDateTime()` wrapper; optional dates `{{DateTime(p,'1970-01-01 00:00:00')}}`; timezones `{{String(tz,'UTC')}}` never `required=True` (breaks `toTimeZone()` under `--check`). ClickHouse idioms still apply: `toFloatOrZero` never `toFloat64OrZero`, prefer `countIf(...)` over `COUNT(CASE WHEN ...)`. `JSONExtractString` returns `''` not `NULL` — `nullIf(...,'')` where NULL matters.
 - Channel classifier: `ORGANIC_SEARCH_ENGINE_HOSTS` / `ORGANIC_SEARCH_SOURCES` are the single exported source of truth, shared between the Tinybird pipe SQL (e.g. `seo_revenue_landing_pages.pipe`) and `channelFromEvent` — don't fork it.
 - **Attribution accuracy > speed.** Verify the math before committing. When unsure about attribution logic, read `nightly-attribution.js` and `attribution-engine.js` before changing anything.
 

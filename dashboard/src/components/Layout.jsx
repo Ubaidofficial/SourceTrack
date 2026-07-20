@@ -42,7 +42,6 @@ const PAGE_TITLES = {
   '/report-builder': 'Report Builder',
   '/app/integrations': 'Integrations',
   '/snippet': 'Install Tracking',
-  '/debugger': 'Live Events',
   '/settings': 'Settings',
   '/ops': 'Ops Console'
 }

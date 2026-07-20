@@ -29,7 +29,7 @@
 ---
 
 ## 1. Tracking & data capture
-- ✅ Lightweight cookieless tracker (`tracker/tracker.min.js`), no `document.cookie`, no fingerprint, no IP storage
+- ⚠️ Cookieless-**by-default** tracker (`tracker/tracker.min.js`) — first-party `localStorage`, no fingerprint, no IP storage. **NOT "no cookies":** the **served** `tracker.min.js` DOES contain `document.cookie` (verified 2026-07-20) — it writes a first-party cookie **only** on the customer's opt-in `data-cookie-domain` path, and **reads** (never sets) merchant `_fbp`/`_fbc` for Meta CAPI. A strictly-cookieless build exists but is **not served**. 🚫 do not claim "no cookies."
 - ✅ Honors DNT / Global Privacy Control (aborts before any storage/network)
 - ✅ Pageview + custom event + conversion capture
 - ✅ UTM / referrer / campaign / medium / `ref`/`source`/`via` capture
@@ -55,7 +55,7 @@
 - ✅ Device / browser / country / OS breakdowns
 - ✅ Traffic trends, recent activity, live/recent visitors
 - ✅ New vs returning; ✅ bounce rate + avg session duration (truth-gated, PR #82)
-- ⚠️ **Funnels — backend endpoint LIVE + plan-gated** (✅ verified @ `cb17cc2`): `analytics.js:933` `GET /funnel` `requireFeature('funnels_cohorts')`; **SOLD on starter/growth/scale** (`plan-features.js:36`). But **NO UI** — `FunnelChart.jsx` imported nowhere = **billable feature customers can't reach**.
+- ⚠️ **Funnels — backend endpoint LIVE + plan-gated, but UNREACHABLE and can't return data.** `analytics.js:1022` `GET /funnel` `requireFeature('funnels_cohorts')`; **SOLD on trial/starter/growth/scale** (`plan-features.js:36`). **NO UI** — `FunnelChart.jsx` **DELETED (#317)**. It also reads the Supabase `pageviews` table (`analytics.js:1047`), **empty by design in prod (0 rows)** → returns empty funnels. A billable feature that can neither be reached nor return data (verified 2026-07-20).
 - 🚧 **`sessions` (Unique Visitors by dim) + `conversion_rate` — GATED ENTIRELY** (@ `cb17cc2`). VERIFIED: both `break` in the engine's metric switch and fall to the main flexible sql, where only `revenue`/`conversions` have a pipe → **dead PostHog on all 15 dims**. They **never** routed to the session pipes. **2 of the 13 shipped templates are non-functional: `univ_visitors` ("Unique Visitors by Channel") + `univ_cvr` ("Conversion Rate by Channel")** — the other 11 still return data via the pre-agg (verified by executing the gate over all 13). Backlogged. *(Analytics-page visitor counts are a DIFFERENT path — `analytics.js` → `dispatchPageviews` → the `summary` pipe — and are ✅ live, unaffected.)*
 - ⚠️❓ `/dashboard/recent-activity` 404 seen in staging QA (deploy-pending fix)
 
@@ -200,7 +200,7 @@
 | 9 | Report Builder conv_type filter | Built | Ignored on ~6 templates → inflated data |
 | 10 | Conversion/sites/seats caps | Advertised | Not enforced backend (only pageviews metered) |
 | 11 | Ad-platform cost sync (Google + Meta) | 🧪 Built + wired (endpoints + callers survived PR #23; positioned V2) | **END-TO-END UNPROVEN** — no real ad account has run it. Truth-gate: don't market as working (§8) |
-| 12 | Funnels | ⚠️ Backend endpoint live + plan-gated; **SOLD** on starter/growth/scale | **NO UI** — `FunnelChart.jsx` imported nowhere → billable feature customers can't reach (§3) |
+| 12 | Funnels | ⚠️ Backend endpoint live + plan-gated; **SOLD** | **NO UI** — `FunnelChart.jsx` **DELETED #317**; also reads empty `pageviews` (0 rows prod) → can't return data (§1/§3) |
 | 13 | Report-Builder **gated depth** (🚧 @ `cb17cc2`) | Denies honestly (422 + calm state, no zeros) | Needs pipes: `ltv_revenue` (novel shape) · `ai_*_share`/`ai_conversions`/`ai_revenue` (clone the dim-swap template) · `keyword`/`referrer_domain`/`custom_param` · non-default windows (non-Class-A) · journey-explain narrative (clone the conversion sibling) |
 | 14 | `sessions` + `conversion_rate` (🚧 @ `cb17cc2`) | Gated ENTIRELY — dead on every dim; never routed to the session pipes | Unique-Visitors-by-dim + the `univ_cvr` template are non-functional until a pipe lands (§3) |
 | 15 | Campaigns page | ⚠️ Degraded → graceful banner | The 3 campaign pipes exist but are **INERT** (undeployed + unallowlisted) — deploy + allowlist, not a gate (§8) |
@@ -208,13 +208,12 @@
 
 ## 21. ⛔ CUT / REMOVED (NOT in app) — ✅ VERIFIED @ `cb17cc2`
 - ✅ **`ai-chat` — FULLY REMOVED.** Zero references in `api/` **and** `dashboard/src`. No route file, no page, no App.jsx route, no Layout/Dashboard entry point. Nothing lingers.
-- ⚠️ **`ai-analytics` — DE-WIRED but 2 orphan files REMAIN, and neither is zero-ref (NOT deleted).**
-  - Not mounted (absent from `api/index.js`), no App.jsx route/import → **unreachable at runtime**.
-  - `api/routes/ai-analytics.js` — **referenced by `api/routes/admin.js:691`**: `routeExists('ai-analytics.js')`, an `fs.existsSync` probe. ⚠️ **Truth bug:** that probe makes the admin console report **"AI Analytics: live"** purely because the FILE EXISTS, while the route is not mounted — the console currently misreports a dead feature as live. Delete the file **and** the probe entry together.
-  - `dashboard/src/pages/AIAnalytics.jsx` — **referenced by `api/tests/query-error-surfaces.test.js:34`** (empty-state marker list). Delete the page **and** that test entry together.
-  - `dashboard/src/components/Layout.jsx:44` still maps `'/ai-analytics': 'AI Analytics'` — a dead title entry for a path with no route.
+- ✅ **`ai-analytics` — RESOLVED (#315): both orphan files DELETED** (receipts kept per §21's own lesson — verify against current code, not this doc).
+  - `api/routes/ai-analytics.js` — **deleted (#315).** ⚠️ **but the `admin.js` probe was NOT deleted with it** (verified 2026-07-20): `admin.js:686` still runs `routeExists('ai-analytics.js')` (used at `:701`). With the file gone the probe returns false → the console now reports **"AI Analytics: dormant"** (flipped from the old "live" truth-bug). Two hardcoded `'AI Analytics' status: 'live'` entries also linger (`admin.js:644`, `:722`). **OPEN: strip the probe + the hardcoded entries** so the console stops reporting a deleted feature.
+  - `dashboard/src/pages/AIAnalytics.jsx` — **deleted (#315)**, and its `query-error-surfaces.test.js` entry was removed with it (verified gone).
+  - `dashboard/src/components/Layout.jsx` `'/ai-analytics'` title entry — **already gone** (this row was stale); the remaining `/debugger` orphan is removed in the same PR's Layout change.
 - ❗ **Funnels — MOVED OUT of this list (were mis-classified as "removed").** The endpoint is live + plan-gated and the feature is SOLD → see **§3 (Analytics)** + **§20 row 12**.
-- ✅ **"Add Annotation" — removed from the UI.** Zero references in `dashboard/src`. `api/routes/annotations.js` lingers: **not mounted, 0 references anywhere** → the one **provably safe orphan** (delete pending founder go). (`site_annotations` appears only as a table name in the schema-drift ignore list — unrelated to the route.)
+- ✅ **"Add Annotation" — removed from the UI.** Zero references in `dashboard/src`. `api/routes/annotations.js` was the provably-safe orphan → **DELETED (#315).** (`site_annotations` appears only as a table name in the schema-drift ignore list — unrelated to the route.)
 - cohorts · heatmaps · session replay · two-way CRM sync · affiliate mgmt · Consent Mode v2 (→V1.1) · synthetic AI UTMs / Direct-Rescue (unshipped moat) · predictive LTV · DeepSeek health-agent LLM (deleted PR #184). *(📜 not re-verified by this audit.)*
 - ❗ **Ad-platform cost sync — MOVED OUT of this list (was mis-classified "not built").** Endpoints + callers are live; PR #23 removed only the Integrations UI → see **§8** + **§20 row 11**.
 > **Lesson:** the Session-139M inventory doc is STALE — but so was this doc's own §21: it called funnels "removed (0 refs)" when the endpoint is live and plan-gated. **Verify against current code, not any inventory doc — including this one.**
@@ -242,11 +241,11 @@
 **Orphan files (file present, NOT mounted/routed) — 1 deletable, 3 blocked/out-of-scope:**
 | File | Refs | Action |
 |---|---|---|
-| `api/routes/annotations.js` | **0** | ✅ safe to delete — **pending founder go** |
-| `api/routes/ai-analytics.js` | `admin.js:691` `routeExists()` probe | ⛔ blocked — delete with the probe entry |
-| `dashboard/src/pages/AIAnalytics.jsx` | `api/tests/query-error-surfaces.test.js:34` | ⛔ blocked — delete with the test entry |
-| `dashboard/src/pages/ShareDashboard.jsx` | 0 (unrouted; backing `/api/public` absent) | 🔍 newly found — founder decision |
-| `dashboard/src/components/FunnelChart.jsx` | 0 (unimported) | 🔍 newly found — but funnels endpoint is LIVE (§21) |
+| `api/routes/annotations.js` | **0** | ✅ **DELETED (#315)** |
+| `api/routes/ai-analytics.js` | `admin.js:686` `routeExists()` probe | ✅ file **DELETED (#315)** — ⚠️ probe NOT removed; admin console now reports "dormant" (§21) |
+| `dashboard/src/pages/AIAnalytics.jsx` | (test entry removed with it) | ✅ **DELETED (#315)** + its `query-error-surfaces.test.js` entry |
+| `dashboard/src/pages/ShareDashboard.jsx` | 0 (unrouted; backing `/api/public` absent) | ✅ **DELETED (#323)** with `public-dashboard.js` + the Settings `/share` UI |
+| `dashboard/src/components/FunnelChart.jsx` | 0 (unimported) | ✅ **DELETED (#317)** — but the funnels endpoint is still LIVE + SOLD (§21/§3): billable, no UI, reads empty `pageviews` |
 
 **§15 team/workspace invites — ✅ RESOLVED: NOT BUILT.** No invite/member route file, **zero** member-management endpoints (`router.get|post|put|delete` matching member/invite/team/seat → none), and **no invite control in `Settings.jsx`** (its only "member" text is GDPR account-deletion prose). `company_members` is **read-only** across the codebase (role lookup in `user-auth.js:34`, plus `email-reports.js`, `google-search-console.js`, `admin.js`). Membership *enforcement* exists (`requireSiteMembership`, `auth.js:189`) so the data model supports shared workspaces, but **there is no way to invite/add a member in-product** — members must be provisioned out-of-band. → the §15 ❓ is a **spec-leak from 139M**, not a partial build.
 
