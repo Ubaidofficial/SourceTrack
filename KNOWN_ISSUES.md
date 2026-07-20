@@ -472,7 +472,11 @@ After the 19:54 failures, status flipped to `'error'` with `last_error_code = 's
 
 **Asymmetry to record:** `checkout.session.completed` (:189) keys off site **metadata** and works (it *sets* `stripe_customer_id`); all four lifecycle handlers key off `stripe_customer_id`, which only exists **if checkout landed first**. Stripe does **not** guarantee event ordering — a lifecycle event arriving before/without a landed checkout matches zero rows and silently no-ops.
 
-**Reproduction running:** Antigravity is cancelling staging `sub_1TvOPG…` against today's code with delivery records intact; staging restore is held (that row is the fixture).
+**Reproduction (staging, current code, full delivery records): PASS — but HAPPY PATH ONLY.** Antigravity cancelled staging `sub_1TvOPG…`; event `evt_1TvQUs…` (`customer.subscription.deleted`) fired **2026-07-20T23:21:19.545Z UTC**, delivered, the handler ran, the row mutated `plan 'growth'→'inactive'` and `pv_limit 150000→0`, HTTP 200, log `[billing] subscription cancelled — customer cus_UvEtzqotX9vISx`. ⚠️ **Timestamp trap:** Antigravity's summary reported `2026-07-21T01:21:18Z` — that is **CEST mislabelled with a `Z` suffix**; use the Railway UTC `23:21:19.545Z` (same class as `TIMESTAMP_TRAP_AUDIT.md` / PR #90). ⚠️ **CRITICAL QUALIFIER — the whole point:** `stripe_customer_id` was **already populated** on the staging row (checkout completed hours earlier), so `.eq` matched a row and the update landed. **The ZERO-ROW BRANCH — the one suspected in June — was NEVER exercised.** The correct reading is **"the handler works when the row matches," NOT "the handler is fine."** The June root cause (why the row did not match) stays **unknown and unrecoverable**.
+
+**Fix scope (when dispatched — DO NOT build now; full ceremony, money rail):** all four handlers capture affected rows via `.select()`, treat a **zero-row match as an error worth alerting on** rather than a silent 200, and consider `stripe_subscription_id` as a **fallback lookup key**. One PR, four call sites.
+
+**Also open (same audit):** `STRIPE_PRICE_ID_SCALE` is **absent from prod env** — the Scale tier **cannot be purchased**; and **2 of 3 prod prices** (Starter, Early-Bird-Annual) have **no `pv_limit` metadata**, masked by codebase fallbacks.
 
 **Product decision (not a defect), flagged for later:** the handler sets `plan='inactive'`, `pv_limit=0` — tracking **stops dead** on cancellation rather than downgrading to free tier. May be deliberate.
 
