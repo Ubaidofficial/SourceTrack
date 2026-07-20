@@ -150,6 +150,9 @@ The migrations for C2 schema convergence are authored but NOT applied to any dat
 
 ### 18. Token rotation queue
 
+**Added 2026-07-20 — `DEEPSEEK_API_KEY` (prod, urgent):** exposed in plaintext during a `railway variables` read. Nothing live consumes it — only `api/lib/ai-client.js` (behind the cut ai-chat/ai-analytics features) and `scripts/check-secret-safety.js` — but it is billable. **Revoke in the DeepSeek console, then delete the variable from every service rather than replacing it.** It is currently set on `sourcetrack-health` where nothing reads it.
+
+
 Multiple tokens are queued for rotation:
 - `deploy_token` (currently referenced in a shell env var).
 - Pre-existing Tinybird tokens exposed in previous logs and session transcripts.
@@ -177,7 +180,7 @@ Status: pipe-vs-HogQL parity for the nightly write path is **UNVERIFIED and will
 
 **Verified 2026-07-20:** first post-B3 run fired 02:00:49 UTC, status=success, 1712ms, no error. Read path proven. **Write path still unproven** — conversions_processed: 0 on 18/19/20 July, so no attribution row has been written since B3 landed.
 
-The nightly attribution job (`api/jobs/nightly-attribution.js`) now runs **Tinybird-sole with fail-closed reads** (B3, #308–#311, migration complete 2026-07-19). Its first live 02:00 UTC run is now verified (above). `restartPolicy: NEVER` means a failed run is a **~24h attribution gap with no retry** — a failure silently drops a day of the money rail (`attributed_conversions`) until the next night. **Remaining action:** add alerting on a failed or absent run — nothing currently detects a missed night.
+The nightly attribution job (`api/jobs/nightly-attribution.js`) now runs **Tinybird-sole with fail-closed reads** (B3, #308–#311, migration complete 2026-07-19). Its first live 02:00 UTC run is now verified (above). `restartPolicy: NEVER` means a failed run is a **~24h attribution gap with no retry** — a failure silently drops a day of the money rail (`attributed_conversions`) until the next night. **Detection already exists** — `health-agent.js:109` `evaluateNightlyJob` returns critical on a missing run, a non-success status, or a run older than 26h, and `nightly_job` is in `CRITICAL_CHECKS`; health-agent runs every 30 min in prod. **Remaining action is delivery, not detection:** health-agent's only output is a Slack POST gated on `SLACK_WEBHOOK_URL`, and it writes no `job_runs` row — so if that var is unset in production the check has been running silently and unobservably. Verify the var, and give health-agent a `job_runs` row so its own execution is visible.
 
 ### 21. sourcetrack-email cron misconfigured — weekly emails have NEVER sent
 
@@ -288,6 +291,68 @@ anything.
 
 **Interim:** marked ⚠️ stale in `DOCS_INDEX.md` with "trust `KNOWN_ISSUES` and `FEATURE_MAP` over
 it." Do not cite it as authoritative until the audit runs.
+
+---
+### 29. No working alert channel — health checks run and report nowhere
+
+**Severity:** high · **Verified:** 2026-07-20 against production Railway config + `job_runs`
+
+**Detection is built and correct. Delivery does not exist.**
+
+`api/jobs/health-agent.js` runs every 30 min in production (cron `*/30 * * * *`, service
+`f15924b7`). It performs four critical checks — `CRITICAL_CHECKS = {supabase, nightly_job,
+conversions, tinybird_quarantine}` — including `evaluateNightlyJob` (`:109`), which returns
+critical on a missing `job_runs` row, a non-success status, or a run older than 26h.
+
+**None of it reaches anyone.** `notify()` (`:280`) begins:
+
+```js
+if (!SLACK || dx.severity === 'ok') return
+```
+
+`SLACK_WEBHOOK_URL` was **unset in production** — verified 2026-07-20 via
+`railway variables --environment production --service f15924b7 | grep -i slack` (empty, against a
+command confirmed to produce output). So for as long as the health cron has existed, every critical
+result has been discarded.
+
+This very likely includes a live one: `evaluateConversions` asks *"are `attributed_conversions`
+actually landing?"* and `nightly-attribution` has recorded `conversions_processed: 0` on
+2026-07-18, 07-19 and 07-20.
+
+**Current state — a placeholder is set, which is worse than unset.** While testing,
+`SLACK_WEBHOOK_URL` was set to the literal string
+`https://hooks.slack.com/services/YOUR/REAL/URL` on both `sourcetrack-health` (`f15924b7`) and
+`sourcetrack-dq` (`9278c467`). It is not a real webhook. No crash results — `fetch` does not throw
+on a 404 — but the variable now *appears* configured to anyone inspecting it. **Either replace it
+with a real webhook or remove it.** Removal is the better resting state: `notify()` returns early
+and the gap stays visible.
+
+**Compounding problem — the monitors are themselves unobservable.** `job_runs` contains only
+three job names (checked 2026-07-20): `email-reports-weekly` (255 runs), `nightly-attribution`
+(78), `gsc-daily-sync` (23). **`health-agent` and `data-quality-check` write no `job_runs` row at
+all**, so "did the monitor run?" is currently unanswerable — the same blind spot that let
+`sourcetrack-email` accumulate 255 phantom successes without sending a single email (issue 21).
+
+**Related:** `anomaly-watcher` (issue to be filed) watches `attributed_conversions` for
+direct-spike, source-silent and coverage-drop, and alerts through this same unset variable. It is
+also **not scheduled in production** (staging only, `0 3 * * *`). Scheduling it before the channel
+works only adds a third silent watcher.
+
+**Actions, in order:**
+
+1. Create a real incoming webhook (Slack, or Discord with `/slack` appended to the URL — that
+   endpoint accepts the Slack payload shape `health-agent.js:292` sends).
+2. Verify it independently with `curl` before trusting it.
+3. Set `SLACK_WEBHOOK_URL` on `sourcetrack-health` and `sourcetrack-dq`; re-read the variable to
+   confirm it persisted (see issue 21 — Railway config changes have silently failed here before).
+4. Make `health-agent` and `data-quality-check` write a `job_runs` row every run, matching the
+   column shape `anomaly-watcher.js:58` `_writeJobRun` already uses.
+5. Have `notify()` log a clearly-marked undeliverable-alert line to stdout when `SLACK` is unset
+   and severity is not ok, so a Railway log read still surfaces it.
+6. Only then schedule `anomaly-watcher` in production.
+
+**Do not rebuild detection.** `evaluateNightlyJob` and `evaluateConversions` are correct and
+already critical-tier. The gap is the channel, not the logic.
 
 ---
 ## Recently fixed
