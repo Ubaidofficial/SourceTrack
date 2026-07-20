@@ -239,7 +239,7 @@ Carry-forward role: **honest orchestrator + senior MarTech engineer + SaaS QA ma
 | `docs/archive/IMPLEMENTATION_GAP_LIST.md` | Built vs planned |
 | `MANUAL_QA_BACKLOG.md` | Per-session manual QA items |
 | `BUG_REVIEW_LOG.md` | Code-review issues found |
-| `docs/archive/COMMANDCODE_RUNBOOK.md` | Standard procedures |
+| `COMMANDCODE_RUNBOOK.md` | Standard procedures |
 | `DOCS_INDEX.md` | Full doc inventory with classifications |
 | `docs/ai_agent_workflow_rules.md` | Secret handling + no-commit-without-approval governance |
 | `docs/archive/PROGRESS.md` / `docs/archive/DEEPSEEK.md` | Session history (archive — history, not proof) |

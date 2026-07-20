@@ -73,7 +73,7 @@ If conditions 1–5 are met and 6–9 are scheduled, this is a **GO for a tiny b
 | Area | Status | Repo-proven evidence | Remaining external verification | Risk | Required next action |
 |------|--------|----------------------|-------------------------------|------|----------------------|
 | CI / regression pipeline | ⚠️ Partial | `.github/workflows/ci.yml`: `node --check`, `git diff --check`, `npm run qa:static`, dashboard build — all green (run 27305431837) | — | CI does **not** run `qa:attribution`/`qa:smoke`/`qa:edge`. Add at least `qa:attribution` to CI to catch attribution regressions. (P2) |
-| Deployment / rollback | ✅ Documented, partly proven | `archive/COMMANDCODE_RUNBOOK.md` rollback section; Railway 1-click rollback "Verified" in `backup_recovery.md` | Railway console | Dry-run a rollback in staging once. |
+| Deployment / rollback | ✅ Documented, partly proven | `COMMANDCODE_RUNBOOK.md` rollback section; Railway 1-click rollback "Verified" in `backup_recovery.md` | Railway console | Dry-run a rollback in staging once. |
 | Staging / production separation | ⚠️ Code-parameterized only | `.env.example` fully parameterized (STAGING_HOSTS, ALLOWED_ORIGINS, separate STRIPE/SUPABASE/POSTHOG keys) | **Supabase, PostHog, Stripe, Resend, Railway consoles** | P0-2 — verify in all five consoles. |
 | Production observability | ⚠️ Weak | `/health` liveness, hourly health-agent cron (`api/jobs/health-agent.js`) | Slack webhook delivery | P1-1 — add Sentry-class exception capture. |
 | Incident response | ✅ Documented | `docs/production_observability_incident_response.md` severity table + checklists | — | Acceptable for beta. |
@@ -85,7 +85,7 @@ If conditions 1–5 are met and 6–9 are scheduled, this is a **GO for a tiny b
 | Legal / policy | ⚠️ Draft only | `Terms.jsx` "as-is, no SLA, no guarantees"; `docs/legal_policy_readiness.md` | **Legal review; DPA** | Disclose beta status; DPA before EU/B2B scale. |
 | Transactional email | ⚠️ Partial | Resend integration (`email-reports.js`, `usage-threshold-emails.js`); usage dedup via `usage_email_log` | **Resend SPF/DKIM/DMARC, domain** | P1-3 — digest suppression; no `reply_to` header (replies to unmonitored mailbox). |
 | Support readiness | ✅ Documented | `docs/support_readiness.md` email-only, read-only triage SQL | — | Acceptable. No 24/7, no SLA, no refund guarantee. |
-| Docs truth / install QA | ✅ Good | `docs/docs_truth_audit.md`, `docs/install_qa_map.md`; tracker path `/tracker.min.js` consistent | — | Note: standalone `ci_/deployment_/observability_runbook.md` files referenced in the session plan **do not exist** — content lives in `archive/COMMANDCODE_RUNBOOK.md`. Doc-naming drift only. |
+| Docs truth / install QA | ✅ Good | `docs/docs_truth_audit.md`, `docs/install_qa_map.md`; tracker path `/tracker.min.js` consistent | — | Note: standalone `ci_/deployment_/observability_runbook.md` files referenced in the session plan **do not exist** — content lives in `COMMANDCODE_RUNBOOK.md`. Doc-naming drift only. |
 | Backup / recovery | ⚠️ Partial | Stripe webhook idempotency/replay "Verified"; Railway rollback "Verified" | **Supabase PITR/backups** | P0-3. |
 | Admin / operator access | ⚠️ Code-guard dependent | `admin.js:12` `requireRole('super_admin')` global; admin_audit_log | — | Service-role client bypasses RLS — safety depends entirely on middleware. Any future route missing `requireSiteMembership` = cross-tenant leak. |
 | Event pipeline capacity | ⚠️ Ready-to-test, not proven | PostHog batching tuned; `/api/collect` does **synchronous** Supabase inserts (`analytics.js:94,115`) | **Real staging load test** | Synchronous write on collect is the top scaling bottleneck. Fine at tiny scale. No production load testing was run (per constraints). |
@@ -166,7 +166,7 @@ If conditions 1–5 are met and 6–9 are scheduled, this is a **GO for a tiny b
 
 **Legal readiness:** Beta-grade. Drafts exist, claims are softened, no compliance lies. Not lawyer-reviewed, no DPA. Acceptable **only** if every beta customer is told it's a private beta in writing.
 
-**Docs readiness:** Strong and unusually honest — the 133B–133W docs consistently flag their own gaps. Minor drift: three runbook filenames referenced in the plan don't exist as standalone files (content folded into `archive/COMMANDCODE_RUNBOOK.md`). Observability gap: the single biggest one (no exception monitoring) is correctly called out by the docs themselves.
+**Docs readiness:** Strong and unusually honest — the 133B–133W docs consistently flag their own gaps. Minor drift: three runbook filenames referenced in the plan don't exist as standalone files (content folded into `COMMANDCODE_RUNBOOK.md`). Observability gap: the single biggest one (no exception monitoring) is correctly called out by the docs themselves.
 
 **Launch readiness:** The app is much closer to a controlled beta than it was. **It is not ready for broad self-serve launch.** It can probably survive 3–5 carefully selected, manually-supported beta customers on a single instance. It should not be thrown at high-volume ecommerce or large Shopify stores. The biggest risk is no longer missing features — it is unproven operations and a handful of money-touching paths that have been written but never run.
 
