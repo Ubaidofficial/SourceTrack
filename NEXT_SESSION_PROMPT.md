@@ -51,6 +51,8 @@ paste-ready command/dispatch blocks.
 
 **⛔ DO NOT ROTATE `ENCRYPTION_KEY` AGAIN without an immediate GSC reconnect** — see KNOWN_ISSUES KI-34 (rotation silently invalidates all stored OAuth tokens).
 
+**QUEUED — KI-41 (to file):** `AGENTS.md` and `CLAUDE.md` are whole-file mirrors with no single source of truth. Drift already occurred (the "Doesn't"/"Does not" nit, deliberately left in #342). Correcting one leaves the other stale — caught manually during #342 review; no test, lint, or CI check exists. Same defect class as KI-32 (`AI_HOST_MAP` vs `AI_DOMAINS_MAP`), applied to the files that govern every agent on the project. Options, not decided: (a) one canonical file + pointer, (b) a shared include both reference, (c) a CI diff check on the shared sections — cheapest, no restructure. **NOT SCOPED, NOT SCHEDULED.** (Kept here as a queue note, not yet a numbered `KNOWN_ISSUES` entry — the next docs PR gives it a real KI number.)
+
 ---
 
 ## 1. PRODUCT
