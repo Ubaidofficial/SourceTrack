@@ -1,6 +1,6 @@
 # Next Session Prompt
 
-_Last updated: 2026-07-20 (repo-cleanup + prod-diagnostics session, PRs #323-#334)._
+_Last updated: 2026-07-20 — **Session 144** (fixes + findings, PRs #336–#341). See the Session 145 handoff block below; sections §1–§8 are prior-session reference and some facts are superseded (GSC now verified working — FEATURE_MAP §1; alerting env fixed 2026-07-20)._
 
 AI-agent workflow rules are governed by [docs/ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md).
 No AI-agent may commit or push before raw diff review and explicit user approval.
@@ -26,8 +26,30 @@ paste-ready command/dispatch blocks.
 | **CC (Claude Code)** | Executes in worktree `~/Desktop/trackiq-ccdesktop`, serial. Never self-merges. |
 | **Antigravity (Gemini)** | Browser/E2E. Never reads `.env`, never queries `auth.users`, never prints raw `site_key`. |
 
-**Your MCP access:** read-only Supabase (prod `zxjjjsipafojhzkkumvh`, staging
-`nrsvpwzekfrdrzkoecfk`) + Tinybird. **No GitHub or Railway MCP** — I paste that output.
+**Your MCP access (corrected 2026-07-20):** read-only **Supabase** (prod `zxjjjsipafojhzkkumvh`, staging `nrsvpwzekfrdrzkoecfk`) + **PostHog** (prod project 416017 only) + **Railway** + **Tinybird** + **GitHub**. Three constraints that each invalidate a class of check: **Tinybird MCP is ST_Staging ONLY** (prod events unreachable); **Railway MCP has NO env-var read tool** (`ENCRYPTION_KEY`/`SLACK_WEBHOOK_URL` checkable only by the founder in the Railway UI); **GitHub MCP returns 404 on the private repo** (PR diffs/file lists NOT MCP-verifiable — route PR checks through the founder's terminal or CC).
+
+---
+
+## 0.5. SESSION 145 HANDOFF (from Session 144, 2026-07-20)
+
+**Merged this session:** #336, #337, #338, #339, #340, #341.
+
+**Queued (priority):**
+1. **KI-14** — `/admin` degraded-state (`degraded:true` + `failed_reads[]` + `FORCE_READ`-gated rethrow). Plan approved, **not built**; 3 amendments sent. Super-admin ops tooling (lower priority).
+2. **KI-35** — GSC property↔domain validation. Investigation points are in the KI; **not started**.
+3. **KI-40** — CI guard that rebuilds `tracker.min.js` and fails on min↔source drift.
+
+**⏰ AWAITING VERDICT at 02:00 UTC 2026-07-21** — three tests fired 2026-07-20 (verify with TWO independent reads, per discipline):
+1. **HIGHEST VALUE — Test 2, revenue stitching:** `conversion_value 777.77` posted to `/api/conversion` against `anonymous_id 1974cccb-1c47-4b45-aa95-2e2f425128ce` (a known-good 3-pageview session). **PASS = `touchpoint_count >= 2` with a real `first_touch_source`. FAIL = 0 touchpoints / NULL source = stitching broken** → becomes the whole next day.
+2. **Test 1, money rail:** real form conversion with `utm_source=chatgpt`.
+3. **Test 3, AI-referrer server fallback:** `anonymous_id ki5-referrer-test-20260720`; landed after a bot-filter rejection of the curl UA (**bot filtering verified working live**).
+4. **GSC first automated cron sync.**
+
+**Verdict queries:** SELECTs against `gsc_sync_runs` and `attributed_conversions` (site_id `eb7f68c3-a2b7-4224-a8d0-56ac1e831511`), plus the 02:00 `nightly-attribution` Railway logs.
+
+**Tokens still to rotate (5):** `st_endpoint_read`, `dual_write_append`, Tinybird workspace admin, Tinybird MCP connector, Slack webhook. Plus **`site_key 473fba5e` transited chat** (public in page source, low severity — noted).
+
+**⛔ DO NOT ROTATE `ENCRYPTION_KEY` AGAIN without an immediate GSC reconnect** — see KNOWN_ISSUES KI-34 (rotation silently invalidates all stored OAuth tokens).
 
 ---
 

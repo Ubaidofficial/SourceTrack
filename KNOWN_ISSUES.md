@@ -186,6 +186,8 @@ The nightly attribution job (`api/jobs/nightly-attribution.js`) now runs **Tinyb
 
 The `sourcetrack-email` service is misconfigured: `buildCommand` runs the job at **build time**, and `startCommand` is null, so the deployed cron boots `bootstrap.js` and crashes. Result: **weekly emails have never been sent.** Six UI fix attempts have not persisted the config; the cause is unexplained. Needs a root-cause pass (Railway service config vs. repo; why the UI change does not stick).
 
+**Confirmed 2026-07-20 from two independent angles that `email-reports-weekly` runs per DEPLOY, not weekly:** (1) `job_runs` on 2026-07-20 alone: 08:54, 08:58, 08:59, 09:17, 10:20, 10:21, 10:46, 10:53, 11:07, 16:34, 16:58, 17:04, 17:31, 19:35 — **~14 runs of a "weekly" job**, every one `Sent 0, skipped 4, errors 0`. (2) Railway shows the cron services **redeploy on every merge to `main`** (`5fe4412`, `65b9340`, `a749709`, `81d3ef8`, `f5fa4e0`, `b6d9543`, `dc4b89d`); a job in `buildCommand` runs once per deploy — **deploy count matches run count**.
+
 ### 22. ~~Share / public reports — REMOVE~~ — DONE (#323)
 
 `api/routes/public-dashboard.js` + `dashboard/src/pages/ShareDashboard.jsx` + the `/share` links in `Settings.jsx` are a partially-built public-reports feature. The design doc **§23 lists Public reports as V2**, so the correct action is to **REMOVE** these, not finish them. Settings currently renders links to a **404 route** (customer-facing defect). Scope: delete the two files + the Settings `/share` links.
@@ -422,6 +424,34 @@ Session 97-98 (KI-11) unified AI classification — but only the **read** side (
 
 **Fixed (this PR):** `clearStoredIdentity()` prefix-sweeps every `st_*` key from localStorage/sessionStorage/cookies except the preserve-list `['st_consent']`, deletes the `st_aid` cookie (domain + host-only `path=/` variants), and nulls in-memory `AID`/`SID`; re-consent mints a fresh id. **Client-side only — server-side GDPR erasure is Phase 7, NOT STARTED; this is NOT full compliance.**
 
+### 34. `ENCRYPTION_KEY` rotation silently invalidates all stored OAuth tokens
+
+Rotating `ENCRYPTION_KEY` leaves `gsc_connections.encrypted_refresh_token` **undecryptable** — sync then fails with Node crypto's AES-GCM auth-tag error `"Unsupported state or unable to authenticate data"`, while the UI keeps showing **"Connected"** over dead ciphertext. Only a full **Disconnect → OAuth reconnect** re-encrypts with the new key; the "Sync Search Console" button **cannot** fix it (it reuses the stored token). **Confirmed** (Supabase MCP, prod): `gsc_sync_runs` 2026-07-20 19:54:20 and 19:54:24, both failed with that exact string. **Fix:** a rotation runbook listing every table holding key-encrypted material and requiring re-auth; consider a boot-time decrypt probe that flips status and surfaces "re-auth required". **DO NOT rotate `ENCRYPTION_KEY` again without an immediate GSC reconnect.**
+
+### 35. GSC property is not validated against the site's own domain (inferred — connect route not read)
+
+Reconnecting GSC for site `www.techrupt.pk` defaulted the property to `http://dailypctechtips.blogspot.com/` — an unrelated domain — and rendered a green **"Connected"** badge for it. Design spec §17.4 already requires step 3 "Confirm property/domain match" and step 6 "Mismatch warning/block"; neither is enforced. **Severity: NOT a cross-tenant leak** (Google requires verified ownership) — it is a **data-correctness** defect: another domain's search data flows into the landing-page-matched SEO-revenue allocation and produces plausible-but-wrong numbers with no visible signal. **Status:** observed in UI + spec gap; the connect route has **not** been read — recorded as **inferred**. **Investigation points for the fix PR:** where property selection is persisted; whether any domain comparison exists; auto-select vs user-choice; normalization for http/https, www/apex, trailing slash, `sc-domain:` properties; warn vs block.
+
+### 36. Disconnect cascade-deletes the entire `gsc_sync_runs` audit history
+
+`gsc_sync_runs` held **6 rows before disconnect, 1 after**. Destroyed: the 2026-07-19 malformed-key failure, the 2026-06-29 missing-key failure, the 07-18 and 06-26 successes, and both 19:54 decrypt failures. Evidence of a **three-week outage** survived only because it had been queried 20 minutes earlier. Sync-run history is an **audit record, not connection state**, and should survive disconnect.
+
+### 37. UI rendered "Connected" over an empty `gsc_connections` table (inferred — source not traced)
+
+Between disconnect and property selection, `gsc_connections` had **zero rows** while the page showed a green **Connected** badge plus Sync/Disconnect controls. Connected state is derived from something **other than the persisted row**. Source not traced — recorded as **inferred**.
+
+### 38. GSC auto-disable flaw fired again, as predicted (2nd confirmed occurrence)
+
+After the 19:54 failures, status flipped to `'error'` with `last_error_code = 'sync_failed'`. `gsc-daily-sync.js:152` selects `.eq('status','connected')`, so the next scheduled run would have found nothing and no-op'd. **One failure permanently disqualifies the connection — no retry, no operator signal.** Second confirmed occurrence; already noted in `FEATURE_MAP`.
+
+### 39. `gsc-daily-sync` reported success on a no-op early exit
+
+`job_runs` 2026-07-20 02:00:49 — `gsc-daily-sync`, **success, 148ms, error null**. No `gsc_sync_runs` row written; `last_synced_at` did not move. It found no eligible connection, exited in 148ms, and logged the pre-#332 hardcoded success. #332 (`deriveGscJobStatus`) now derives status honestly. **Record the ~148ms signature as a detection heuristic for no-op runs.**
+
+### 40. `tracker.min.js` is a STRUCTURAL trap — not a historical incident
+
+**Frame exactly this way: no drift has occurred.** Prod serves the committed `tracker/tracker.min.js` directly (`api/index.js:337` `res.sendFile`) and **nothing rebuilds it at deploy**, so a source-only tracker change is **INERT** in production unless the min is rebuilt and committed in the same PR. **No test guards min↔source sync.** As of 2026-07-20 the two were verified **IN SYNC**: rebuilding `origin/main`'s `tracker.js` with the repo's own esbuild `0.24.2` via the documented `package.json:9` `build:tracker` script produced a **byte-identical** match to the committed min — no prior tracker change shipped as a no-op; prod is **NOT** running stale logic. **Recommended fix (not built here):** a CI guard that runs `build:tracker` and fails if the committed min differs from the rebuild.
+
 ---
 ## Recently fixed
 
@@ -587,7 +617,7 @@ Source shortcut filters are schema-valid and safe, but source/channel value accu
 - Start: `npm run start` = `serve -s dist -l $PORT`
 - The `serve` package must be in `dependencies` (not devDependencies) — fixed in this session
 
-`api.sourcetrack.ai` (or similar) is served by the **api** Railway service:
+`api.srctk.com` (the real ingest host; `api.sourcetrack.ai` does not resolve) is served by the **api** Railway service:
 - Builder: NIXPACKS
 - Start: `node api/index.js`
 

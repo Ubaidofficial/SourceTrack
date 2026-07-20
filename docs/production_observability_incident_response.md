@@ -111,8 +111,8 @@ If a deployment triggers a P0 outage, roll back to the last stable release using
 - [ ] Monitor the deployment log to ensure the container builds and boots successfully.
 - [ ] Run basic smoke test commands:
   ```bash
-  curl -i https://api.sourcetrack.ai/health
-  curl -I https://api.sourcetrack.ai/tracker.min.js
+  curl -i https://api.srctk.com/health
+  curl -I https://api.srctk.com/tracker.min.js
   ```
 - [ ] Verify that startup logs show no new uncaught rejections or connection failures.
 
