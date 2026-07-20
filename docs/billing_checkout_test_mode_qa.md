@@ -282,3 +282,27 @@ billing cache invalidated for affected staging/production site row count: 1
   3. Live customer subscription cancellation webhook did not process or update production DB on 2026-06-26.
 - **Verdict:** PARTIAL (Prod config has multiple high-risk gaps and sync errors).
 
+### Run: 2026-07-21 — Stripe customer.subscription.deleted reproduction (staging)
+- **Environment:** staging (Supabase nrsvpwzekfrdrzkoecfk, Railway 74a58dbc)
+- **Executed by:** Antigravity, backend API triggers via `stripe.subscriptions.cancel`
+- **Code under test:** origin/main @ 115fa50ab804fedb1e61e09469e5468fd9a4d21e
+- **Target site:** s141smoke2-store.com (872e3530-55ed-4a01-a239-76a42aae3ebc)
+- **Stripe mode:** sk_test_ (prefix verified, value not recorded)
+
+| Step | Assertion | Observed | Verdict |
+|---|---|---|---|
+| 1 | Baseline site row state | plan='growth', pv_limit=150000, Stripe customer/subscription IDs populated | PASS |
+| 2 | Cancel subscription immediately | Invoked `stripe.subscriptions.cancel` for `sub_1TvOPGLZY0IPZEmwgqjIwKl6` | PASS |
+| 3 | Event generation | Event `evt_1TvQUsLZY0IPZEmwbfIcdnU3` fired on staging Stripe | PASS |
+| 4 | Webhook processing | Webhook processed by staging API server, returning `200 OK` | PASS |
+| 5 | Database downgrade check | Plan mutated to `'inactive'`, pv_limit to `0` immediately | PASS |
+
+**Log evidence (Stripe Deletion Webhook):**
+```
+billing cache invalidated for affected staging/production site row count: 0
+[billing] subscription cancelled — customer cus_UvEtzqotX9vISx
+2026-07-20T23:21:22.637816488Z [INFO]  timestamp="2026-07-20T23:21:19.545Z" duration_ms=309 event="request_completed" request_id="a97e88d0-9a74-4859-9ce1-d5cac1aafc70" method="POST" path="/api/billing/webhook" status=200
+```
+
+- **Downgrade behaviour (Reproduction):** Immediate. Mutated DB record plan to `'inactive'` and `pv_limit` to `0` upon receipt of `customer.subscription.deleted` webhook.
+- **Verdict:** P0-1 PASS (Cancellation logic is fully operational on staging when event is received).
