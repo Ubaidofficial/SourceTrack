@@ -180,7 +180,7 @@ Status: pipe-vs-HogQL parity for the nightly write path is **UNVERIFIED and will
 
 **Verified 2026-07-20:** first post-B3 run fired 02:00:49 UTC, status=success, 1712ms, no error. Read path proven. **Write path still unproven** — conversions_processed: 0 on 18/19/20 July, so no attribution row has been written since B3 landed.
 
-The nightly attribution job (`api/jobs/nightly-attribution.js`) now runs **Tinybird-sole with fail-closed reads** (B3, #308–#311, migration complete 2026-07-19). Its first live 02:00 UTC run is now verified (above). `restartPolicy: NEVER` means a failed run is a **~24h attribution gap with no retry** — a failure silently drops a day of the money rail (`attributed_conversions`) until the next night. **Detection already exists** — `health-agent.js:109` `evaluateNightlyJob` returns critical on a missing run, a non-success status, or a run older than 26h, and `nightly_job` is in `CRITICAL_CHECKS`; health-agent runs every 30 min in prod. **Remaining action is delivery, not detection:** health-agent's only output is a Slack POST gated on `SLACK_WEBHOOK_URL`, and it writes no `job_runs` row — so if that var is unset in production the check has been running silently and unobservably. Verify the var, and give health-agent a `job_runs` row so its own execution is visible.
+The nightly attribution job (`api/jobs/nightly-attribution.js`) now runs **Tinybird-sole with fail-closed reads** (B3, #308–#311, migration complete 2026-07-19). Its first live 02:00 UTC run is now verified (above). `restartPolicy: NEVER` means a failed run is a **~24h attribution gap with no retry** — a failure silently drops a day of the money rail (`attributed_conversions`) until the next night. **Detection already exists** — `health-agent.js:109` `evaluateNightlyJob` returns critical on a missing run, a non-success status, or a run older than 26h, and `nightly_job` is in `CRITICAL_CHECKS`; health-agent runs every 30 min in prod. **Remaining action is delivery, not detection:** health-agent's only output is a Slack POST gated on `SLACK_WEBHOOK_URL`, and it writes no `job_runs` row — and until 2026-07-20 that var held a truthy placeholder, so the POST hit a dead Slack path whose 404 the unchecked `fetch` swallowed (the check ran silently and unobservably). Now fixed (real webhook, HTTP 200); still give health-agent a `job_runs` row so its own execution is visible.
 
 ### 21. sourcetrack-email cron misconfigured — weekly emails have NEVER sent
 
@@ -310,22 +310,28 @@ critical on a missing `job_runs` row, a non-success status, or a run older than 
 if (!SLACK || dx.severity === 'ok') return
 ```
 
-`SLACK_WEBHOOK_URL` was **unset in production** — verified 2026-07-20 via
+`SLACK_WEBHOOK_URL` was **unset in production** at first — verified 2026-07-20 via
 `railway variables --environment production --service f15924b7 | grep -i slack` (empty, against a
-command confirmed to produce output). So for as long as the health cron has existed, every critical
-result has been discarded.
+command confirmed to produce output). While unset, `notify()` took the `!SLACK` branch above and
+every critical result was discarded — an honest, visible gate.
 
-This very likely includes a live one: `evaluateConversions` asks *"are `attributed_conversions`
-actually landing?"* and `nightly-attribution` has recorded `conversions_processed: 0` on
+This very likely included a live one: `evaluateConversions` asks *"are `attributed_conversions`
+actually landing?"* and `nightly-attribution` recorded `conversions_processed: 0` on
 2026-07-18, 07-19 and 07-20.
 
-**Current state — a placeholder is set, which is worse than unset.** While testing,
-`SLACK_WEBHOOK_URL` was set to the literal string
-`https://hooks.slack.com/services/YOUR/REAL/URL` on both `sourcetrack-health` (`f15924b7`) and
-`sourcetrack-dq` (`9278c467`). It is not a real webhook. No crash results — `fetch` does not throw
-on a 404 — but the variable now *appears* configured to anyone inspecting it. **Either replace it
-with a real webhook or remove it.** Removal is the better resting state: `notify()` returns early
-and the gap stays visible.
+**Then it got worse, not better.** While trying to unset the variable (the installed CLI lacks
+`--unset`), `SLACK_WEBHOOK_URL` was set to the literal placeholder
+`https://hooks.slack.com/services/YOUR/REAL/URL` on `sourcetrack-health` (`f15924b7`) and
+`sourcetrack-dq` (`9278c467`). That value is **truthy**, so `notify()` no longer took the `!SLACK`
+branch at `:283` — it POSTed every critical alert to that dead Slack path at `:289`, where the
+`fetch` has no `.ok` check and no `try/catch`, so the 404 was swallowed and the run looked clean.
+The honest drop-when-unset gate had become a **silent false-delivery**.
+
+**Env fixed 2026-07-20 — code path still unguarded.** A real incoming webhook is now set on all
+three readers (health, nightly, anomaly) and delivery is curl-verified (HTTP 200) — replaced with a
+real URL, not re-unset. But the `fetch` at `:289` still has no `.ok` check and no `try/catch`, and
+`notify()` is unwrapped, so a revoked URL, a Slack outage, or a transient throw fails silently again
+— delivery holds only while that URL stays valid.
 
 **Compounding problem — the monitors are themselves unobservable.** `job_runs` contains only
 three job names (checked 2026-07-20): `email-reports-weekly` (255 runs), `nightly-attribution`
@@ -338,7 +344,7 @@ direct-spike, source-silent and coverage-drop, and alerts through this same unse
 also **not scheduled in production** (staging only, `0 3 * * *`). Scheduling it before the channel
 works only adds a third silent watcher.
 
-**Actions, in order:**
+**Actions, in order:** *(Update 2026-07-20: real webhook set + curl-verified HTTP 200 on the three `notify()` readers — health-agent, nightly-attribution, anomaly-watcher. Step 3's `sourcetrack-dq` target is moot: `data-quality-check.js` does not read `SLACK_WEBHOOK_URL`, so its env value has no delivery impact and it was never remediated. Steps 4–6 remain.)*
 
 1. Create a real incoming webhook (Slack, or Discord with `/slack` appended to the URL — that
    endpoint accepts the Slack payload shape `health-agent.js:292` sends).
