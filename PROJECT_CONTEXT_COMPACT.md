@@ -106,7 +106,7 @@ npm run build:tracker
 
 - Make surgical changes only
 - Verify in code before claiming implemented
-- Do not treat `PROGRESS.md` or `DEEPSEEK.md` as proof of current implementation
+- Do not treat `docs/archive/PROGRESS.md` or `docs/archive/DEEPSEEK.md` as proof of current implementation
 - Do not destructively compact archives
 - Do not claim full DataFast/Cometly/Usermaven parity unless verified in code, data, and QA
 - Manual QA remains pending unless actually performed in the running app

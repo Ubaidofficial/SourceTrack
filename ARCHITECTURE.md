@@ -122,4 +122,4 @@ Shared helpers: `dashboard/src/lib/api.js` · `dashboard/src/lib/supabase.js` ·
 - Supabase schema is migration-driven; `schema.sql` may be stale — verify against the live DB.
 - **Tinybird is the source of truth for event analytics; Supabase for attribution/conversions/revenue/billing + user/site/config.** (PostHog is gone.)
 - Minified tracker files must be rebuilt after tracker source changes (`npm run build:tracker`).
-- `PROGRESS.md` is history/navigation, not proof.
+- `docs/archive/PROGRESS.md` is history/navigation, not proof.

@@ -26,7 +26,7 @@ None confirmed at runtime.
 
 ### Design/architecture notes (not bugs)
 
-- `ATTRIBUTION.md` Part 2 (P2 — Model parity on totals) states totals must match across models. This is claimed as "architecturally guaranteed by LEFT JOIN semantics" in PROGRESS.md. Runtime verification needed.
+- `ATTRIBUTION.md` Part 2 (P2 — Model parity on totals) states totals must match across models. This is claimed as "architecturally guaranteed by LEFT JOIN semantics" in docs/archive/PROGRESS.md. Runtime verification needed.
 - `IDENTITY_DESIGN.md` contains 12+ unresolved `TODO: confirm` items about PostHog alias behavior, ignored referrers, and session_id. These are design questions, not bugs.
 - `KNOWN_ISSUES.md` #3 (no ad click IDs) and #4 (no ad spend) remain valid. Not blocking for Sessions 82–90 since those are P4/deferred.
 
@@ -80,7 +80,7 @@ None confirmed at runtime.
 
 **Date:** 2026-05-13
 **Review type:** Onboarding Figma alignment audit (read-only).
-**Files audited:** `Onboarding.jsx`, `OnboardingCard.jsx`, `OnboardingProgress.jsx`, `api/routes/onboarding.js`, `ONBOARDING_FLOW_SPEC.md`.
+**Files audited:** `Onboarding.jsx`, `OnboardingCard.jsx`, `OnboardingProgress.jsx`, `api/routes/onboarding.js`, `docs/archive/ONBOARDING_FLOW_SPEC.md`.
 **Confirmed issues:** None. Business logic intact. Only gaps: hex colors, inline styles, 5-vs-6 step stepper.
 **No implementation code changed.**
 
@@ -96,7 +96,7 @@ None confirmed at runtime.
 
 **Date:** 2026-05-13
 **Review type:** Onboarding stepper alignment audit (read-only).
-**Files audited:** `Onboarding.jsx`, `OnboardingProgress.jsx`, `ONBOARDING_FLOW_SPEC.md`.
+**Files audited:** `Onboarding.jsx`, `OnboardingProgress.jsx`, `docs/archive/ONBOARDING_FLOW_SPEC.md`.
 **Finding:** 5-step Figma spec vs 6-step code. Zero safe cosmetic-only changes possible — any stepper alignment requires backend `MAX_STEP` change + state machine refactor. Not a bug; structural UX decision deferred.
 **No implementation code changed.**
 

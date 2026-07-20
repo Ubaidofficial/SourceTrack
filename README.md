@@ -164,7 +164,7 @@ Start with [`DOCS_INDEX.md`](./DOCS_INDEX.md) — it assigns a trust tier to eve
 | [`ATTRIBUTION.md`](./ATTRIBUTION.md) | Attribution truthfulness contract. |
 | [`SUPABASE_SCHEMA.md`](./SUPABASE_SCHEMA.md) | Schema reference. |
 | [`CHANGELOG.md`](./CHANGELOG.md) | Release notes. |
-| [`AUDIT_PROD_READINESS_V2.md`](./AUDIT_PROD_READINESS_V2.md) | **Historical** — May 2026 point-in-time audit. |
+| [`docs/archive/AUDIT_PROD_READINESS_V2.md`](./docs/archive/AUDIT_PROD_READINESS_V2.md) | **Historical** — May 2026 point-in-time audit. |
 
 ---
 

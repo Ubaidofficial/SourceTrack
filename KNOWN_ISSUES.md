@@ -228,16 +228,16 @@ session for it.** Standing rule instead: *when a PR touches one of these files, 
 
 | File | Size | Note |
 |---|---|---|
-| `PROGRESS.md` | 163 KB | Session-by-session history from Session 1; unchecked items are stale |
-| `DEEPSEEK.md` | 82 KB | Describes the DeepSeek health-agent LLM **deleted in #184** |
-| `AUDIT_PROD_READINESS_V2.md` | | May point-in-time audit |
-| `AUDIT_S97.md` | | May point-in-time audit |
-| `COMPETITOR_PARITY.md` | | Planning doc — not proof of shipped features |
-| `BUSINESS_DASHBOARDS_SPEC.md` | | Implementation status unverified |
-| `ONBOARDING_FLOW_SPEC.md` | | Implementation status unverified |
-| `FIGMA_DESIGN_SYSTEM.md` | | Generated spec |
-| `FIGMA_TOKEN_IMPLEMENTATION_PLAN.md` | | Do not implement without a session gate |
-| `IMPLEMENTATION_GAP_LIST.md` | | Superseded by `FEATURE_MAP §20` |
+| `docs/archive/PROGRESS.md` | 163 KB | Session-by-session history from Session 1; unchecked items are stale |
+| `docs/archive/DEEPSEEK.md` | 82 KB | Describes the DeepSeek health-agent LLM **deleted in #184** |
+| `docs/archive/AUDIT_PROD_READINESS_V2.md` | | May point-in-time audit |
+| `docs/archive/AUDIT_S97.md` | | May point-in-time audit |
+| `docs/archive/COMPETITOR_PARITY.md` | | Planning doc — not proof of shipped features |
+| `docs/archive/BUSINESS_DASHBOARDS_SPEC.md` | | Implementation status unverified |
+| `docs/archive/ONBOARDING_FLOW_SPEC.md` | | Implementation status unverified |
+| `docs/archive/FIGMA_DESIGN_SYSTEM.md` | | Generated spec |
+| `docs/archive/FIGMA_TOKEN_IMPLEMENTATION_PLAN.md` | | Do not implement without a session gate |
+| `docs/archive/IMPLEMENTATION_GAP_LIST.md` | | Superseded by `FEATURE_MAP §20` |
 
 **Stale but still useful — rewrite, don't archive:** `ATTRIBUTION.md` (36 KB),
 `IDENTITY_DESIGN.md` (predates Tinybird), `MANUAL_QA_BACKLOG.md`, `QA_RUNBOOK.md`.
