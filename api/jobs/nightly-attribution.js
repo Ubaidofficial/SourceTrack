@@ -176,6 +176,26 @@ export function computeRunErrorMessage({ status, hardFailures = 0, suspectEmpty 
   return base && fellBack > 0 ? `${base} [${fellBack} site(s) fell back: conversions pipe returned null]` : base
 }
 
+// Derive the gsc-daily-sync job_runs status + error_message from the run summary and how
+// many connections are stuck in 'error'/'needs_reconnect'. The old code hardcoded
+// status:'success', so a fully-failed or fully-disqualified batch reported a clean success
+// (prod: ~3 weeks of "success" while gsc_performance_daily was frozen). Pure — the caller
+// supplies brokenCount. 'partial' IS an allowed job_runs status (job_runs_status_check).
+export function deriveGscJobStatus ({ eligible = 0, failed = 0, records_synced = 0 } = {}, brokenCount = 0) {
+  if (failed > 0 && records_synced === 0) {
+    return { status: 'failed', error_message: `${failed}/${eligible} connection(s) failed, 0 records synced` }
+  }
+  if (failed > 0) {
+    return { status: 'partial', error_message: `${failed}/${eligible} connection(s) failed` }
+  }
+  if (eligible === 0) {
+    return brokenCount > 0
+      ? { status: 'failed', error_message: `0 eligible; ${brokenCount} connection(s) in error/needs_reconnect` }
+      : { status: 'success', error_message: 'no eligible GSC connections' }
+  }
+  return { status: 'success', error_message: null }
+}
+
 
 
 async function main() {
@@ -329,11 +349,22 @@ async function main() {
       const gsc = await runGscDailySync({
         supabase, refreshAccessToken, fetchGscPerformance, normalizePath, sleep, log
       })
+      // eligible:0 must not silently read as a clean success — a connection stuck in
+      // 'error'/'needs_reconnect' fails the .eq('connected') eligibility filter, so it
+      // would otherwise stay invisible here forever. Only query in that case.
+      let gscBrokenCount = 0
+      if (gsc.eligible === 0) {
+        const { data: broken } = await supabase.from('gsc_connections')
+          .select('site_key')
+          .in('status', ['error', 'needs_reconnect'])
+        gscBrokenCount = broken?.length || 0
+      }
+      const gscOutcome = deriveGscJobStatus(gsc, gscBrokenCount)
       await supabase.from('job_runs').insert({
         job_name: 'gsc-daily-sync',
-        status: 'success',
+        status: gscOutcome.status,
         conversions_processed: gsc.records_synced,
-        error_message: gsc.failed > 0 ? `${gsc.failed}/${gsc.eligible} connections failed` : null,
+        error_message: gscOutcome.error_message,
         duration_ms: Date.now() - gscStart,
         ran_at: new Date().toISOString()
       })
