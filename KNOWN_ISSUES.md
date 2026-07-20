@@ -416,6 +416,12 @@ Session 97-98 (KI-11) unified AI classification — but only the **read** side (
 
 **Data impact (deferred — do not act):** existing rows carry split labels (`Chatgpt`/`ChatGPT`), verbatim hostnames, and inflated `Copilot` from organic Bing. Go-forward is fixed; the read-normalization/backfill of history is a separate decision pending the AI Sources check.
 
+### 33. `consent(false)` deleted no stored identifiers — client-side GDPR withdrawal (FIXED)
+
+`sourcetrack.consent(false)` set `_consentGiven=false`, persisted `st_consent`, and cleared the in-memory queue — and **removed nothing**. Verified two ways on prod `techrupt.pk` (2026-07-20): after `window.sourcetrack.consent(false)` in a fresh incognito session (3 pageviews), **`st_aid` (the anonymous_id), `st_ft_src`/`st_ft_med`/`st_ft_cmp`/`st_ft_ts`, and `st_sid` all SURVIVED**; nothing was removed; only `st_consent` was added. The in-memory `AID` also survived — `getToken()` returned the erased id while withdrawn, and it resurrected into outbound events on a same-page `optIn()`. Withdrawal stopped *using* the identifier but retained it.
+
+**Fixed (this PR):** `clearStoredIdentity()` prefix-sweeps every `st_*` key from localStorage/sessionStorage/cookies except the preserve-list `['st_consent']`, deletes the `st_aid` cookie (domain + host-only `path=/` variants), and nulls in-memory `AID`/`SID`; re-consent mints a fresh id. **Client-side only — server-side GDPR erasure is Phase 7, NOT STARTED; this is NOT full compliance.**
+
 ---
 ## Recently fixed
 
