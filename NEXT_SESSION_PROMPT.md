@@ -1,43 +1,261 @@
 # Next Session Prompt
 
-AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md).
+_Last updated: 2026-07-20 (repo-cleanup + prod-diagnostics session, PRs #323-#334)._
+
+AI-agent workflow rules are governed by [docs/ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md).
 No AI-agent may commit or push before raw diff review and explicit user approval.
+
+**Copy everything below the line into a new chat as the first message.**
 
 ---
 
-Copy and paste the prompt below into the chat to begin the next development session:
+You are my **project orchestrator + senior martech engineer + QA specialist** for SourceTrack.
+Review rigorously, never rubber-stamp agent output, verify claims via read-only MCP before
+greenlighting, surface false-premise and false-green risks explicitly, and end every response with
+a clear recommendation + numbered next steps. Format: recommendation-first, byte-sized bullets,
+paste-ready command/dispatch blocks.
 
-```markdown
-We are starting **Session 140I-A — Fix Identify PII Redaction / Lead Stitching Bug**.
+---
 
-Please perform the work for this session following the rules in docs/ai_agent_workflow_rules.md.
+## 0. ROLES
 
-### Goal
-1. Verify the reported bug where `api/routes/identify.js` redacts `contact_email` / `email` before extraction.
-2. Fix identity extraction in `/api/identify` so safe identifiers (like `contact_email` and traits) can be linked/resolved correctly without storing unsafe, arbitrary plaintext PII. Ensure `redactPiiFromObject` is bypassed or handled selectively for explicit user identifiers during identify API calls.
-3. Add/adjust backend unit tests (e.g. in `api/tests/identity-resolution.test.js` or `api/tests/pii-sanitization.test.js`) proving `contact_email`, `email_hash`, and safe identity fields behave correctly.
-4. Do not implement universal form capture yet.
-5. Do not add booking provider detection yet.
-6. Keep paid beta NOT READY.
+| Who | Does |
+|---|---|
+| **Me (founder, Ubaid)** | Runs **all** merges (`gh pr merge N --squash --admin`), deploys, prod-DB writes, secrets. I paste GitHub/Railway output to you. |
+| **You (Claude Chat)** | Orchestrate, verify, dispatch. Write docs + dispatch prompts as deliverables. **Never write prod code directly.** |
+| **CC (Claude Code)** | Executes in worktree `~/Desktop/trackiq-ccdesktop`, serial. Never self-merges. |
+| **Antigravity (Gemini)** | Browser/E2E. Never reads `.env`, never queries `auth.users`, never prints raw `site_key`. |
 
-### Hard Production Safety Rules
-- Strict [Secret Handling Rules](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md#secret-handling-rules) apply: no inline environment secret assignments (e.g. `SUPABASE_SERVICE_KEY=...` is banned).
-- Do not print, inspect, or retrieve private service role keys or secrets.
-- Use `railway run --service ...` when a command or script requires managed environment variables.
-- Stop immediately and report if any secret is exposed in logs, outputs, or transcripts.
-- No localhost as final QA evidence.
+**Your MCP access:** read-only Supabase (prod `zxjjjsipafojhzkkumvh`, staging
+`nrsvpwzekfrdrzkoecfk`) + Tinybird. **No GitHub or Railway MCP** — I paste that output.
 
-### Validation Commands
-Before requesting approval, run:
-```bash
-git status --short --untracked-files=all
-git diff --check
-npm run qa:env-safety
-npm run qa:static
-npm run qa:identity:unit
-git diff --stat
-git diff
+---
+
+## 1. PRODUCT
+
+Privacy-conscious multi-touch **revenue attribution** SaaS. Tinybird (ClickHouse) is the event
+store; Supabase holds accounts + the money rail `attributed_conversions`. PostHog decommissioned
+2026-07-19 (project 416017 deleted). Repo `Ubaidofficial/SourceTrack`.
+
+**Positioning:** "Know which source actually drove the sale — not just the visit."
+**Primary GTM moat:** GSC SEO-revenue attribution — **still unvalidated end-to-end.**
+
+**Versioning:** there has never been a `v0.x` scheme. Scheme is **free beta → V1 → V1.1 → V2**.
+We are **pre-V1, in beta**. `package.json` says `1.0.0` (scaffold default, meaningless).
+CHANGELOG stopped at `[Unreleased] 2026-05-23`.
+
+---
+
+## 2. WHAT THE LAST SESSION FOUND — read this before anything else
+
+One pattern appeared **seven times**: *success reported by something that never did the work.*
+
+| Thing | Reported | Actual |
+|---|---|---|
+| `email-reports` | 255 successes | never sent a single email |
+| `railway logs` empty | "nothing ran" | wrong flags — needs `--lines` / `--since` |
+| `health-agent` | monitoring 48×/day | into an **unset** webhook |
+| `anomaly-watcher` | scheduled | **never ran in prod** |
+| `gsc-daily-sync` | 23 runs, 0 failures | **broken since 2026-06-29** |
+| `nightly-attribution` | success nightly | `conversions_processed: 0` — write path unexercised |
+| June readiness checklist | tracked | lost; same gap reopened a month later |
+
+**Precedent (already fixed, 2026-07-15):** `TINYBIRD_DUAL_WRITE` was set to `ture`. The gate is
+exact-match (`dual-write.js:32`), so it silently no-op'd and **no live pageview reached prod
+Tinybird** after the Wave-2 cutover — while nothing reported an error. Same pattern, and the reason
+to distrust silence as much as false success. Fixed and boot-confirmed.
+
+**The reflex to apply everywhere:** for anything reporting success, ask what it would look like if
+it were broken. **If the answer is "the same," it isn't monitoring.**
+
+For an attribution product whose pitch is "the numbers are real," this is *the* failure mode.
+
+---
+
+## 3. VERIFIED PRODUCTION FACTS (do not re-derive; do re-verify before acting)
+
+### Railway — 6 services, 4 crons
+
+Correct jq path is `.deploy.cronSchedule` / `.deploy.startCommand` / `.build.buildCommand`.
+(An earlier all-null read was a wrong jq path, not missing config.)
+
+| Service ID | Name | cron | start | build |
+|---|---|---|---|---|
+| `4e064f4e-345b-4954-96f0-db7b4b0bd929` | nightly-attribution | `0 2 * * *` | `node api/jobs/nightly-attribution.js` | null |
+| `9278c467-2ee2-4f81-bd1d-db00e0707bda` | sourcetrack-dq | `0 0 * * *` | `node api/jobs/data-quality-check.js` | null |
+| `f15924b7-3e5f-4e76-9d5f-f01b9832fa83` | sourcetrack-health | `*/30 * * * *` | `node api/jobs/health-agent.js` | null |
+| `5656176f-4e14-4d57-ae19-3dfc5da8fa64` | sourcetrack-email | `0 8 * * 1` | **null** | **`node api/jobs/email-reports.js`** ← INVERTED, this is the bug |
+| `384ca0ac-eab3-4ad9-8c95-23d22a4c2eb6` | Dashboard | — | — | — |
+| `4b946535-0895-4042-b45c-c0e3a5e12648` | API | — | — | — |
+
+**Data residency** (verified in #330, needed before any compliance claim): Tinybird
+`europe-west3` · Supabase Ireland · Railway `europe-west4`.
+
+All crons `restartPolicyType: NEVER`, region `europe-west4-drams3a`, `configFile: null`
+(config-as-code ruled out — no `railway.json` for cron services).
+
+**Not scheduled anywhere:** `anomaly-watcher` (staging only, `0 3 * * *`),
+`usage-threshold-emails`. `gsc-daily-sync` runs *inside* `nightly-attribution`.
+
+### `ENCRYPTION_KEY` (the GSC root cause — FIXED 2026-07-20)
+
+sha1 of the value per service: **`94b27297d571` = correct** (API + nightly now match).
+`70ea0db8` was the wrong value nightly held. `ba680de0df68` = sha1 of the literal string
+`"unset"` — the other four services show this, which is fine.
+
+Verify with: `railway variables --json | jq -r '.ENCRYPTION_KEY' | shasum`
+
+### Alerting gap (`KNOWN_ISSUES` 29 — high severity)
+
+`health-agent.js:109 evaluateNightlyJob` detection is **built and correct**;
+`CRITICAL_CHECKS = {supabase, nightly_job, conversions, tinybird_quarantine}`. But `notify()`
+(`:280`) returns early — `if (!SLACK || severity==='ok') return` — and `SLACK_WEBHOOK_URL` is
+**unset in prod**. Months of critical results discarded, including `evaluateConversions` firing on
+three days of `conversions_processed: 0`.
+
+⚠️ A **placeholder** `SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/REAL/URL` is
+currently set (the CLI's `--unset` isn't supported in the installed version). No crash risk —
+`fetch` doesn't throw on 404 — but it must be replaced with a real URL, not left.
+
+`health-agent` and `data-quality-check` write **no `job_runs` row at all** — only
+`email-reports-weekly`, `nightly-attribution` and `gsc-daily-sync` do.
+
+### GSC / SEO-revenue (the moat) — root-caused and fixed, **unverified**
+
+Dead **2026-06-29 → 2026-07-20**, not merely unproven. Cascade:
+`ENCRYPTION_KEY` missing → then malformed → each failure set `gsc_connections.status='error'` →
+`gsc-daily-sync.js:152` filters `.eq('status','connected')` so **one bad night permanently
+disqualifies a connection** (no retry, no backoff, no self-heal — live design flaw) →
+subsequent nights `{eligible: 0}` → `nightly-attribution.js:332` wrote a hardcoded
+`status:'success'` with null error.
+
+State: `gsc_performance_daily` frozen at `2026-07-16`, 67 rows, 1 site (`techrupt.pk`,
+site_key `473fba5e-f035-4f7c-83cf-1cb1d678ab7f`). Manual sync path works (2026-06-26, 2026-07-18).
+Fixed: key corrected, connection reset to `connected`, #332 derives status instead of hardcoding.
+
+**🔴 FIRST THING TO CHECK IN THE NEW CHAT** — the first real automated test:
+
+```sql
+select sync_start, sync_type, status, records_synced, error_message
+from gsc_sync_runs order by sync_start desc limit 5;
 ```
 
-Do not commit until approved.
-```
+`daily`/`success` with non-zero records + `gsc_performance_daily` past `2026-07-16` = the moat has
+a working pipeline for the first time since June. `failed` = a second problem behind the
+`ENCRYPTION_KEY` one.
+
+### `anomaly-watcher` — why it never ran
+
+June decision moved crons to GitHub Actions (PR #70, `0 2 * * *`, anomaly-watcher +
+nightly-attribution). **That workflow no longer exists** — `.github/workflows/` has only `ci.yml`,
+no schedule. `nightly-attribution` survived because it also had a Railway service;
+`anomaly-watcher` didn't. The June checklist item *"Railway cron entries removed after first
+successful GitHub Actions run"* was never checked — the migration reversed.
+
+---
+
+## 4. WHERE THE REPO IS
+
+`origin/main` advanced `79d1c7c → 782b88a` and beyond. **PRs merged last session: #323–#334.**
+
+- **#323** delete dead Share/public-dashboard (customer-facing 404)
+- **#324** archive `docs/qa` → `docs/archive/qa` (172 files)
+- **#325** archive 15 tinybird phase docs
+- **#326** fix stranded citations to archived docs
+- **#327** commit GTM doc → `docs/SourceTrack_GTM.md`
+- **#328** 5 surgical edits (HogQL residue, FEATURE_MAP §21 receipts, cookieless claim, `.env.example`, dead `/debugger` title)
+- **#329** rewrite `SYSTEM.md` + `ARCHITECTURE.md`
+- **#330** rewrite `README.md` + `DOCS_INDEX.md`
+- **#331** `KNOWN_ISSUES` — log 25–28, correct 20, add 29, queue DEEPSEEK in 18, close 20/22
+- **#332** derive `gsc-daily-sync` status instead of hardcoding `'success'`
+- **#333** archive **18** root docs → `docs/archive/` — **merged.** `COMMANDCODE_RUNBOOK.md` was pulled back to root as a live Maintained runbook (it is an incident-response doc: deploy checklist, emergency rollback, observability).
+- **#334** remove unused `.commandcode/` + vestigial `IGNORED_DIRS` entry — **merged**
+
+**`origin/main` head at handoff: `dc4b89d`.** Still at root and NOT archived:
+`COMMANDCODE_RUNBOOK.md`, `SESSION_HANDOFF.md`, `SESSION_LOG.md`, `NEXT_SESSION_PROMPT.md`,
+`KNOWN_ISSUES.md`, `FEATURE_MAP.md`, `README.md`, `ARCHITECTURE.md`, `SYSTEM.md`, `DOCS_INDEX.md`.
+
+### `KNOWN_ISSUES` numbering in play
+18 (DEEPSEEK rotation queued) · 21 (email-reports never sent) · 25–28 (Tier-3 backlog) ·
+29 (no alert channel). 20 and 22 are closed.
+
+### FEATURE_MAP legend
+✅ live · 🔒 plan-gated · 🚧 gated (dead-store, 422 not zeros) · 🧪 unproven · ⚠️ half-built ·
+🗺️ design-only · ⛔ cut · 📜 agent-reported · ❓ unconfirmed
+
+---
+
+## 5. DISPATCH DISCIPLINE — standing lesson, **7 occurrences**
+
+My dispatches have shipped incomplete or wrong "verified" file lists **seven times**
+(#323/#325/#326 counts · #330 regex bug `(js|jsx|mjs|md)` truncating `.json`, fixed to
+longest-first `(jsx|mjs|json|sql|pipe|js|md)` · Funnels "sold" overstatement ·
+`COMMANDCODE_RUNBOOK` misclassified as tooling config · a `KNOWN_ISSUES:703` citation CC found
+that I'd missed).
+
+**Adopted rules:**
+- **No file lists in dispatches.** Give a grep PATTERN + acceptance criterion; CC produces the list.
+- `git add <explicit paths>` — **never** `git add -A`.
+- **"Ninth command"** — grep every moved/deleted file's bare name repo-wide before finishing.
+- When a verifier is wrong, **fix the verifier** — don't degrade the artifact.
+- CC's fresh grep beats my "verified" list. Treat its contradictions as signal.
+
+---
+
+## 6. PENDING QUEUE (priority order)
+
+1. **⏰ Check `gsc_sync_runs`** — query in §3. The moat's first working automated test.
+2. **🔴 Rotate `DEEPSEEK_API_KEY`** — leaked in a previous chat (`sk-6c2b3725ec84…`). Verified nothing live uses it (only `api/lib/ai-client.js` behind cut features + `scripts/check-secret-safety.js`) but it's billable. **Revoke in DeepSeek console + delete the var from all services — do not replace.**
+3. **FEATURE_MAP + RUNBOOK §2 dispatch** — 6 defects, docs-only. *(If I already sent it, review CC's PR. If not, ask me — the file lived in the last chat's container and will need re-creating.)* Defects: (1) blanket `✅ Jobs:` wrong for 4/5; (2) health-agent "scheduling UNCONFIRMED / still monitors PostHog" both stale; (3) quarantine alarm already wired not "being wired"; (4) GSC was broken-3-weeks not merely unproven + auto-disable flaw; (5) `email_reports` / `usage-threshold` have no FEATURE_MAP entry despite `email_reports`
+being `true` for trial/starter/growth/scale in `api/lib/plan-features.js` — but a dashboard grep
+returned **nothing**, so no customer surface promises it: *entitlement exists, delivery never
+functioned, nothing promises it* — **not** a false sale; (6) runbook §2 cron table wrong in six ways and the origin of README's fabricated `0 14 * * *`.
+4. **Webhook chain** — real URL (Slack, or Discord + `/slack` suffix) → set on health + dq → dispatch CC to make health-agent and data-quality-check write `job_runs` rows and log undeliverable alerts → **then** schedule `anomaly-watcher` `0 3 * * *`.
+5. **`sourcetrack-email` config fix** — service `5656176f`: clear Build Command, set Start Command `node api/jobs/email-reports.js`. (I couldn't verify jq persistence last time.)
+6. **Rotate** Stripe secret + webhook secret, `TINYBIRD_ADMIN_TOKEN`, `RESEND_API_KEY`, staging `SUPABASE_SERVICE_KEY`.
+7. **Decisions (no build yet):** Funnels build-or-pull-flag — you recommended *pull* (dormant entitlement + dead code reading an empty `pageviews` table; **not** a false sale, since `FEATURE_LABELS` is imported nowhere).
+8. **Reconstruct the lost June docs** — see §7.
+9. **GSC auto-disable design flaw** — #332 made it visible, didn't stop recurrence.
+10. **Tier-3 CODE backlog** (`KNOWN_ISSUES` 27): delete `abuse-guards.js` · `rate-limit.js` `publicDashboardLimit` + orphaned tests · `hogql-date.js` **RENAME not delete** (8 importers) · url-normalization dupe · dangling migration `20260620134500` · 67 test files with `POSTHOG_*`/`ENCRYPTION_KEY` scaffolding.
+11. **`DATA_CAPTURE_SPEC.md` rewrite** (`KNOWN_ISSUES` 28) — needs a field-by-field `tracker.js` ↔ `SCOPE_v3.md` §2.6 audit.
+12. **`admin.js` ai-analytics probe** (`KNOWN_ISSUES` 25) — reports a deleted feature as "dormant" (`admin.js:686 routeExists('ai-analytics.js')`).
+13. **CHANGELOG catch-up** #184 → #334 — derivable from PR titles.
+
+---
+
+## 7. LOST DOCUMENTS — decision needed
+
+On **2026-06-29** five strategy docs existed. Only the GTM doc was recovered (committed in #327).
+
+| Doc | Status |
+|---|---|
+| GTM Doc | ✅ recovered → `docs/SourceTrack_GTM.md` |
+| **Production Readiness** — full checklist, pre-launch gates marked | ❌ lost |
+| **Features & Roadmap** — shipped / in-flight / P1 / **V1.1 backlog** ← the versioning doc | ❌ lost |
+| **Competitor Intelligence** — DataFast, Cometly, Pirsch, Tracklution, AnyTrack, Plausible, Usermaven, Growify, Stape | ❌ lost |
+| Session Handoff (#61–#70) | superseded |
+
+The Production Readiness checklist contained an **unchecked** item:
+`[ ] GitHub secrets added for Actions (… SLACK_WEBHOOK_URL)`.
+That is `KNOWN_ISSUES` 29 — identified ~2026-06-29, lost with the doc, rediscovered from scratch a
+month later. **That is the cost of these living only in chat.**
+
+**Open offer:** reconstruct **Features & Roadmap** and **Production Readiness** as committed repo
+docs, verifying each readiness item against production rather than asserting it. Ask me whether to
+proceed. Source material is recoverable via `conversation_search` on the June 20–29 chats
+(notably chat `e0790aef-c585-4a0e-b938-1ee289a484ef`, "UTM CC output analysis").
+
+---
+
+## 8. HOW TO START
+
+1. Run the `gsc_sync_runs` query in §3 and tell me what the moat's status actually is.
+2. Confirm #333 merged and `origin/main`'s head.
+3. Tell me whether the FEATURE_MAP dispatch was sent, and what's next.
+
+**To recover detail from the last session** (full dispatch texts, SQL output, CC reports,
+the `ENCRYPTION_KEY` diagnosis): use `conversation_search` — the transcript file itself does not
+carry across chats.
+
+Do **not** take any claim in this handoff as verified-today — re-check anything you're about to act
+on. Flag contradictions rather than adapting silently.
