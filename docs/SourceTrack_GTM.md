@@ -1,5 +1,18 @@
 # SourceTrack — GTM & Positioning (updated)
 
+> **Provenance (added 2026-07-20 on first commit to git).** Content frozen **2026-06-28**. This
+> document had **never been committed** — it was lost and re-derived from scratch **twice**
+> (2026-07-07, 2026-07-20) before landing in git here. It belongs in the repo because
+> `FEATURE_MAP.md` §5 gates a **public revenue claim** on it (the truth-gate for what may be said
+> about revenue attribution publicly); losing it risks shipping an unverifiable marketing claim.
+>
+> **This is NOT the complete GTM picture.** A sibling lineage — `SOURCETRACK_GTM_v3→v5.md`
+> ("Living Doc," 2026-06-26/27) — is **not in the repo and may be lost.** It held the locked ICP
+> tiers, a 25-item moat backlog, and B2B displacement targets this file does not carry.
+>
+> A **corrections log** (verified against current code 2026-07-20) is appended at the end — read it
+> before acting on any feature claim below.
+
 **Built from:** full competitor legal/marketing teardowns (Cometly, SourceLoop, DataFast, Piqo, AnyTrack, Usermaven) + SourceTrack prod verification, this session + prior. Supersedes the "four moats vs everyone" framing.
 
 ---
@@ -123,3 +136,19 @@ Headline = **SEO-revenue + AI-source** (the unique moats). CAPI = "also." Privac
 ---
 
 *All competitor claims reflect their stated public policies/marketing (2025-2026); implementation may differ but cannot be claimed-against beyond stated position. SourceTrack feature states from prod verification + memory; ⚠️ items are unproven-with-real-data. Not legal advice.*
+
+---
+
+## Corrections log (verified against code 2026-07-20)
+
+Each row was re-verified by grep/read against the current codebase — not carried from memory.
+
+| Section | Original claim | Correction (verified) |
+|---|---|---|
+| §4 Tier 2 | UTM builder "AUDIT IN FLIGHT — may already exist" | **RESOLVED — both exist.** Reusable component `dashboard/src/components/UTMBuilder.jsx` **and** a public standalone page `dashboard/src/pages/tools/UtmBuilder.jsx` routed at `/tools/utm-builder` (`App.jsx`). The "extract to a public SEO page" quick-win is already shipped. |
+| §8 | "`/docs` currently redirects to homepage (partial infra)" | **RESOLVED.** `/docs` serves `DocsHome` with **11** real doc pages under `dashboard/src/pages/docs/`. It is a full docs section, not a redirect. |
+| §5 (✅-safe) | "cookieless journeys" listed as safe-to-claim | **⚠️ Move to caveat.** The **served** `tracker.min.js` contains `document.cookie`: cookieless by default (localStorage), but a first-party cookie is written on the customer's opt-in `data-cookie-domain` path, and merchant `_fbp`/`_fbc` are **read** (never set) for Meta CAPI. A strictly-cookieless build exists but is **not served**. Do **not** claim "no cookies." |
+| §5 | "core data stored in EU" | **Strengthened.** US-hosted PostHog was decommissioned 2026-07-19 (project 416017 deleted). Analytics now read from Tinybird (EU, Frankfurt region); Supabase is EU (Ireland). Still **no** "GDPR compliant" badge — that label is not claimable. |
+| §5 (🚫) | *(Funnels not listed)* | **ADD Funnels to 🚫 CANNOT-claim.** Sold (`plan-features.js:36`, `funnels_cohorts` gated on trial+), endpoint live (`analytics.js:1022` `GET /funnel`), but it reads the Supabase **`pageviews`** table (`analytics.js:1047`) which is **empty by design in prod (0 rows)**, and its UI (`FunnelChart.jsx`) was **deleted in #317**. A billable feature that cannot return data and has no UI. |
+
+> Audit candidate (not corrected here): two UTM files with different casing coexist — `pages/tools/UtmBuilder.jsx` (page) and `components/UTMBuilder.jsx` (component).
