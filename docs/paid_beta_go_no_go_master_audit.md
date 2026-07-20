@@ -375,3 +375,36 @@ Code quality verdict:  MESSY BUT MANAGEABLE — clean ESM, strong security hygie
 - ✅ No app/backend feature code changed (audit + session docs only).
 - ✅ `ALLOW_PRODUCTION_QA_MUTATION` not set.
 - ✅ No GDPR/CCPA/SOC2/uptime/SLA/24-7 compliance claims made or implied.
+
+---
+
+## Session 144 Status Update — 2026-07-20
+
+The 2026-06-10 CONDITIONAL GO verdict stands. P0 conditions re-checked 40 days later:
+
+| # | P0 condition | Status @ 2026-07-20 | Owner |
+|---|---|---|---|
+| P0-1 | Stripe checkout/webhook evidence | 🟡 IN PROGRESS — Antigravity staging E2E + prod config audit. Reportedly tested ~5x previously but NO evidence was ever recorded; that absence IS the blocker. | Antigravity |
+| P0-2 | Staging/prod separation | 🟡 PARTIAL — Supabase confirmed genuinely separate projects (`SourceTrack` / `zxjjjsipafojhzkkumvh` vs `sourcetrack-staging` / `nrsvpwzekfrdrzkoecfk`, distinct hosts). Stripe / Resend / Railway separation NOT yet console-verified. | Founder |
+| P0-3 | Supabase backups + PITR | ❌ UNVERIFIED — org confirmed on Pro plan (daily backups likely included) but PITR is typically a separate add-on. Confirm in Supabase → Database → Backups. | Founder |
+| P0-4 | Prod env secrets + IP resolver | ❌ UNVERIFIED — confirm `ST_IP_RESOLVER_MODE=railway`, `ST_LOG_HASH_SECRET`, `TRACKER_SALT` present in Railway prod. Presence only; never paste values. | Founder |
+
+### New pre-launch items found 2026-07-20 (not in the original audit)
+
+| # | Item | Severity | Evidence |
+|---|---|---|---|
+| N-1 | **Leaked-password protection DISABLED** in Supabase Auth | Fix before launch — one toggle, free | Supabase security advisor, `auth_leaked_password_protection` |
+| N-2 | `count_monthly_pageviews` + `count_monthly_sessions` have **mutable `search_path`** — these are the BILLING METERS | Fix before launch — privilege-escalation surface on the billing path | Supabase security advisor, `function_search_path_mutable` (4 functions total) |
+| N-3 | **Zero staging sites have ever had a Stripe customer or subscription** — the billing path has never been exercised in the environment built for it | Explains why P0-1 sat open 40 days | `sites` query, staging, all rows `has_cust=false` |
+| N-4 | 16 tables show "RLS enabled, no policy" | ℹ️ NOT a hole — RLS with no policy is deny-all / fail-closed; API uses `service_role` | Supabase security advisor, INFO level |
+
+### Still open from the original audit
+
+P1-1 exception monitoring (largest ops blind spot) · P1-2 onboarding 500→400 · P1-3 email
+suppression · P1-4 GDPR bulk erasure (now Phase 7, NOT STARTED) · P1-5 Stripe webhook rate
+limiter · P2-1 conversion caps advertised but unenforced · SELF-SERVE P1-1 **no API-key
+management UI — top self-serve blocker, requires manual DB injection**
+
+### Verdict
+
+**NO-GO for taking payment** until P0-1 through P0-4 close. N-1 and N-2 added as launch gates.
