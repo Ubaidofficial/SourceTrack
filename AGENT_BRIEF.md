@@ -44,7 +44,7 @@ Do not claim full Cometly/DataFast/Usermaven parity unless verified in code and 
 At the start of every coding session, read:
 
 1. `RULES.md`
-2. `PROGRESS.md`
+2. `docs/archive/PROGRESS.md`
 3. `AGENT_BRIEF.md`
 4. Relevant feature docs:
    - `ATTRIBUTION.md`
@@ -54,7 +54,7 @@ At the start of every coding session, read:
    - `QA_RUNBOOK.md`
    - `KNOWN_ISSUES.md`
 
-Treat `PROGRESS.md` as history/navigation, not proof. Verify against code before claiming behavior.
+Treat `docs/archive/PROGRESS.md` as history/navigation, not proof. Verify against code before claiming behavior.
 
 ## Current baseline
 

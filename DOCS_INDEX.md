@@ -37,7 +37,7 @@ Trust tier per doc. **Precedence when sources conflict:** code → `KNOWN_ISSUES
 
 ## Reference (context / navigation — not proof)
 
-`AGENT_BRIEF.md` · `PROJECT_CONTEXT_COMPACT.md` · `DEVELOPER_CONTEXT.md` · `RULES.md` · `DEV_SESSION_CHECKLIST.md` · `NEXT_SESSION_PROMPT.md` · `COMMANDCODE_RUNBOOK.md` · `QA_RUNBOOK.md` · `MANUAL_QA_BACKLOG.md` · `BUG_REVIEW_LOG.md` · `IMPLEMENTATION_GAP_LIST.md` · `IMPLEMENTATION_STATUS.md` · `CHANGELOG.md` — plus design/spec docs (verify implementation in code before claiming): `FIGMA_DESIGN_SYSTEM.md` · `FIGMA_TOKEN_IMPLEMENTATION_PLAN.md` · `BUSINESS_DASHBOARDS_SPEC.md` · `ONBOARDING_FLOW_SPEC.md` · `COMPETITOR_PARITY.md`.
+`AGENT_BRIEF.md` · `PROJECT_CONTEXT_COMPACT.md` · `DEVELOPER_CONTEXT.md` · `RULES.md` · `DEV_SESSION_CHECKLIST.md` · `NEXT_SESSION_PROMPT.md` · `QA_RUNBOOK.md` · `MANUAL_QA_BACKLOG.md` · `BUG_REVIEW_LOG.md` · `CHANGELOG.md`. *(The superseded planning/spec docs — `IMPLEMENTATION_GAP_LIST`, `IMPLEMENTATION_STATUS`, `COMMANDCODE_RUNBOOK`, the `FIGMA_*` / `BUSINESS_DASHBOARDS_SPEC` / `ONBOARDING_FLOW_SPEC` / `COMPETITOR_PARITY` specs — were archived to `docs/archive/` in this batch; see Historical below.)*
 
 ## Session tracking
 
@@ -50,8 +50,9 @@ Trust tier per doc. **Precedence when sources conflict:** code → `KNOWN_ISSUES
 ## Historical (point-in-time — not current)
 
 - **Migration (complete):** `POSTHOG_MIGRATION_HANDOFF.md`, `POSTHOG_DECOMMISSION_SCAN.md` — the PostHog→Tinybird migration is **done** (2026-07-19); these are the record, not live guidance.
-- **Session history:** `PROGRESS.md`, `DEEPSEEK.md`.
-- **Point-in-time audits / plans:** `AUDIT_PROD_READINESS_V2.md` · `AUDIT_S97.md` · `PAID_BETA_SESSION_PLAN.md` · `SELF_SERVE_PAID_BETA_AUDIT.md` · `SESSION_132_ATTRIBUTION_AUDIT.md` · `SESSION_132D_MARKETER_TEST_PLAN.md` · `SOURCETRACK_COMPETITIVE_READINESS_AUDIT.md` · `SOURCETRACK_PRIVACY_ANALYTICS_AND_GA4_READINESS_AUDIT.md` · `SOURCETRACK_SEGMENT_LAUNCH_READINESS_AUDIT.md` · `implementation_plan.md`.
+- **Session history (archived → `docs/archive/`):** `docs/archive/PROGRESS.md`, `docs/archive/DEEPSEEK.md`.
+- **Point-in-time audits (archived this batch):** `docs/archive/AUDIT_PROD_READINESS_V2.md` · `docs/archive/AUDIT_S97.md` · `docs/archive/SELF_SERVE_PAID_BETA_AUDIT.md` · `docs/archive/SESSION_132_ATTRIBUTION_AUDIT.md` · `docs/archive/SESSION_132D_MARKETER_TEST_PLAN.md` · `docs/archive/SOURCETRACK_COMPETITIVE_READINESS_AUDIT.md` · `docs/archive/SOURCETRACK_PRIVACY_ANALYTICS_AND_GA4_READINESS_AUDIT.md` · `docs/archive/SOURCETRACK_SEGMENT_LAUNCH_READINESS_AUDIT.md`. *(Still at root: `PAID_BETA_SESSION_PLAN.md` — may be active, not archived.)*
+- **Superseded planning / specs (archived this batch):** `docs/archive/COMMANDCODE_RUNBOOK.md` · `docs/archive/IMPLEMENTATION_GAP_LIST.md` · `docs/archive/IMPLEMENTATION_STATUS.md` · `docs/archive/implementation_plan.md` · `docs/archive/ONBOARDING_FLOW_SPEC.md` · `docs/archive/FIGMA_DESIGN_SYSTEM.md` · `docs/archive/FIGMA_TOKEN_IMPLEMENTATION_PLAN.md` · `docs/archive/BUSINESS_DASHBOARDS_SPEC.md` · `docs/archive/COMPETITOR_PARITY.md`.
 
 ## Archives — cited by live code; DO NOT delete
 
@@ -59,6 +60,7 @@ Trust tier per doc. **Precedence when sources conflict:** code → `KNOWN_ISSUES
 |---|---|
 | `docs/archive/qa/` | 172 frozen sprint QA reports (#324). `api/middleware/tier-check.js` cites `pageview_limit_enforcement_140G-4.md` as the rationale for live quota enforcement. |
 | `tinybird/archive/` | 15 migration-planning docs (#325). 8 are cited in deployed `.pipe` descriptions + code comments (e.g. `PHASE4_4C_PLAN.md` is the evidence for the argMax null-skip in `last_touch_by_site.pipe`). |
+| `docs/archive/` (root-doc batch, this PR) | 19 superseded root docs (session history + planning/spec + point-in-time audits). Verified **zero** code references — archived for provenance, **not deleted** so their history survives. Their internal cross-references stay stale by design (frozen). |
 
 ## Maintenance rules
 

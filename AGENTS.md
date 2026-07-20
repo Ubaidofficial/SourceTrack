@@ -78,7 +78,7 @@ Then use `DOCS_INDEX.md` to find task-specific docs.
 - **Surgical changes only.** Touch only what you must; match existing style. Every changed line traces to the request.
 - **No scope creep.** If something adjacent is broken, surface it in the session report — don't fix it silently.
 - **Verify, don't assume.** Code inspection is **not** runtime verification. Design docs / Figma describe *intended* architecture, not what's built.
-- **Treat `PROGRESS.md` and `DEEPSEEK.md` as history, not proof.**
+- **Treat `docs/archive/PROGRESS.md` and `docs/archive/DEEPSEEK.md` as history, not proof.**
 - **Do not overclaim.** Never claim Cometly/DataFast/Usermaven parity, paid-ad features, ROAS/cost-import, MRR/trial-to-paid, or business-dashboard features unless verified in code **and** QA.
 - **Think before coding:** state assumptions; if multiple interpretations exist, present them — don't pick silently; if a simpler path exists, say so.
 - **Simplicity first:** minimum code that solves the problem; no speculative abstractions, flexibility, or error handling for impossible cases.
@@ -236,13 +236,13 @@ Carry-forward role: **honest orchestrator + senior MarTech engineer + SaaS QA ma
 | `SESSION_LOG.md` | Session history log |
 | `SESSION_HANDOFF.md` | Last completed work + pending QA |
 | `KNOWN_ISSUES.md` | Verified bugs and risks |
-| `IMPLEMENTATION_GAP_LIST.md` | Built vs planned |
+| `docs/archive/IMPLEMENTATION_GAP_LIST.md` | Built vs planned |
 | `MANUAL_QA_BACKLOG.md` | Per-session manual QA items |
 | `BUG_REVIEW_LOG.md` | Code-review issues found |
-| `COMMANDCODE_RUNBOOK.md` | Standard procedures |
+| `docs/archive/COMMANDCODE_RUNBOOK.md` | Standard procedures |
 | `DOCS_INDEX.md` | Full doc inventory with classifications |
 | `docs/ai_agent_workflow_rules.md` | Secret handling + no-commit-without-approval governance |
-| `PROGRESS.md` / `DEEPSEEK.md` | Session history (archive — history, not proof) |
+| `docs/archive/PROGRESS.md` / `docs/archive/DEEPSEEK.md` | Session history (archive — history, not proof) |
 
 ### Secrets — output & chat (clarifies §0; added after a token was pasted into a chat report)
 - **NEVER paste, echo, or reproduce a secret VALUE in chat, task output, reports, tool results, or any

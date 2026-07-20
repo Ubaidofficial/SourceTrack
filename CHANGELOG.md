@@ -186,7 +186,7 @@ but no entrypoint. Covers quick start, architecture, env vars, jobs,
 privacy claims, and links to the deeper docs.
 
 **Stale `loader.min.js` references** — replaced 14 references across 8 docs
-(DEEPSEEK.md, QA_RUNBOOK.md, ARCHITECTURE.md, PROGRESS.md, AGENT_BRIEF.md,
+(docs/archive/DEEPSEEK.md, QA_RUNBOOK.md, ARCHITECTURE.md, docs/archive/PROGRESS.md, AGENT_BRIEF.md,
 DATA_CAPTURE_SPEC.md, BUG_REVIEW_LOG.md, CLAUDE.md). The actual file is
 `tracker/tracker.min.js`; `loader.min.js` never existed.
 

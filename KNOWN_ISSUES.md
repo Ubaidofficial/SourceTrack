@@ -228,16 +228,16 @@ session for it.** Standing rule instead: *when a PR touches one of these files, 
 
 | File | Size | Note |
 |---|---|---|
-| `PROGRESS.md` | 163 KB | Session-by-session history from Session 1; unchecked items are stale |
-| `DEEPSEEK.md` | 82 KB | Describes the DeepSeek health-agent LLM **deleted in #184** |
-| `AUDIT_PROD_READINESS_V2.md` | | May point-in-time audit |
-| `AUDIT_S97.md` | | May point-in-time audit |
-| `COMPETITOR_PARITY.md` | | Planning doc — not proof of shipped features |
-| `BUSINESS_DASHBOARDS_SPEC.md` | | Implementation status unverified |
-| `ONBOARDING_FLOW_SPEC.md` | | Implementation status unverified |
-| `FIGMA_DESIGN_SYSTEM.md` | | Generated spec |
-| `FIGMA_TOKEN_IMPLEMENTATION_PLAN.md` | | Do not implement without a session gate |
-| `IMPLEMENTATION_GAP_LIST.md` | | Superseded by `FEATURE_MAP §20` |
+| `docs/archive/PROGRESS.md` | 163 KB | Session-by-session history from Session 1; unchecked items are stale |
+| `docs/archive/DEEPSEEK.md` | 82 KB | Describes the DeepSeek health-agent LLM **deleted in #184** |
+| `docs/archive/AUDIT_PROD_READINESS_V2.md` | | May point-in-time audit |
+| `docs/archive/AUDIT_S97.md` | | May point-in-time audit |
+| `docs/archive/COMPETITOR_PARITY.md` | | Planning doc — not proof of shipped features |
+| `docs/archive/BUSINESS_DASHBOARDS_SPEC.md` | | Implementation status unverified |
+| `docs/archive/ONBOARDING_FLOW_SPEC.md` | | Implementation status unverified |
+| `docs/archive/FIGMA_DESIGN_SYSTEM.md` | | Generated spec |
+| `docs/archive/FIGMA_TOKEN_IMPLEMENTATION_PLAN.md` | | Do not implement without a session gate |
+| `docs/archive/IMPLEMENTATION_GAP_LIST.md` | | Superseded by `FEATURE_MAP §20` |
 
 **Stale but still useful — rewrite, don't archive:** `ATTRIBUTION.md` (36 KB),
 `IDENTITY_DESIGN.md` (predates Tinybird), `MANUAL_QA_BACKLOG.md`, `QA_RUNBOOK.md`.
@@ -700,7 +700,7 @@ D4 deleted `dashboard/src/lib/posthog.js` + the `posthog-js` dependency. That li
 ### ✅ RESOLVED — PostHog legal copy gate cleared: project 416017 is DELETED (opened 2026-07-19, closed 2026-07-19, D5)
 **CLOSED.** The gate was: could customer data still reside in PostHog? **Answer: no — PostHog project 416017 is confirmed DELETED** (the orchestrator's MCP token that previously returned `403 — API key does not have access to project 416017` now returns `404 — Project not found`; 2026-07-19). D5's env half is also done (POSTHOG_*/VITE_POSTHOG_* stripped from Railway, 12/12 zero matches, all 6 services redeployed, prod boot clean off Tinybird). So the gated edits were applied: PostHog **removed** from `Subprocessors.jsx`, and the now-false `Settings.jsx:1393` retention disclosure **removed** (no residual PostHog events exist to disclose). `Settings.jsx:1394` (paid-beta blocker) left for a founder call. A `Settings.jsx:1207` visitor-erasure correction shipped in #313. **PostHog is fully decommissioned — code, env, and project.** Original gate context retained below for the record:
 
-Historical state (now moot): PostHog was fully off the code path (no read/write, dependency + frontend client removed) but the **historical customer data was believed to still RESIDE in the PostHog project** — the repo had **no PostHog data-deletion job or runbook**, and `COMMANDCODE_RUNBOOK.md:441/453` stated historical events were **not** bulk-deleted and retention "must be verified in the provider console." Until the founder confirmed project deletion:
+Historical state (now moot): PostHog was fully off the code path (no read/write, dependency + frontend client removed) but the **historical customer data was believed to still RESIDE in the PostHog project** — the repo had **no PostHog data-deletion job or runbook**, and `docs/archive/COMMANDCODE_RUNBOOK.md:441/453` stated historical events were **not** bulk-deleted and retention "must be verified in the provider console." Until the founder confirmed project deletion:
 - **`dashboard/src/pages/Subprocessors.jsx:22`** (`['PostHog', 'Product/event analytics (read layer)', 'US']`) is **LEFT IN PLACE.** Removing a sub-processor entry claims customer data no longer resides there; if data still sits in PostHog, that claim is false — worse than leaving it. Prepared removal: delete that one array row. **Apply only after project-deletion is confirmed.**
 - **`Settings.jsx:1393`** ("Deleting your account does NOT delete historical raw analytics events already sent to … PostHog") is **LEFT IN PLACE** — it is a *true* retention disclosure while the data exists.
 - **`Settings.jsx:1394`** ("Paid Beta Blocker: … PostHog retention/deletion handling") is **LEFT IN PLACE** — a founder business/legal status call.
