@@ -452,6 +452,14 @@ After the 19:54 failures, status flipped to `'error'` with `last_error_code = 's
 
 **Frame exactly this way: no drift has occurred.** Prod serves the committed `tracker/tracker.min.js` directly (`api/index.js:337` `res.sendFile`) and **nothing rebuilds it at deploy**, so a source-only tracker change is **INERT** in production unless the min is rebuilt and committed in the same PR. **No test guards min↔source sync.** As of 2026-07-20 the two were verified **IN SYNC**: rebuilding `origin/main`'s `tracker.js` with the repo's own esbuild `0.24.2` via the documented `package.json:9` `build:tracker` script produced a **byte-identical** match to the committed min — no prior tracker change shipped as a no-op; prod is **NOT** running stale logic. **Recommended fix (not built here):** a CI guard that runs `build:tracker` and fails if the committed min differs from the rebuild.
 
+### 42. `sites.api_key` is plaintext at rest; `requireApiKey` middleware is dead code
+
+`sites.api_key` is a **plaintext** column, DB-default-generated (`DEFAULT gen_random_uuid()`) — **prod: 4/4 sites carry a plaintext key, only 1 has `api_key_hash`** (Supabase-verified 2026-07-20). It is read by **nothing live**: `api/middleware/api-key.js` (`requireApiKey`) — which would look it up (`sites.api_key_hash`, with a **raw-plaintext fallback**) — is **defined but never imported or mounted**. So this is a latent plaintext credential on every site **plus** dead middleware. The current live key model is the separate hashed `api_keys` table (see FEATURE_MAP §1). `gdpr.js:548` already excludes `api_key`/`api_key_hash` from export. **Fix them together** (the #340 lesson — a dead reader and its data are one change, not two): drop the plaintext column + the hash-fallback branch + the dead middleware. Verify the actual prod column shape first (baseline schema vs later migrations differ).
+
+### 43. `api_keys` has no scope model; revoke destroys audit; no generation rate-limit
+
+`api_keys` has **no `scopes`/`permissions` column** — every issued key is all-powerful **per-site**. Today's only consumer is write-ingest (`POST /api/server/event`), but the roadmap is a **read REST API → MCP server**. With **0 keys issued in prod**, the migration cost to add scopes is **zero and will never be lower** — add a scope/permission model **before** the key authenticates anything beyond ingest (retrofitting scopes onto already-issued all-access keys is the painful path). Also: **revoke = hard `DELETE`** (no `revoked_at`/`is_active`), so `last_used_at` audit history is destroyed on revoke; and there is **no rate-limit or per-site cap** on `POST /api/integrations/api-keys` generation. (Not `KI-34` class — keys are hashed, not `ENCRYPTION_KEY`-encrypted, so rotation doesn't cascade.)
+
 ---
 ## Recently fixed
 

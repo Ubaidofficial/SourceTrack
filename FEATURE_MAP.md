@@ -159,7 +159,7 @@
 ## 16. Developer / API
 - ✅ Identify API; developer docs portal (API, Tracker, Conversions, Offline, Webhooks, Campaign-Costs, Security, Identify)
 - ✅📜 **Server-side event ingestion** — `POST /api/server/event` + `api_keys` table (SHA-256 Bearer)
-- ⚠️ **NO API-key management UI** — can't generate/view/revoke keys in Settings/Dev portal; requires manual DB injection (**SELF_SERVE P1-1, top self-serve blocker**)
+- ✅⚠️ **API-key management is BUILT end-to-end** (the prior "NO API-key UI / manual DB injection" line here was **materially false** — a line-3 freshness-guard failure, corrected 2026-07-20). Full create/list/revoke REST surface (`GET`/`POST`/`DELETE /api/integrations/api-keys`, `integrations.js`) + `Settings.jsx` "Server API Tokens" UI; hashed storage (`api_keys.key_hash` sha256), **reveal-once by construction**, plan-gated `api_access`, hidden in support-preview; consumed by `POST /api/server/event` (`server-events.js`). ⚠️ **But NEVER EXERCISED IN PROD** — `api_keys` = **0 rows, 0 ever used** (Supabase-verified 2026-07-20). ⚠️ **The real self-serve blocker is PACKAGING, not engineering:** `api_access` is gated to **Growth+**, so free/starter customers cannot obtain a key at all — a plan-tier decision. Related security gaps: `KNOWN_ISSUES` **KI-42** (plaintext `sites.api_key` + dead middleware), **KI-43** (no scopes / revoke-destroys-audit / no gen rate-limit).
 
 ## 17. Ops / internal (not customer-facing)
 - ✅ **Admin / Ops console** — `/api/admin` route (auth-guarded) + `Admin.jsx` page
