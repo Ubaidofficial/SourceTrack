@@ -10,7 +10,6 @@ const IGNORED_DIRS = [
   'dist',
   'dashboard/dist',
   '.claude',
-  '.commandcode',
   'logs'
 ];
 
