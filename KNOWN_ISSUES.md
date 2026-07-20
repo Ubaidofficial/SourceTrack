@@ -172,15 +172,18 @@ What we rely on instead (and the standing gate for removing the HogQL fallback i
 
 Status: pipe-vs-HogQL parity for the nightly write path is **UNVERIFIED and will remain so** — recorded here rather than implied by a green harness.
 
-### 20. Nightly 02:00 UTC verification pending (first live B3 run)
+### 20. ~~Nightly 02:00 UTC verification pending~~ — VERIFIED 2026-07-20
 
-The nightly attribution job (`api/jobs/nightly-attribution.js`) now runs **Tinybird-sole with fail-closed reads** (B3, #308–#311, migration complete 2026-07-19). Its **first live 02:00 UTC run has NOT been verified.** `restartPolicy: NEVER` means a failed run is a **~24h attribution gap with no retry** — a failure silently drops a day of the money rail (`attributed_conversions`) until the next night. Action: verify the first live run's outcome and add alerting on a failed/absent run.
+
+**Verified 2026-07-20:** first post-B3 run fired 02:00:49 UTC, status=success, 1712ms, no error. Read path proven. **Write path still unproven** — conversions_processed: 0 on 18/19/20 July, so no attribution row has been written since B3 landed.
+
+The nightly attribution job (`api/jobs/nightly-attribution.js`) now runs **Tinybird-sole with fail-closed reads** (B3, #308–#311, migration complete 2026-07-19). Its first live 02:00 UTC run is now verified (above). `restartPolicy: NEVER` means a failed run is a **~24h attribution gap with no retry** — a failure silently drops a day of the money rail (`attributed_conversions`) until the next night. **Remaining action:** add alerting on a failed or absent run — nothing currently detects a missed night.
 
 ### 21. sourcetrack-email cron misconfigured — weekly emails have NEVER sent
 
 The `sourcetrack-email` service is misconfigured: `buildCommand` runs the job at **build time**, and `startCommand` is null, so the deployed cron boots `bootstrap.js` and crashes. Result: **weekly emails have never been sent.** Six UI fix attempts have not persisted the config; the cause is unexplained. Needs a root-cause pass (Railway service config vs. repo; why the UI change does not stick).
 
-### 22. Share / public reports — REMOVE, do not finish (design §23 = V2)
+### 22. ~~Share / public reports — REMOVE~~ — DONE (#323)
 
 `api/routes/public-dashboard.js` + `dashboard/src/pages/ShareDashboard.jsx` + the `/share` links in `Settings.jsx` are a partially-built public-reports feature. The design doc **§23 lists Public reports as V2**, so the correct action is to **REMOVE** these, not finish them. Settings currently renders links to a **404 route** (customer-facing defect). Scope: delete the two files + the Settings `/share` links.
 
@@ -193,6 +196,100 @@ Report Builder gates **11 metrics + 2 dimensions** behind a 422 whose copy refer
 `scripts/qa-setup-doctor.mjs` is **not wired into CI** and has been failing unnoticed (a stale `Dashboard.jsx`/`SetupDoctorCard` assertion — Dashboard dropped the card at some earlier point). Unknown how many other `scripts/qa-*.mjs` are similarly orphaned (authored, never invoked by any CI workflow or `package.json` script). Action: for each `scripts/qa-*.mjs`, confirm it is invoked by CI or an npm script, or retire it.
 
 
+### 25. Operator console reports a deleted feature as "dormant"
+
+**Severity:** low · **Verified:** 2026-07-20 @ post-#330 main
+
+`api/routes/admin.js:686` runs `routeExists('ai-analytics.js')` and `:701` renders the result as
+`AI Analytics — status: dormant`. The route file was **deleted in #315**, so the probe now always
+returns false. Related hardcoded entries at `:644` and `:722`.
+
+The output is technically accurate but misleading — *dormant* implies the feature could be switched
+on. There is nothing to switch on.
+
+**Fix:** delete the probe, the console row, and the two hardcoded entries. Roughly four lines.
+
+**Why not fixed in #328:** out of scope for a docs PR. Recorded in `FEATURE_MAP §21` with receipts,
+flagged rather than silently adapted.
+
+---
+
+### 26. Tier-3 cleanup backlog — documentation
+
+**Severity:** cosmetic · **Verified:** 2026-07-20
+
+Tier 1 and Tier 2 cleanup are complete (#323–#330). What follows is tidying. **Do not schedule a
+session for it.** Standing rule instead: *when a PR touches one of these files, fix it in that PR.*
+
+**Root documents untouched since May — archive candidates → `docs/archive/`:**
+
+| File | Size | Note |
+|---|---|---|
+| `PROGRESS.md` | 163 KB | Session-by-session history from Session 1; unchecked items are stale |
+| `DEEPSEEK.md` | 82 KB | Describes the DeepSeek health-agent LLM **deleted in #184** |
+| `AUDIT_PROD_READINESS_V2.md` | | May point-in-time audit |
+| `AUDIT_S97.md` | | May point-in-time audit |
+| `COMPETITOR_PARITY.md` | | Planning doc — not proof of shipped features |
+| `BUSINESS_DASHBOARDS_SPEC.md` | | Implementation status unverified |
+| `ONBOARDING_FLOW_SPEC.md` | | Implementation status unverified |
+| `FIGMA_DESIGN_SYSTEM.md` | | Generated spec |
+| `FIGMA_TOKEN_IMPLEMENTATION_PLAN.md` | | Do not implement without a session gate |
+| `IMPLEMENTATION_GAP_LIST.md` | | Superseded by `FEATURE_MAP §20` |
+
+**Stale but still useful — rewrite, don't archive:** `ATTRIBUTION.md` (36 KB),
+`IDENTITY_DESIGN.md` (predates Tinybird), `MANUAL_QA_BACKLOG.md`, `QA_RUNBOOK.md`.
+
+**Append-only logs past usable size:** `SESSION_HANDOFF.md` (356 KB), `SESSION_LOG.md` (256 KB).
+No agent reads either in full. Consider periodic splits (`SESSION_LOG_2026H1.md`) rather than
+deletion.
+
+**Archive, never delete.** `docs/archive/qa/` and `tinybird/archive/` are cited by live code
+comments and `.pipe` descriptions — see #326. When archiving anything, grep the **bare filename**
+repo-wide: citations live in code comments, test asserts, JSON prose, and other docs, in at least
+three different formats.
+
+---
+
+### 27. Tier-3 cleanup backlog — code
+
+**Severity:** low · **Verified:** 2026-07-20
+
+| Item | State | Action |
+|---|---|---|
+| `api/lib/abuse-guards.js` | zero references | delete |
+| `api/lib/rate-limit.js` `publicDashboardLimit` / `createPublicDashboardLimit` | orphaned by #323; **behaviour tests still assert on it** | delete limiter **and** the three tests together — a suite asserting on dead code will confuse a future CI failure |
+| `api/lib/hogql-date.js` | PostHog-era **name**, ~8 live importers | **rename, do not delete** |
+| `api/lib/url-normalization.js` vs `url-normalize.js` | possible duplicate | audit and merge |
+| `supabase/migrations/20260620134500_add_site_support_notes.sql` | dangling — applied to neither DB | decide: apply or remove |
+| `supabase/schema.sql` | 1 KB, stale (see issue 1) | regenerate or delete |
+| `site_annotations` / `annotations` tables | routes deleted in #315, tables remain | DDL — needs explicit founder go-ahead |
+| 67 test files reference `process.env.POSTHOG_*` | legitimate fail-closed scaffolding, but named after a deleted system | rename to a neutral env var |
+
+**Script wiring:** see issue 24 — 40 `qa-*` scripts, 6 npm script names, 1 in CI. Same backlog,
+not duplicated here.
+
+---
+
+### 28. Deferred: `DATA_CAPTURE_SPEC.md` needs a rewrite, not a patch
+
+**Severity:** medium — actively misleads agents · **Verified:** 2026-07-20
+
+Two defects:
+
+1. A "PostHog properties" section describing a store decommissioned 2026-07-19.
+2. Its "Not yet verified/built" list claims click IDs are unbuilt — **directly contradicting
+   issue 3 above** (*"This issue was wrong. Click IDs ARE captured end-to-end"*) and
+   `FEATURE_MAP §1`, which records 13 captured.
+
+**Why deferred:** fixing it correctly requires a field-by-field audit of `tracker.js` against
+`tinybird/SCOPE_v3.md §2.6`, to establish which fields are typed columns and which live in the JSON
+properties bag. Rewriting it from the other two docs would launder their claims rather than verify
+anything.
+
+**Interim:** marked ⚠️ stale in `DOCS_INDEX.md` with "trust `KNOWN_ISSUES` and `FEATURE_MAP` over
+it." Do not cite it as authoritative until the audit runs.
+
+---
 ## Recently fixed
 
 ### Safe JS-based Multi-Touch Attribution Engine (Session 105)
