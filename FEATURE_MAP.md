@@ -129,7 +129,7 @@
 - 🧪 **Stripe (attribution)** — manual webhook `/api/webhooks/stripe/:site_key` (checkout + refund); built but **no prod site connected** — buyer-attribution not live in prod
 - ✅ **Stripe (own billing)** — `/api/billing/webhook` (subscription lifecycle, plan/limit updates, dunning) — separate from attribution
 - 🧪 **Shopify** — manual webhook (orders/paid + orders/create); **no refund netting** (parity gap vs Stripe); not a native app
-- 🧪 **Google Search Console (GSC SEO-revenue)** — built + truth-gated; **never proven on real organic data**; staging OAuth redirect bug (points at prod host)
+- 🧪 **Google Search Console (GSC SEO-revenue)** — built + truth-gated. **The automated pipeline was DEAD 2026-06-29 → 2026-07-20:** the daily sync failed on a missing then malformed `ENCRYPTION_KEY` on the `nightly-attribution` service; each failure set `gsc_connections.status='error'`, which the `.eq('status','connected')` eligibility filter (`gsc-daily-sync.js:152`) then **permanently disqualifies** — so subsequent nights returned `{eligible:0}` and the job wrote a hardcoded `success` (fixed in #332). `gsc_performance_daily` froze at 2026-07-16 (67 rows, 1 site). **Fixed 2026-07-20** (key aligned, connection reset, #332 derives the status). **Manual sync works** (2026-06-26, 2026-07-18); the **automated path is unverified since 2026-06-29** — 🧪 pending its first successful 02:00 UTC run after 2026-07-20. ⚠️ **Live design flaw:** a transient failure permanently disqualifies a connection with no retry/backoff/self-heal — #332 made it visible, it does not prevent recurrence.
 - ✅🔒📜 **CAPI (server-side Conversions API)** — Meta + Google; token encryption at rest, `capi_deliveries` log, event-ID dedup, hashed PII, plan-gated (`requireFeature('capi_server_side')`), wired into conversion routes (PRs #57–60). MS/LinkedIn senders reachable+tested. TikTok deliberately stripped. ⚠️ don't claim "live forwarding" until a merchant uses it.
 - ✅📜 **Outbound webhook** — HMAC-signed, SSRF-guarded, plan-gated; carries `ai_source` + 14 click IDs into customers' CRMs (**gap in all 4 competitors**)
 - ✅ Incoming/manual conversion webhook (HMAC, replay-bound)
@@ -164,9 +164,21 @@
 - ✅ **Admin / Ops console** — `/api/admin` route (auth-guarded) + `Admin.jsx` page
 - ✅ **Event Debugger** — real-time event inspector (`/debugger`) — polished, QA-verified
 - ✅ **Data Quality** page (`/data-quality`) + `data-quality-check.js` job
-- ✅ Jobs: nightly-attribution, anomaly-watcher, email-reports (digest), usage-threshold-emails, **health-agent**
-- ⚠️❓ **health-agent scheduling UNCONFIRMED** (no repo cron; maybe Railway dashboard cron) + **still monitors DEAD PostHog** (needs Tinybird repoint) — see #97
-- ⚠️ **Quarantine alarm** (`quarantine-alarm.js`, silent-revenue-loss monitor) — built + tested, **being wired into health-agent (#97)**
+- **Jobs — per-job status (verified from prod Railway config + `job_runs`, 2026-07-20; NOT a blanket ✅):**
+
+  | Job | Status |
+  |---|---|
+  | `nightly-attribution` | ✅ runs `0 2 * * *`, config correct — but `conversions_processed: 0` on 18–20 Jul: the Tinybird read path is proven, the money-rail **write** path is unexercised. |
+  | `health-agent` | ⚠️ runs `*/30 * * * *`, checks correct — but delivery is broken (see next bullet). |
+  | `data-quality-check` | ✅ runs `0 0 * * *`. |
+  | `email-reports` | ❌ **has never sent an email** — job is in `buildCommand` (runs at build time; ~255 "success" `job_runs` rows), `startCommand` absent → the Monday cron boots `bootstrap.js` and crashes. `KNOWN_ISSUES` 21. |
+  | `usage-threshold-emails` | ❌ **scheduled nowhere** (not staging, not prod). The `0 14 * * *` schedule that once appeared in the runbook/README does not exist. |
+  | `anomaly-watcher` | ❌ **NOT scheduled in production** — staging only (`0 3 * * *`); its former GitHub-Actions cron (#70) is gone (`.github/workflows/` has only `ci.yml`). Never run in prod. |
+  | `gsc-daily-sync` | runs **inside** `nightly-attribution` (not its own service) — see the GSC row in §1/§20. |
+- ⚠️ **health-agent: detection correct, delivery absent.** Scheduling is **confirmed** (Railway `f15924b7`, `*/30 * * * *`, `node api/jobs/health-agent.js`) — not "unconfirmed". It does **NOT** monitor PostHog: that check was **RETIRED in D2**, `data_flow` reads Tinybird, and `CRITICAL_CHECKS = {supabase, nightly_job, conversions, tinybird_quarantine}` (`health-agent.js:18`). The gap splits in two. **Env — FIXED 2026-07-20:** `SLACK_WEBHOOK_URL` held a literal placeholder (so `notify()`'s `:283` guard, `if (!SLACK || dx.severity === 'ok') return`, passed on a truthy-but-dead value and every alert POSTed into the void); it now points at a real webhook on all three readers, curl-verified HTTP 200. **Code — NOT fixed (the durable defect):** the `fetch` at `:289` still has **no `.ok` check and no `try/catch`**, and `notify()` is still **unwrapped** at `:320` — so a revoked URL, a Slack outage, or a transient network *throw* is swallowed silently again (the throw rejects `run()`, the top-level `.catch` at `:328` logs a generic crash, and `process.exit(snap.overall === 'critical' ? 1 : 0)` at `:322` never runs — masking the verdict). Alerts land today only because the URL is currently valid. health-agent additionally writes **no `job_runs` row** (its own runs are unobservable). `KNOWN_ISSUES` 29.
+- ✅ **Quarantine alarm** (`quarantine-alarm.js`, silent-revenue-loss monitor) — built + tested + **wired into health-agent (#97)**: imported at `health-agent.js:5`, `tinybird_quarantine` is in `CRITICAL_CHECKS` (`:18`). ⚠️ Caveat: its alert rides the same fragile channel — deliverable today (real webhook, HTTP 200, since 2026-07-20) but silently droppable if the URL is revoked or Slack errors, because the `fetch` at `:289` is unchecked and `notify()` is unwrapped at `:320` (see the health-agent row above).
+- ⚠️ **Email reports (weekly digest)** — a plan entitlement (`plan-features.js:37` `email_reports`, trial+), but the delivery job (`email-reports`) **has never functioned** (above) and **nothing customer-facing promises it** (zero `email.report`/`weekly report` surface in `dashboard/src`). Dormant entitlement + broken job — **not** a sales claim.
+- ⚠️ **Usage-cap threshold emails (50/80/100%)** — the notification **job (`usage-threshold-emails`) is scheduled nowhere** and has never run. Distinct from the **live** in-dashboard usage meter (`Billing.jsx`, reads `/billing/usage` → `site_usage_monthly`, which works). Nothing customer-facing promises the *emails* — **not** a sales claim.
 - ✅ Data export (`/api/export`), job-status (`/api/jobs`), hygiene checks (`/api/hygiene`), backfill tool
 - ⚠️ No exception monitoring (Sentry-class) — biggest ops blind spot (P1-1); no public status page
 
@@ -192,10 +204,10 @@
 | 1 | MRR-by-source + trial→paid | Steps 1–3 built | Step 4 blocked: no-card trial makes no Stripe sub → `trial_start` never fires |
 | 2 | Server-side event API keys | Backend built | No UI to generate/view/revoke keys (self-serve P1) |
 | 3 | Attribution-window config | UI + route exist | Blocked on unrun DB migration |
-| 4 | GSC SEO-revenue | Built + truth-gated | Never proven on real organic data + staging redirect bug |
+| 4 | GSC SEO-revenue | Built + truth-gated | **Automated pipeline was dead 2026-06-29→07-20** (`ENCRYPTION_KEY`, then auto-disable via `.eq('connected')`); fixed #332 but 🧪 pending first automated sync. Manual path works. Auto-disable is a live design flaw (no retry). |
 | 5 | Business-type dashboard variants | Design-confirmed | Build-state unverified (design says don't claim) |
 | 6 | Onboarding fresh-signup | Resume works | Fresh signup E2E untested; 500-not-400 on reject (patch fixes) |
-| 7 | health-agent + quarantine alarm | Alarm built | Wire (#97) + scheduling unconfirmed + still on dead PostHog |
+| 7 | health-agent + quarantine alarm | ✅ built + wired (#97), scheduled `*/30` in prod, on Tinybird | **Delivery:** env fixed 2026-07-20 (real webhook on all three readers, HTTP 200); **code defect remains** — the `fetch` at `:289` has no `.ok`/`try/catch` and `notify()` is unwrapped at `:320`, so a revoked URL/outage/transient throw fails silently again (throw masks the exit verdict, `:322`/`:328`). Works today only while the URL is valid. Writes no `job_runs` row (`KNOWN_ISSUES` 29) |
 | 8 | Stripe/Shopify buyer-attribution | Webhooks built | No prod site connected → not live; Shopify has no refund netting |
 | 9 | Report Builder conv_type filter | Built | Ignored on ~6 templates → inflated data |
 | 10 | Conversion/sites/seats caps | Advertised | Not enforced backend (only pageviews metered) |
