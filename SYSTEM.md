@@ -1,195 +1,89 @@
-# SYSTEM.md — TrackIQ
+# SYSTEM.md — SourceTrack
+
+Backend system contract. Verified by grep against the code on `main` (2026-07-20). Where this doc and the code disagree, **the code wins** — re-verify before trusting a load-bearing line.
 
 ## Product
-TrackIQ is a marketing attribution SaaS. It tracks first-touch, last-touch, first-touch non-direct, last-touch non-direct, and AI platform attribution (which AI tools send traffic that converts: ChatGPT, Claude, Perplexity, Gemini, etc.).
+SourceTrack is a multi-tenant marketing-attribution SaaS. It tracks first-touch, last-touch, first-touch-non-direct, last-touch-non-direct, linear, u-shaped, time-decay, w-shaped, and AI-platform attribution (which AI tools — ChatGPT, Claude, Perplexity, Gemini, Copilot, DeepSeek, Grok, … — send traffic that converts). Attribution models are defined in `api/lib/attribution-engine.js` (9 keys).
 
 ## Stack
-- Backend: Node.js v20 + Express → Railway
-- Events: Self-hosted PostHog on Railway
-- DB/Auth: Supabase — site metadata + user accounts ONLY. No raw events in Supabase.
-- Frontend: React + Vite → Railway
-- AI chat: provider-agnostic via `api/lib/ai-client.js` (Session 3 only)
-- Billing: Stripe (Session 4 only)
+- **Backend:** Node.js ESM + Express → Railway. `import`/`export` only, never `require()`.
+- **Analytics read/write layer:** Tinybird (ClickHouse), served by deployed pipes in `tinybird/pipes/*.pipe`. Reads go through `api/lib/tinybird-read.js` (`queryTinybirdPipe`). *(PostHog was the event store until it was decommissioned 2026-07-19 — project 416017 deleted, the PostHog client library removed. It is gone; there is no fallback to it.)*
+- **Source of truth (Postgres):** Supabase — attribution, conversions, revenue, billing/entitlements, site metadata, user accounts, RLS. The `pageviews` table is **empty by design** (analytics reads come from Tinybird).
+- **Frontend:** React + Vite → Railway.
+- **Billing:** Stripe. **Two separate webhooks — never conflate** (see below).
+- **AI chat / AI analytics:** **cut** (not in the app). `api/lib/ai-client.js` still exists → audit candidate.
 
 ## Global guardrails
-- async/await only. No `.then()` chains, no callbacks.
-- Every async function must use try/catch.
-- Never use `console.log`. Use `console.error` only for caught errors.
-- Never hardcode secrets. Always use `process.env.*`.
-- Do not invent APIs, SDK options, env vars, table names, or PostHog properties not defined in this file or the session prompt.
+- async/await only. No `.then()` chains, no callbacks. Every async function uses try/catch.
+- Never `console.log`. Use `console.error` only for caught errors.
+- Never hardcode secrets. Always `process.env.*`. `getSupabase()` from `api/lib/supabase.js` — never `createClient()` directly in routes.
+- Do not invent APIs, SDK options, env vars, or table names not in this file or the code.
 - If unsure, leave `TODO: confirm` instead of guessing.
 - Do not reorder middleware unless explicitly instructed.
-- Do not add billing code before Session 4.
-- Do not modify `ai-client.js` outside Session 3 unless explicitly instructed.
 
 ## API response format
-All API responses must be:
 `{ success: boolean, data: any, error: string | null }`
 
 ## HTTP codes
 - 200 ok
 - 400 bad input
-- 401 invalid/missing site_key
+- 401 invalid/missing `site_key`
 - 402 trial expired or inactive subscription
+- **422 valid request, backing data path unavailable** (a gated/dead-store shape — the server denies rather than return fake zeros; §6 data-truth)
 - 429 rate limited
 - 500 server error
 
 ## Client IP rule
-Always use:
-`req.headers['x-forwarded-for']?.split(',')[0]`
-Never use `req.ip` because Railway proxies break geoip accuracy.
+`req.headers['x-forwarded-for']?.split(',')[0]` — never `req.ip` (Railway proxies break geoip accuracy). `enrich()` must never store raw IP.
 
 ## UUID rule
-Use:
 `import { v4 as uuidv4 } from 'uuid'`
 
-## PostHog ingestion
-Package: `posthog-node`
+## The Tinybird read contract (verified against `api/lib/tinybird-read.js`)
+- `queryTinybirdPipe(pipeName, params)` is gated by `TINYBIRD_READ_ENABLED` + the `TINYBIRD_READ_PIPES` allowlist (`isPipeReadAllowed` → `null` if disallowed).
+- Retries **transient** failures — HTTP 429, HTTP ≥ 500, or a network throw/timeout — up to **3 attempts total** (`MAX_ATTEMPTS = 3`), 15s per-attempt timeout, backoff `Retry-After` or `min(60s, 2000·2^attempt)`.
+- Returns **`null` on exhaustion**, **`[]` for a served-empty** result, and **never throws** to the caller.
+- **`null` ≠ `[]`:** `[]` = "store answered, no data"; `null` = "store did not answer."
+- **`null` fails CLOSED — there is NO fallback path** (`queryPostHog` was deleted in #311):
+  - `readTb` (`api/routes/dashboard.js:35`) **throws** on null.
+  - engine `_pipeNull` (`api/lib/attribution-engine.js:50`) **throws** on null.
+  - the nightly (`api/jobs/nightly-attribution.js`) **aborts** its write on null.
+- **Never substitute zeros. Never fall back to another store.**
+- **Known violation** (`KNOWN_ISSUES.md §14`): `/admin` + `/leads/count` swallow the throw and return **200 with zeroed KPIs** — that is a **bug**, not the pattern.
 
-```js
-import { PostHog } from 'posthog-node'
+## Pipe conventions (verified against shipped `.pipe` files; deploys are founder-gated)
+- `site_id` is a **required** template param, never string-interpolated.
+- Required dates: `{{DateTime(p, required=True)}}` with **no** `toDateTime()` wrapper.
+- Optional dates default: `{{DateTime(p,'1970-01-01 00:00:00')}}`.
+- Timezones: `{{String(tz,'UTC')}}` — never `required=True` (breaks `toTimeZone()` under `--check`).
+- Array params as repeated query keys.
+- `JSONExtractString` returns `''` not `NULL` — wrap `nullIf(...,'')` where NULL semantics matter.
+- **`tb --cloud deploy --check` against prod is the mandatory pre-deploy gate.** Typed-column reference: `tinybird/SCOPE_v3.md` §2.6 (a field absent from that table lives in the JSON bag — read via `JSONExtractString`). `SCOPE_v3.md` is **not** archived — it stays in place.
 
-export const ph = new PostHog(process.env.POSTHOG_API_KEY, {
-  host: process.env.POSTHOG_HOST,
-  flushAt: 1,
-  flushInterval: 0
-})
+## The two Stripe webhooks — NEVER conflate
+1. **`api/routes/billing.js` → `billingWebhookHandler`** — SourceTrack's **own** billing/entitlements. Sets plan state on sites. Dedupe via in-memory NodeCache. **Records no revenue.** Must be registered with `express.raw({ type: 'application/json' })` **before** `express.json()` in `api/index.js`, or signature verification breaks.
+2. **`api/routes/stripe-webhook.js` → `POST /:site_key`** — **customers' buyers'** purchases, ingested as `$conversion` for attribution. Idempotency via DB tables `revenue_idempotency_keys` / `claim_revenue_idempotency_keys` — claim the key **after** the write succeeds.
 
-process.on('exit', () => ph.shutdown())
-process.on('SIGTERM', async () => {
-  await ph.shutdown()
-  process.exit(0)
-})
-```
+## Cron jobs (`restartPolicy: NEVER`)
+All production cron services are `restartPolicyType: NEVER` — a crashed run is **not retried until the next fire**. For `nightly-attribution` that is a ~24h money-rail gap with no automatic recovery (contrast: `api/railway.json` sets `ON_FAILURE` + 10 retries for the API service; crons do not inherit it). Full schedule table + the `sourcetrack-email` misconfiguration are in `ARCHITECTURE.md`.
 
-Capture pattern:
-`ph.capture({ distinctId, event, properties })`
+## CRM stage values (`POST /api/conversion/offline`)
+`conversion_type` pipeline stages: `lead_created` · `qualified` · `opportunity` · `closed_won`. Ingested as `$conversion` with `ingestion_method: 'offline'`. API-driven only — no automatic CRM sync.
 
-After every capture:
-`await ph.shutdown()`
-This is mandatory or events may silently drop.
+## Cookie / storage spec (verified against `tracker/tracker.js`)
+**Cookieless by default.** Visitor/attribution IDs live in first-party `localStorage`; no fingerprinting, no raw-IP storage; DNT / Global Privacy Control honored (aborts before any storage/network).
 
-## HogQL query API
-Endpoint:
-`POST ${POSTHOG_HOST}/api/projects/${POSTHOG_PROJECT_ID}/query/`
+A first-party **cookie is written ONLY** when the customer opts in via the `data-cookie-domain` script attribute (a validated leading-dot domain, ≥2 labels, not on the unsafe-suffix list — `tracker.js:99-112`). When written, attributes are `path=/; SameSite=Lax; max-age=31536000` (`tracker.js:67`) — **not** `SameSite=None`, and **not** the legacy `__ti_id_/__ti_ft_/__ti_lt_` names (those do not exist).
 
-Important: the trailing slash is required.
+The tracker also **reads** the merchant's own `_fbp` / `_fbc` cookies (`tracker.js:408-409`) to forward to Meta CAPI — **read-only, never set by us.** A strictly-cookieless build (`tracker/tracker.cookieless.js`) exists but is **not served**.
 
-Headers:
-- `Authorization: Bearer ${POSTHOG_PERSONAL_API_KEY}`
-- `Content-Type: application/json`
-
-Body:
-```json
-{ "query": { "kind": "HogQLQuery", "query": "<sql>" } }
-```
-
-Response:
-```json
-{ "results": [["col1", "col2"]] }
-```
-
-Default row limit is 100. Use `LIMIT` up to 50000 in SQL if needed.
-
-## HogQL rules
-- Table: `events` only
-- Built-in columns: `distinct_id`, `event`, `timestamp`
-- Custom properties: `properties.my_property`
-- Always filter by site:
-  `WHERE properties.site_id = '{siteKey}'`
-- Date format:
-  `timestamp >= toDateTime('2024-01-01 00:00:00')`
-- Date helper:
-```js
-function toHogDate(iso) {
-  return iso.replace('T',' ').replace(/\.\d+Z?$/,'').replace('Z','')
-}
-```
-- Numeric conversion:
-  `toFloat64OrZero(toString(properties.conversion_value))`
-- Null check for AI source:
-  `properties.ai_source IS NOT NULL AND properties.ai_source != ''`
-
-## Allowed PostHog properties
-Use only these unless a session explicitly adds another one:
-- `properties.site_id`
-- `properties.utm_source`
-- `properties.utm_medium`
-- `properties.utm_campaign`
-- `properties.utm_content`
-- `properties.utm_term`
-- `properties.first_touch_source`
-- `properties.first_touch_medium`
-- `properties.first_touch_campaign`
-- `properties.ai_source`
-- `properties.is_conversion`
-- `properties.conversion_value`
-- `properties.device_type`
-- `properties.country`
-- `properties.page_url`
-- `properties.referrer`
-- `properties.server_timestamp`
-- `properties.conversion_type`
-- `properties.form_name`
-- `properties.ingestion_method`
-- `properties.external_id`
-- `properties.source_system`
-- `properties.contact_email`
-
-## CRM stage values (Session 43)
-When `conversion_type` is used for pipeline stages via `POST /api/conversion/offline`, the standard values are:
-- `lead_created` — new lead entered CRM
-- `qualified` — lead qualified by sales
-- `opportunity` — deal/opportunity created
-- `closed_won` — deal closed/won
-
-Stages are ingested as `$conversion` events with `ingestion_method: 'offline'` and the stage value in `conversion_type`. Stages are API-driven only — no automatic CRM sync, no bidirectional updates.
-
-## LTV (Session 35.2, polished Session 47)
-SourceTrack LTV means **cumulative realized revenue** from tracked conversion events, not predicted future value. It is computed as:
-- `SUM(conversion_value)` across all `$conversion` events for the same `distinct_id`
-- Attributed to a source dimension via first-touch or last-touch model
-- Anonymous-only visitors (UUID-format distinct_ids) are excluded — they cannot be stitched across sessions/devices
-- Only `first_touch` and `last_touch` attribution models are supported (no linear or ai_platforms for LTV)
-
-Labeled as "LTV Revenue v1 (identified users)" in Report Builder. Not predictive LTV — label reflects cumulative historical revenue per identity.
-
-## Cookie spec (tracker.js)
-All cookies must be:
-`SameSite=None; Secure; path=/; max-age=31536000`
-
-- Anonymous ID: `__ti_id_{siteKey}` — UUIDv4, create if missing, never overwrite
-- First touch: `__ti_ft_{siteKey}` — write only if missing, never overwrite
-- Last touch: `__ti_lt_{siteKey}` — write only when `utm_source` exists, always overwrite
-
-## AI platform detection
-Read `req.headers.referer`, parse with `new URL(...)` in try/catch.
-
-Map hostnames:
-- `chat.openai.com` or `chatgpt.com` → `ChatGPT`
-- `claude.ai` → `Claude`
-- `perplexity.ai` → `Perplexity`
-- `gemini.google.com` → `Gemini`
-- `grok.x.com` → `Grok`
-- `copilot.microsoft.com` → `Copilot`
-- `bing.com` with `/chat` path → `Copilot`
-- `deepseek.com` → `DeepSeek`
-- `you.com` → `You.com AI`
-- `phind.com` → `Phind`
-- `kagi.com` → `Kagi`
-- no match → `null`
-
-Always call `next()`. Never block requests.
-
-## Stripe invariant (Session 4 only)
-`/api/billing/webhook` MUST be registered before `express.json()` in `api/index.js`.
-Use:
-`express.raw({ type: 'application/json' })`
-If `express.json()` runs first, Stripe webhook verification breaks.
+## AI-platform detection
+`api/lib/channel-classifier.js` is the **single source of truth** — `ORGANIC_SEARCH_ENGINE_HOSTS` / `ORGANIC_SEARCH_SOURCES` plus the AI-domain set (22 domains), shared between the pipe SQL and `channelFromEvent`. Do not hardcode a divergent inline copy. *(Known: `KNOWN_ISSUES.md §13` — 3 pipes carry a stale divergent classifier causing live mis-classification; a dedicated PR must copy the corrected SQL over.)*
 
 ## Supabase rule
-- Server-side only: `SUPABASE_SERVICE_KEY`
-- Frontend only: `SUPABASE_ANON_KEY`
+- Server-side only: `SUPABASE_SERVICE_KEY` (via `getSupabase()`).
+- Frontend only: `SUPABASE_ANON_KEY`.
+- Boot requires **only** `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` (`api/index.js:85` `REQUIRED_ENV`); missing → `process.exit(1)`.
 
 ## geoip-lite deploy note
-GeoIP uses the bundled database shipped with `geoip-lite`. No auto-update runs at build time or runtime (the `postinstall` script that called `startWatchingDataUpdate()` was removed in Session 35.2 — it caused Railway build timeouts during `npm ci`). Country lookups still work using the bundled data. Freshness depends on how recently `geoip-lite` was published/updated.
+GeoIP uses the bundled database shipped with `geoip-lite`; no auto-update at build/runtime (the `postinstall` `startWatchingDataUpdate()` was removed — it caused Railway `npm ci` timeouts). Freshness depends on the published package.
