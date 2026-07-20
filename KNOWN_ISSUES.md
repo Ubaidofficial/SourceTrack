@@ -361,6 +361,46 @@ works only adds a third silent watcher.
 **Do not rebuild detection.** `evaluateNightlyJob` and `evaluateConversions` are correct and
 already critical-tier. The gap is the channel, not the logic.
 
+### 30. CI required-checks gate did not hold — #335 merged RED to `main` (2026-07-20)
+
+**What happened.** #335 (`b6d9543`) was merged to `main` while `build-and-test` was **RED**:
+`scripts/check-secret-safety.js` flagged an inline `SLACK_WEBHOOK_URL` secret-assignment (the banned
+`NAME`-equals-value pattern) at `NEXT_SESSION_PROMPT.md:116` (fixed by #337). `main` then sat red for
+~5h. Because `pull_request` CI runs on the branch-**merged-with-base** commit, a red `main`
+propagates the failure into **every open PR** — it reddened #336 on an otherwise-clean diff.
+Detection existed (the check ran and failed); nothing surfaced it, and the merge used
+`gh pr merge --admin`, which bypasses a failing required check.
+
+**Why the obvious fix isn't available.** Required-status-check enforcement (branch protection /
+rulesets) is **not enforceable on this Free private repo**. GitHub reports: *"Your rules won't be
+enforced on this private repository until you move to a GitHub Team or Enterprise organization
+account."* The gate therefore cannot be made mandatory here — do not record "branch protection" as
+the fix; it is unavailable.
+
+**Mitigations in place (detection + discipline, not prevention):**
+1. **Alerting — PR #338 (merged, `81d3ef8`).** A `build-and-test` step, `Alert on red main`, gated on
+   `failure() && push && main`, POSTs to Slack when `main` goes red. It has an **explicit HTTP-200
+   check** (`[ "$code" = "200" ] || exit 1`) and an **unset-secret guard** (`exit 1` when
+   `SLACK_WEBHOOK_URL` is empty) — deliberately **not** repeating `notify()`'s unchecked-`fetch`
+   defect at `health-agent.js:289` (KI-29). Proven end-to-end: run `29761252622` logged
+   `slack http 200` (secret masked in the log), step success, message confirmed in-channel.
+2. **Drop `--admin` from the default merge.** Merge with plain `gh pr merge <n> --squash`.
+   **Discipline only — unenforced:** `--admin` remains a one-keystroke bypass for as long as
+   required-check enforcement is unavailable, the same class of control that failed here.
+
+**Durable risk.** Until the repo moves to a plan that enforces required checks, nothing *prevents* a
+red merge — the safety net is the #338 alert (fast discovery) plus merge discipline (choosing not to
+bypass). Treat a red `build-and-test` on `main` as a launch blocker.
+
+### 31. GitHub-hosted runners are deprecating Node 20 (low severity)
+
+Surfaced in run `29761252622`: `actions/checkout@v4` and `actions/setup-node@v4` emit *"Node 20 is
+being deprecated. This workflow is running with Node 24 by default…"* Runners already default to
+Node 24; the pinned action majors still declare a Node 20 runtime and will **hard-fail** once Node 20
+support is fully removed. **Fix:** bump the action versions in `.github/workflows/ci.yml`
+(`actions/checkout`, `actions/setup-node`, and any other `@v*` actions on the Node 20 runtime) to
+Node-24-compatible releases. Not urgent; no functional impact today.
+
 ---
 ## Recently fixed
 
