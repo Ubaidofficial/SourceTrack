@@ -5,6 +5,7 @@ import { getSupabase } from '../lib/supabase.js'
 import { normalizePlan, getPvLimit } from '../lib/plan-features.js'
 import { requireUserAuth } from '../middleware/user-auth.js'
 import { validateSiteKey, requireSiteMembership, clearSiteCache, clearSiteCacheForKeys } from '../middleware/auth.js'
+import { updateSiteSubscription, recordUnresolvedSite, subscriptionIdFrom } from '../lib/billing-subscription-update.js'
 
 // Exported so tests can stub the Stripe client (constructEvent / subscriptions)
 // on the exact instance the webhook handler uses.
@@ -214,18 +215,21 @@ export async function billingWebhookHandler(req, res) {
         const plan       = isActive ? planFromPriceId(price?.id) : 'inactive'
         const pvLimit    = isActive ? pvLimitFromPrice(price, plan) : 0
 
-        const { error } = await sb.from('sites').update({
-          plan,
-          pv_limit: pvLimit,
-          stripe_subscription_id: sub.id,
-        }).eq('stripe_customer_id', customerId)
-
-        if (error) {
-          console.error('[billing] failed to update subscription state:', error.message)
-          throw error
-        }
+        // KI-44: .select()-backed zero-row detection + stripe_subscription_id fallback.
+        // Throws when both keys miss -> existing catch -> 500 -> Stripe retries.
+        const result = await updateSiteSubscription(sb, {
+          patch: { plan, pv_limit: pvLimit, stripe_subscription_id: sub.id },
+          customerId,
+          subscriptionId: subscriptionIdFrom(sub.id),
+          eventType: event.type,
+          eventId: event.id,
+        })
 
         await invalidateCacheByCustomerId(customerId, sb)
+        if (result.outcome === 'recovered') {
+          // Matched by subscription id, so the customer-id cache sweep above missed it.
+          for (const id of result.siteIds) await invalidateCacheBySiteId(id, sb)
+        }
 
         console.log(`[billing] subscription updated — customer ${customerId} → plan ${plan} (${status})`)
         break
@@ -234,14 +238,19 @@ export async function billingWebhookHandler(req, res) {
       // ── Subscription cancelled ─────────────────────────────────────────────
       case 'customer.subscription.deleted': {
         const customerId = event.data.object.customer
-        const { error } = await sb.from('sites').update({ plan: 'inactive', pv_limit: 0 }).eq('stripe_customer_id', customerId)
-
-        if (error) {
-          console.error('[billing] failed to update subscription state:', error.message)
-          throw error
-        }
+        // event.data.object IS the subscription here, so its own id is the fallback key.
+        const result = await updateSiteSubscription(sb, {
+          patch: { plan: 'inactive', pv_limit: 0 },
+          customerId,
+          subscriptionId: subscriptionIdFrom(event.data.object.id),
+          eventType: event.type,
+          eventId: event.id,
+        })
 
         await invalidateCacheByCustomerId(customerId, sb)
+        if (result.outcome === 'recovered') {
+          for (const id of result.siteIds) await invalidateCacheBySiteId(id, sb)
+        }
         console.log(`[billing] subscription cancelled — customer ${customerId}`)
         break
       }
@@ -253,20 +262,35 @@ export async function billingWebhookHandler(req, res) {
         if (invoice.billing_reason === 'subscription_cycle') {
           // Reactivate if somehow marked inactive
           const site = await getSiteByCustomerId(customerId)
-          if (site && site.plan === 'inactive') {
+          if (!site) {
+            // KI-44: this branch previously fell through with NO log at all — a renewal
+            // for a customer we cannot resolve looked identical to a no-op. Recorded, not
+            // thrown: nothing was attempted, so there is no failed write to retry into.
+            await recordUnresolvedSite(sb, {
+              eventType: event.type,
+              eventId: event.id,
+              customerId,
+              subscriptionId: subscriptionIdFrom(invoice.subscription),
+              note: 'renewal payment succeeded but getSiteByCustomerId returned no site',
+            })
+          } else if (site.plan === 'inactive') {
             // Re-fetch sub to get current plan + price metadata
             const subs = await stripe.subscriptions.list({ customer: customerId, limit: 1, expand: ['data.items.data.price'] })
             const price = subs.data[0]?.items?.data?.[0]?.price
             const plan = planFromPriceId(price?.id)
             const pvLimit = pvLimitFromPrice(price, plan)
-            const { error } = await sb.from('sites').update({ plan, pv_limit: pvLimit }).eq('stripe_customer_id', customerId)
-
-            if (error) {
-              console.error('[billing] failed to update subscription state:', error.message)
-              throw error
-            }
+            const result = await updateSiteSubscription(sb, {
+              patch: { plan, pv_limit: pvLimit },
+              customerId,
+              subscriptionId: subscriptionIdFrom(invoice.subscription),
+              eventType: event.type,
+              eventId: event.id,
+            })
 
             await invalidateCacheByCustomerId(customerId, sb)
+            if (result.outcome === 'recovered') {
+              for (const id of result.siteIds) await invalidateCacheBySiteId(id, sb)
+            }
             console.log(`[billing] payment succeeded — reactivated ${customerId} → ${plan}`)
           }
         }
@@ -279,14 +303,18 @@ export async function billingWebhookHandler(req, res) {
         const attempt    = event.data.object.attempt_count
         // Only suspend after 3rd failed attempt — Stripe retries by default
         if (attempt >= 3) {
-          const { error } = await sb.from('sites').update({ plan: 'inactive', pv_limit: 0 }).eq('stripe_customer_id', customerId)
-
-          if (error) {
-            console.error('[billing] failed to update subscription state:', error.message)
-            throw error
-          }
+          const result = await updateSiteSubscription(sb, {
+            patch: { plan: 'inactive', pv_limit: 0 },
+            customerId,
+            subscriptionId: subscriptionIdFrom(event.data.object.subscription),
+            eventType: event.type,
+            eventId: event.id,
+          })
 
           await invalidateCacheByCustomerId(customerId, sb)
+          if (result.outcome === 'recovered') {
+            for (const id of result.siteIds) await invalidateCacheBySiteId(id, sb)
+          }
           console.warn(`[billing] payment failed x${attempt} — suspended ${customerId}`)
         } else {
           console.warn(`[billing] payment failed x${attempt} for ${customerId} — waiting for retry`)
