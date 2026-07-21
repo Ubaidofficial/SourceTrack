@@ -2,6 +2,7 @@ import { getAttribution, getFlexibleReport, getAttributionExplanation, getPreAgg
 import { requireFeature } from '../lib/plan-features.js'
 import { serializeHogQLDateRange } from '../lib/hogql-date.js'
 import { isValidTimezone } from '../lib/utils.js'
+import { computeCampaignVerdicts } from '../lib/campaign-verdicts.js'
 
 // These were a byte-identical DUPLICATE of lib/report-config-validation.js — trimming one
 // and not the other silently leaked the gated shape through export.js/saved-reports.js.
@@ -443,42 +444,22 @@ export async function attributionVerdicts(req, res) {
       timezone: req.site?.timezone
     })
 
+    // A genuinely empty range. This is now the ONLY way `data: []` can be returned —
+    // every failure path below is a 5xx, so an empty array means "no campaigns", full stop.
     if (!campaigns?.length) return res.json({ success: true, data: [], error: null })
 
-    const { callAI } = await import('../lib/ai-client.js')
-
-    const systemPrompt = `You are a marketing attribution analyst. Given campaign performance data, return a verdict for each campaign.
-Return ONLY a valid JSON array. No markdown, no backticks, no preamble.
-Schema: [{"campaign":"name","verdict":"SCALE"|"PAUSE"|"KILL","reason":"max 10 words","signal":"Scale Now"|"Monitor"|"Pause"|"Invest"}]
-Rules:
-- SCALE: high revenue, positive trend, good conversion rate
-- PAUSE: low revenue but some conversions, needs review
-- KILL: zero or near-zero revenue, no conversions`
-
-    const userMessage = JSON.stringify(
-      campaigns.slice(0, 20).map(c => ({
-        campaign: c.dim_value || 'unknown',
-        revenue: c.revenue || 0,
-        conversions: c.conversions || 0,
-        sessions: c.sessions || 0
-      }))
-    )
-
-    let verdicts = []
-    try {
-      const aiText = await callAI(systemPrompt, userMessage)
-      const clean = aiText.replace(/```json|```/g, '').trim()
-      verdicts = JSON.parse(clean)
-      if (!Array.isArray(verdicts)) verdicts = []
-    } catch (aiErr) {
-      console.error('[verdicts] AI parse error:', aiErr.message)
-      verdicts = []
-    }
+    // KI-47: deterministic, in-process, no network. Was an LLM call that shipped campaign
+    // names + revenue to a third party. No truncation — every campaign is judged, so a
+    // silent top-N cap can never read as "these are all of them".
+    const verdicts = computeCampaignVerdicts(campaigns)
 
     return res.json({ success: true, data: verdicts, error: null })
   } catch (err) {
-    console.error('[attribution/verdicts] query failed:', err?.message || err)
-    res.status(200).json({ success: true, data: [], error: null })
+    // KI-47: was `200 { success: true, data: [] }` on ANY error — indistinguishable from an
+    // empty range, which is how a revoked API key would have read as "no campaigns" forever.
+    // Deterministic code has no excuse for that: a failure here is a real failure.
+    console.error('[attribution/verdicts] failed:', err?.message || err)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to compute campaign verdicts' })
   }
 }
 // ─────────────────────────────────────────────────────────────────────────────
