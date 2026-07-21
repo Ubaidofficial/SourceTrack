@@ -851,6 +851,33 @@ Asked directly, answered honestly: **not in its current state.** A 4-tab page wh
 
 That said, **it is close to shippable**: option (a) alone converts it into an honest, if narrow, page — and the render path is already truthful (no fake zeros). **My recommendation: (a) now, unconditionally; then (b) as the next increment; (c) only alongside KI-51.** With (a) shipped, the remaining honest gap is "Campaigns shows campaign-level data only", which is a defensible V1 scope statement — whereas today's behaviour is not.
 
+### 54. Tinybird prod/staging are indistinguishable at the point of use — test fixtures were written to PRODUCTION
+
+Filed 2026-07-21 (session 145). Two hazards, **one root cause**: nothing at the point of use distinguishes the production workspace from staging. Test fixtures were seeded into **PRODUCTION**, then deleted. **Every layer reported success** — the tool checked `res.ok`, the API returned `202`, and no quarantine table was created. Same silent-success class as KI-39/44/45/46/49, on the write path.
+
+**The three workspaces** (org `imubaid93`): **`ST_Staging`** 289 MB — staging · **`SourceTrack`** 1.1 MB — **PRODUCTION** (holds `st_prod_read_all`) · **`imubaid93_workspace`** 224 B — empty, neither.
+
+**(a) TOKEN-NAME COLLISION — STILL OPEN.** **Both `ST_Staging` and `SourceTrack` contain a token named `dual_write_append`** — identical name, no visual distinction in the UI or in `tb token ls`. **The token name carries zero workspace information.** This is what caused the prod write. **Fix: rename one of them** (e.g. `dual_write_append_staging`). Until then, treat any `dual_write_append` reference as ambiguous.
+
+**(b) TWO `.tinyb` FILES RESOLVED BY CWD — RESOLVED, recorded because the shape recurs.** Repo root resolved to `ST_Staging`; `tinybird/` resolved to `SourceTrack` (**PROD**) — **and `tb` itself directs you into `tinybird/`**. Resolved 2026-07-21: the prod credential was removed and both directories re-authed to `ST_Staging`. Both `.tinyb` paths are gitignored; **0 tracked** in git.
+
+> ✅ **The guard existed and was ignored.** `tb --cloud` prints **`Running against Tinybird Cloud: Workspace <name>`** on *every* command. It was correct all day while nobody read it. **Read that line before acting — it is the cheapest possible check.**
+
+**Also recorded (unfixed, same family):**
+- `tb login` reports **"No region detected"** and defaults to **option 1 (europe-west2)** when the workspaces are **europe-west3** — a wrong-target default at the moment of authentication.
+- `tb` **4.6.4 → 4.6.12** update available, not applied.
+
+**Verifying which workspace you are on — three independent discriminators (all validated 2026-07-21):**
+1. `site_id = 'de200000-babe-41d4-a716-446655441111'` event count — **>0 = staging, 0 = prod**. ⚠️ The suffix is **`…441111`**, NOT `…440000`; the wrong suffix returns 0 in **both** and reads as a false "this is prod". (That misread happened during this session and was caught.)
+2. Total `events` rows — staging ≈ **1.11 M**; prod `SourceTrack` is 1.1 **MB** and cannot hold that.
+3. `event_id LIKE 'tzfix-%'` — 4 rows in staging only (see below).
+
+**PERMANENT staging fixture (KI-51 boundary test) — do not delete, do not treat as customer data.** In `ST_Staging`, site `b827e6fe-df63-4516-b95e-b7b1ef238d39` (`Europe/Paris`), `utm_campaign='tz-fixture'`, `event_id` `tzfix-A/E/D/C`, 2026-07-19→21, **sum 15.00**. Signatures: **Paris-correct 5.00 · UTC-bounds 12.00 · `<=` trap 13.00**. ⚠️ **Conversions count is 2 under BOTH the correct and the wrong window — only REVENUE distinguishes them.** A count-only check passes while the answer is wrong by 7.00.
+
+> ⚠️ **KI-52 trap, restated because it recurs:** `events.site_id` holds the **INTERNAL** site id, never the customer-facing `site_key`. Querying with the wrong one returns **zero rows and looks exactly like "no data seeded"**.
+
+**`events_quarantine` does NOT exist in `ST_Staging`** — verified; Tinybird's own error states quarantine tables are created only on demand, so **no row has ever failed schema validation**. Relevant to the Phase-7 quarantine-alarm work: that alarm has never had a real row to fire on.
+
 ---
 ## Recently fixed
 

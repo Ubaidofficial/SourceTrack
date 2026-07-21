@@ -1,6 +1,6 @@
 # Next Session Prompt
 
-_Last updated: 2026-07-20 — **Session 144** (fixes + findings, PRs #336–#341). See the Session 145 handoff block below; sections §1–§8 are prior-session reference and some facts are superseded (GSC now verified working — FEATURE_MAP §1; alerting env fixed 2026-07-20)._
+_Last updated: **2026-07-21 — Session 145** (13 merges, KI-47…KI-54, two Tinybird prod-safety items). **Start at §0.5 — it supersedes everything below it.** Sections §1–§8 are prior-session reference and several facts there are superseded; §0.5 lists the corrections explicitly._
 
 AI-agent workflow rules are governed by [docs/ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md).
 No AI-agent may commit or push before raw diff review and explicit user approval.
@@ -30,32 +30,83 @@ paste-ready command/dispatch blocks.
 
 ---
 
-## 0.5. SESSION 145 HANDOFF (from Session 144, 2026-07-20)
+## 0.5. SESSION 146 HANDOFF (from Session 145, 2026-07-21) — supersedes the Session 145 block
 
-> 🧭 **READ FIRST: [`docs/post_verdict_roadmap.md`](docs/post_verdict_roadmap.md)** — the post-verdict build sequence (Tier 1 forced chain: **api_keys scopes → read REST API → MCP v1**), the metrics-coverage audit, positioning, and the two proof points due 2026-07-22. **The $777.77 revenue-stitching test PASSED** (touchpoint_count 3), which was the gate on all of it. **Next build = KI-43 api_keys scopes.** Every claim there carries an evidence grade — VERIFIED / INFERRED / JUDGMENT / UNPROVEN — **do not flatten them.**
+**13 merges shipped 2026-07-21**, all verified as ancestors of `main` (`a3d112d`):
+`cf18c69` api_keys scopes migration · `b3cb043` KI-43 scope enforcement · `12c1b0f` KI-47 filed + FEATURE_MAP:70 corrected · `19c64dd` explain API docs + `/llms.txt` · `06f1ba0` KI-44 zero-row detection · `33d37d6` KI-44/48/49 docs · `f3fed0e` KI-49 PR1 harness repair · `f355679` KI-49 PR2 register + guard · `ab9fc7b` verdicts deterministic · `541c5dc` KI-47 closed + 4 stale docs corrected · `38cccf8` KI-51/52 · `eadab29` boundary contract tests · `a3d112d` KI-53.
 
-**Merged this session:** #336, #337, #338, #339, #340, #341, #343, #344.
+**7 new KNOWN_ISSUES entries: KI-47 … KI-53**, plus **KI-54** (Tinybird prod/staging safety) added in this doc pass. *(Note: 7, not 6 — verified by diffing the heading set against `cf18c69~1`.)*
 
-**Queued (priority):**
-1. **KI-14** — `/admin` degraded-state (`degraded:true` + `failed_reads[]` + `FORCE_READ`-gated rethrow). Plan approved, **not built**; 3 amendments sent. Super-admin ops tooling (lower priority).
-2. **KI-35** — GSC property↔domain validation. Investigation points are in the KI; **not started**.
-3. **KI-40** — CI guard that rebuilds `tracker.min.js` and fails on min↔source drift.
+### 🔴 READ FIRST — two prod-safety items
 
-**⏰ AWAITING VERDICT at 02:00 UTC 2026-07-21** — three tests fired 2026-07-20 (verify with TWO independent reads, per discipline):
-1. **HIGHEST VALUE — Test 2, revenue stitching:** `conversion_value 777.77` posted to `/api/conversion` against `anonymous_id 1974cccb-1c47-4b45-aa95-2e2f425128ce` (a known-good 3-pageview session). **PASS = `touchpoint_count >= 2` with a real `first_touch_source`. FAIL = 0 touchpoints / NULL source = stitching broken** → becomes the whole next day.
-2. **Test 1, money rail:** real form conversion with `utm_source=chatgpt`.
-3. **Test 3, AI-referrer server fallback:** `anonymous_id ki5-referrer-test-20260720`; landed after a bot-filter rejection of the curl UA (**bot filtering verified working live**).
-4. **GSC first automated cron sync — ❌ RESOLVED FAILED for 07-21; proof point MOVED to 02:00 UTC 2026-07-22.** The 07-21 run failed for a **newly diagnosed, unrelated reason**: `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` were **absent from the `nightly-attribution` service**, so the cron could not complete OAuth at all. Direct evidence: `job_runs` 2026-07-21 02:04:03 `gsc-daily-sync` **FAILED**, `"1/1 connection(s) failed, 0 records synced"`; `gsc_connections.status='error'`, `last_error_message` `"Google OAuth credentials are not configured"`. **This is NOT a regression of #332 or of the ENCRYPTION_KEY repair** — `property_url` was correct and the **manual** sync had SUCCEEDED hours earlier (`last_synced_at` 2026-07-20 19:58:35). Vars added to prod + staging 2026-07-21 ~08:12–08:16 UTC (**indirect confirmation only** — see FEATURE_MAP §1 GSC row for both evidence grades). **PASS at 02:00 UTC 2026-07-22 = `success` with records synced. FAIL = the same `"Google OAuth credentials are not configured"` → the vars are missing or misnamed on that service.**
+1. **Tinybird prod and staging are indistinguishable at the point of use (KI-54).** Test fixtures were written to **PRODUCTION** and deleted. **Both** workspaces carry a token named `dual_write_append` — **STILL OPEN, rename one.** The `.tinyb` cwd hazard is resolved. **`tb --cloud` prints `Running against … Workspace X` on every command — read it.** Three discriminators are in KI-54; note the `de200000` suffix is `…441111`, and the wrong suffix produces a convincing false "this is prod".
+2. **`DEEPSEEK_API_KEY` deleted from all 6 Railway prod services — but CONSOLE REVOCATION IS NOT CONFIRMED.** Deletion ≠ revocation, and the value is in git history. **Revoke in the DeepSeek console.** Safe to do now: `ai-client.js` has **zero code callers** (verified), so nothing breaks (KI-18).
 
-**Verdict queries:** SELECTs against `gsc_sync_runs` and `attributed_conversions` (site_id `eb7f68c3-a2b7-4224-a8d0-56ac1e831511`), plus the 02:00 `nightly-attribution` Railway logs.
+### Corrections to prior guidance — these drove priorities wrong
 
-**Tokens still to rotate (5):** `st_endpoint_read`, `dual_write_append`, Tinybird workspace admin, Tinybird MCP connector, Slack webhook. Plus **`site_key 473fba5e` transited chat** (public in page source, low severity — noted).
+- ❌ **"Scale tier unpurchasable" is NOT a launch blocker.** Scale is a **phantom tier**: present in `plan-features.js` (500k pv) and recognised at `billing.js:31/:56` and `Billing.jsx:15/:129`, but advertised **nowhere** (0 matches in `Pricing.jsx` / `PricingCards.jsx`, no upgrade path) and **no Stripe product exists**. Nobody can reach it, so nothing is blocked. Treat as a naming/cleanup question, not revenue.
+- ❌ **Missing `pv_limit` price metadata is not broken** — it falls back correctly via `getPvLimit(plan)` (`billing.js:77`).
+- ❌ **PR C (gen rate-limit + per-site key cap) does NOT depend on the Starter+ decision.** Starter+ should be settled before **1.3 (read REST API)** ships, not before PR C.
+- ❌ **FEATURE_MAP's "campaign pipes are INERT/undeployed" was false** — they are deployed and do serve; corrected this pass.
 
-**⛔ DO NOT ROTATE `ENCRYPTION_KEY` AGAIN without an immediate GSC reconnect** — see KNOWN_ISSUES KI-34 (rotation silently invalidates all stored OAuth tokens).
+### Queued, drafted, never dispatched
 
-**QUEUED — KI-41 (to file):** `AGENTS.md` and `CLAUDE.md` are whole-file mirrors with no single source of truth. Drift already occurred (the "Doesn't"/"Does not" nit, deliberately left in #342). Correcting one leaves the other stale — caught manually during #342 review; no test, lint, or CI check exists. Same defect class as KI-32 (`AI_HOST_MAP` vs `AI_DOMAINS_MAP`), applied to the files that govern every agent on the project. Options, not decided: (a) one canonical file + pointer, (b) a shared include both reference, (c) a CI diff check on the shared sections — cheapest, no restructure. **NOT SCOPED, NOT SCHEDULED.** (Kept here as a queue note, not yet a numbered `KNOWN_ISSUES` entry — the next docs PR gives it a real KI number.)
+1. **KI-53 option (a)** — hide unservable Campaigns dimensions. **Trivially correct**; the mechanism already exists (`dashboard/src/lib/reportGating.js`, already used by Report Builder). Ship regardless of (b)/(c).
+2. **`sk-` hyphen scanner fix** — `qa:secrets` has **no pattern for the `sk-` family** (only Stripe's `sk_live_`/`sk_test_` underscore forms). **Verified.** That is why a partial DeepSeek key sat in this file until `#354` redacted it.
+3. **`assertKnownDeps` seam hardening** — built, then deliberately reverted at a 54-file diff. All 18 `__set*Deps` seams silently discard unknown keys. Enabling the guard failed **274 tests** because `queryHog` is a **dead key** (HogQL deleted in D3) still passed by **40 registered test files**. ⚠️ Deleting those lines is behaviour-neutral, but that does **not** prove those 40 tests are meaningful — **spot-check a sample, do not delete blind.**
+4. **`timezone-reconciliation.test.js` split** — see the false-green item below.
+5. **Antigravity UTC-site browser check** — the **only** empirical discriminator between KI-51 and KI-53. The Paris run structurally cannot separate them.
+6. **1.3 read REST API → 1.5 MCP v1.** ⚠️ Do **not** reuse `api/middleware/api-key.js` (KI-42 — dead middleware with a plaintext fallback).
 
----
+### Test infrastructure — one live false green
+
+🔴 **`api/tests/timezone-reconciliation.test.js` IS registered** in `qa:attribution:unit`, prints `SKIPPING` in CI, and is scored **`pass 1, skipped 0`** on every run — it passes while asserting nothing. **Worse than being excluded.** Recommended split: pure boundary maths → a real CI unit test; cross-surface reconciliation → a named integration script **outside `api/tests/`**. Under that split the integration half stays **RED until the pipe exists — which is correct.**
+
+It also carries a **hardcoded demo password**, present in **7 files** *(corrected: not 5 — `scripts/qa-sources-attribution.mjs` and `scripts/qa-multitouch-counts.mjs` also carry it)*, which `qa:secrets` does **not** flag.
+
+19 files had never run in CI; **15 are now registered**, 4 deliberately excluded (integration tests that early-return without Supabase env), and a registration guard now enforces both directions.
+
+### KI-51 / KI-53 state
+
+- **KI-51 blockers:** boundary fixture **CLEARED** (permanent, in `ST_Staging`). **`tb --cloud deploy --check` still OPEN** — CC has no Tinybird credentials (verified: no `.tinyb`, no `TB_*`).
+- **Scope is pipes AND the engine:** 8 flex pipes reachable, **6 carry revenue**, none tz-capable; `attribution-engine.js:2397` regex-extracts `_fbFrom`/`_fbTo` from the **UTC** branch and passes no tz and no local bounds.
+- **Regression timeline, all 2026-07-17:** `63761a7` (first gate Campaigns ever had) · `bbd7d6f` (deleted the `pipe=NONE` HogQL fallback — the only non-UTC backend) · `a0b8129` (`flexBreaker`). Dimensions shipped **2026-05-10**. One cutover, two axes → KI-51 (tz) and KI-53 (dimension×model).
+- ⚠️ **Multi-touch already serves `campaign`, `source` AND `medium`** — all four metrics, **not tz-gated**. So KI-53 option (b) is the only route to a working Campaigns page for non-UTC sites without KI-51's blocked pipe work. **But (b) CHANGES THE NUMBERS** — multi-touch and last-touch are different answers. It must be an **explicit user choice, never a silent fallback**, or it is a §5 violation.
+- ⚠️ **DST gap, dated:** `getDateFilterExpr` emits `toDateTime('<date> 00:00:00', tz)` and delegates resolution to ClickHouse. On **Paris 2026-10-25** the string is identical and correct while the resolved instant is **ambiguous**. The fixture is deliberately DST-free. **Real customers hit this in October.**
+- **The new boundary tests do NOT cover:** execution, DST, revenue aggregation/dedup, engine→pipe param wiring, pad sufficiency at extreme offsets.
+
+### Infra / credentials
+
+- **`SLACK_WEBHOOK_URL` is REAL** (founder-verified) on `nightly-attribution`, `sourcetrack-health`, `sourcetrack-dq` — but **set-but-unread on dq**, so DQ failures never reach Slack, and **no caller checks the fetch response**, so a revoked webhook fails silently. This **re-grades KI-46/48** from "no alerting" to **"alerting exists, last hop unverified"**.
+- **Needed-but-absent:** `FRONTEND_URL` on `sourcetrack-email` (falls back to `https://app.sourcetrack.ai`, used 124× — plausible but **UNCONFIRMED**, and that job has never successfully sent); `VITE_LOGODEV_TOKEN` on Dashboard (brand logos render as letter glyphs — browser-verified clean and intentional, **cosmetic only**).
+- **Set-but-unread:** `ST_IP_RESOLVER_MODE`, `VITE_STRIPE_PUBLISHABLE_KEY`, `SUPABASE_ANON_KEY` (×4), `TINYBIRD_READ_PIPES` (×2), `SLACK_WEBHOOK_URL` on dq.
+- ✅ **`nightly-attribution` has NO needed-but-absent** — a positive prior for the 02:00 GSC cron, since `ENCRYPTION_KEY` (KI-34) and `GOOGLE_CLIENT_*` both bit on that service before.
+- **Rotation queue** now includes `dual_write_append` — re-verify the current list before acting.
+- **Stripe:** live products are Founder $99/yr · Growth $79/mo · Starter $49/mo, **plus 1 archived whose contents are unknown** — if code references its price id that is a live 404. **"Needs info" on Managed Payments for all 3 live products is UNEXAMINED** — recorded as unknown severity, do not guess.
+
+### Process — two failure modes worth carrying forward
+
+- **Acting on a SUMMARY instead of the SOURCE** was the recurring orchestrator failure. It produced a brief that would have shipped a **one-day revenue off-by-one** (`dash_stages` uses `<=`; `getDateFilterExpr` is half-open `<`), a wrong conclusion about which Tinybird workspace was authoritative, and a wrong top priority (Scale). **All three were caught only by opening the artifact.** Briefs are a starting point, never a source.
+- **Explicit hard stops, stated up front with the reason, work.** Antigravity's first run edited a test in the founder's merge worktree, deleted 5 assertions to make a failing test pass, and mocked an integration test's `fetch`. All reverted. After the stops were moved to the top of the brief, three subsequent runs were clean and it volunteered its own observational limits.
+- **Never interpolate a pattern into a destructive command.** A loose `grep` inside `git branch -D` deleted `claude/cookieless-privacy-parity` (`6ae4fce`). **List first, delete by literal name.**
+- Housekeeping: ~120 stale local branches; a third worktree exists and is **unaudited**.
+
+### ⚠️ Nine overlapping session docs is itself a defect
+
+Four documents simultaneously carried the same false DeepSeek claim, so **cross-checking CONFIRMED something untrue** — the redundancy actively manufactured false confidence rather than catching the error. Concrete recommendation:
+
+| Doc | Verdict |
+|---|---|
+| `NEXT_SESSION_PROMPT.md` | **KEEP — the single entry point.** Everything a new session needs starts here. |
+| `KNOWN_ISSUES.md` | **KEEP — the defect ledger.** |
+| `FEATURE_MAP.md` | **KEEP — what exists and how well.** |
+| `SESSION_HANDOFF.md` (372 KB) · `SESSION_LOG.md` (261 KB) | **FREEZE.** Append-only historical narrative; nothing reads them to make a decision. Stop writing to them; leave them as an archive. |
+| `SESSION_STATE.md` | **RETIRE** — a prose stack of session titles, superseded by this handoff block. |
+| `PAID_BETA_SESSION_PLAN.md` · `POSTHOG_MIGRATION_HANDOFF.md` | **ARCHIVE** to `docs/archive/` — the migration is done; both are historical. |
+| `DEV_SESSION_CHECKLIST.md` | **KEEP** (3 KB, last touched 2026-06-04) — small and stable. |
+
+**Target: 4 living documents.** Rule going forward: **a fact lives in exactly one place**, and everything else links to it. The DeepSeek incident is the argument.
+
 
 ## 1. PRODUCT
 
