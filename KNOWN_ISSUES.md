@@ -904,6 +904,16 @@ The app's recovery flow is otherwise complete and correct (`/forgot-password` �
 
 ⚠️ **UNVERIFIED and higher severity if wrong:** is `app.sourcetrack.ai` actually the production dashboard host? `FRONTEND_URL` on `sourcetrack-email` carries the identical assumption, already recorded as "plausible but UNCONFIRMED". Two surfaces now depend on it. **If that host is wrong, password reset is broken in PRODUCTION for real customers.** Confirm before paid beta.
 
+### 57. Gate-unavailable copy was forked between the route and the gate module
+
+Filed 2026-07-21, found while attempting a one-line copy correction. `api/routes/campaigns.js:62` hand-inlined the same sentence that `api/lib/report-config-validation.js:269` exports as `UNAVAILABLE_SUFFIX`, while already importing `servedByDeployedBackend` from that module — so the import path existed and was not used. Campaigns and Report Builder could drift apart in what they tell a user about the same gate, and nothing would catch it.
+
+Same defect class as KI-32 (`AI_HOST_MAP` vs `AI_DOMAINS_MAP`) and KI-41 (`AGENTS.md` vs `CLAUDE.md`), applied to money-rail gate messaging. **RESOLVED in this PR** — campaigns.js now consumes the shared constant. Recorded because the shape recurs and because a copy fork inside the gate module is not obvious from either file alone.
+
+⚠️ `api/tests/report-picker-gating.test.js` pins the wording by regex, so gate copy is test-guarded — changing it is a deliberate spec edit, not a string tweak.
+
+⚠️ **`UNAVAILABLE_SUFFIX` was module-PRIVATE** — not in the export block — so the fork was not merely careless: consuming the constant was impossible without first exporting it. That is the mechanism by which this class of fork forms, and it is worth checking for wherever a shared string is expected.
+
 ---
 ## Recently fixed
 

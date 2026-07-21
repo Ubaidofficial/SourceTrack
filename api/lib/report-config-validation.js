@@ -618,6 +618,10 @@ export {
   SESSION_REPORT_DIMS,
   SESSION_PIPE_METRICS,
   gatedReportReason,
+  // Exported so a ROUTE that builds its own gate message shares this exact sentence instead of
+  // hand-inlining it. api/routes/campaigns.js did inline it while already importing from this
+  // module — a silent fork in what two pages tell a user about the same gate (KI-57).
+  UNAVAILABLE_SUFFIX,
   FLEX_BREAKING_FILTER_KEYS,
   flexFiltersPresent
 }
