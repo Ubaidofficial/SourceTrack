@@ -771,6 +771,86 @@ It currently (i) cannot run in CI, (ii) asserts an invariant the product no long
 
 **Recommended: A.** Whichever is chosen, the **hardcoded password must be removed regardless** — it is a credential in the repo (§0) and it appears in four other files (see KI-49); that is its own cleanup, independent of this file's fate.
 
+### 53. Campaigns offers 4 dimension tabs and can serve 1 — 3 of 4 are 422 for EVERY site, UTC included
+
+Filed 2026-07-21 against `eadab29`. Found as by-catch while stopping on KI-51. **Wider reach than KI-51: that one hits only non-UTC sites; this one hits everybody.**
+
+#### (1) The matrix — VERIFIED by EXECUTING the resolver, not by reading it
+
+`servedByDeployedBackend` is exported, so the table below is the real function called with `api/routes/campaigns.js:53-59`'s exact argument shape (`viaRoutePreAgg:false`, `hasAttributionWindow:false`, the site's tz), across all 9 `ALLOWED_MODELS` × the 4 dimensions the UI offers. A cell is `422` when **any** of campaigns.js's four metrics (`revenue`/`conversions`/`sessions`/`leads`) is unbacked, because `campaigns.js:61-66` throws for the whole request if one fails.
+
+**tz = UTC**
+
+| model | campaign | source | medium | ai_source |
+|---|---|---|---|---|
+| first_touch | **200** | 422 | 422 | 422 |
+| **last_touch** ← hardcoded by `Campaigns.jsx:563` | **200** | **422** | **422** | **422** |
+| first_touch_non_direct | 422 | 422 | 422 | 422 |
+| last_touch_non_direct | 422 | 422 | 422 | 422 |
+| ai_platforms | 422 | **200** | 422 | **200** |
+| linear / u_shaped / time_decay / w_shaped | **200** | **200** | **200** | 422 |
+
+**tz = Europe/Paris** — identical **except** `first_touch`/`last_touch` × `campaign` flips `200 → 422` (that flip, and only that flip, is KI-51).
+
+**The UI hardcodes `model: 'last_touch'` and offers no model selector** (`Campaigns.jsx:563`; the page's own tooltip at `:522` says "This page uses last-touch attribution… To compare other models, open Report Builder"). So the only row that can ever execute is `last_touch`:
+
+- **UTC site → 1 tab works (`campaign`), 3 tabs 422.**
+- **non-UTC site → 0 tabs work** (KI-51 takes the last one).
+
+Failure is **total, not partial** — for `source`/`medium`/`ai_source` under `last_touch`, all four metrics resolve to `NONE`, not just one.
+
+#### (2) Which defect owns which failure — do not conflate
+
+| Failure | Owner |
+|---|---|
+| `source` / `medium` / `ai_source` 422 on a **UTC** site | **KI-53** (this entry) — a model×dimension coverage gap, tz-irrelevant |
+| `campaign` 422 on a **non-UTC** site | **KI-51** — the tz breaker |
+
+**Antigravity's browser test cannot distinguish them.** It ran against the Europe/Paris demo site, where KI-51 alone 422s all four tabs. **A UTC site is the discriminator and has not been browser-tested.** The matrix above is the source-level substitute; a UTC browser pass would corroborate it. (That test did establish something valuable and separate: the UI renders an **honest** "Temporarily unavailable" state — lock icon, plain language, cost imports still offered — not a fake empty state. §6 holds on the render path.)
+
+#### (3) Regression — YES, 2026-07-17. Same date and root cause as KI-51, different axis
+
+- The 4 dimensions have been in the UI since **2026-05-10** (`4a5c4e7`) and `ALLOWED_DIMS` in the route since **2026-05-17**.
+- **`campaigns.js` had NO gate at all before `63761a7` (2026-07-17)** — verified: `git show 63761a7~1:api/routes/campaigns.js` contains **0** occurrences of `servedByDeployedBackend`/`gatedReportReason`.
+- So until 2026-07-17 these dimensions went ungated into `getFlexibleReport`, fell through to the `pipe=NONE` branch → `queryHogQL` → a then-live PostHog, and **returned real data**. `bbd7d6f` (#272, 2026-07-17) deleted that fallback; the gate then converted the dead read into an honest 422.
+
+So the tabs **worked for ~2 months and regressed on 2026-07-17**. The Tinybird cutover shipped backings for `campaign` but not for `source`/`medium`/`ai_source` under the touch models — KI-51 is the same cutover missing the tz axis. **Neither is caused by the gate; the gate is what makes both visible instead of fabricating zeros.**
+
+#### (4) Export shares the resolver and is thinner than its own vocabulary — VERIFIED
+
+Export accepts 16 `ALLOWED_GROUPS`. Servable groups for `revenue` (and identically for `conversions`) at tz=UTC:
+
+| model | servable groups |
+|---|---|
+| `last_touch` | **5 / 16** — campaign, conversion_type, provider, attribution_status, stitching_method |
+| `first_touch` | **6 / 16** — the above + source |
+| `linear` (any multi-touch) | **14 / 16** |
+| `ai_platforms` | **11 / 16** |
+
+⚠️ **Lower severity than Campaigns, for a specific reason:** Export's shape comes from a **saved report**, and the Report Builder already gates its picker from the same source of truth (`dashboard/src/lib/reportGating.js` → `gate-constants.js`, the identical module `api/lib/report-config-validation.js` imports). `ReportBuilder.jsx:933` deliberately says "unavailable" **up front instead of on Load**. So a user is largely prevented from *creating* an unservable saved report. **Campaigns is the outlier: it renders all 4 tabs unconditionally and consults none of that machinery.** Whether a pre-existing saved report can still hit a 422 export is untested and worth a check.
+
+#### (5) A finding that changes the options: multi-touch already serves 3 of 4 dims, in BOTH timezones
+
+`linear`/`u_shaped`/`time_decay`/`w_shaped` resolve `campaign`, `source` **and** `medium` — all four metrics via `multitouch_conversions_by_site` — and rule 4 is **not tz-gated**, so this holds for Europe/Paris too. `ai_source` is served only by `ai_platforms`. **The backings largely exist; the page just cannot ask for them.**
+
+#### Options — PROPOSED, NOT BUILT. Founder decides.
+
+| | Option | Cost | Honesty | Result |
+|---|---|---|---|---|
+| **(a)** | **Hide the dimensions that cannot be served.** Derive the tab list from the same gate the server uses, exactly as ReportBuilder already does. | **Trivial** — the mechanism exists (`reportGating.js`), the source of truth is shared, no API/pipe/DDL change. | ✅ Highest. Shows only what works. Consistent with §5 data-truth and §19.5 "no disabled clutter". | 1 honest tab (UTC), 0 (non-UTC) |
+| **(b)** | **Let the user choose the attribution model.** Makes `source` reachable via `first_touch`, and `source`+`medium` via multi-touch — **including on non-UTC sites**, since rule 4 is not tz-gated. | Moderate — a selector, plus copy explaining that the numbers' *meaning* changes with the model. | ✅ High, if the model is labelled on every figure. ⚠️ Silently changing attribution semantics to make a tab load would be a §6 problem. | up to 3 tabs, both timezones |
+| **(c)** | **Build backings for `medium` / `ai_source` under the touch models.** | Highest — new pipes, `--check`, parity, deploy. Same blockers as KI-51. | ✅ High. Fixes the root gap. | 4 tabs, once KI-51 also lands |
+
+**(a) is trivially correct and I will say so plainly.** It is not a workaround — it is the product telling the truth about its own coverage, using machinery already shipped in a sibling page. It also composes with (b) and (c): whatever becomes servable later simply appears. **Ship (a) regardless of what you decide about (b)/(c).**
+
+**(b) is the highest-leverage follow-up**, because it is the only option that improves non-UTC sites without waiting on KI-51's blocked pipe work.
+
+#### ⚠️ The product question: is Campaigns shippable as-is?
+
+Asked directly, answered honestly: **not in its current state.** A 4-tab page where 3 tabs error is worse than a 1-tab page, because the failure is discovered by clicking — the tabs advertise capability the product does not have. And for a non-UTC customer the page has **zero** working tabs while still presenting four.
+
+That said, **it is close to shippable**: option (a) alone converts it into an honest, if narrow, page — and the render path is already truthful (no fake zeros). **My recommendation: (a) now, unconditionally; then (b) as the next increment; (c) only alongside KI-51.** With (a) shipped, the remaining honest gap is "Campaigns shows campaign-level data only", which is a defensible V1 scope statement — whereas today's behaviour is not.
+
 ---
 ## Recently fixed
 
