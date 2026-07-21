@@ -9,6 +9,7 @@ import { storeIdentityLink, resolveAnonymousId } from '../lib/identity-links.js'
 import { trackGlobalIpLimit } from '../middleware/rate-limit.js'
 import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
 import { resolveClientIp } from '../lib/ip-resolver.js'
+import { hasScope, SCOPE_WRITE_EVENTS } from '../lib/api-key-scopes.js'
 
 const router = Router()
 
@@ -24,12 +25,23 @@ router.post('/event', trackGlobalIpLimit, async (req, res) => {
 
     const { data: apiKey, error: keyErr } = await getSupabase()
       .from('api_keys')
-      .select('id, site_id')
+      .select('id, site_id, scopes')
       .eq('key_hash', keyHash)
       .maybeSingle()
 
     if (keyErr || !apiKey) {
       return res.status(401).json({ success: false, data: null, error: 'Invalid API key' })
+    }
+
+    // KI-43: scope check belongs with auth (a property of the credential), so it runs before
+    // plan entitlement. Fail-closed — a key whose scopes are '{}' (the DB default, i.e. any
+    // non-app INSERT), null, or missing this scope is denied, never allowed through.
+    if (!hasScope(apiKey.scopes, SCOPE_WRITE_EVENTS)) {
+      return res.status(403).json({
+        success: false,
+        data: null,
+        error: `API key is not authorized for this endpoint (requires the '${SCOPE_WRITE_EVENTS}' scope)`
+      })
     }
 
     const siteId = apiKey.site_id
