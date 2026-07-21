@@ -775,6 +775,8 @@ It currently (i) cannot run in CI, (ii) asserts an invariant the product no long
 
 Filed 2026-07-21 against `eadab29`. Found as by-catch while stopping on KI-51. **Wider reach than KI-51: that one hits only non-UTC sites; this one hits everybody.**
 
+> ⚠️ **Reach is wider still: 3 of 4 tabs are dead for EVERY site in EVERY timezone — CONFIRMED IN A BROWSER 2026-07-21 on the UTC site `de200000-babe-41d4-a716-446655440000`:** Campaign 200 (empty state), Source 422, Medium 422, AI Source 422. Rules 7/8 serve `group_by='source'` only when `model === 'first_touch'`, and `Campaigns.jsx:563` hardcodes `last_touch`. All four metrics resolve NULL, not just one. Only the `campaign` tab's UTC-vs-non-UTC flip belongs to KI-51 — **this browser pass is the empirical discriminator that separates the two defects.**
+
 #### (1) The matrix — VERIFIED by EXECUTING the resolver, not by reading it
 
 `servedByDeployedBackend` is exported, so the table below is the real function called with `api/routes/campaigns.js:53-59`'s exact argument shape (`viaRoutePreAgg:false`, `hasAttributionWindow:false`, the site's tz), across all 9 `ALLOWED_MODELS` × the 4 dimensions the UI offers. A cell is `422` when **any** of campaigns.js's four metrics (`revenue`/`conversions`/`sessions`/`leads`) is unbacked, because `campaigns.js:61-66` throws for the whole request if one fails.
@@ -837,9 +839,13 @@ Export accepts 16 `ALLOWED_GROUPS`. Servable groups for `revenue` (and identical
 
 | | Option | Cost | Honesty | Result |
 |---|---|---|---|---|
-| **(a)** | **Hide the dimensions that cannot be served.** Derive the tab list from the same gate the server uses, exactly as ReportBuilder already does. | **Trivial** — the mechanism exists (`reportGating.js`), the source of truth is shared, no API/pipe/DDL change. | ✅ Highest. Shows only what works. Consistent with §5 data-truth and §19.5 "no disabled clutter". | 1 honest tab (UTC), 0 (non-UTC) |
+| **(a)** | **Hide the dimensions that cannot be served.** Derive the tab list from the same gate the server uses, exactly as ReportBuilder already does. | **Small, but NOT trivial** — `reportGating.js` cannot express this shape (see correction below). Needs a new static module under `dashboard/src/lib/` bound to the gate by test. No route, pipe or DDL change. | ✅ Highest. Shows only what works. Consistent with §5 data-truth. | 1 honest tab (UTC), 0 (non-UTC) |
 | **(b)** | **Let the user choose the attribution model.** Makes `source` reachable via `first_touch`, and `source`+`medium` via multi-touch — **including on non-UTC sites**, since rule 4 is not tz-gated. | Moderate — a selector, plus copy explaining that the numbers' *meaning* changes with the model. | ✅ High, if the model is labelled on every figure. ⚠️ Silently changing attribution semantics to make a tab load would be a §6 problem. | up to 3 tabs, both timezones |
 | **(c)** | **Build backings for `medium` / `ai_source` under the touch models.** | Highest — new pipes, `--check`, parity, deploy. Same blockers as KI-51. | ✅ High. Fixes the root gap. | 4 tabs, once KI-51 also lands |
+
+> ⚠️ **CORRECTED 2026-07-21 — option (a) is NOT trivial, and `reportGating.js` is NOT the mechanism.** Verified by executing the gate, not reading it: `dimensionGateReason(key, metric)` takes no `model`, `tz`, `viaRoutePreAgg` or `hasAttributionWindow`, and returns `null` (selectable) for all four Campaigns dimensions — `GATED_GROUPS` is only `{keyword, referrer_domain}`. **Deriving the tab list from it reproduces today's four tabs exactly: a no-op that looks like a fix.** It is also semantically inverted — `reportGating` is a **denylist**, the route uses the **allowlist** `servedByDeployedBackend`; `sessions` sits in `GATED_METRICS` while `flexible_report_campaign_sessions_by_site` serves that column today, so routing Campaigns through it would **hide a working column**. Extending it is blocked by design: `report-picker-gating.test.js:91` asserts `reportGating exposes no window gating`.
+>
+> The real gate is `servedReportShape`/`servedByDeployedBackend` in `api/lib/report-config-validation.js`, which **the dashboard cannot import** (Railway `rootDirectory=/dashboard`; guarded by `dashboard-build-root.test.js:66` using this exact import as the canonical offender). Shipped fix: a static list in `dashboard/src/lib/` bound to the gate by test. Relocating the gate to `dashboard/src/lib/` (the `gate-constants.js` precedent) remains available as a follow-up.
 
 **(a) is trivially correct and I will say so plainly.** It is not a workaround — it is the product telling the truth about its own coverage, using machinery already shipped in a sibling page. It also composes with (b) and (c): whatever becomes servable later simply appears. **Ship (a) regardless of what you decide about (b)/(c).**
 
@@ -872,11 +878,31 @@ Filed 2026-07-21 (session 145). Two hazards, **one root cause**: nothing at the 
 2. Total `events` rows — staging ≈ **1.11 M**; prod `SourceTrack` is 1.1 **MB** and cannot hold that.
 3. `event_id LIKE 'tzfix-%'` — 4 rows in staging only (see below).
 
+**Staging seed-account passwords have drifted, with no record of their values.** `demo-realistic-saas@sourcetrack.ai` owns four UTC growth sites and its password is **unrecoverable** — the account's mailbox does not exist, so the Dashboard's own "Send password recovery" cannot help either (see KI-56 for why a staging reset link would not have worked regardless). This should be resolved as part of the `DEMO_PASSWORD` env-var migration (7 files), **not** as a separate credential fix.
+
 **PERMANENT staging fixture (KI-51 boundary test) — do not delete, do not treat as customer data.** In `ST_Staging`, site `b827e6fe-df63-4516-b95e-b7b1ef238d39` (`Europe/Paris`), `utm_campaign='tz-fixture'`, `event_id` `tzfix-A/E/D/C`, 2026-07-19→21, **sum 15.00**. Signatures: **Paris-correct 5.00 · UTC-bounds 12.00 · `<=` trap 13.00**. ⚠️ **Conversions count is 2 under BOTH the correct and the wrong window — only REVENUE distinguishes them.** A count-only check passes while the answer is wrong by 7.00.
 
 > ⚠️ **KI-52 trap, restated because it recurs:** `events.site_id` holds the **INTERNAL** site id, never the customer-facing `site_key`. Querying with the wrong one returns **zero rows and looks exactly like "no data seeded"**.
 
 **`events_quarantine` does NOT exist in `ST_Staging`** — verified; Tinybird's own error states quarantine tables are created only on demand, so **no row has ever failed schema validation**. Relevant to the Phase-7 quarantine-alarm work: that alarm has never had a real row to fire on.
+
+### 55. `MetricTile` reports "Not yet tracked" when the QUERY FAILED — a false statement about the customer's data
+
+Filed 2026-07-21. `MetricTile.jsx:32` sets `isEmptyState = isEmpty || value == null`, and `:93` renders "Not yet tracked" for that state. On a gated 422 the KPI object is undefined, every tile takes `value == null`, and the page asserts the customer tracked nothing — when in fact the request could not run.
+
+**Observed 2026-07-21** on Campaigns/Source/Medium/AI Source at UTC: body reads "Temporarily unavailable" while the tiles above read "Not yet tracked". Two contradictory explanations on one screen, and the wrong one is more prominent. A user would reasonably go debug a tracking install that is fine.
+
+Not a fake number (§5.1 holds — `—` is shown, not `0`), but a fake *explanation*. The measured-zero case is correct and should not change: the Campaign tab rendered a true `0` from a successful query.
+
+`MetricTile` is shared, so this is not Campaigns-specific — it applies anywhere a KPI query can error. **Fix: distinguish "no data" from "could not load". NOT SCOPED, NOT SCHEDULED.**
+
+### 56. `ForgotPassword` hardcodes a PRODUCTION `redirectTo` — password reset is impossible in any non-prod environment
+
+Filed 2026-07-21. `dashboard/src/pages/ForgotPassword.jsx:19` passes `redirectTo: 'https://app.sourcetrack.ai/reset-password'` as a literal. On staging, the recovery email links to the **production** app, which is wired to the production Supabase project — a token minted by staging GoTrue cannot validate there. **Staging password reset cannot succeed.** Confirmed 2026-07-21 when a staging reset was needed and no path existed; the Dashboard's own "Send password recovery" was also useless because the seed account's mailbox does not exist.
+
+The app's recovery flow is otherwise complete and correct (`/forgot-password` → `/reset-password`, `ResetPassword.jsx:137` `updateUser({ password })`, plus `/auth/confirm` for `type=recovery`). Only the hardcoded host is wrong. Fix: `${window.location.origin}/reset-password` or an env var.
+
+⚠️ **UNVERIFIED and higher severity if wrong:** is `app.sourcetrack.ai` actually the production dashboard host? `FRONTEND_URL` on `sourcetrack-email` carries the identical assumption, already recorded as "plausible but UNCONFIRMED". Two surfaces now depend on it. **If that host is wrong, password reset is broken in PRODUCTION for real customers.** Confirm before paid beta.
 
 ---
 ## Recently fixed
