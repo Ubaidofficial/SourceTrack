@@ -73,7 +73,7 @@
 - ✅ **`TINYBIRD_READ_ENABLED=true`** on SourceTrack-Api.
 - ⚠️ **`TINYBIRD_READ_PIPES` IS SET (a named allowlist)** on SourceTrack-Api → per `isPipeReadAllowed()`: unset/empty = ALL pipes served; a set list = ONLY those pipes, rest fall back to dead PostHog (silent zeros). **The allowlist being set = the trap.** Unset it → all pipes serve from Tinybird.
 - Both Dashboard + Api still carry backend `POSTHOG_*` (remove in D5). Dashboard oddly carries backend POSTHOG_* too (frontend service — leftover).
-- Note: `DEEPSEEK_API_KEY`/`AI_PROVIDER` present on both — DeepSeek LLM was deleted (PR #184) but `ai-client.js` is still referenced in analytics/proxy/dashboard/channel-classifier — SEPARATE from PostHog; audit later.
+- Note: `DEEPSEEK_API_KEY`/`AI_PROVIDER` present on both — SEPARATE from PostHog. **Updated as of `ab9fc7b`:** the audit happened (KI-47). PR #184 deleted the AI chat feature, but `/api/attribution/verdicts` was built later and silently re-added the LLM dependency; PR #353 rebuilt it deterministically. **`api/lib/ai-client.js` now has zero importers repo-wide** — the "still referenced in analytics/proxy/dashboard/channel-classifier" note was a false positive: those files match on AI-*referrer*-domain detection (inbound traffic classification), not on the AI client.
 
 ## Two immediate high-value moves (do these first)
 - **GDPR — stop the live sub-processor:** unset `VITE_POSTHOG_API_KEY` on Dashboard **+ redeploy** (VITE vars are build-time — the current bundle already has it baked in; needs a rebuild to take effect). Stops PostHog frontend telemetry. Fast, reversible.

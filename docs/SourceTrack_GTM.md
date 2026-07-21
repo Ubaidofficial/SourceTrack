@@ -89,7 +89,13 @@ Two tiers, both **unbuilt by all four competitors**, both leverage existing stre
 ## 5. Marketable features by truth-gate
 
 ### ✅ Safe to claim NOW (built + truthful)
-Multi-touch attribution (9 models) · UTM/referrer/campaign/click-ID capture · visitor journey · cookieless journeys · **AI-source detection (22 domains: ChatGPT, Gemini, Claude, Perplexity, Copilot, DeepSeek, Grok)** · **GSC SEO-revenue attribution (est. label)** · lead qualification (no revenue needed) · Report Builder (template-first) · multi-site portfolio · manual conversion webhook (HMAC, replay-bound) · outbound webhook (HMAC, SSRF-guarded — gap in all 4 competitors) · lightweight analytics · **privacy: GPC/DNT honored, no fingerprinting, no data to LLM** · "core data stored in EU."
+Multi-touch attribution (9 models) · UTM/referrer/campaign/click-ID capture · visitor journey · cookieless journeys · **AI-source detection (22 domains: ChatGPT, Gemini, Claude, Perplexity, Copilot, DeepSeek, Grok)** · **GSC SEO-revenue attribution (est. label)** · lead qualification (no revenue needed) · Report Builder (template-first) · multi-site portfolio · manual conversion webhook (HMAC, replay-bound) · outbound webhook (HMAC, SSRF-guarded — gap in all 4 competitors) · lightweight analytics · **privacy: GPC/DNT honored, no fingerprinting, no data to LLM** *(re-verified `ab9fc7b` 2026-07-21 — see below)* · "core data stored in EU."
+
+> ⚠️ **"no data to LLM" — verification note, do not repeat the claim without it.** This claim was **FALSE from the day `/api/attribution/verdicts` shipped until `ab9fc7b`** (2026-07-21): that endpoint sent real campaign names, revenue and conversion counts to a third-party model (`api.deepseek.com` by default, `api.moonshot.cn` under `AI_PROVIDER=kimi`). It sat in this "safe to claim NOW" list the whole time — see `KNOWN_ISSUES` **KI-47**.
+>
+> **It is true again as of `ab9fc7b`,** verified by grep across `api/`, `tinybird/`, `dashboard/src/` and `scripts/`: the only outbound model client is `api/lib/ai-client.js`, and it has **zero importers** — no code path can reach it. Every other `deepseek`/`anthropic`/`openai` hit is inbound AI-*referrer* detection (classifying visitors arriving **from** those tools), brand logos, or the secret scanner's key-name regex. `ai-client.js` and the `openai` npm dependency still exist but are dormant.
+>
+> **This is a point-in-time claim, not a permanent property.** It was falsified once by a feature added after it was written. Before repeating it in marketing copy, a DPA, or a security questionnaire, **re-run the grep against the current ref** and update the ref above.
 
 ### ⚠️ Marketable WITH caveat (beta / truth-gated)
 CAPI (Meta+Google config landing via #60 — don't claim "live forwarding" until a merchant uses it) · GSC SEO-revenue ("estimated, matched by landing page + date") · Stripe ("test-mode beta," not production) · Shopify ("manual webhook," not native app).
