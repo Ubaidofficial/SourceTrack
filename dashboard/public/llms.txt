@@ -13,6 +13,24 @@ and cookieless, first-party tracking. No CRM required.
 - Use cases: https://sourcetrack.ai/use-cases/saas, /use-cases/shopify, /use-cases/lead-generation
 - Docs: https://sourcetrack.ai/docs
 
+## API surface
+- Attribution Explain API reference:
+  https://github.com/Ubaidofficial/SourceTrack/blob/main/docs/guides/attribution-explain-api.md
+- GET /api/attribution/explain — why one visitor's conversion was attributed to a
+  given source under a given model. Requires a Supabase session JWT plus a site_key.
+  Returns the conversion, a journey summary, read-time sessions, the attributed
+  source, and the touch list. Step-by-step explanation is implemented for the five
+  single-touch models; the four multi-touch models return a null attribution.
+- POST /api/server/event — server-side event ingestion. This is the only endpoint
+  that accepts a Server API Token; it requires the token to carry the
+  'write:events' scope.
+
+## Developer guides
+- Forms and booking support matrix:
+  https://github.com/Ubaidofficial/SourceTrack/blob/main/docs/guides/forms-and-booking-support.md
+- Form and checkout source handoff:
+  https://github.com/Ubaidofficial/SourceTrack/blob/main/docs/guides/form_checkout_source_handoff.md
+
 ## Notes
 - Cookieless by default. No fingerprinting. First-party tracking.
 - Core data is stored in the EU; the analytics event store is US-hosted.

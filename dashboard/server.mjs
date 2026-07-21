@@ -64,6 +64,11 @@ app.get('/robots.txt', (_req, res) => {
   res.sendFile(join(DIST, 'robots.txt'))
 })
 
+app.get('/llms.txt', (_req, res) => {
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+  res.sendFile(join(DIST, 'llms.txt'))
+})
+
 // Static assets (sets correct Content-Type for .png, .ico, .svg, .js, .css …)
 app.use(express.static(DIST, {
   index: false,          // don't serve index.html here — let the catch-all do it
