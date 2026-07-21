@@ -58,6 +58,24 @@ function context({ eventType, eventId, customerId, subscriptionId }) {
   ].join(' ')
 }
 
+// writeJobRun LOGS an insert failure and returns it — it does not throw — so an
+// unchecked call would let the durable record vanish while the caller carried on,
+// which is the same silent-failure class this module exists to close. Every call
+// site checks the returned error and escalates through here.
+//
+// Deliberately does NOT throw: the billing outcome (recovered / hard failure) is
+// already decided by this point, and throwing here would mask it behind a logging
+// problem. A distinct, greppable line is the escalation — it says the event is now
+// console-only, so whoever reads it knows job_runs will NOT contain this event.
+export const DURABLE_RECORD_FAILED = '[billing] DURABLE RECORD FAILED'
+
+function escalateRecordFailure(ctx, recordErr) {
+  console.error(
+    `${DURABLE_RECORD_FAILED} — the zero-row event is now console-only: ${ctx} — ` +
+    `job_runs insert error: ${recordErr?.message || recordErr}`
+  )
+}
+
 /**
  * Apply a subscription-state patch to sites, detecting a zero-row match.
  *
@@ -104,12 +122,13 @@ export async function updateSiteSubscription(sb, { patch, customerId, subscripti
         `[billing] ZERO-ROW RECOVERED via stripe_subscription_id — ${ctx} sites=${siteIds.join(',')} — ` +
         'stripe_customer_id linkage is BROKEN on these sites and needs repair'
       )
-      await writeJobRun(sb, {
+      const { error: recordErr } = await writeJobRun(sb, {
         job_name: BILLING_ZERO_ROW_JOB,
         status: STATUS_RECOVERED,
         conversions_processed: siteIds.length,
         error_message: `RECOVERED via stripe_subscription_id — ${ctx} sites=${siteIds.join(',')}`
       })
+      if (recordErr) escalateRecordFailure(ctx, recordErr)
       return { outcome: 'recovered', siteIds }
     }
   }
@@ -118,12 +137,13 @@ export async function updateSiteSubscription(sb, { patch, customerId, subscripti
   console.error(
     `[billing] ZERO-ROW FAILURE — no site matched. ${ctx} — subscription state NOT applied`
   )
-  await writeJobRun(sb, {
+  const { error: recordErr } = await writeJobRun(sb, {
     job_name: BILLING_ZERO_ROW_JOB,
     status: STATUS_FAILED,
     conversions_processed: 0,
     error_message: `ZERO-ROW: no site matched customer_id or subscription_id — ${ctx}`
   })
+  if (recordErr) escalateRecordFailure(ctx, recordErr)
 
   const err = new Error(`[billing] zero-row match — no site for ${ctx}`)
   err.billingZeroRow = true
@@ -141,10 +161,11 @@ export async function updateSiteSubscription(sb, { patch, customerId, subscripti
 export async function recordUnresolvedSite(sb, { eventType, eventId, customerId, subscriptionId, note }) {
   const ctx = context({ eventType, eventId, customerId, subscriptionId })
   console.error(`[billing] UNRESOLVED SITE — ${note || 'no site for customer'} — ${ctx}`)
-  await writeJobRun(sb, {
+  const { error: recordErr } = await writeJobRun(sb, {
     job_name: BILLING_ZERO_ROW_JOB,
     status: STATUS_FAILED,
     conversions_processed: 0,
     error_message: `UNRESOLVED: ${note || 'no site for customer'} — ${ctx}`
   })
+  if (recordErr) escalateRecordFailure(ctx, recordErr)
 }

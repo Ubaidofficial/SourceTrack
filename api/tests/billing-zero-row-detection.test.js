@@ -26,7 +26,7 @@ process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test'
 
 const { getSupabase } = await import('../lib/supabase.js')
 const { billingWebhookHandler } = await import('../routes/billing.js')
-const { BILLING_ZERO_ROW_JOB, STATUS_RECOVERED, STATUS_FAILED, subscriptionIdFrom } =
+const { BILLING_ZERO_ROW_JOB, STATUS_RECOVERED, STATUS_FAILED, subscriptionIdFrom, DURABLE_RECORD_FAILED } =
   await import('../lib/billing-subscription-update.js')
 
 // ── harness ───────────────────────────────────────────────────────────────────
@@ -48,10 +48,12 @@ function mockRes() {
  * @param jobRuns  out-param array collecting every job_runs insert
  * @param updates  out-param array collecting every update {patch, column, value}
  */
-function installSupabase({ matchCustomer = [], matchSubscription = [], siteRow = null, jobRuns, updates }) {
+function installSupabase({ matchCustomer = [], matchSubscription = [], siteRow = null, jobRuns, updates, jobRunsError = null }) {
   _client.from = (table) => {
     if (table === 'job_runs') {
-      return { insert: async (row) => { jobRuns.push(row); return { error: null } } }
+      // jobRunsError simulates a rejected insert. writeJobRun returns it rather than
+      // throwing, so the caller must check it — that is what the last test asserts.
+      return { insert: async (row) => { jobRuns.push(row); return { error: jobRunsError } } }
     }
     if (table !== 'sites') return _realFrom(table)
 
@@ -264,6 +266,39 @@ test('5b. payment_succeeded: an ACTIVE site is left alone and writes no record',
   assert.strictEqual(res.statusCode, 200)
   assert.strictEqual(jobRuns.length, 0, 'an already-active site is not an anomaly')
   assert.strictEqual(updates.length, 0, 'reactivation must not run for a non-inactive site')
+})
+
+// ── 6. the durable record itself fails to insert ──────────────────────────────
+// writeJobRun logs and RETURNS an insert error rather than throwing, so an unchecked
+// call would let the record vanish while the handler carried on — the same silent
+// failure this module closes. The escalation must be distinguishable, and must NOT
+// change what the handler returns (a logging fault must not mask the billing outcome).
+test('6. a failed durable record escalates distinctly and does not change the return', async (t) => {
+  const jobRuns = [], updates = []
+  installSupabase({
+    matchCustomer: [], matchSubscription: [], jobRuns, updates,
+    jobRunsError: { message: 'insert rejected (simulated)' }
+  })
+  const realError = console.error
+  const lines = []
+  console.error = (...args) => { lines.push(args.join(' ')) }
+  t.after(() => { console.error = realError; restoreSupabase() })
+
+  const res = mockRes()
+  await billingWebhookHandler(req(SUB_UPDATED('cus_zero', 'sub_zero')), res)
+
+  // Unchanged: the hard-failure branch still throws → 500 → Stripe retries.
+  assert.strictEqual(res.statusCode, 500, 'a logging fault must not alter the billing outcome')
+  assert.strictEqual(jobRuns.length, 1, 'the insert was still attempted')
+
+  const escalation = lines.filter(l => l.includes(DURABLE_RECORD_FAILED))
+  assert.strictEqual(escalation.length, 1, 'exactly one escalation line for one failed record')
+  assert.match(escalation[0], /console-only/, 'must say the event is no longer durable')
+  assert.match(escalation[0], /cus_zero/, 'must carry the context needed to act')
+  assert.match(escalation[0], /insert rejected \(simulated\)/, 'must surface the underlying insert error')
+  // Distinguishable from the zero-row line itself, which is a different failure.
+  assert.ok(lines.some(l => l.includes('ZERO-ROW FAILURE') && !l.includes(DURABLE_RECORD_FAILED)),
+    'the zero-row line and the record-failure line must be separate lines')
 })
 
 // ── subscriptionIdFrom: accepts both Stripe id shapes, rejects everything else ─
