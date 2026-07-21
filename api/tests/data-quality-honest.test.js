@@ -11,7 +11,7 @@ process.env.NODE_ENV = 'test'
 process.env.SUPABASE_URL = 'https://mock-proj.supabase.co'
 process.env.SUPABASE_SERVICE_KEY = 'mock-service-role-key-value'
 
-const { insufficientDataStatus, DATA_SUFFICIENCY_MIN, classify, classifyMax } =
+const { insufficientDataStatus, DATA_SUFFICIENCY_MIN, classify, classifyMax, checkErrorReport } =
   await import('../jobs/data-quality-check.js')
 
 // ── skip path: below threshold -> 'skipped', never 'ok' ──────────────────────────────────────
@@ -40,4 +40,21 @@ test('classifyMax (lower-is-better) still returns ok/warning/critical, unchanged
   assert.equal(classifyMax(0.5, 0.7, 0.9), 'ok')
   assert.equal(classifyMax(0.8, 0.7, 0.9), 'warning')
   assert.equal(classifyMax(0.95, 0.7, 0.9), 'critical')
+})
+
+// ── PR B: a thrown check leaves a VISIBLE 'skipped' row, not an absent one ────────────────────
+test("a thrown check reports 'skipped' under a distinct <check>_error name — never ok/critical", () => {
+  const r = checkErrorReport('source_attribution_rate', new Error('boom'))
+  assert.equal(r.status, 'skipped')
+  assert.notEqual(r.status, 'ok')       // must not look healthy
+  assert.notEqual(r.status, 'critical') // and must not look like a threshold failure
+  assert.equal(r.check_name, 'source_attribution_rate_error') // suffix ⇒ not mistaken for a verdict
+  assert.match(r.message, /boom/)       // error text preserved for the operator
+})
+
+test('checkErrorReport tolerates a non-Error throw', () => {
+  const r = checkErrorReport('non_direct_rate', 'raw string error')
+  assert.equal(r.status, 'skipped')
+  assert.equal(r.check_name, 'non_direct_rate_error')
+  assert.match(r.message, /raw string error/)
 })

@@ -29,6 +29,23 @@ export function insufficientDataStatus(total) {
   return total < DATA_SUFFICIENCY_MIN ? 'skipped' : null
 }
 
+// KI-45 (PR B): a per-check that THROWS must leave a VISIBLE row, not vanish. Before this, a
+// thrown check was only console.error'd and wrote nothing — indistinguishable from "not
+// applicable". Record it as a 'skipped' (unknown) result under a distinct `<check>_error` name so
+// it can never be read as a threshold verdict, with the error text in the message.
+export function checkErrorReport(checkName, err) {
+  return {
+    check_name: `${checkName}_error`,
+    status: 'skipped',
+    message: `check threw: ${err?.message || err}`
+  }
+}
+async function insertCheckError(supabase, checkName, siteId, err) {
+  const r = checkErrorReport(checkName, err)
+  console.error(`  ${checkName} failed:`, err?.message || err)
+  await insert(supabase, r.check_name, r.status, null, null, r.message, siteId)
+}
+
 async function run() {
   console.log('[data-quality-check] Starting...')
   const supabase = getSupabase()
@@ -123,7 +140,7 @@ async function run() {
       const status = classify(ratio, 0.5, 0.2)
       const msg = `${Math.round(ratio * 100)}% of conversions have a first-touch source recorded`
       await insert(supabase, 'source_attribution_rate', status, ratio, 0.5, msg, site.id)
-    } catch (e) { console.error('  CHECK 1 failed:', e.message) }
+    } catch (e) { await insertCheckError(supabase, 'source_attribution_rate', site.id, e) }
 
     // ── CHECK 2: non_direct_rate ──────────────────────────────────────────────
     // What % of attributed conversions have a non-Direct channel?
@@ -143,7 +160,7 @@ async function run() {
       const status = classifyMax(directRatio, 0.7, 0.9)
       const msg = `${Math.round(directRatio * 100)}% of conversions attributed to Direct (high = potential UTM tracking gap)`
       await insert(supabase, 'non_direct_rate', status, directRatio, 0.7, msg, site.id)
-    } catch (e) { console.error('  CHECK 2 failed:', e.message) }
+    } catch (e) { await insertCheckError(supabase, 'non_direct_rate', site.id, e) }
 
     // ── CHECK 3: conversion_value_coverage ───────────────────────────────────
     // What % of conversions have a non-zero revenue value?
@@ -160,7 +177,7 @@ async function run() {
       const status = classify(ratio, 0.7, 0.4)
       const msg = `${Math.round(ratio * 100)}% of conversions have a revenue value > 0`
       await insert(supabase, 'conversion_value_coverage', status, ratio, 0.7, msg, site.id)
-    } catch (e) { console.error('  CHECK 3 failed:', e.message) }
+    } catch (e) { await insertCheckError(supabase, 'conversion_value_coverage', site.id, e) }
 
     // ── CHECK 4: touchpoint_depth ─────────────────────────────────────────────
     // What % of attributed conversions have touchpoint_count > 1?
@@ -179,7 +196,7 @@ async function run() {
       const status = ratio < 0.05 ? 'warning' : 'ok'
       const msg = `${Math.round(ratio * 100)}% of conversions have multi-touch journeys (touchpoint_count > 1)`
       await insert(supabase, 'touchpoint_depth', status, ratio, 0.05, msg, site.id)
-    } catch (e) { console.error('  CHECK 4 failed:', e.message) }
+    } catch (e) { await insertCheckError(supabase, 'touchpoint_depth', site.id, e) }
 
     // ── CHECK 5: ai_detection_rate ───────────────────────────────────────────
     // Informational only — what % of conversions are detected from AI sources.
@@ -204,7 +221,7 @@ async function run() {
       const ratio = total > 0 ? (aiAttr ?? 0) / total : 0
       const msg = `${Math.round(ratio * 100)}% of conversions from AI sources (${aiAttr ?? 0}/${total})`
       await insert(supabase, 'ai_detection_rate', 'ok', ratio, null, msg, site.id)
-    } catch (e) { console.error('  CHECK 5 failed:', e.message) }
+    } catch (e) { await insertCheckError(supabase, 'ai_detection_rate', site.id, e) }
 
     // ── CHECK 6: data_freshness ───────────────────────────────────────────────
     // When was the last conversion recorded for this site?
@@ -227,7 +244,7 @@ async function run() {
         const msg = `Last conversion recorded ${daysSince} day(s) ago (${lastConv.conversion_date})`
         await insert(supabase, 'data_freshness', status, daysSince, 3, msg, site.id)
       }
-    } catch (e) { console.error('  CHECK 6 failed:', e.message) }
+    } catch (e) { await insertCheckError(supabase, 'data_freshness', site.id, e) }
 
     // ── CHECK 7: duplicate_conversion_rate ───────────────────────────────────
     // The single most common CAPI integration issue is a second tracking pixel
@@ -260,7 +277,7 @@ async function run() {
           : `${pct}% duplicate rate (healthy)`
         await insert(supabase, 'duplicate_conversion_rate', status, dupRate, 0.15, msg, site.id)
       }
-    } catch (e) { console.error('  CHECK 7 failed:', e.message) }
+    } catch (e) { await insertCheckError(supabase, 'duplicate_conversion_rate', site.id, e) }
   }
 
   console.log('\n[data-quality-check] Done.')
