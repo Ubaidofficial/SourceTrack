@@ -32,7 +32,9 @@ paste-ready command/dispatch blocks.
 
 ## 0.5. SESSION 145 HANDOFF (from Session 144, 2026-07-20)
 
-**Merged this session:** #336, #337, #338, #339, #340, #341.
+> 🧭 **READ FIRST: [`docs/post_verdict_roadmap.md`](docs/post_verdict_roadmap.md)** — the post-verdict build sequence (Tier 1 forced chain: **api_keys scopes → read REST API → MCP v1**), the metrics-coverage audit, positioning, and the two proof points due 2026-07-22. **The $777.77 revenue-stitching test PASSED** (touchpoint_count 3), which was the gate on all of it. **Next build = KI-43 api_keys scopes.** Every claim there carries an evidence grade — VERIFIED / INFERRED / JUDGMENT / UNPROVEN — **do not flatten them.**
+
+**Merged this session:** #336, #337, #338, #339, #340, #341, #343, #344.
 
 **Queued (priority):**
 1. **KI-14** — `/admin` degraded-state (`degraded:true` + `failed_reads[]` + `FORCE_READ`-gated rethrow). Plan approved, **not built**; 3 amendments sent. Super-admin ops tooling (lower priority).

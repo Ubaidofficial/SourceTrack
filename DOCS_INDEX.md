@@ -28,6 +28,7 @@ Trust tier per doc. **Precedence when sources conflict:** code → `KNOWN_ISSUES
 | `SUPABASE_SCHEMA.md` | Supabase tables/RLS/verification queries. | Maintained |
 | `.env.example` | Canonical env template (includes the Tinybird block since #328). | Maintained |
 | `IDENTITY_DESIGN.md` | Identity-stitching architecture. | Maintained |
+| `docs/post_verdict_roadmap.md` | **Build sequencing after the 2026-07-20/21 verdicts** — Tier 1 forced chain (api_keys scopes → read REST API → MCP v1), Tiers 2–4, metrics-coverage audit, positioning, held items, due proof points. Every claim carries an explicit evidence grade (VERIFIED / INFERRED / JUDGMENT / UNPROVEN) — **do not flatten them.** Also holds the §0 verification-methods note (squash merges defeat `merge-base --is-ancestor`). Distinct from `docs/paid_beta_go_no_go_master_audit.md`, which is a launch *gate*, not a roadmap. | Maintained |
 | `COMMANDCODE_RUNBOOK.md` | **Operational runbook** — Production Deployment Checklist, Emergency Rollback Runbook (incl. Scenario C: webhook-decryption failures), and Observability & Monitoring procedures. Incident-response — kept live at root, **not** archived. | Maintained |
 
 ## ⚠️ Stale — trust code / `KNOWN_ISSUES` / `FEATURE_MAP` over it
