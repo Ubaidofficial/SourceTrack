@@ -484,6 +484,37 @@ After the 19:54 failures, status flipped to `'error'` with `last_error_code = 's
 
 **P0 — outranks KI-14/35/40. HELD pending the 02:00 UTC verdicts** (do not start).
 
+---
+
+**✅ FIXED — squash `06f1ba0` (PR #349), merged 2026-07-21.** *(VERIFIED — `git rev-parse origin/main` + `git show --stat`; the four changed files are on `main`.)*
+
+- `.select('id')` on all four updates makes the zero-row case observable. The fallback key is `stripe_subscription_id` (`sub.id` on updated/deleted; `invoice.subscription` on succeeded/failed — valid top-level at the pinned `apiVersion: '2024-06-20'`).
+- Three distinguishable outcomes: `matched` (silent) · `recovered` (durable `partial` row — the write landed but the `customer_id` linkage is broken) · hard failure (durable `failed` row, then throw → 500 → Stripe retries, since the idempotency claim commits only after the switch).
+- `invoice.payment_succeeded`'s `getSiteByCustomerId → null` branch, which previously skipped with **no log at all**, is now recorded (not thrown — nothing was attempted).
+- Durable sink is `job_runs` via `writeJobRun`; `site_alerts` was rejected because its SELECT policy is `site_id IN (owner's sites)`, which a NULL `site_id` satisfies for nobody — the row would have been invisible, recreating this very failure.
+
+**⚠️ The evidence standard here DIFFERS from KI-45 — deliberately. Do not leave this open waiting for a runtime proof point.**
+
+KI-45 could be closed on an observed prod run because its code path executes nightly regardless of customer count. **This one cannot.** The zero-row branch only fires when a Stripe lifecycle event arrives for a customer with no matching `sites` row, and at ~0 real paying customers **that may never happen in prod.** Waiting for an observation would leave a merged, tested money-rail fix open indefinitely against an event that will not come.
+
+**Correctness therefore rests on the test suite plus a mutation check** *(VERIFIED — re-run locally against `06f1ba0` while writing this entry; both mutations applied and reverted, tree left clean)*:
+
+| Mutation | Result |
+|---|---|
+| Remove zero-row detection (no `.select()`, treat "no error" as success) | **9 of 16 tests fail** |
+| Remove the durable-record error guard only | **1 of 16 fails** (test 6, and only test 6) |
+| Unmutated | **16/16 pass** |
+
+> ⚠️ Earlier working notes said "8 of 16" for the first mutation. **The correct figure is 9** — test 6 also traverses the hard-failure path, so it depends on detection too. Cite 9.
+
+**This is the same reasoning shape as KI-19** (correctness-by-construction where empirical parity is structurally unobtainable): where the real-world comparison cannot be produced, the standard becomes *does the guard demonstrably fail when removed* — which is exactly what the mutation check establishes. **Treat KI-44 as closed on that basis.**
+
+**What the fix does NOT cover — still unknown, and unrecoverable:**
+- **The June root cause is still unknown.** The fix makes a future zero-row match *detectable*; it does not explain **why** techrupt.pk's row failed to match in June. Was `stripe_customer_id` NULL, stale, or different? **Unanswerable** — Stripe retains delivery-attempt records 15 days and the event is now ~26 days old (see the June-delivery paragraph above). No task should be planned that depends on recovering it.
+- **The affected prod row is not repaired by this fix.** techrupt.pk may still read `plan='growth'` — the fix changes future event handling, not existing state. Verify and repair separately.
+- **The zero-row branch has never executed in prod.** Its first real execution will also be its first real-world test.
+- **Nothing reads the durable record yet — see KI-48.**
+
 ### 45. THE SILENT-SUCCESS CLASS — "OK must mean verified" (data-quality-check is the 4th instance)
 
 **Name the class once, prominently:** a job reports success/OK for work it did **not** do. Four instances surfaced 2026-07-20, and it is *the* failure mode for a product whose pitch is "the numbers are real":
@@ -551,6 +582,47 @@ Filed 2026-07-21 against `b3cb043`, from documenting the endpoint. Every claim b
 **Proposed fix — REBUILD VERDICTS DETERMINISTIC (proposal only, NOT built, no code written).** Replace the model call with **threshold rules over already-computed metrics** — ROAS, CPL, conversion volume, and revenue trend, all of which the pre-aggregated attribution read already returns. Same `{campaign, verdict, reason, signal}` response shape, so no consumer changes; `reason` becomes a templated string citing the numbers that triggered the rule ("0 conversions on 1,240 sessions"). This is **§26-safe by construction**: no model call, **no data egress**, deterministic, reproducible from the rows, and it repairs (a)–(d) at once — the GTM claim becomes true again, DeepSeek stops being a sub-processor, and `DEEPSEEK_API_KEY` can be revoked per KI-18 without a silent outage. Thresholds must be cost-gated like every other cost metric (§6): **hide** ROAS/CPL-derived verdicts when no ad-cost data exists for the range rather than emitting a verdict from a fabricated zero. **The alternative is removal** — delete the route and the `ai_analytics` gate with it. **Founder decides; both are defensible, and doing neither is not.** Whichever is chosen, `data: []` must stop being the failure signal (return a real error), and KI-18 must be corrected.
 
 **Scope note:** the API documentation for this endpoint was deliberately **withheld** from the docs PR (#347) pending this decision. It is written and accurate as of `b3cb043`, and was preserved rather than discarded.
+
+### 48. The KI-44 durable record has NO reader — nothing alerts, and nothing displays it
+
+Filed 2026-07-21 against `06f1ba0`, immediately after KI-44 merged. KI-44 now writes a durable `job_runs` row on every zero-row match (`job_name='billing-webhook-zero-row'`). **Nothing consumes it.**
+
+**(a) `health-agent` does not read these rows — VERIFIED (read `api/jobs/health-agent.js`).** `CRITICAL_CHECKS` is exactly `new Set(['supabase', 'nightly_job', 'conversions', 'tinybird_quarantine'])` (`:18`) — **nothing billing-related.** The only `job_runs` read is inside the `nightly_job` check (`:192`), and it hard-filters `.eq('job_name', 'nightly-attribution')` — so a `billing-webhook-zero-row` row is **not even fetched**, let alone evaluated. Adding the job name to `CRITICAL_CHECKS` alone would therefore do nothing; the query is the binding constraint.
+
+**(b) ⚠️ CORRECTION — `/api/jobs` does NOT surface these rows either. VERIFIED (read `api/routes/job-status.js` in full — it is 24 lines and has exactly one route).** A working assumption while filing this said the rows were "visible via `/api/jobs`". **That is false.** The sole route is `GET /api/jobs/attribution/status`, which is `requireRole('super_admin')` **and** hard-filters `.eq('job_name', 'nightly-attribution')` (`:12`). There is no unfiltered job-runs endpoint anywhere.
+
+**So the accurate state is worse than "visible if someone looks":** **no application code path reads these rows at all.** The only way to see a billing zero-row event today is a direct SQL/console query against `job_runs` that someone thinks to run. Adjacent to **KI-46** (whole-job failure invisible because no row is written) — this is the mirror image: **the row is written and no one reads it.** The durability guarantee KI-44 bought is currently unrealised.
+
+**Propose (NOT built, no code written):**
+1. Add a `billing_zero_row` check to `health-agent` that queries `job_runs` for `job_name='billing-webhook-zero-row'` within the lookback window and goes critical on any `failed` row (and warns on `partial`/recovered) — **a new query, not just a new entry in `CRITICAL_CHECKS`**, per (a).
+2. Decide the delivery channel deliberately: **KI-29** records that health-agent's Slack path is droppable (`fetch` at `:289` has no `.ok`/try-catch; `notify()` unwrapped at `:320`). Routing a money-rail alert through it without fixing KI-29 first would recreate the silence one layer out.
+3. Optionally widen `/api/jobs` to accept a `job_name` parameter so the rows are at least inspectable without DB access.
+
+**(c) Folded in — the 500 retry blast radius (a deliberate, accepted trade from KI-44, recorded so it is not forgotten).** KI-44's hard-failure branch throws → 500 → Stripe retries. That is correct for the likely case (an ordering race where `stripe_customer_id` is not yet committed resolves in seconds). **But for a permanently-absent site it retries for ~3 days and Stripe may then DISABLE the endpoint** — which would take down **all** billing webhooks on that endpoint, including `checkout.session.completed`, i.e. **new signups would stop provisioning.** *(INFERRED — this is Stripe's documented retry-then-disable behaviour for a persistently failing endpoint, reasoned from the code path; it has NOT been observed on this account.)* Low probability at ~0 paying customers; **the risk rises with customer count**, so this should be closed before any real volume.
+
+**Propose (NOT built):** discriminate on **event age**. An ordering race resolves in seconds, so an event still matching zero rows well after delivery is permanent, not transient. Compare `event.created` against now and, past a threshold (~1h), **return 200 instead of throwing** — retrying cannot help, the durable row is already written, and the endpoint is spared. Under that threshold, keep throwing so genuine races still self-heal. Net effect: retries stay for the case they fix, and the disable risk is bounded. Requires (a)/(b) to be in place first, since it trades Stripe's escalation signal for the durable record — **do not ship the 200 path while nothing reads `job_runs`.**
+
+### 49. `package.json` enumerates test files BY NAME — 19 of 137 currently never run in CI
+
+Filed 2026-07-21 against `06f1ba0`. The `qa:*:unit` scripts list every test file explicitly; there is **no glob**. A file that is not named in one of those lists is silently skipped forever — green CI, test never executed. **This is the silent-success class applied to the very mechanism used to catch the silent-success class.**
+
+**It is not hypothetical — it is already realised. VERIFIED (counted programmatically against `06f1ba0`; regex-extracted every `api/tests/*.test.js` reference from all `package.json` scripts and diffed against `readdirSync('api/tests')`):**
+
+| | count |
+|---|---|
+| `api/tests/*.test.js` on disk | **137** |
+| distinct files referenced by any `qa:*` script | **118** |
+| **never executed by CI** | **19** |
+
+The 19 include money- and privacy-relevant coverage: `stripe-webhook-refund-wiring`, `nightly-refund-persist`, `gdpr-subject-export`, `tinybird-read-allowlist`, `report-dead-store-gate`, `alerts-plan-gate`, `health-agent-quarantine`, `conversion-classifier`, `attribution-touch-cutover`, `leads-journey-attribution`, and 9 others.
+
+**Running all 19 locally: 205 tests, 199 pass, 6 fail — VERIFIED (executed while filing this).** **Both failure classes are stale test harnesses, NOT product regressions** — stated explicitly so this is not misread as a hidden outage:
+- `nightly-reconciliation.test.js` — aborts at import: it never sets the mock `SUPABASE_URL`/`SUPABASE_SERVICE_KEY`, so `getSupabase()` throws (1 file-level failure).
+- `session-report-dims.test.js` — 5 assertion failures, all `[tinybird-force-read] session_report_pageviews returned null`: the file predates the Tinybird stub-injection convention and never injects a pipe stub, so the fail-closed guard fires.
+
+Neither indicates broken product code. **The point stands regardless:** these files rotted precisely *because* nothing ran them, and the same mechanism would hide a genuine regression identically. Registration is currently enforced only by an author remembering — it was nearly missed twice in one day (KI-43 PR A, and again on #349; both were caught only by deliberately re-checking).
+
+**Propose (NOT built, no code written):** a guard test — glob `api/tests/*.test.js`, extract every `api/tests/…` reference from `package.json`'s scripts, and **fail if any on-disk file is unregistered**. It is self-registering by nature (it lives in a list it checks) and costs one file read. Ship it with an explicit allowlist for the currently-19 so the guard can land green, then burn the allowlist down — fixing the 2 broken files and registering the other 17 is a separate, mechanical task.
 
 ---
 ## Recently fixed
