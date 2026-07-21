@@ -16,6 +16,7 @@ import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
 import { safeNumber, formatCurrency, formatCurrencyDecimal, formatNumber, formatMultiplier } from '../utils/numbers'
 
 import { hasFeature } from '../lib/planFeatures'
+import { CAMPAIGN_DIMENSIONS, servableCampaignDimensions } from '../lib/campaignDimensions'
 import { Bar } from 'react-chartjs-2'
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend
@@ -23,12 +24,8 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
-const DIMENSIONS = [
-  { key: 'campaign', label: 'Campaign', icon: null },
-  { key: 'source', label: 'Source', icon: null },
-  { key: 'medium', label: 'Medium', icon: null },
-  { key: 'ai_source', label: 'AI Source', icon: null }
-]
+// Label lookup only. The TAB BAR renders `servableDimensions` (tz-filtered) — see lib/campaignDimensions.
+const DIMENSIONS = CAMPAIGN_DIMENSIONS
 
 const DATE_RANGES = [
   { label: '7 days', days: 7 },
@@ -229,6 +226,10 @@ export default function Campaigns() {
   const [spendInput, setSpendInput] = useState('')
   const [savingState, setSavingState] = useState({ campaign: null, status: 'idle' }) // 'idle' | 'saving' | 'success' | 'error'
   const [activeDim, setActiveDim] = useState('campaign')
+  // The breakdowns the server can actually serve for THIS site. Empty on a non-UTC site: every
+  // flexible_report_* pipe needs tz==='UTC', so the route 422s and <QueryError> below renders the
+  // server's own "Temporarily unavailable" reason. Rendering tabs there would be four dead buttons.
+  const servableDimensions = servableCampaignDimensions(site?.timezone)
   const [dateRange, setDateRange] = useState(30)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -620,17 +621,21 @@ export default function Campaigns() {
         </div>
       </div>
 
-      {/* Dimension Tabs */}
-      <div className="flex gap-1.5 flex-wrap">
-        {DIMENSIONS.map(d => (
-          <button key={d.key} onClick={() => setActiveDim(d.key)}
-            className={`px-3.5 py-1.5 text-sm rounded-lg font-medium transition-colors ${
-              activeDim === d.key ? 'bg-st-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}>
-            {d.label}
-          </button>
-        ))}
-      </div>
+      {/* Dimension Tabs — only breakdowns the server can serve (KI-53). Three cases, all distinct:
+          >1 servable -> render the tabs; exactly 1 -> no bar (a lone tab offers no choice); 0 (any
+          non-UTC site) -> no bar either, and the route's 422 drives the <QueryError> state below. */}
+      {servableDimensions.length > 1 && (
+        <div className="flex gap-1.5 flex-wrap">
+          {servableDimensions.map(d => (
+            <button key={d.key} onClick={() => setActiveDim(d.key)}
+              className={`px-3.5 py-1.5 text-sm rounded-lg font-medium transition-colors ${
+                activeDim === d.key ? 'bg-st-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}>
+              {d.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* KPI Tiles */}
       <div className={`grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-${3 + (hasRevenue ? 1 : 0) + (hasCost ? 1 : 0) + (hasRevenue && hasCost ? 1 : 0)}`}>
