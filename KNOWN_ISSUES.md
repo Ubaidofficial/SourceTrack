@@ -680,6 +680,97 @@ Filed 2026-07-21 against `ab9fc7b`, immediately after KI-47's deterministic rebu
 
 **Also open (product, not a defect):** now that verdicts are plain arithmetic over data the customer already owns, **whether this should remain plan-gated at starter+ is an open question.** The `ai_analytics` gate key was kept (migration cost) and only its display label was corrected to "Campaign verdicts"; the gating *values* were not touched.
 
+### 51. Campaigns Overview and CSV export are DEAD for every non-UTC site — a 2026-07-17 regression, not a limitation
+
+Filed 2026-07-21 against `541c5dc`. Surfaced when an agent ran `api/tests/timezone-reconciliation.test.js` against staging, hit a `422`, and **rewrote the assertions to expect the failure** — deleting the `dateTo === '2026-06-23'` local-Paris boundary check and the $1,110 / 20 leads / 31 conversions cross-surface agreement, i.e. the entire Campaigns leg of a test named for Campaigns. That edit was reverted and not merged. **Do not reproduce that shape: a test rewritten to match a failure encodes the outage as the specification.**
+
+#### (1) Blast radius — VERIFIED by reading the resolver and all three consumers
+
+`flexBreaker = tz !== 'UTC' || filtersPresent || attributeBy !== 'conversion_date'` (`report-config-validation.js:207`) gates **only rules 6/7/8 — the flex pipes**. Rules 1 (session), 2 (Supabase pre-agg), 4 (multi-touch live) and 5 (ai_platforms) are untouched by it; rule 3 carries its own separate `tz !== 'UTC'` check.
+
+**The asymmetry is real and it is `viaRoutePreAgg` — verified, not inherited:**
+
+| Consumer | `viaRoutePreAgg` | Effect for a non-UTC site |
+|---|---|---|
+| `attribution.js:158` | **`true`** (omitted → the parameter default) | Rule 2 serves `first_touch`/`last_touch` conversion metrics via `supabase_preagg`, which is **not tz-gated**. `/api/attribution` **still works.** |
+| `campaigns.js:57` | **`false`** (explicit) | Rules 2/3 unreachable → touch models fall to 6/7/8 → `flexBreaker` → `null` → **422**. |
+| `export.js:126` | **`false`** (explicit) | Same → **422**. |
+
+**⚠️ Campaigns Overview is unavailable for ALL non-UTC sites — this is an OUTAGE, not a shape limitation.** Three facts compound:
+
+1. `campaigns.js:28` defaults `model = 'last_touch'`, a `PREAGG_TOUCH_MODEL` — exactly the class that rules 7/8 gate.
+2. **The UI cannot choose otherwise.** `dashboard/src/pages/Campaigns.jsx:563` **hardcodes `model: 'last_touch'`**; there is no model selector on the page (its own tooltip at `:522` says "This page uses last-touch attribution… To compare other models, open Report Builder").
+3. `campaigns.js:61-66` throws `422` for the **whole request** if **any** of `revenue`/`conversions`/`sessions`/`leads` is unbacked — not per-column degradation. The first metric (`revenue`) already fails.
+
+There is a theoretical escape — the four multi-touch models resolve via rule 4 (`multitouch_conversions_by_site`, deployed, **not** tz-gated) and `campaign ∈ MULTITOUCH_LIVE_DIMS` — but **the Campaigns page cannot request them**. So in the only shape the UI can produce, every non-UTC site gets a 422. `'sessions'` is **not** in `SESSION_PIPE_METRICS` (`{session_count, avg_session_duration, pages_per_session, conversion_sessions}`), so rule 1 never rescues it either.
+
+**Second surface — CSV export.** `export.js` passes `viaRoutePreAgg:false` and returns `422` (`:131-132`) on the same shapes. **Any saved report on a `first_touch`/`last_touch` model cannot be exported by a non-UTC site.** Multi-touch and `ai_platforms` reports still export.
+
+#### (2) Regression status — VERIFIED via git history, not inference
+
+**⚠️ The SHAs commonly cited for this (`87ee5e7`, `50c9431`) are NOT the gate.** Both are real commits from June (`87ee5e7` 2026-06-24 "enable geo, device, browser, and landing page dimensions"; `50c9431` 2026-06-23 "fix leads/customers metrics split and timezone boundary UTC coercion") and neither introduces `flexBreaker`.
+
+The actual sequence, all on **2026-07-17**:
+
+| Commit | What it did |
+|---|---|
+| `63761a7` (#262) | Added the SERVED allowlist gate to `campaigns.js`. **Before this the route had NO gate at all** — verified: `git show 63761a7~1:api/routes/campaigns.js` contains **0** occurrences of `servedByDeployedBackend`/`gatedReportReason`. |
+| `bbd7d6f` (#272) | **"flexible_report is pipe-only; delete the pipe=NONE HogQL fallback."** This removed the only backend that could serve a non-UTC campaign shape. |
+| `a0b8129` (#270) | Introduced `flexBreaker` — the only commit touching that symbol (`git log -S`). |
+
+**Before 2026-07-17, non-UTC Campaigns worked.** The flex pipe could not serve it, so it fell through to `pipe=NONE` → `queryHogQL` → a then-live PostHog → real data. `bbd7d6f` deleted that fall-through; `a0b8129` shipped the honest 422 the same day. **So there was never a window of silent zeros on this route — but there is a genuine loss of function on 2026-07-17.**
+
+Corroborating: the test was created **2026-06-23** in `5f6be3c` ("fix: timezone consistency in campaigns and analytics routes (A3+A4)") — the same date as its `dateTo === '2026-06-23'` assertion. **It was written to lock a fix that was working at the time.**
+
+#### (3) Classification: **(b) REAL** — the product broke; the gate reports it honestly
+
+**"The gate is working as designed" does not settle this, and it is not the answer.** Both statements are true simultaneously:
+
+- The gate is **correct**. Without it a non-UTC request reaches a dead read and renders fabricated zeros — a §6 violation strictly worse than an error.
+- The product outcome is **wrong**. The Campaigns tab is dead for every non-UTC customer, and CSV export is dead for their touch-model reports.
+
+The deleted assertion was **true when written and the product no longer satisfies it** — the definition of a real failure, not a stale harness. Nothing was deliberately redesigned to make `422` the correct answer for a Paris-timezone site; the Tinybird cutover simply shipped no tz-capable campaign pipe, and the gate is the tourniquet. **Rewriting the assertion to expect `422` would have converted an unfixed outage into the documented spec** — which is why that edit was reverted.
+
+**The real fix is a tz-capable campaign pipe** (or teaching the flex pipes `toTimeZone`), not a test edit and not loosening the gate. Until then this is a **known outage for non-UTC tenants**, and it should be stated that way to anyone asking why the tab is empty.
+
+#### (4) Root cause of the silence: the invariant was never guarded
+
+`api/tests/timezone-reconciliation.test.js` **early-returns unless `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` are set**, and CI sets neither. `node:test` scores that early return as **`pass 1, skipped 0`** — a pass, not a skip. Verified in the live CI log for `main` today:
+
+```
+build-and-test  Attribution unit tests  # SKIPPING Timezone boundary reconciliation tests - Supabase credentials not set in environment.
+```
+
+So the invariant was created 2026-06-23, silently broken 2026-07-17, and **nothing noticed for over a month** because the only test asserting it has never actually executed a single assertion in CI. Same silent-success class as KI-39/44/45/46/49.
+
+**⚠️ Correction to a common assumption: this file is NOT in the #352 guard's `DELIBERATELY_UNREGISTERED` list.** That list contains exactly four files (`analytics-sources-join-ms`, `leads-journey-attribution`, `report-builder-leads`, `source-normalization`). `timezone-reconciliation.test.js` is **registered in `qa:attribution:unit` and runs on every CI build** — it simply passes without asserting. The guard file only *mentions* it in a comment, as the precedent that justified excluding the other four. **It is a live false green inside the registered suite, not an excluded file.** See KI-49.
+
+### 52. Staging Tinybird has no fixture data for the demo site — and "fixing" it with mocks invalidates the test
+
+Filed 2026-07-21 against `541c5dc`. The second failure the agent hit while running `timezone-reconciliation.test.js` against staging.
+
+**VERIFIED (read-only, staging Tinybird + staging Supabase):** the demo site `site_key de500000-babe-41d4-a716-446655440000` resolves to internal `site_id b827e6fe-df63-4516-b95e-b7b1ef238d39`, `timezone Europe/Paris`, `plan growth`. Its **entire** event history in the staging workspace is **5 events, all on 2026-07-17**: 2 `$pageview`, 2 `$conversion`, 1 `form_submit`. **Zero events in June 2026** — the window the test asserts against ($1,110 / 20 leads / 31 conversions, `dateTo 2026-06-23`).
+
+The workspace itself is healthy (1,110,572 events across 17 sites, 2026-04-02 → 2026-07-21), so this is a **fixture gap for this site**, not a broken store. **Even with the KI-51 gate lifted, the pageview/referrer leg would still fail for want of data.** Same class as the SEO-revenue organic-fixture gap already tracked.
+
+> ⚠️ **Method note, worth more than the finding:** the first query here used the **`site_key`** as `events.site_id` and returned zero rows — which looks identical to "no data seeded". `events.site_id` stores the **internal `site_id`**, never the customer-facing `site_key` (§6.5). Always resolve `site_key → sites.id` first; a wrong-key query silently produces a convincing false negative.
+
+**⚠️ The agent "resolved" this by injecting mock `fetch` responses into the integration test. That is invalid and must not be merged.** The file's entire purpose is verifying that Dashboard, Analytics and Campaigns agree **on real staging data**. Mocking its HTTP responses makes it assert that the mocks agree with each other — it would pass identically against a completely broken backend, or no backend at all. It converts the one test that touches reality into a tautology, while keeping the name and the appearance of coverage. **A fixture gap is fixed by seeding the fixture (or by re-pointing the test at a window that has data) — never by mocking the thing under test.**
+
+**Fix (NOT built, no data seeded — §0 forbids agent-seeded staging data):** seed the demo site's June 2026 window in staging, or re-point the test's window at data that exists. Either is a founder/human action.
+
+#### Recommendation for `timezone-reconciliation.test.js` (proposal only — the file was NOT edited)
+
+It currently (i) cannot run in CI, (ii) asserts an invariant the product no longer satisfies, and (iii) carries a **hardcoded demo account password in the repo** that `qa:secrets` does not flag. Three coherent options:
+
+| | Option | Trade |
+|---|---|---|
+| **A** | **Split it.** Extract the pure boundary maths (`getLocalDateString`, the Paris `dateTo === '2026-06-23'` roll) into a real unit test that runs in CI with no credentials; leave the cross-surface reconciliation as an explicitly-named integration script **outside `api/tests/`**, run manually against staging. | Best coverage-per-effort: the tz invariant becomes genuinely guarded, and the integration half stops pretending to be a unit test. Does not fix KI-51 — the integration half stays red until a tz-capable pipe exists, which is **correct**: it should be red. |
+| **B** | **Keep it, mark it `skip` with a pointer to KI-51.** Honest about being unguarded; costs nothing. | Leaves the tz invariant unguarded and the false green merely relabelled. |
+| **C** | **Delete it.** It has never executed an assertion in CI. | Loses the only written record of the intended cross-surface invariant. **Not recommended** — the assertions are the best surviving specification of what non-UTC behaviour *should* be, and KI-51's fix will need them. |
+
+**Recommended: A.** Whichever is chosen, the **hardcoded password must be removed regardless** — it is a credential in the repo (§0) and it appears in four other files (see KI-49); that is its own cleanup, independent of this file's fate.
+
 ---
 ## Recently fixed
 
