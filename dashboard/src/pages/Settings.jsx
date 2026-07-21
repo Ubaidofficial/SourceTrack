@@ -8,6 +8,14 @@ import UTMBuilder from '../components/UTMBuilder'
 import { getTrialInfo, getPlanLabel, isPaidPlan } from '../lib/billing'
 import { hasFeature } from '../lib/planFeatures'
 
+// KI-43 — must stay in sync with VALID_API_KEY_SCOPES in api/lib/api-key-scopes.js (the
+// server rejects anything else with a 400). Descriptions are deliberately literal about
+// what each scope does TODAY: read:analytics is stored and grantable but enforced by no
+// endpoint yet, and must not be described as if it unlocks something.
+const API_TOKEN_SCOPES = [
+  { value: 'write:events', description: 'Send server-side events to POST /api/server/event.' },
+  { value: 'read:analytics', description: 'Reserved for the upcoming read API. Grants no access today.' }
+]
 
 export default function Settings() {
   const { user } = useAuth()
@@ -58,6 +66,9 @@ export default function Settings() {
   const [apiKeysLoading, setApiKeysLoading]         = useState(false)
   const [apiKeysError, setApiKeysError]             = useState('')
   const [newTokenName, setNewTokenName]             = useState('')
+  // KI-43: mirrors the API's app-side default (['write:events']). The DB default is '{}' —
+  // a deliberately different, fail-closed backstop. Do not "align" them.
+  const [newTokenScopes, setNewTokenScopes]         = useState(['write:events'])
   const [newTokenModalOpen, setNewTokenModalOpen]   = useState(false)
   const [createdToken, setCreatedToken]             = useState(null)
   const [tokenCopied, setTokenCopied]               = useState(false)
@@ -83,15 +94,20 @@ export default function Settings() {
       setApiKeysError('Token name is required')
       return
     }
+    if (newTokenScopes.length === 0) {
+      setApiKeysError('Select at least one scope')
+      return
+    }
     setApiKeysLoading(true)
     setApiKeysError('')
     try {
       const data = await fetchApi(`/integrations/api-keys?site_key=${activeSite.site_key}`, {
         method: 'POST',
-        body: { name: newTokenName.trim() }
+        body: { name: newTokenName.trim(), scopes: newTokenScopes }
       })
       setCreatedToken(data)
       setNewTokenName('')
+      setNewTokenScopes(['write:events'])
       await loadApiKeys()
     } catch (err) {
       setApiKeysError(err.message || 'Failed to generate token')
@@ -1224,6 +1240,7 @@ export default function Settings() {
                     <tr className="bg-gray-50 dark:bg-gray-800/40 border-b border-gray-100 dark:border-gray-800 text-st-gray dark:text-gray-400">
                       <th className="p-3 font-semibold">Name</th>
                       <th className="p-3 font-semibold">Token prefix</th>
+                      <th className="p-3 font-semibold">Scopes</th>
                       <th className="p-3 font-semibold">Created</th>
                       <th className="p-3 font-semibold">Last Used</th>
                       <th className="p-3 text-right">Action</th>
@@ -1234,6 +1251,18 @@ export default function Settings() {
                       <tr key={k.id} className="text-st-black dark:text-gray-300">
                         <td className="p-3 font-medium truncate max-w-[150px]">{k.name}</td>
                         <td className="p-3 font-mono text-[11px]">{k.key_prefix}</td>
+                        <td className="p-3">
+                          {k.scopes?.length ? (
+                            <span className="flex flex-wrap gap-1">
+                              {k.scopes.map(s => (
+                                <span key={s} className="inline-block px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 font-mono text-[10px]">{s}</span>
+                              ))}
+                            </span>
+                          ) : (
+                            // No scopes = denied by every endpoint. Say so rather than showing a blank cell.
+                            <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-500">None — token is denied</span>
+                          )}
+                        </td>
                         <td className="p-3 text-st-gray dark:text-gray-400">{new Date(k.created_at).toLocaleDateString()}</td>
                         <td className="p-3 text-st-gray dark:text-gray-400">
                           {k.last_used_at ? new Date(k.last_used_at).toLocaleDateString() : 'Never'}
@@ -1383,6 +1412,33 @@ export default function Settings() {
                   </p>
                 </div>
 
+                <div className="space-y-1">
+                  <label className="block text-xs text-st-gray dark:text-gray-400">Scopes</label>
+                  <div className="space-y-2 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                    {API_TOKEN_SCOPES.map(s => (
+                      <label key={s.value} className="flex items-start gap-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={newTokenScopes.includes(s.value)}
+                          onChange={e => setNewTokenScopes(prev => (
+                            e.target.checked
+                              ? [...prev, s.value]
+                              : prev.filter(v => v !== s.value)
+                          ))}
+                          className="mt-0.5 shrink-0"
+                        />
+                        <span>
+                          <span className="block text-xs font-semibold text-st-black dark:text-dark-primary font-mono">{s.value}</span>
+                          <span className="block text-[10px] text-st-gray dark:text-gray-400 leading-relaxed">{s.description}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-st-gray dark:text-gray-400">
+                    A token can only do what its scopes allow. Grant the minimum it needs.
+                  </p>
+                </div>
+
                 <div className="flex justify-end gap-3 pt-2">
                   <button
                     type="button"
@@ -1393,7 +1449,7 @@ export default function Settings() {
                   </button>
                   <button
                     type="submit"
-                    disabled={apiKeysLoading}
+                    disabled={apiKeysLoading || newTokenScopes.length === 0}
                     className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
                   >
                     {apiKeysLoading ? 'Generating…' : 'Generate Token'}

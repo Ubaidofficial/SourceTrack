@@ -9,6 +9,7 @@ import { addPullZoneHostname, loadFreeCertificate, removePullZoneHostname } from
 import { invalidateProxyCache } from '../middleware/managed-proxy.js'
 import { validateCrossDomainSettings } from '../lib/cross-domain-validation.js'
 import { requireFeature } from '../lib/plan-features.js'
+import { normalizeRequestedScopes } from '../lib/api-key-scopes.js'
 
 const router = express.Router()
 
@@ -1012,7 +1013,7 @@ router.get('/api-keys', async (req, res) => {
     const supabase = getSupabase()
     const { data: keys, error } = await supabase
       .from('api_keys')
-      .select('id, key_prefix, name, last_used_at, created_at')
+      .select('id, key_prefix, name, scopes, last_used_at, created_at')
       .eq('site_id', siteId)
       .order('created_at', { ascending: false })
 
@@ -1041,6 +1042,13 @@ router.post('/api-keys', async (req, res) => {
       return res.status(400).json({ success: false, data: null, error: 'Token name is too long (maximum 100 characters)' })
     }
 
+    // KI-43: an unrecognised scope is DENIED (400), never dropped or coerced. Omitting
+    // `scopes` yields the app default ['write:events'] — deliberately NOT the DB default '{}'.
+    const requestedScopes = normalizeRequestedScopes(req.body?.scopes)
+    if (!requestedScopes.ok) {
+      return res.status(400).json({ success: false, data: null, error: requestedScopes.error })
+    }
+
     // Gating check
     const block = requireFeature(req.site?.plan, 'api_access', 'API access')
     if (block) {
@@ -1060,9 +1068,10 @@ router.post('/api-keys', async (req, res) => {
         owner_id: req.user?.id,
         key_prefix: keyPrefix,
         key_hash: keyHash,
-        name
+        name,
+        scopes: requestedScopes.scopes
       })
-      .select('id, key_prefix, name, last_used_at, created_at')
+      .select('id, key_prefix, name, scopes, last_used_at, created_at')
       .single()
 
     if (error) throw error
