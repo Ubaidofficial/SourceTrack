@@ -154,6 +154,14 @@ The migrations for C2 schema convergence are authored but NOT applied to any dat
 
 > ⚠️ **CORRECTED 2026-07-21 — see KI-47 before acting on the paragraph above.** "Nothing live consumes it" is **false** at `b3cb043`: the mounted, plan-gated `GET /api/attribution/verdicts` reaches `ai-client.js` via `attribution.js:448`, and `ai-client.js:25` defaults the provider to DeepSeek. Revoking the key as instructed would **not** surface an error — the handler catches, returns `200 {success:true, data:[], error:null}`, and the feature becomes a permanent empty list indistinguishable from "no campaigns". **Read KI-47 (a)/(d)/(e) first; the revoke is still probably right, but it needs the endpoint decided first.**
 
+> ✅ **SAFE TO EXECUTE as of `ab9fc7b` (2026-07-21).** KI-47's deterministic rebuild removed the only caller. **Verified repo-wide at this ref: `api/lib/ai-client.js` has ZERO importers in `api/`, `tinybird/`, `dashboard/src`, `scripts/`** (every remaining mention is documentation, an AI-*referrer*-detection domain list, or the secret-scanner's own key-name regex). Revoking the key and deleting the variable now changes no behaviour: no code path reads it, and the verdicts error path returns **500** rather than a silent `[]`. Proceed with the original instruction.
+>
+> ⚠️ **WHY IT WAS UNSAFE WHILE SAYING OTHERWISE — the transferable lesson.** The entry asserted "nothing live consumes it", and that was **true when written**: PR #184 deleted the AI chat feature, and the docs correctly recorded the removal. **`verdicts` was built LATER and silently reintroduced the same dependency.** Nothing re-checked the claim, because a removal is written once and then trusted forever.
+>
+> **A "removed" / "nothing uses this" claim decays the moment a later feature re-adds what was removed** — and nothing in the process notices, because the claim reads as settled history rather than as a fact with an expiry date. It had also propagated: **four separate documents carried the false claim simultaneously** — `README.md:90`, `NEXT_SESSION_PROMPT.md:247`, `POSTHOG_DECOMMISSION_SCAN.md:76`, and this entry — so a reader who cross-checked would have found three confirmations of something untrue. All four were corrected in the same PR as this note.
+>
+> **Practical rule:** a negative claim about code ("nothing calls X", "X was deleted", "no data goes to Y") is only valid **as of a named ref**. State the ref, and re-verify with a grep before acting on it — never inherit it. Both KI-47's egress finding and this entry's false-safety were the same failure: trusting a documented negative instead of re-running the check.
+
 
 Multiple tokens are queued for rotation:
 - `deploy_token` (currently referenced in a shell env var).
@@ -583,6 +591,26 @@ Filed 2026-07-21 against `b3cb043`, from documenting the endpoint. Every claim b
 
 **Scope note:** the API documentation for this endpoint was deliberately **withheld** from the docs PR (#347) pending this decision. It is written and accurate as of `b3cb043`, and was preserved rather than discarded.
 
+---
+
+**✅ RESOLVED — squash `ab9fc7b` (PR #353), merged 2026-07-21.** The deterministic rebuild shipped: the dynamic `import('../lib/ai-client.js')` and the prompt are gone, replaced by the pure `api/lib/campaign-verdicts.js`. **(a) RESOLVED** — no egress; **(b) RESOLVED** — the GTM claim is true again (see below); **(c) RESOLVED** — DeepSeek is no longer a sub-processor at all, so its absence from `Subprocessors.jsx` is no longer a disclosure gap; **(d) MOOT** — the "revoking the key silently returns `[]`" hazard cannot occur, because nothing calls the client and the error path now returns **500** rather than `200 {data:[]}`.
+
+**🔴 THE FINDING WORTH KEEPING — three of the old prompt's four rules were structurally UNSATISFIABLE.** Each verified against `ab9fc7b~1` (the pre-fix tree) while writing this; do not re-derive it, and do not lose it:
+
+| Old rule (`attribution.js` prompt, pre-fix) | Why the data could not support it |
+|---|---|
+| *"SCALE: high revenue, **positive trend**, good conversion rate"* | The payload carried `campaign`, `revenue`, `conversions`, `sessions` and **no time dimension whatsoever**. A trend was not computable from it — only invented. |
+| *"…good **conversion rate**"* | The payload sent `sessions: c.sessions \|\| 0`, but `getPreAggregatedAttribution`'s result builder (`attribution-engine.js:515-529`) emits **only** `dim_value`, `revenue`, `conversions` — **zero occurrences of `sessions`**. So it sent **literal `0` for every campaign on every call**, and a conversion rate was uncomputable. |
+| *"KILL: zero or near-zero revenue, **no conversions**"* | The aggregation is `for (const conv of conversions)` (**`attribution-engine.js:441`**) — a campaign only enters the result set once it has at least one conversion. **"No conversions" was unreachable by construction.** |
+
+**State it plainly: every `SCALE` and every `KILL` verdict this endpoint ever returned was fabricated.** SCALE required a trend and a conversion rate, neither of which existed in the input; KILL required zero conversions, which could not occur. `PAUSE` ("low revenue but some conversions") was the only rule whose inputs were real. The model was not summarising data — for two of three verdicts it was inventing the criteria and then applying them.
+
+**This is a stronger indictment than the egress itself.** The egress was a policy violation; this was a correctness failure that no amount of prompt tuning would have fixed, because the required facts were never in the payload. It is also the general lesson: *an LLM handed an inadequate payload does not report that the payload is inadequate — it produces confident output anyway.* A deterministic implementation cannot do that: `computeCampaignVerdicts` returns `INSUFFICIENT_DATA` / `NO_REVENUE_DATA` when the inputs cannot support a judgment.
+
+**Threshold caveat carried forward:** see **KI-50** — the new thresholds are absolute and currency-blind.
+
+**Still open, unchanged by this fix:** `api/lib/ai-client.js` still exists (now with **zero code callers** — verified repo-wide) and the `openai` npm dependency is still installed. Removal is a separate decision. The `ai_analytics` **gate key** is unchanged (migration cost); only its display label was corrected.
+
 ### 48. The KI-44 durable record has NO reader — nothing alerts, and nothing displays it
 
 Filed 2026-07-21 against `06f1ba0`, immediately after KI-44 merged. KI-44 now writes a durable `job_runs` row on every zero-row match (`job_name='billing-webhook-zero-row'`). **Nothing consumes it.**
@@ -623,6 +651,34 @@ The 19 include money- and privacy-relevant coverage: `stripe-webhook-refund-wiri
 Neither indicates broken product code. **The point stands regardless:** these files rotted precisely *because* nothing ran them, and the same mechanism would hide a genuine regression identically. Registration is currently enforced only by an author remembering — it was nearly missed twice in one day (KI-43 PR A, and again on #349; both were caught only by deliberately re-checking).
 
 **Propose (NOT built, no code written):** a guard test — glob `api/tests/*.test.js`, extract every `api/tests/…` reference from `package.json`'s scripts, and **fail if any on-disk file is unregistered**. It is self-registering by nature (it lives in a list it checks) and costs one file read. Ship it with an explicit allowlist for the currently-19 so the guard can land green, then burn the allowlist down — fixing the 2 broken files and registering the other 17 is a separate, mechanical task.
+
+### 50. Campaign-verdict thresholds are absolute and currency-blind
+
+Filed 2026-07-21 against `ab9fc7b`, immediately after KI-47's deterministic rebuild. Not a defect in that rebuild — a limitation it inherits and now makes explicit, where the LLM previously hid it behind plausible prose.
+
+**(a) The threshold is a bare number with no unit — VERIFIED (read `api/lib/campaign-verdicts.js`).** `SCALE_MIN_REVENUE = 500` is compared directly against `row.revenue`. Nothing in the module, or anywhere in the read path that feeds it, attaches a currency.
+
+**(b) Revenue is NOT currency-normalised anywhere in the money rail — VERIFIED (read-only prod query on `information_schema`, plus grep of the engine).** A `currency` column exists on **three** tables — `campaign_costs` (`varchar(3)`, default `'USD'`, `CHECK (currency ~ '^[A-Z]{3}$')`, baseline `:474`/`:476`), `revenue_ingestion_events` (`text`, nullable, no default), and `subscription_revenue` (`text`, `NOT NULL`, default `'USD'`) — but **no conversion is applied between them and no currency travels with `conversion_value`** into `attributed_conversions` or the pre-aggregated read. `grep currency api/lib/attribution-engine.js` returns nothing.
+
+**Consequence:** **€500, ¥500 and $500 all clear the same threshold.** For a JPY tenant the bar is roughly two orders of magnitude too low; every campaign reads `SCALE`. The three unreconciled currency columns are a broader hazard than this entry — a site ingesting mixed-currency revenue is already summing incomparable numbers — but the threshold makes it *visible* for the first time.
+
+**(c) Absolute thresholds do not scale across tenants — INFERRED (arithmetic from the constant; not measured against live customer data).** A site doing $50k/month clears `500` on nearly every campaign and sees a page of `SCALE`; a site doing $400/month clears it on none and sees `PAUSE` throughout. In both cases the verdict column carries no information — the *same* failure the LLM had, arrived at honestly. **This is the strongest argument for option (C) below.**
+
+**⚠️ Correction to a working assumption:** a proposal to make this "site-configurable via the existing Settings currency field" was checked and **there is no such field**. **`sites` has no `currency` column** (prod-verified: only `campaign_costs`, `revenue_ingestion_events`, `subscription_revenue` carry one), and `dashboard/src/pages/Settings.jsx` has no currency input. Option (B) therefore requires **new DDL plus new UI**, not the reuse of something that exists.
+
+**Three options — PROPOSED, NOT BUILT. Founder decides; do not silently retune the constant.**
+
+| | Option | Cost | Trade |
+|---|---|---|---|
+| **A** | **Keep absolute, document the unit.** Declare the threshold USD-assumed, say so in the API docs and in the verdict `reason`. | Nil — a comment and a doc line. | Honest but still wrong for non-USD tenants and still unscaled across account sizes. Buys time, fixes nothing. |
+| **B** | **Site-configurable.** Add `sites.currency` + a threshold override, expose both in Settings. | **New DDL + new UI + a migration** (§8 apply-then-merge), plus a default-value decision for existing rows. | Correct per tenant, but pushes a modelling question onto the customer, and a customer who never touches it is back to option A. |
+| **C** | **Rank/percentile-relative.** Judge a campaign against the site's own distribution (e.g. top quartile of revenue → SCALE, bottom decile with conversions → KILL). | Moderate — replace two constants with a percentile computation over the same rows already in hand. No DDL, no UI, no new read. | **Currency-free by construction** (a percentile has no unit) and **self-scaling** across account sizes. Cost: it always ranks, so with 2–3 campaigns the verdicts become arbitrary — needs a minimum-campaign floor and a way to say "all of these are bad", which absolute thresholds give for free. |
+
+**Recommendation (mine, not a decision): C with an absolute floor.** Percentiles solve the unit and the scaling problems together, and the `INSUFFICIENT_DATA` state KI-47 already added is the natural place to park a too-few-campaigns case. A single retained absolute rule — zero revenue while other campaigns earn — keeps the "everything here is bad" signal that pure ranking loses.
+
+**Do not change `SCALE_MIN_REVENUE` without deciding this.** The constant is pinned by `api/tests/campaign-verdicts.test.js` precisely so a retune has to be deliberate.
+
+**Also open (product, not a defect):** now that verdicts are plain arithmetic over data the customer already owns, **whether this should remain plan-gated at starter+ is an open question.** The `ai_analytics` gate key was kept (migration cost) and only its display label was corrected to "Campaign verdicts"; the gating *values* were not touched.
 
 ---
 ## Recently fixed

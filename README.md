@@ -87,7 +87,7 @@ Boot fails fast on missing vars — but **only `SUPABASE_URL` + `SUPABASE_SERVIC
 | `TRACKER_SALT` | prod | Salt for cookieless visitor IDs. |
 | `ST_MANAGED_PROXY_TARGET` | prod | CNAME target for the managed-proxy edge (boot fails without it in prod). |
 | `RESEND_API_KEY` | optional | Email reports (Resend REST). |
-| `DEEPSEEK_API_KEY` | optional | AI provider key. *(The AI chat / AI analytics features were cut; the key/`ai-client.js` remain as an audit candidate.)* |
+| `DEEPSEEK_API_KEY` | unused | AI provider key. **As of `ab9fc7b` no code reads it** — `api/lib/ai-client.js` has zero importers (verified repo-wide at that ref), and campaign verdicts were rebuilt deterministically in PR #353. The key and `ai-client.js` are removal candidates, not dependencies. *(An earlier "the features were cut" note here was true when written but went stale when `/api/attribution/verdicts` later re-added the dependency — see KI-18.)* |
 | `SLACK_WEBHOOK_URL` | optional | Job alert webhook. |
 | `NIGHTLY_CONCURRENCY` | optional | Nightly worker pool (default 4, range 1–8). |
 | `META_TEST_EVENT_CODE` | dev | Meta CAPI test events — omit in production. |

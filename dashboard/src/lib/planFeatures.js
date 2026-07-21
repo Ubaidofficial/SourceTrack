@@ -64,7 +64,7 @@ export const FEATURE_LABELS = {
   white_label:              'Unbranded CSV export',
   manual_spend:             'Manual spend entry',
   manual_revenue_status:    'Manual revenue/status',
-  ai_analytics:             'AI Analytics',
+  ai_analytics:             'Campaign verdicts',
   ai_chat:                  'AI Chat assistant',
   saved_reports:            'Saved reports',
   dashboard_widgets:        'Dashboard widgets',

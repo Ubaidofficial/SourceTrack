@@ -427,7 +427,7 @@ export async function attributionVerdicts(req, res) {
     const { date_from, date_to } = req.query
     const posthogSiteId = String(req.site.id)
 
-    const block = requireFeature(req.site?.plan, 'ai_analytics', 'AI Analytics')
+    const block = requireFeature(req.site?.plan, 'ai_analytics', 'Campaign verdicts')
     if (block) return res.status(402).json(block)
 
     if (!date_from || !date_to) {
