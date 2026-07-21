@@ -6,7 +6,21 @@
 import test from 'node:test'
 import assert from 'node:assert'
 
-import { calculateAttribution } from '../jobs/nightly-attribution.js'
+// HARNESS REPAIR (KI-49, 2026-07-21) — setup only, no assertion touched.
+// `nightly-attribution.js:61` calls getSupabase() at MODULE TOP LEVEL, which throws
+// '[supabase] SUPABASE_URL and SUPABASE_SERVICE_KEY must be set' without env. This file
+// never set the mock env, so it aborted at import and all 3 tests were lost — the file
+// has simply never run (it is unregistered in package.json; see KI-49).
+//
+// A static `import` is hoisted and evaluated BEFORE any assignment in this module, so the
+// env must be set first and the module pulled in via dynamic import — the convention
+// already used by the registered sibling api/tests/nightly-touchpoints-fail-closed.js.
+// calculateAttribution itself is pure; nothing about the code under test changed.
+process.env.NODE_ENV = 'test'
+process.env.SUPABASE_URL = 'https://mock-proj.supabase.co'
+process.env.SUPABASE_SERVICE_KEY = 'mock-service-role-key-value'
+
+const { calculateAttribution } = await import('../jobs/nightly-attribution.js')
 
 // Minimal-but-valid touchpoint: the fields calculateAttribution/tpBase read.
 const tp = (timestamp, utm_source = 'google') => ({

@@ -33,10 +33,29 @@ const PV_ROWS = [
   ['v2', '2026-07-01T11:00:00Z', '/blog', 'facebook', 'social', 'brand', 'DE', 'mobile']
 ]
 
+// HARNESS REPAIR (KI-49, 2026-07-21) — the injection below, NOT the assertions.
+// This previously did `queryTinybird: async () => null` to "force the HogQL leg" and
+// served the fixture through a `queryHog` dep. Both are gone: D1b-2/D3 made Tinybird the
+// SOLE read path, deleted the HogQL fallback, and `__setAttributionReadDeps` now accepts
+// ONLY `{ queryTinybird }` — so `queryHog` was being silently ignored while the null
+// Tinybird result hit the fail-closed guard and threw
+// `[tinybird-force-read] session_report_pageviews returned null`.
+//
+// That throw is CORRECT product behaviour (§5: a null read fails closed, never a fake
+// zero). The test was asking for an architecture that no longer exists. It now serves the
+// SAME fixture through the pipe seam the engine actually reads.
+//
+// PV_ROWS is unchanged and remains the single source of truth — it is mapped positionally
+// into the named-column shape `session_report_pageviews` returns, so the fixture data is
+// provably identical to before. Every assertion below is untouched.
+const PV_COLS = ['distinct_id', 'timestamp', 'page_url', 'utm_source', 'utm_medium', 'utm_campaign', 'country', 'device_type']
+const asNamedRow = (row) => Object.fromEntries(PV_COLS.map((c, i) => [c, row[i]]))
+
 function inject () {
   __setAttributionReadDeps({
-    queryTinybird: async () => null,          // force the HogQL leg
-    queryHog: async (_sql, name) => (name === 'session_report_conversions' ? [] : PV_ROWS)
+    // `[]` is a SERVED-EMPTY result, not null — it must not trip the fail-closed guard.
+    queryTinybird: async (pipeName) =>
+      pipeName === 'session_report_pageviews' ? PV_ROWS.map(asNamedRow) : []
   })
 }
 const run = (groupBy, groupBy2 = null) =>
