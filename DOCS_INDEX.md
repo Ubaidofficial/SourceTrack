@@ -23,7 +23,10 @@ Trust tier per doc. **Precedence when sources conflict:** code → `KNOWN_ISSUES
 |---|---|---|
 | `README.md` | Product overview, env vars, data residency, crons. | Maintained |
 | `FEATURE_MAP.md` | What actually ships. ⚠️ **Can drift — its own §21 lesson ("verify against current code, not any inventory doc, including this one") applies to itself.** Corrected 2026-07 (funnels reframed as a dormant entitlement, not "sold"; §21 orphan-file receipts marked resolved with PR numbers). | Maintained |
-| `docs/SourceTrack_GTM.md` | GTM & positioning. **Content frozen 2026-06-28**; never committed until #327. `FEATURE_MAP.md` §5 gates a **public revenue claim** on it — losing it risks an unverifiable marketing claim. Corrections log appended. | Maintained |
+| `docs/SourceTrack_GTM.md` | GTM & positioning — **owns** the canonical customer-facing hero (§1.1, mirrors `Landing.jsx`), the VOICE RULE (§1.2), the claims-gates (§5/§5.1), and the ICP (§6). Every marketing page inherits this. **Content frozen 2026-06-28**; never committed until #327. `FEATURE_MAP.md` §5 gates a **public revenue claim** on it — losing it risks an unverifiable marketing claim. Corrections log appended. | Maintained |
+| `docs/marketing/website_seo_plan.md` | The locked website + SEO execution spec: sitemap (12 silos), build phases, page-by-page title/meta/schema, homepage copy playbook, screenshot system. Appendices carry the 6-competitor traffic evidence + raw keyword volumes. Defers to `docs/SourceTrack_GTM.md` for all positioning and claims. | Maintained |
+| `docs/marketing/fast_acquisition_90day.md` | The manual acquisition motion for customers 1–200 (founder outreach, Reddit, FB groups). Companion to — deliberately **not** merged into — the SEO plan; different job, different cadence. | Maintained |
+| `docs/marketing/demo_seed_spec.md` | Spec for the seeded **staging** demo tenant that gates every real product screenshot. Appendix covers the separate `/demo` fixture component's attribution-tab gap. Staging-only; the seed guard must stay intact. | Maintained |
 | `ATTRIBUTION.md` | Attribution truthfulness contract. | Maintained |
 | `SUPABASE_SCHEMA.md` | Supabase tables/RLS/verification queries. | Maintained |
 | `.env.example` | Canonical env template (includes the Tinybird block since #328). | Maintained |
