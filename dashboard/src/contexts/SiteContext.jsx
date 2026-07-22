@@ -60,13 +60,23 @@ export function SiteProvider({ children }) {
 
         const savedSite = sitesList.find(s => s.site_key === savedKey)
 
-        const nextActiveSite = (savedSite && savedSite.onboarding_completed)
-          ? savedSite
-          : (completedSites[0] || incompleteSites[0] || null)
+        // An EXPLICIT saved selection wins outright — including a site that has not finished
+        // onboarding. Requiring onboarding_completed here silently swapped the user's chosen site
+        // for completedSites[0], and the write below then persisted that swap, destroying the
+        // choice rather than merely overriding it. Because Settings/Integrations read this same
+        // context, their mutations (domain, GDPR retention, API-key revoke, Stripe/Shopify webhook
+        // secrets) and the site_key shown in tracker snippets all pointed coherently at the wrong
+        // site — nothing looked broken. Selecting an un-onboarded site is a supported state:
+        // setActiveSiteKey() already allows it and Layout renders a "Resume setup" affordance for it.
+        const nextActiveSite = savedSite || completedSites[0] || incompleteSites[0] || null
 
         if (nextActiveSite) {
           setActiveSite(nextActiveSite)
-          window.localStorage.setItem('sourcetrack_active_site_key', nextActiveSite.site_key)
+          // Persist ONLY when we picked a default (no saved key, or it no longer resolves to a
+          // site in the list). Never write a substitution over a still-valid saved selection.
+          if (!savedSite) {
+            window.localStorage.setItem('sourcetrack_active_site_key', nextActiveSite.site_key)
+          }
         } else {
           setActiveSite(null)
           window.localStorage.removeItem('sourcetrack_active_site_key')
