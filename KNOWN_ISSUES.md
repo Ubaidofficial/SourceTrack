@@ -1276,3 +1276,40 @@ The only app path that erases Tinybird on delete is `gdpr.js`. **Any other site 
 
 ### events datasource accepts any present site_id with no sites-existence check (2026-07-19, log-only)
 `tinybird/adapter/normalize.js:224` validates only that `site_id` is **present/non-empty** ("refusing to assign a default tenant") — it never checks the id **exists in `sites`**, and `events.datasource` (ClickHouse `MergeTree`) has no FK. **Not exploitable via the routes** — `/api/track`, `/api/pixel`, `/proxy/{e,c}` all resolve `site_id` server-side from a `site_key → sites` lookup (unknown key → 401/no-write; client `properties.site_id` lands in `custom_properties`, not top-level), so an arbitrary UUID cannot be injected there. But it is a **missing defence-in-depth guard** at the write boundary: any non-route writer (a script, `tb` CLI, cutover smoke-test) can write an unchecked `site_id`. **One orphan event exists in prod Tinybird for `site_id 79638a99-3500-4357-9e61-7c356cba1957`** (no `sites` row; timestamp = the dual-write cutover moment `2026-07-07 10:30:00.000`; UUID not in the repo) — almost certainly a cutover smoke-test write. **Read isolation holds** (82 read pipes require `site_id`; reads scope to the authenticated `req.site.id`, so it can never surface in a customer dashboard). **Leave the row; log the gap.** Not fixed.
+
+### 🔴 GDPR visitor erasure keys off `anonymous_id`, but every row keys off `distinct_id` — erasure matches ZERO rows and still reports success (2026-07-22, launch-blocker class)
+
+**Right-to-erasure requests silently succeed while deleting nothing.** Found as by-catch while investigating whether the erasure path would cover new PII (it does not cover the *existing* data either).
+
+`api/routes/gdpr.js:119-139` takes `anonymous_id` from the request body and deletes with:
+
+```js
+.from('attributed_conversions').delete()
+  .eq('site_id', site.id)
+  .eq('anonymous_id', anonymous_id)
+```
+
+But **`anonymous_id` is NULL on effectively every row**, while `distinct_id` (NOT NULL) is what the rest of the system keys on:
+
+| store | rows | `anonymous_id` NULL | `distinct_id` populated |
+|---|---|---|---|
+| **prod** `attributed_conversions` | 5 (1 site, `techrupt.pk`) | **5/5** | 5/5 |
+| **staging** demo site `de200000-…0001` | 35 | **35/35** | 35/35 |
+
+Everything user-facing keys off `distinct_id`: `journey.js:100` (`WHERE distinct_id = …`) and `journey.js:160` (`.eq('distinct_id', visitorId)`), `leads-server.js:71,101,288` (raw `distinct_id` **is** the lead id), and the `visitor_id` field added to `/analytics/recent-conversions` in #368. So the id an operator actually has in hand is a `distinct_id`, and passing it to `/gdpr/visitor` matches **no** `attributed_conversions` row.
+
+**Both legs are affected.** The Tinybird leg (`gdpr.js:172`) passes the same value as `subjectId`, and `buildDeleteCondition` (`tinybird/adapter/erase.js:51`) matches `distinct_id = '<subject>' OR visitor_id = '<subject>'` — so whether it erases depends on which id the caller happened to supply. The two legs can therefore disagree: Tinybird events erased, Supabase attribution rows retained.
+
+**The failure is silent, which is the worst part.** A Postgres `DELETE` matching zero rows is not an error, so `dbErr` is null and the endpoint returns:
+
+> `Visitor data for anonymous_id "…" has been erased.`
+
+That is a **false confirmation on a GDPR Article 17 request** — the compliance defect is the untrue response as much as the retained data.
+
+**Blast radius today is small** (5 prod rows, 1 site, and there is no evidence any erasure request has been served), but the code path is wrong and scales wrong: every future conversion row inherits the same NULL `anonymous_id`.
+
+Not fixed — logged. A fix needs to decide the canonical subject key (almost certainly `distinct_id`, matching every other read path), match on it in **both** legs, and **assert rows-affected** so a zero-row delete can never again report success. `erasure_log` should record the matched count, not just a status.
+
+### `DEMO_PLAN` header comment documents a fixture shape that does not match what the code builds (2026-07-22, docs-only)
+
+`scripts/lib/attribution-fixture.mjs` header claims *"45 visitors — Organic 14 (31%) … 16 journeys carry an AI touch somewhere (36%)"*. Executing `buildDemoJourneys()` on `origin/main` yields **46 visitors, Organic 15 (33%), 15 AI-touch journeys (33%)**. Pre-existing drift, verified against pristine `origin/main` (not introduced by the reshape in #369, which is exactly neutral on all three). Harmless today — the 30% AI floor still holds and the seeder prints the *computed* shape at run time, so nobody is misled operationally — but the comment is the thing a reader trusts when deciding whether a change broke an invariant. One-line correction whenever convenient.
