@@ -247,15 +247,22 @@ function installSupabase (cfg) {
   }
   const selChain = (table) => {
     const b = {
-      eq: () => b, in: () => b, limit: () => b, order: () => b, neq: () => b, gte: () => b, select: () => b,
+      eq: () => b, in: () => b, or: () => b, limit: () => b, order: () => b, neq: () => b, gte: () => b, select: () => b,
       maybeSingle: async () => result(table, 'maybeSingle'),
       single: async () => result(table, 'single'),
       then: (res, rej) => Promise.resolve(result(table, 'await')).then(res, rej)
     }
     return b
   }
+  // `.or()` is required: the subject key matches distinct_id OR anonymous_id. Deletes
+  // resolve with a `count` because the route now reports ACTUAL rows affected —
+  // cfg.deleteCounts[table] (default 1) drives the no-match vs erased branch.
   const delChain = (table) => {
-    const b = { eq: () => b, in: () => b, then: (res) => { seq.push(`delete:${table}`); return Promise.resolve({ error: null }).then(res) } }
+    const count = cfg.deleteCounts ? (cfg.deleteCounts[table] ?? 0) : 1
+    const b = {
+      eq: () => b, in: () => b, or: () => b,
+      then: (res) => { seq.push(`delete:${table}`); return Promise.resolve({ error: null, count }).then(res) }
+    }
     return b
   }
   _client.from = (table) => ({
@@ -415,4 +422,79 @@ test('🔴 (h) /account multi-member (not sole admin): NO site delete, ZERO eras
   assert.ok(!seq.includes('delete:sites'), 'the shared workspace sites are NOT deleted')
   assert.equal(erasureInserts.length, 0, 'no erasure_log row — nothing was erased')
   assert.deepEqual(res.body.tinybird ?? [], [], 'response claims NO Tinybird/event-data erasure')
+})
+
+// ── SUBJECT-KEY FIX: rows-affected honesty + full-store coverage ─────────────
+// Regression cover for the defect where /visitor deleted attributed_conversions by
+// anonymous_id (NULL on every row), matched ZERO rows, and still answered
+// "has been erased" — a false confirmation on an Art. 17 request.
+
+test('🔴 (g) /visitor with NO matching rows in EITHER store does NOT report success', async (t) => {
+  t.after(() => { restoreSupabase(); __resetGdprEraseDeps() })
+  // Every Supabase delete matches 0 rows AND Tinybird matched 0.
+  installSupabase({ site: ROUTE_SITE, links: [], deleteCounts: {} })
+  __setGdprEraseDeps({
+    eraseSubject: async (args) => ({
+      status: 'executed', subjectId: args.subjectId, siteId: args.siteId,
+      datasources: ['events', 'events_by_visitor'],
+      perDatasource: [{ datasource: 'events', matched: 0 }, { datasource: 'events_by_visitor', matched: 0 }]
+    })
+  })
+  const res = mockRes()
+  await visitorHandler(visitorReq(), res)
+  assert.equal(res.body.success, false, 'nothing was erased — success:true would be the LIE')
+  assert.equal(res.body.erased, false)
+  assert.equal(res.statusCode, 404)
+  assert.doesNotMatch(res.body.message, /has been erased|permanently deleted/i)
+  assert.match(res.body.message, /no data found/i)
+  // The dashboard surfaces data.error (api.js:61) — without it the operator sees a bare
+  // status code and cannot tell "no such visitor" from an outage.
+  assert.ok(res.body.error, 'must populate `error` so the UI can surface the reason')
+  assert.equal(res.body.rows_affected.supabase_total, 0)
+  assert.equal(res.body.rows_affected.tinybird_total, 0)
+})
+
+test('🔴 (h) /visitor deletes from ALL FOUR PII tables, each site-scoped', async (t) => {
+  t.after(() => { restoreSupabase(); __resetGdprEraseDeps() })
+  const { seq } = installSupabase({ site: ROUTE_SITE, links: [] })
+  installEraser(null, 'executed')
+  await visitorHandler(visitorReq(), mockRes())
+  // lead_qualifications + subscription_identity were NEVER erased before this fix:
+  // a "completed" erasure left visitor PII in both.
+  for (const t of ['attributed_conversions', 'lead_qualifications', 'subscription_identity', 'site_identity_links']) {
+    assert.ok(seq.includes(`delete:${t}`), `must erase ${t}`)
+  }
+})
+
+test('(i) /visitor reports the ACTUAL per-table rows affected, not a blanket claim', async (t) => {
+  t.after(() => { restoreSupabase(); __resetGdprEraseDeps() })
+  installSupabase({
+    site: ROUTE_SITE, links: [],
+    deleteCounts: { attributed_conversions: 3, lead_qualifications: 1, subscription_identity: 0, site_identity_links: 2 }
+  })
+  installEraser(null, 'executed')
+  const res = mockRes()
+  await visitorHandler(visitorReq(), res)
+  assert.equal(res.body.success, true)
+  assert.equal(res.body.erased, true)
+  assert.deepEqual(res.body.rows_affected.supabase, {
+    attributed_conversions: 3, lead_qualifications: 1, subscription_identity: 0, site_identity_links: 2
+  })
+  assert.equal(res.body.rows_affected.supabase_total, 6)
+  assert.equal(res.body.rows_affected.tinybird_total, 6, '3 + 3 across both datasources')
+  assert.match(res.body.message, /6 database row\(s\), 6 event row\(s\)/)
+})
+
+test('🔴 (j) Supabase rows deleted but Tinybird did NOT erase → partial, reports the real count', async (t) => {
+  t.after(() => { restoreSupabase(); __resetGdprEraseDeps() })
+  installSupabase({ site: ROUTE_SITE, links: [], deleteCounts: { attributed_conversions: 2 } })
+  installEraser(null, 'failed')
+  const res = mockRes()
+  await visitorHandler(visitorReq(), res)
+  assert.equal(res.body.success, false)
+  assert.equal(res.body.partial, true)
+  assert.equal(res.body.erased.tinybird_events, false)
+  assert.equal(res.body.rows_affected.supabase_total, 2)
+  assert.match(res.body.message, /2 database row\(s\)/)
+  assert.ok(res.body.error, 'the operator must see WHY this was not a complete erasure')
 })

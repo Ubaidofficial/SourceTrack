@@ -1138,7 +1138,7 @@ export default function Settings() {
           <div className="border-t border-gray-100 dark:border-gray-800 pt-4 space-y-2">
             <p className="text-xs font-semibold text-st-black dark:text-dark-primary">Erase Visitor Data (Right to Erasure)</p>
             <p className="text-xs text-st-gray dark:text-gray-400">
-              Enter a visitor's anonymous ID to erase matching SourceTrack app database records. This action is immediate for app database records and cannot be undone.
+              Enter the Visitor ID (the ID shown in Leads and on a visitor's journey) to erase matching SourceTrack app database records. This action is immediate for app database records and cannot be undone.
             </p>
             <div className="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg p-3 text-[11px] text-amber-800 dark:text-amber-300 space-y-1.5 font-sans">
               <p>• Database attribution records and stitched identity mappings will be permanently deleted from our app database.</p>
@@ -1151,7 +1151,7 @@ export default function Settings() {
                 type="text"
                 value={visitorId}
                 onChange={e => setVisitorId(e.target.value)}
-                placeholder="anonymous_id (e.g. xxxxxxxx-xxxx-4xxx-…)"
+                placeholder="Visitor ID (as shown in Leads)"
                 className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
               />
               <button
