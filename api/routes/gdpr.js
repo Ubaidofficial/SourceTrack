@@ -1,7 +1,7 @@
 /**
  * GDPR / Privacy endpoints
  *
- * DELETE /api/gdpr/visitor   — erase all data for one visitor (by anonymous_id)
+ * DELETE /api/gdpr/visitor   — erase all data for one visitor (by visitor id; see SUBJECT KEY)
  * DELETE /api/gdpr/account   — full account purge (all sites + auth user)
  * PUT    /api/gdpr/retention — set data_retention_days for a site
  * GET    /api/gdpr/export    — DSAR export of one site's data as a JSON bundle
@@ -88,7 +88,55 @@ function rowCountsOf (result) {
 // A real, confirmed delete happened ONLY when status === 'executed'. Every other status
 // (skipped_not_configured | skipped_no_admin_token | dry_run | failed) means the event
 // data was NOT erased — the response must not claim otherwise.
+// NOTE: 'executed' means "the delete job ran", NOT "rows were found". A zero-match delete
+// is still 'executed', so the ROW COUNTS — never the status alone — decide whether the
+// response may claim anything was erased.
 const eraseExecuted = (status) => status === 'executed'
+
+// Total Tinybird rows the erase condition matched across datasources, or null when the
+// eraser could not count (skipped/failed) — null must never be read as zero.
+function tinybirdMatchedTotal (result) {
+  const ds = result?.perDatasource || []
+  if (!ds.length || ds.some(d => d.matched == null)) return null
+  return ds.reduce((n, d) => n + Number(d.matched || 0), 0)
+}
+
+// ── SUBJECT KEY ─────────────────────────────────────────────────────────────
+// The caller supplies ONE visitor identifier. Every id surfaced anywhere in the product
+// is a distinct_id — the Leads table (leads-server.js:71,101), the journey modal
+// (journey.js:100,160) and /analytics/recent-conversions.visitor_id all emit distinct_id,
+// and there is no UI that can produce an anonymous_id. But three tables store that same
+// value under an anonymous_id-shaped name:
+//   attributed_conversions.distinct_id   — the real key (anonymous_id is NULL in practice)
+//   lead_qualifications.visitor_id       — a distinct_id (leads-server.js:186,321,420)
+//   subscription_identity.anonymous_id   — assigned conversion.distinct_id
+//                                          (stripe-subscription.js:112)
+// So the subject is matched across BOTH id columns wherever a table has two, mirroring
+// what the Tinybird condition already does (`distinct_id = X OR visitor_id = X`,
+// erase.js:51). Matching both cannot over-delete: every match is ALSO scoped by site_id,
+// which is server-resolved from the caller's membership and never user input.
+//
+// Previously every Supabase leg matched on anonymous_id alone, so a real erasure request
+// matched ZERO rows while the endpoint answered "has been erased".
+const subjectOrFilter = (id) => `distinct_id.eq.${id},anonymous_id.eq.${id}`
+
+// site_identity_links is the ONE table whose anonymous_id genuinely holds an anonymous_id
+// (identify.js:139 writes it). Resolve the subject through it so a linked user_id is
+// erased too, and so an anonymous_id-shaped subject still reaches distinct_id-keyed rows.
+async function resolveSubjectIds (supabase, siteId, subjectId) {
+  const { data, error } = await supabase
+    .from('site_identity_links')
+    .select('user_id, anonymous_id')
+    .eq('site_id', siteId)
+    .or(`anonymous_id.eq.${subjectId},user_id.eq.${subjectId}`)
+  if (error) throw error
+  const ids = new Set([subjectId])
+  for (const r of (data || [])) {
+    if (r.user_id) ids.add(r.user_id)
+    if (r.anonymous_id) ids.add(r.anonymous_id)
+  }
+  return [...ids]
+}
 
 // Persist the erase result to erasure_log (service-role write) — the POSITIVE, provable
 // signal that the attempt happened, so a failed/skipped delete is retryable rather than
@@ -131,39 +179,58 @@ gdprRouter.delete('/visitor', async (req, res) => {
       return res.status(403).json({ success: false, error: 'Site not found or access denied' })
     }
 
-    // 1. Delete from attributed_conversions
-    const { error: dbErr } = await supabase
+    // Resolve every identifier this subject is known by on THIS site, so a subject
+    // supplied as either id shape reaches all of their rows.
+    const subjectIds = await resolveSubjectIds(supabase, site.id, anonymous_id)
+
+    // 1. Supabase legs. Every delete is site-scoped and asks for an EXACT count — the
+    // count is what the response is allowed to claim. A delete matching zero rows is not
+    // a Postgres error, so without counting, "erased" was unfalsifiable.
+    const supabaseCounts = {}
+
+    // attributed_conversions — distinct_id is the real key; anonymous_id is matched too
+    // so an anonymous_id-shaped subject cannot silently miss.
+    const { count: convCount, error: dbErr } = await supabase
       .from('attributed_conversions')
-      .delete()
+      .delete({ count: 'exact' })
       .eq('site_id', site.id)
-      .eq('anonymous_id', anonymous_id)
-
+      .or(subjectIds.map(id => subjectOrFilter(id)).join(','))
     if (dbErr) throw dbErr
+    supabaseCounts.attributed_conversions = convCount ?? 0
 
-    // 1b. Resolve any linked user_ids for this anonymous_id on this site to delete their identity links too
-    const { data: resolvedLinks } = await supabase
-      .from('site_identity_links')
-      .select('user_id')
+    // lead_qualifications — visitor_id IS a distinct_id (leads-server.js:186,321,420).
+    // Previously EXCLUDED as an "unverified anonymous_id↔visitor_id match": that was
+    // sound while the subject key was wrongly anonymous_id, and is not once it is
+    // distinct_id. Leaving it out retained visitor PII through a "completed" erasure.
+    const { count: lqCount, error: lqErr } = await supabase
+      .from('lead_qualifications')
+      .delete({ count: 'exact' })
       .eq('site_id', site.id)
-      .eq('anonymous_id', anonymous_id)
+      .in('visitor_id', subjectIds)
+    if (lqErr) throw lqErr
+    supabaseCounts.lead_qualifications = lqCount ?? 0
 
-    const linkedUserIds = (resolvedLinks || []).map(r => r.user_id).filter(Boolean)
-
-    // Delete identity links matching anonymous_id scoped strictly to this site
-    await supabase
-      .from('site_identity_links')
-      .delete()
+    // subscription_identity — its anonymous_id column is assigned conversion.distinct_id
+    // (stripe-subscription.js:112). Never erased before.
+    const { count: siCount, error: siErr } = await supabase
+      .from('subscription_identity')
+      .delete({ count: 'exact' })
       .eq('site_id', site.id)
-      .eq('anonymous_id', anonymous_id)
+      .in('anonymous_id', subjectIds)
+    if (siErr) throw siErr
+    supabaseCounts.subscription_identity = siCount ?? 0
 
-    // Delete identity links matching resolved user_id(s) scoped strictly to this site
-    if (linkedUserIds.length > 0) {
-      await supabase
-        .from('site_identity_links')
-        .delete()
-        .eq('site_id', site.id)
-        .in('user_id', linkedUserIds)
-    }
+    // site_identity_links — the one table whose anonymous_id is genuinely an
+    // anonymous_id. Delete by either side of the link across every resolved id.
+    const { count: linkCount, error: linkErr } = await supabase
+      .from('site_identity_links')
+      .delete({ count: 'exact' })
+      .eq('site_id', site.id)
+      .or(`anonymous_id.in.(${subjectIds.join(',')}),user_id.in.(${subjectIds.join(',')})`)
+    if (linkErr) throw linkErr
+    supabaseCounts.site_identity_links = linkCount ?? 0
+
+    const supabaseTotal = Object.values(supabaseCounts).reduce((a, b) => a + b, 0)
 
     // 2. Erase the subject's EVENT data from Tinybird (the sole event store). The
     // result is NEVER swallowed: it drives an erasure_log audit row AND an honest
@@ -173,21 +240,50 @@ gdprRouter.delete('/visitor', async (req, res) => {
     await logErasure(supabase, { subjectId: anonymous_id, siteId: site.id, result: erase })
 
     if (eraseExecuted(erase.status)) {
+      const tbMatched = tinybirdMatchedTotal(erase)
+      // 'executed' only means the delete job ran. If NOTHING matched in either store,
+      // there was no data for this subject — say so. Claiming erasure here is a false
+      // confirmation on an Art. 17 request, which is the defect this endpoint had.
+      if (supabaseTotal === 0 && tbMatched === 0) {
+        return res.status(404).json({
+          success: false,
+          erased: false,
+          // `error` (not just `message`) because the dashboard surfaces data.error —
+          // api.js:61. Without it the operator sees a bare "Request failed with status
+          // 404" and cannot tell a no-match from an outage.
+          error: `No data found for visitor "${anonymous_id}" on this site. Nothing was erased.`,
+          message: `No data found for visitor "${anonymous_id}" on this site. Nothing was erased.`,
+          tinybird_status: erase.status,
+          rows_affected: { supabase: supabaseCounts, supabase_total: 0, tinybird: rowCountsOf(erase), tinybird_total: 0 }
+        })
+      }
       return res.json({
         success: true,
-        message: `Visitor data for anonymous_id "${anonymous_id}" has been erased.`,
+        erased: true,
+        message: `Visitor data for "${anonymous_id}" has been erased (${supabaseTotal} database row(s), ${tbMatched == null ? 'unknown' : tbMatched} event row(s)).`,
         tinybird_status: erase.status,
+        rows_affected: {
+          supabase: supabaseCounts,
+          supabase_total: supabaseTotal,
+          tinybird: rowCountsOf(erase),
+          tinybird_total: tbMatched
+        },
         row_counts: rowCountsOf(erase)
       })
     }
     // Tinybird did NOT erase the event data — DO NOT claim erasure. Honest partial:
-    // Supabase records were deleted; the event data was not. Logged for retry.
+    // report the Supabase rows actually deleted (which may be zero), and be explicit
+    // that the event data was not touched. Logged for retry.
     return res.status(200).json({
       success: false,
       partial: true,
-      message: `Supabase records for anonymous_id "${anonymous_id}" were deleted, but event data in Tinybird was NOT erased (status: ${erase.status}). This has been recorded for retry.`,
-      erased: { supabase: true, tinybird_events: false },
+      // Same reason as the no-match branch: without `error` this warning never reaches
+      // the operator, who would be left believing the erasure completed.
+      error: `${supabaseTotal} database row(s) for visitor "${anonymous_id}" were deleted, but event data in Tinybird was NOT erased (status: ${erase.status}). This has been recorded for retry.`,
+      message: `${supabaseTotal} database row(s) for visitor "${anonymous_id}" were deleted, but event data in Tinybird was NOT erased (status: ${erase.status}). This has been recorded for retry.`,
+      erased: { supabase: supabaseTotal > 0, tinybird_events: false },
       tinybird_status: erase.status,
+      rows_affected: { supabase: supabaseCounts, supabase_total: supabaseTotal, tinybird: null, tinybird_total: null },
       detail: erase.reason ?? null
     })
   } catch (err) {
@@ -243,39 +339,58 @@ gdprRouter.get('/subject', async (req, res) => {
     }
 
     // 2. Supabase subject-scoped rows — explicit allowlist selects (never select('*')),
-    // scoped by anonymous_id (the SAME key the eraser deletes on). The error is NEVER
-    // swallowed: a query error throws → 500, so a DB failure can never masquerade as an
-    // empty subject.
+    // scoped by the SAME subject key the eraser deletes on, so access and erasure can
+    // never disagree about what is held. The error is NEVER swallowed: a query error
+    // throws → 500, so a DB failure can never masquerade as an empty subject.
+    // Previously this matched anonymous_id alone, which is NULL on every row — so a real
+    // subject access request answered "we hold no data about you" while holding it.
+    const subjectIds = await resolveSubjectIds(supabase, site.id, anonymous_id)
+
     const { data: conversions, error: convErr } = await supabase
       .from('attributed_conversions')
       .select('conversion_event_id, distinct_id, anonymous_id, conversion_date, conversion_timestamp, conversion_type, conversion_value, channel, status, first_touch_source, first_touch_medium, first_touch_campaign, first_touch_timestamp, last_touch_source, last_touch_medium, last_touch_campaign, last_touch_timestamp, touchpoint_count, processed_at')
       .eq('site_id', site.id)
-      .eq('anonymous_id', anonymous_id)
+      .or(subjectIds.map(id => subjectOrFilter(id)).join(','))
     if (convErr) throw convErr
 
     const { data: links, error: linkErr } = await supabase
       .from('site_identity_links')
       .select('anonymous_id, user_id, source, first_seen_at, last_seen_at, created_at')
       .eq('site_id', site.id)
-      .eq('anonymous_id', anonymous_id)
+      .or(`anonymous_id.in.(${subjectIds.join(',')}),user_id.in.(${subjectIds.join(',')})`)
     if (linkErr) throw linkErr
+
+    // lead_qualifications + subscription_identity — now INCLUDED. Both were outside the
+    // Art. 15 answer because the subject key was wrong; with distinct_id as the key the
+    // mapping is verified, and the eraser deletes them, so access must disclose them.
+    const { data: quals, error: qualErr } = await supabase
+      .from('lead_qualifications')
+      .select('visitor_id, status, qualified, created_at, updated_at')
+      .eq('site_id', site.id)
+      .in('visitor_id', subjectIds)
+    if (qualErr) throw qualErr
+
+    const { data: subs, error: subErr } = await supabase
+      .from('subscription_identity')
+      .select('anonymous_id, stripe_customer_id, first_subscription_id, first_touch_source, first_touch_channel, created_at')
+      .eq('site_id', site.id)
+      .in('anonymous_id', subjectIds)
+    if (subErr) throw subErr
 
     return res.json({
       success: true,
-      subject: { site_key: site.site_key, anonymous_id },
+      subject: { site_key: site.site_key, visitor_id: anonymous_id, resolved_ids: subjectIds },
       generated_at: new Date().toISOString(),
+      // Zero rows across every store is a real answer ("we hold no data") — but it must be
+      // stated, not inferred from empty arrays by the reader.
+      has_data: (conversions.length + links.length + quals.length + subs.length) > 0 ||
+                Number(events?.count ?? 0) > 0,
       sources: {
         tinybird_events: events,
         attributed_conversions: { count: conversions.length, rows: conversions },
         site_identity_links: { count: links.length, rows: links },
-        // EXCLUDED, stated (not silently omitted): lead_qualifications is scoped by
-        // visitor_id — a different identifier than the anonymous_id subject key used
-        // here and by the /visitor eraser — so matching it against anonymous_id is an
-        // unverified mapping, and the erasure counterpart does not touch it.
-        lead_qualifications: {
-          included: false,
-          reason: 'Scoped by visitor_id, not the anonymous_id subject key used by this endpoint and the erasure counterpart; excluded to avoid an unverified anonymous_id↔visitor_id match.'
-        }
+        lead_qualifications: { count: quals.length, rows: quals },
+        subscription_identity: { count: subs.length, rows: subs }
       }
     })
   } catch (err) {

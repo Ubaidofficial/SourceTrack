@@ -150,11 +150,14 @@ function installSupabase (cfg) {
     if (table === 'sites') return { data: cfg.site ?? null, error: cfg.siteError ?? null }
     if (table === 'attributed_conversions') return { data: cfg.conversions ?? [], error: cfg.convError ?? null }
     if (table === 'site_identity_links') return { data: cfg.links ?? [], error: cfg.linkError ?? null }
+    if (table === 'lead_qualifications') return { data: cfg.quals ?? [], error: cfg.qualError ?? null }
+    if (table === 'subscription_identity') return { data: cfg.subs ?? [], error: cfg.subError ?? null }
     return { data: [], error: null }
   }
+  // `.or()` is required: the subject key matches distinct_id OR anonymous_id.
   const chain = (table) => {
     const b = {
-      select: () => b, eq: () => b, limit: () => b, order: () => b, in: () => b,
+      select: () => b, eq: () => b, limit: () => b, order: () => b, in: () => b, or: () => b,
       maybeSingle: async () => result(table),
       then: (res, rej) => Promise.resolve(result(table)).then(res, rej)
     }
@@ -196,8 +199,32 @@ test('(a) /subject WITH events → success bundle contains them; conversion coun
   // READ path only — the reader was never handed an admin token.
   assert.equal(calls.length, 1)
   assert.ok(!('adminToken' in calls[0]), 'the subject reader must never receive an admin token')
-  // lead_qualifications is explicitly excluded, not silently dropped.
-  assert.equal(res.body.sources.lead_qualifications.included, false)
+  // lead_qualifications + subscription_identity are now INCLUDED. They were excluded
+  // while the subject key was wrongly anonymous_id ("unverified mapping"); with
+  // distinct_id as the key the mapping is verified, and the eraser deletes them — so
+  // Art. 15 access must disclose exactly what Art. 17 erasure removes.
+  assert.equal(res.body.sources.lead_qualifications.count, 0)
+  assert.equal(res.body.sources.subscription_identity.count, 0)
+  assert.equal(res.body.has_data, true, 'a subject with rows must be reported as having data')
+})
+
+test('(a2) /subject discloses lead_qualifications + subscription_identity rows when present', async (t) => {
+  t.after(() => { restoreSupabase(); __resetGdprExportDeps() })
+  installSupabase({
+    site: ROUTE_SITE,
+    conversions: [{ conversion_event_id: 'c1' }],
+    links: [],
+    quals: [{ visitor_id: 'anon-9', status: 'qualified' }],
+    subs: [{ anonymous_id: 'anon-9', stripe_customer_id: 'cus_x' }]
+  })
+  installReader(okEvents(1))
+  const res = mockRes()
+  await subjectHandler(req(), res)
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.body.sources.lead_qualifications.count, 1, 'must not silently omit lead PII')
+  assert.equal(res.body.sources.lead_qualifications.rows[0].visitor_id, 'anon-9')
+  assert.equal(res.body.sources.subscription_identity.count, 1)
+  assert.equal(res.body.sources.subscription_identity.rows[0].stripe_customer_id, 'cus_x')
 })
 
 test('(b) /subject with NO data → success:true, explicitly empty (NOT a failure shape)', async (t) => {
@@ -212,6 +239,9 @@ test('(b) /subject with NO data → success:true, explicitly empty (NOT a failur
   assert.equal(res.body.sources.attributed_conversions.count, 0)
   assert.equal(res.body.sources.site_identity_links.count, 0)
   assert.equal(res.body.error, undefined, 'empty is not an error')
+  // "We hold no data" must be STATED, not left for the reader to infer from empty
+  // arrays — this is the affirmative answer to an Art. 15 request.
+  assert.equal(res.body.has_data, false)
 })
 
 test('🔴 (c) /subject Tinybird FAILS → does NOT return a complete-looking bundle; fails loudly (load-bearing)', async (t) => {
