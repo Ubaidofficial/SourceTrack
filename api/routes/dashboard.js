@@ -404,6 +404,15 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           bounce_rate: bounceRate,
           leads: leadConverters.size,
           leads_prev: prevLeadConverters.size,
+          // Does this site track lead-type conversions AT ALL? Distinguishes a REAL zero ("lead
+          // events are configured, none converted in this range") from "no data" ("this site only
+          // records purchases"). Without it the UI cannot tell them apart and renders a fake 0 —
+          // the §6 failure. Derived from the site's own onboarding selection, classified by the
+          // same canonical classifier that produces `leads` above, so the two can never drift.
+          // True as soon as any lead-type conversion is observed, which covers sites that send
+          // lead conversions via the JS API without ever selecting them in onboarding.
+          leads_tracked: leadConverters.size > 0 || (req.site.onboarding_state?.selected_conversions || [])
+            .some((t) => classifyConversionType(t) === 'lead'),
           customers: totalCustomers,
           customers_prev: prevCustomers,
           sql_percent: sqlPercent,

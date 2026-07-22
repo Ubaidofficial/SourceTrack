@@ -64,7 +64,7 @@ export default function Dashboard() {
     timeRange, setTimeRange, liveCount, freshnessLabel, handleExport,
     isLoading, isError, error, refetch,
     overview, analyticsSummary, recentActivity, dashboardReports,
-    kpis, totalRevenue, totalConversions, totalLeads, totalCustomers,
+    kpis, totalRevenue, totalConversions, totalLeads, leadsTracked, totalCustomers,
     leadConvRate, customerConvRate, avgValue, revenueDelta, leadsDelta, customersDelta,
     aiRevResults, aiSourceRows, activeResults, topPagesResults, timeResults,
     models, modelRevenues, revTrendData, channelTrendResults, channelTrendData,
@@ -244,9 +244,11 @@ export default function Dashboard() {
                     />
                     <MetricTile
                       label="Leads"
-                      value={totalLeads}
-                      trend={leadsDelta?.pct}
-                      sub={leadConvRate > 0 ? `${leadConvRate.toFixed(1)}% conversion rate` : null}
+                      value={leadsTracked ? totalLeads : null}
+                      isEmpty={!leadsTracked}
+                      emptyReason="No lead events tracked for this site"
+                      trend={leadsTracked ? leadsDelta?.pct : null}
+                      sub={leadsTracked && leadConvRate > 0 ? `${leadConvRate.toFixed(1)}% conversion rate` : null}
                     />
                     <MetricTile
                       label="Customers"
@@ -259,8 +261,10 @@ export default function Dashboard() {
                   <>
                     <MetricTile
                       label="Total Leads"
-                      value={totalLeads}
-                      trend={leadsDelta?.pct}
+                      value={leadsTracked ? totalLeads : null}
+                      isEmpty={!leadsTracked}
+                      emptyReason="No lead events tracked for this site"
+                      trend={leadsTracked ? leadsDelta?.pct : null}
                     />
                     <MetricTile
                       label="Customers"
@@ -269,9 +273,10 @@ export default function Dashboard() {
                     />
                     <MetricTile
                       label="Lead Conversion Rate"
-                      value={totalLeads > 0 ? leadConvRate : null}
+                      value={leadsTracked && totalLeads > 0 ? leadConvRate : null}
                       format="percent"
-                      isEmpty={totalLeads === 0}
+                      isEmpty={!leadsTracked || totalLeads === 0}
+                      emptyReason={leadsTracked ? 'Not yet tracked' : 'No lead events tracked for this site'}
                     />
                   </>
                 )}

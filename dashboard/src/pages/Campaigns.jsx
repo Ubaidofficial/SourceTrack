@@ -639,10 +639,15 @@ export default function Campaigns() {
 
       {/* KPI Tiles */}
       <div className={`grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-${3 + (hasRevenue ? 1 : 0) + (hasCost ? 1 : 0) + (hasRevenue && hasCost ? 1 : 0)}`}>
-        <MetricTile label="Total Visits"    value={kpis?.total_visits} />
-        <MetricTile label="Total Leads"     value={kpis?.total_leads} />
-        <MetricTile label="Conversions"     value={kpis?.total_conversions} />
-        {hasRevenue && <MetricTile label="Total Revenue"   value={kpis?.total_revenue} format="currency" />}
+        {/* §6: hidden entirely when the analytics reads failed. The amber banner above already
+            carries the "unavailable" context, so an empty tile would only repeat it — and a 0 tile
+            beside that banner is the fake zero this fixes. The server nulls these too, so no
+            consumer can render a 0. Cost tiles below are unaffected: spend comes from a different
+            store (Supabase campaign_costs) and stays truthful when the analytics legs fail. */}
+        {analyticsAvailable && <MetricTile label="Total Visits"    value={kpis?.total_visits} />}
+        {analyticsAvailable && <MetricTile label="Total Leads"     value={kpis?.total_leads} />}
+        {analyticsAvailable && <MetricTile label="Conversions"     value={kpis?.total_conversions} />}
+        {analyticsAvailable && hasRevenue && <MetricTile label="Total Revenue"   value={kpis?.total_revenue} format="currency" />}
         {hasCost && <MetricTile label="Total Spend"     value={kpis?.total_spend} format="currency" />}
         {hasRevenue && hasCost && (() => {
           const totalSpend = safeNumber(kpis?.total_spend, 0)

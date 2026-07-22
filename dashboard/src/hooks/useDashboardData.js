@@ -146,6 +146,11 @@ export function useDashboardData() {
   const totalRevenue = kpis.revenue || 0
   const totalConversions = kpis.conversions || 0
   const totalLeads = kpis.leads || 0
+  // Whether this site tracks lead-type conversions at all. Separates a REAL 0 (lead events exist,
+  // none converted in range) from "no data" (purchase-only site). Defaults TRUE when the API has
+  // not answered yet, so a tile never flashes an empty state while loading; the §6 empty state is
+  // only shown once the server has explicitly said this site tracks no leads.
+  const leadsTracked = kpis.leads_tracked !== false
   const totalCustomers = kpis.customers || 0
   const leadConvRate = kpis.lead_conversion_rate || 0
   const customerConvRate = kpis.customer_conversion_rate || 0
@@ -267,7 +272,7 @@ export function useDashboardData() {
     // raw data
     overview, analyticsSummary, recentActivity, dashboardReports,
     // derived
-    kpis, totalRevenue, totalConversions, totalLeads, totalCustomers,
+    kpis, totalRevenue, totalConversions, totalLeads, leadsTracked, totalCustomers,
     leadConvRate, customerConvRate, avgValue, revenueDelta, leadsDelta, customersDelta,
     aiRevResults, aiSourceRows, activeResults, topPagesResults, timeResults,
     models, modelRevenues, revTrendData, channelTrendResults, channelTrendData,

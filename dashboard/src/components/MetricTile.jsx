@@ -9,7 +9,10 @@ const MetricTile = ({
   trend = null,
   compact = false,
   delta = null,
-  sub = null
+  sub = null,
+  // Why this tile has no value. A bare "—" reads as broken; the reason is what makes it read as
+  // "not applicable". Defaults to the generic caption so every existing call site is unchanged.
+  emptyReason = 'Not yet tracked'
 }) => {
   const shouldAnimate = typeof value === 'number' && !Number.isNaN(value) && !isEmpty && value != null && format !== 'text'
 
@@ -77,7 +80,9 @@ const MetricTile = ({
   const showTrend = !isEmptyState && (trend != null || delta)
 
   return (
-    <div className={`metric-tile bg-white dark:bg-dark-card rounded-xl shadow-sm card-hairline border border-gray-200 dark:border-dark-border flex flex-col justify-between transition-all hover:shadow-md duration-200 ${
+    <div
+      title={isEmptyState ? emptyReason : undefined}
+      className={`metric-tile bg-white dark:bg-dark-card rounded-xl shadow-sm card-hairline border border-gray-200 dark:border-dark-border flex flex-col justify-between transition-all hover:shadow-md duration-200 ${
       compact ? 'px-4 py-3 gap-0.5' : 'p-5 gap-1.5'
     }`}>
       <div>
@@ -90,7 +95,7 @@ const MetricTile = ({
       </div>
       {(isEmptyState || showTrend || sub) && (
         <div className="flex items-center gap-1.5 flex-wrap mt-2">
-          {isEmptyState && <p className="text-[10px] text-st-gray dark:text-gray-400 italic">Not yet tracked</p>}
+          {isEmptyState && <p className="text-[10px] text-st-gray dark:text-gray-400 italic">{emptyReason}</p>}
           {showTrend && renderTrendPill()}
           {showTrend && <span className="text-[10px] text-st-gray dark:text-gray-400 font-medium">vs prior</span>}
           {sub && <p className="text-[10px] text-st-gray dark:text-gray-400 font-medium truncate">{sub}</p>}
