@@ -20,7 +20,7 @@
 //   Run: node scripts/verify-demo-seed.mjs
 
 import { getSupabase } from '../api/lib/supabase.js'
-import { FIXTURE_SITE_ID, DEMO_VISITOR_PREFIX, buildDemoJourneys, demoConversionEventIds } from './lib/attribution-fixture.mjs'
+import { DEMO_SITE_ID, DEMO_VISITOR_PREFIX, buildDemoJourneys, demoConversionEventIds } from './lib/attribution-fixture.mjs'
 
 const HERO1_VISITOR = `${DEMO_VISITOR_PREFIX}h1_hero`
 const AI_SOURCES_EXPECTED = 4
@@ -34,7 +34,7 @@ async function main () {
   const { data: rows, error } = await supabase
     .from('attributed_conversions')
     .select('distinct_id, conversion_event_id, conversion_value, conversion_timestamp, touchpoint_count, first_touch_source, first_touch_channel, last_touch_channel, ai_influenced_source')
-    .eq('site_id', FIXTURE_SITE_ID)
+    .eq('site_id', DEMO_SITE_ID)
     .in('conversion_event_id', markers)
     .order('conversion_timestamp', { ascending: true })
   if (error) { console.error(`[verify-demo] query error: ${error.message}`); process.exit(2) }
@@ -44,6 +44,21 @@ async function main () {
   if (!rows || rows.length === 0) {
     console.error(`[verify-demo] PRECONDITION FAILED: 0 attributed_conversions rows for the ${markers.length} demo markers. The demo set was not seeded, or the nightly has not run against staging. Refusing to report a pass on an empty dataset.`)
     process.exit(2)
+  }
+
+  // ── 0. SITE PURITY — the whole point of the clean site: it must hold ONLY this dataset.
+  // Scoped by conversion_event_id, NOT by a `demo_%` distinct_id prefix. That prefix is NOT a reliable
+  // discriminator: the ORIGINAL fixture site carries 116 legacy rows from June seeding runs
+  // (demo_run3_*, demo_dedupe_*) that match `demo_%` but are not this dataset. Prefix matching would
+  // silently pass a polluted site.
+  const { count: totalOnSite, error: totalErr } = await supabase
+    .from('attributed_conversions')
+    .select('*', { count: 'exact', head: true })
+    .eq('site_id', DEMO_SITE_ID)
+  if (totalErr) { console.error(`[verify-demo] purity query error: ${totalErr.message}`); process.exit(2) }
+  const foreign = (totalOnSite || 0) - rows.length
+  if (foreign !== 0) {
+    fails.push(`SITE NOT CLEAN: ${totalOnSite} attributed_conversions rows on ${DEMO_SITE_ID}, but only ${rows.length} belong to this dataset — ${foreign} foreign row(s). The clean site must hold ONLY the demo dataset.`)
   }
 
   // ── 1. Row count in range, and NO row carries the defective orphan shape.
@@ -87,6 +102,7 @@ async function main () {
 
   const plannedConverting = planned.filter((j) => j.conversion).length
   console.log(`\n── SUMMARY ──`)
+  console.log(`  site purity: ${totalOnSite} total rows on the site, ${rows.length} belong to this dataset, ${foreign} foreign${foreign === 0 ? ' ✅' : ' 🔴'}`)
   console.log(`  planned converting journeys: ${plannedConverting}   stored rows: ${rows.length}   missing: ${plannedConverting - rows.length}`)
   console.log(`  rows with >0 touchpoints AND non-NULL first_touch_source: ${rows.length - defective.length}/${rows.length}`)
   console.log(`  distinct ai_influenced_source: ${aiSources.length} — ${aiSources.join(', ') || '(none)'}`)
