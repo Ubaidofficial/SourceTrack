@@ -770,7 +770,11 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
 })
 
 // ─── Recent conversions (privacy-friendly) ───────────────────────────────────
-// Anonymized: distinct_id is never exposed. We surface only the first 3 chars + ****.
+// display_id stays anonymized (first 3 chars + ****) for rendering. visitor_id carries the raw
+// distinct_id because it is the journey key: journey.js looks up Tinybird `events` by
+// distinct_id AND attributed_conversions by .eq('distinct_id', ...). Not a new exposure surface —
+// /leads already surfaces raw distinct_id as the lead id to this same (auth'd, member-gated)
+// audience, and journey.js takes it as a URL param from there.
 router.get('/recent-conversions', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
     const siteId = String(req.site.id)
@@ -781,11 +785,11 @@ router.get('/recent-conversions', requireUserAuth, validateSiteKey, requireSiteM
 
     const { data, error } = await supabase
       .from('attributed_conversions')
-      .select('distinct_id, conversion_date, conversion_value, conversion_type, first_touch_source, first_touch_channel, touchpoint_count, attribution_confidence')
+      .select('distinct_id, conversion_date, conversion_timestamp, conversion_value, conversion_type, first_touch_source, first_touch_channel, touchpoint_count, attribution_confidence')
       .eq('site_id', siteId)
       .gte('conversion_date', fromDate)
       .lte('conversion_date', toDate)
-      .order('conversion_date', { ascending: false })
+      .order('conversion_timestamp', { ascending: false })
       .limit(20)
     if (error) throw error
 
@@ -793,7 +797,9 @@ router.get('/recent-conversions', requireUserAuth, validateSiteKey, requireSiteM
       display_id: r.distinct_id
         ? String(r.distinct_id).slice(0, 3).toUpperCase() + '****'
         : 'Anon',
+      visitor_id: r.distinct_id || null,
       conversion_date: r.conversion_date,
+      conversion_timestamp: r.conversion_timestamp,
       conversion_value: Number(r.conversion_value) || 0,
       conversion_type: r.conversion_type,
       first_touch_source: r.first_touch_source,

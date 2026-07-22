@@ -63,7 +63,7 @@ export default function Dashboard() {
     user, site, siteLoading, navigate, previewMode, previewSiteName, previewSiteDomain,
     timeRange, setTimeRange, liveCount, freshnessLabel, handleExport,
     isLoading, isError, error, refetch,
-    overview, analyticsSummary, recentActivity, dashboardReports,
+    overview, analyticsSummary, recentConversions, dashboardReports,
     kpis, totalRevenue, totalConversions, totalLeads, leadsTracked, totalCustomers,
     leadConvRate, customerConvRate, avgValue, revenueDelta, leadsDelta, customersDelta,
     aiRevResults, aiSourceRows, activeResults, topPagesResults, timeResults,
@@ -72,6 +72,9 @@ export default function Dashboard() {
     trafficKpis, trafficVisitors, trafficPageviews, trafficSources, trafficTopPages,
     hasConversions, hasTraffic,
   } = useDashboardData()
+
+  // Already conversions-only and newest-first from the endpoint; no client-side filter or re-sort.
+  const conversionRows = (recentConversions || []).slice(0, 5)
 
   return (
     <div className="st-container space-y-6">
@@ -336,14 +339,14 @@ export default function Dashboard() {
                     </button>
                   }
                 >
-                  {!recentActivity || !recentActivity.events || recentActivity.events.length === 0 ? (
-                    <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No conversions in last 30 minutes.</p>
+                  {conversionRows.length === 0 ? (
+                    <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No conversions in the recent window.</p>
                   ) : (
                     <DashboardTable
                       columns={[
-                        { key: 'source', label: 'Source', render: (r) => <SourceChip source={r.referrer || r.utm_source || 'Direct'} /> },
-                        { key: 'event', label: 'Event', render: (r) => r.event === '$conversion' ? 'Conversion' : r.event },
-                        { key: 'time', label: 'Time', render: (r) => new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
+                        { key: 'source', label: 'Source', render: (r) => <SourceChip source={r.first_touch_source || 'Direct'} /> },
+                        { key: 'event', label: 'Event', render: (r) => r.conversion_type || 'Conversion' },
+                        { key: 'time', label: 'Time', render: (r) => new Date(r.conversion_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
                         { key: 'action', label: '', render: (r) => (
                           r.visitor_id ? (
                             <button
@@ -357,7 +360,7 @@ export default function Dashboard() {
                           )
                         )}
                       ]}
-                      rows={recentActivity.events.filter(e => e.event === '$conversion').slice(0, 5)}
+                      rows={conversionRows}
                     />
                   )}
                 </DashboardCard>
