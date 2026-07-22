@@ -29,8 +29,11 @@ import {
 
 // The tone matches the server's gate copy + describeQueryError's gated state, so the tooltip
 // and the locked state a user hits say the same thing.
+// Was '…while reporting moves to the new analytics store.' until 2026-07-21 — that migration
+// COMPLETED 2026-07-19 (PostHog 416017 deleted), so the clause described a finished transition.
+// Kept in lockstep with the server's UNAVAILABLE_SUFFIX; report-picker-gating.test.js pins it.
 export const GATED_TOOLTIP =
-  'Temporarily unavailable while reporting moves to the new analytics store.'
+  'Not available yet.'
 
 export const SESSION_DIM_TOOLTIP =
   'Session metrics can only be broken down by source, medium, campaign, landing page, country, device, or date.'

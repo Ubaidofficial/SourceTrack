@@ -847,7 +847,7 @@ Export accepts 16 `ALLOWED_GROUPS`. Servable groups for `revenue` (and identical
 >
 > The real gate is `servedReportShape`/`servedByDeployedBackend` in `api/lib/report-config-validation.js`, which **the dashboard cannot import** (Railway `rootDirectory=/dashboard`; guarded by `dashboard-build-root.test.js:66` using this exact import as the canonical offender). Shipped fix: a static list in `dashboard/src/lib/` bound to the gate by test. Relocating the gate to `dashboard/src/lib/` (the `gate-constants.js` precedent) remains available as a follow-up.
 
-**(a) is trivially correct and I will say so plainly.** It is not a workaround — it is the product telling the truth about its own coverage, using machinery already shipped in a sibling page. It also composes with (b) and (c): whatever becomes servable later simply appears. **Ship (a) regardless of what you decide about (b)/(c).**
+**(a) is unambiguously the right call, and I will say so plainly** — the *decision* is obvious even though the *build* is not trivial (see the cost correction above). It is not a workaround — it is the product telling the truth about its own coverage, using machinery already shipped in a sibling page. It also composes with (b) and (c): whatever becomes servable later simply appears. **Ship (a) regardless of what you decide about (b)/(c).**
 
 **(b) is the highest-leverage follow-up**, because it is the only option that improves non-UTC sites without waiting on KI-51's blocked pipe work.
 
