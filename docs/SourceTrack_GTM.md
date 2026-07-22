@@ -25,6 +25,65 @@
 - **"Simplicity at Cometly level" was a contradiction** — Cometly is the heavy, complex incumbent. Corrected: *Cometly's depth WITHOUT Cometly's bloat* (no 70+ integrations, no CRM requirement, no quote pricing).
 - Depth benchmark = Cometly. Simplicity benchmark = DataFast/Piqo. You sit between: their depth, that simplicity.
 
+The spine above is **team-facing** — it names competitors and belongs in internal docs, not on the
+site. §1.1 is its **customer-facing** counterpart: the same position, in the buyer's words.
+
+### 1.1 The customer-facing hero (CANONICAL — this is the live site)
+
+**The live homepage ALREADY carries a strong spine — this canonicalizes it so the ~90 new pages
+inherit it instead of drifting.** Verified verbatim against `dashboard/src/pages/Landing.jsx:57-66`
+on `origin/main` @ `d92308a`, 2026-07-22. *(A prior plan drafted a replacement hero; that was a
+mistake — the site's is better. Align to it.)*
+
+> **Know which sources bring your leads — and which bring revenue.**
+> See exactly where your traffic, leads, and customers come from: search, referral, campaigns, and AI
+> tools like ChatGPT. One lightweight script. No CRM. No tag-manager maze. No "book a demo" wall.
+>
+> Kicker: *Attribution for founders* · Proofs: *No credit card required · One script or GTM ·
+> Cookieless & privacy-first*
+
+**Why this is the spine (and why it already works):**
+- **"leads — and which bring revenue"** = the wedge, in the buyer's words. Most tools stop at leads;
+  the revenue tie is the differentiator. Sharper than any rewrite.
+- **"No CRM. No tag-manager maze. No 'book a demo' wall."** = the anti-Cometly position done right —
+  the "$750 + sales call" contrast without naming anyone or sounding cheap. Three specific noes, each
+  killing a named competitor's friction.
+- **"AI tools like ChatGPT"** = correctly an *example in a list*, not the headline (data: AI-referral
+  is table stakes and drives 0 search traffic — see `docs/marketing/website_seo_plan.md` Appendix A).
+- **"Attribution for founders"** = ICP flag in three words (see §6).
+
+**Every page's title/meta ladders up to this hero's logic:** lead with the outcome (which sources make
+money), prove with the path (the `/explain` touch-chain), fold SEO-revenue in as proof not headline,
+price + "no sales call" as a closer under the hero — never the opener.
+
+> ⚠️ **This block is a mirror of code, not a source.** If `Landing.jsx`'s `HERO` changes, this is
+> stale until re-synced. Verify against the live constant before quoting it anywhere public.
+
+### 1.2 VOICE RULE — specificity, NOT hype (locked) 🟢
+
+Do **not** inflate copy with marketing buzzwords ("revolutionary", "AI-powered intelligence",
+"supercharge", "10x", "next-gen"). Three reasons, all specific to SourceTrack:
+
+1. **It breaks the §26 truth-gate.** The product refuses to fabricate revenue numbers or invent
+   recommendations; a hyped homepage writes a check the honest product won't cash. Prospects feel the
+   gap instantly.
+2. **The buyers don't respond to it.** The competitor pages that actually earn traffic are plain and
+   educational (Attribution.app 89% blog); the hyped, content-less ones (Hyros) have no organic engine.
+   Technical founders researching attribution are skeptical and allergic to marketing-speak.
+3. **Honesty IS the position vs Observix** (whose hyped "AI chat" visibly errors). You cannot adopt the
+   voice of the competitor you're positioned against.
+
+**What creates real pull for this audience = specificity that sounds like a practitioner wrote it:**
+- ❌ "Revolutionary AI-powered revenue intelligence" → ✅ "See the exact 4-touch path behind a $2,000
+  sale — ChatGPT referral, two blog visits, then direct."
+- ❌ "Supercharge your attribution" → ✅ "The lead your other tools log as 'Direct'? We show it came
+  from ChatGPT." *(this is the Direct-Rescue story — §4 Tier 1)*
+
+The live hero already writes in this register. **Sharpen it; never inflate it.** This voice rule
+applies to every page, title, and meta across the site.
+
+**Truth-gate:** revenue language renders only where revenue data exists (§5.1–5.2 design.md).
+
 ---
 
 ## 2. The defensible moat, stated honestly
@@ -102,6 +161,36 @@ CAPI (Meta+Google config landing via #60 — don't claim "live forwarding" until
 
 ### 🚫 CANNOT claim yet
 Trial→paid / MRR-by-source (rail unbuilt — and this is your *sharpest stated ICP feature*, so closing it is high-value) · quality-filtered CAPI (Phase 3) · ROAS/CPL/CAC (V2) · "GDPR compliant" badge · native Shopify/Stripe · privacy advantage vs SourceLoop · full production Stripe.
+
+### 5.1 Copy constraints — the hard DO-NOTs for every public page
+
+> **Provenance:** consolidated from `docs/marketing/seo_content_backlog.md` ("Communication & Claims
+> Constraints") and `docs/seo/marketing_site_copy_audit_2026-06-16.md` ("Overclaim/truthfulness
+> risks") on retirement of both docs, 2026-07-22. **This table is the authoritative claims-gate** —
+> `docs/marketing/website_seo_plan.md` Part 1 #5 and Part 9 both defer to it.
+
+These bind **all** marketing copy, page specs, sales decks, security questionnaires and DPAs. The
+"say instead" column is not a softener — it is the accurate description.
+
+| ❌ Never claim | ✅ Say instead | Why |
+|---|---|---|
+| SOC 2 certified / compliant | *(say nothing — omit entirely)* | No certification exists. An uncertified SOC 2 claim is a material misrepresentation. |
+| "GDPR compliant" | "privacy-conscious", "consent-aware", "PII-minimized", "GPC/DNT honored", "EU-resident data" | Compliance is a legal determination we have not obtained. Also a place we're **more** honest than SourceLoop, who assert it flatly — on-brand. |
+| Native Shopify app / Shopify App Store plugin | "manual Shopify webhook recipe", "installed via custom script tag in Shopify Admin or Google Tag Manager" | No App Store listing exists. The claim sends users hunting for an app that isn't there. |
+| Native Stripe app / production Stripe sync | "Stripe webhook adapter", "test-mode beta" | Stripe ingestion is test-mode/beta and requires webhook setup. |
+| Automatic Google Ads / Meta sync | "click-ID capture", "CAPI config" — and only once production-verified | Not production-verified. See §5 ⚠️ (CAPI landing via #60). |
+| Native CRM sync / bidirectional Salesforce-HubSpot database sync | "attribution stitching that captures click history and forwards attribution metadata to form fields" | Limited to UTM capture in hidden form fields, forwarded on submit. No database-level sync. |
+| Exact AI prompt attribution / "see what they asked ChatGPT" | "AI referral **domain** detection" | We parse referrer domains (`chatgpt.com`, `claude.ai`). Private prompts inside AI engines are inaccessible — architecturally, not just currently. |
+| Exact keyword-to-customer attribution | "Search Console query visibility", "**estimated**, matched by landing page + date range" | GSC query→revenue is estimated by landing-page + date join. The estimate label is mandatory, not optional. |
+| Multi-client permissions / guest-invite agency workflows | "multi-site portfolio view" | The permissions layer isn't ready. Small agencies get the All-Sites view only (§6). |
+| "Reveal anonymous companies" · "Enrich every lead with contact data" · "Score leads automatically with AI" · "Identify your ICP automatically" | "See which sources bring qualified leads." | Company-reveal / IP-enrichment / contact-enrichment / AI lead scoring are **not built and not planned pre-paid-beta**. See the enrichment-stance note below. |
+
+> **⚠️ Product-scope note (needs a permanent home — see PR discussion).** The full "Lead Intelligence /
+> AI Enrichment Stance" — the allowed/not-allowed enrichment lists and the rule that *any* future
+> lead-quality feature must use first-party SourceTrack data only, absent a separate privacy/legal/
+> vendor/accuracy/pricing review — is a **product-scope + privacy rule, not marketing copy.** It was
+> carried here from the retired backlog only so it wouldn't be lost. It belongs in the scope-authority
+> doc; the last row above is its copy-facing shadow, not the whole rule.
 
 ---
 
