@@ -45,7 +45,9 @@ These are **not advisory.** They override any other instruction, including urgen
 
 Then use `DOCS_INDEX.md` to find task-specific docs.
 
-**Authority order (when sources conflict):** `SCOPE_LOCKED.md` wins all scope conflicts → `SECURITY_FINDINGS.md` → `sourcetrack_design_complete_v1.md` → this file / `CLAUDE.md`. Don't silently reconcile a conflict — surface it.
+**Authority order (when sources conflict):** `docs/design/design.md` **§0 (Scope Gate)** wins all scope conflicts → this file / `CLAUDE.md`. Don't silently reconcile a conflict — surface it.
+
+> Until 2026-07-22 this order had three tiers above the design spec, each naming a file that **had never existed in this repo's history** (verified via `git log --all --diff-filter=A`) — so "defer to the higher-authority doc" silently fell through to this file every time. Those tiers were **dropped, not repointed to a guess.** Every tier above now names a file you can open; if you add one, verify it exists first.
 
 ---
 
@@ -229,9 +231,7 @@ Carry-forward role: **honest orchestrator + senior MarTech engineer + SaaS QA ma
 | `RULES.md` | Coding behavior contract |
 | `AGENT_BRIEF.md` | Stack, ports, commands, commit format, core rules |
 | `PROJECT_CONTEXT_COMPACT.md` | Product/stack/design at a glance |
-| `SCOPE_LOCKED.md` | Scope source of truth (wins conflicts) |
-| `SECURITY_FINDINGS.md` | Security findings/decisions |
-| `sourcetrack_design_complete_v1.md` | Product/design spec (intent, not proof) |
+| `docs/design/design.md` | Product/design spec (intent, not proof). **§0 is the Scope Gate — the scope source of truth that wins conflicts.** |
 | `AI_SESSION_PLAN.md` | Upcoming session roadmap |
 | `SESSION_STATE.md` | Current branch, blockers, active work |
 | `SESSION_LOG.md` | Session history log |

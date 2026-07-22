@@ -185,12 +185,12 @@ These bind **all** marketing copy, page specs, sales decks, security questionnai
 | Multi-client permissions / guest-invite agency workflows | "multi-site portfolio view" | The permissions layer isn't ready. Small agencies get the All-Sites view only (§6). |
 | "Reveal anonymous companies" · "Enrich every lead with contact data" · "Score leads automatically with AI" · "Identify your ICP automatically" | "See which sources bring qualified leads." | Company-reveal / IP-enrichment / contact-enrichment / AI lead scoring are **not built and not planned pre-paid-beta**. See the enrichment-stance note below. |
 
-> **⚠️ Product-scope note (needs a permanent home — see PR discussion).** The full "Lead Intelligence /
-> AI Enrichment Stance" — the allowed/not-allowed enrichment lists and the rule that *any* future
-> lead-quality feature must use first-party SourceTrack data only, absent a separate privacy/legal/
-> vendor/accuracy/pricing review — is a **product-scope + privacy rule, not marketing copy.** It was
-> carried here from the retired backlog only so it wouldn't be lost. It belongs in the scope-authority
-> doc; the last row above is its copy-facing shadow, not the whole rule.
+> **Product-scope note — now homed.** The full "Lead Intelligence / AI Enrichment Stance" (the
+> allowed/not-allowed enrichment lists, and the rule that *any* future lead-quality feature must use
+> **first-party SourceTrack data only** absent a separate privacy/legal/vendor/accuracy/pricing
+> review) is a **product-scope + privacy rule, not marketing copy.** It lives in
+> `docs/design/design.md` **§26.1**, under the Scope Gate that `CLAUDE.md` §12 names as the scope
+> authority. The row above is its copy-facing form; §26.1 is the whole rule.
 
 ---
 
