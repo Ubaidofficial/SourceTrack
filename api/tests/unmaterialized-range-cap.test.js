@@ -25,6 +25,10 @@ const {
   __resetAttributionReadDeps
 } = await import('../lib/attribution-engine.js')
 const { attribution } = await import('../routes/attribution.js')
+// The gate sentence is CONSUMED, never re-typed — a literal here is a fork that rots the moment
+// the real copy changes, which is exactly how this file went red on the 2026-07-21 correction
+// while the identity suite passed (KI-57).
+const { UNAVAILABLE_SUFFIX } = await import('../lib/report-config-validation.js')
 
 const spanDays = (from, to) => Math.round((new Date(`${to}T00:00:00Z`) - new Date(`${from}T00:00:00Z`)) / 86400000)
 
@@ -108,7 +112,10 @@ test('route: 90d keyword report is now GATED (422) — not served as capped zero
   assert.strictEqual(res.statusCode, 422, 'gated, not 200-with-zeros')
   assert.strictEqual(res.body.success, false)
   assert.strictEqual(res.body.gated, true)
-  assert.match(res.body.error, /temporarily unavailable/, 'denies truthfully instead of faking a capped result')
+  // §5 data-truth guard, NOT loosened: the route must deny with the real gate sentence rather than
+  // fake a capped result. Re-pointed at the shared constant so it guards the CONTRACT (this is the
+  // gate's own message) instead of wording it does not care about.
+  assert.ok(res.body.error.endsWith(UNAVAILABLE_SUFFIX), res.body.error)
 })
 
 test('route: a SHORT keyword report is gated too (the cap never made a dead store live)', async () => {

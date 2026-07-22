@@ -93,6 +93,14 @@ test('window options are NOT gated here — that gate is DIM-AWARE (Class-A dims
 
 // ── tone matches the server + describeQueryError's gated state ──────────────────────
 test('tooltip copy matches the gate tone (same sentence the locked state shows)', () => {
-  assert.match(picker.GATED_TOOLTIP, /Temporarily unavailable while reporting moves to the new analytics store\./)
+  // DELIBERATE SPEC EDIT 2026-07-21. This assertion pins the WORDING on purpose — gate copy is a
+  // product decision, so changing it must be a reviewed edit, never an incidental one. The previous
+  // pin was /Temporarily unavailable while reporting moves to the new analytics store\./ and was
+  // retired because that migration COMPLETED 2026-07-19 (PostHog 416017 deleted): the sentence
+  // described a finished transition to paying customers. The pin is kept EXACT, not loosened.
+  assert.match(picker.GATED_TOOLTIP, /Not available yet\./)
   assert.doesNotMatch(picker.GATED_TOOLTIP, /try again|retry|narrower/i, 'a gate is not retryable')
+  // Wording-independent guard added with the same edit: gate copy must carry no expiry claim that
+  // rots the way the migration clause did.
+  assert.doesNotMatch(picker.GATED_TOOLTIP, /migrat|moves to|analytics store/i, 'no migration-era copy')
 })

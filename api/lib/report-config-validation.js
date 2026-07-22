@@ -266,7 +266,16 @@ function servedByDeployedBackend (shape) {
   return PROD_DEPLOYED_PIPES.has(backing) ? backing : null
 }
 
-const UNAVAILABLE_SUFFIX = 'is temporarily unavailable while reporting moves to the new analytics store.'
+// Was 'is temporarily unavailable while reporting moves to the new analytics store.' until
+// 2026-07-21. That migration COMPLETED 2026-07-19 (PostHog project 416017 deleted), so the sentence
+// described a finished transition and got less true every week it stayed shipped.
+//
+// ⚠️ MUST STAY MODEL-AGNOSTIC. Three of the five call sites below are model-INDEPENDENT — the
+// custom_param:* dims, GATED_GROUPS (keyword/referrer_domain) and GATED_METRICS are gated at ANY
+// model and ANY window. Wording like "…for this attribution model" reads correctly for the
+// allowlist catch-all and for campaigns.js, but would be a NEW falsehood on those three. Replacing
+// a stale truth with a confident wrong reason is worse than the staleness (§6).
+const UNAVAILABLE_SUFFIX = 'is not available yet.'
 
 /**
  * Is this report shape one that would reach a dead PostHog read, or fabricate a bucket?
@@ -618,6 +627,10 @@ export {
   SESSION_REPORT_DIMS,
   SESSION_PIPE_METRICS,
   gatedReportReason,
+  // Exported so a ROUTE that builds its own gate message shares this exact sentence instead of
+  // hand-inlining it. api/routes/campaigns.js did inline it while already importing from this
+  // module — a silent fork in what two pages tell a user about the same gate (KI-57).
+  UNAVAILABLE_SUFFIX,
   FLEX_BREAKING_FILTER_KEYS,
   flexFiltersPresent
 }

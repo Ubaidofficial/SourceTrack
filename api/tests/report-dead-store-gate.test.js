@@ -19,7 +19,12 @@ process.env.NODE_ENV = 'test'
 process.env.SUPABASE_URL = 'https://mock-proj.supabase.co'
 process.env.SUPABASE_SERVICE_KEY = 'mock-service-role-key-value'
 
-const { gatedReportReason, ALLOWED_GROUPS, ALLOWED_METRICS, GATED_GROUPS, GATED_METRICS, CLASS_A_DIMS, SESSION_REPORT_DIMS, SESSION_PIPE_METRICS } =
+// UNAVAILABLE_SUFFIX is CONSUMED here, never re-typed. These tests used to match a hardcoded
+// fragment of the gate sentence, which silently encoded product copy in a file whose subject is the
+// GATE, not its wording. Asserting against the exported constant makes them wording-independent: a
+// reviewed copy change can no longer redden them, while a message that stops using the shared
+// sentence still will (KI-57).
+const { gatedReportReason, ALLOWED_GROUPS, ALLOWED_METRICS, GATED_GROUPS, GATED_METRICS, CLASS_A_DIMS, SESSION_REPORT_DIMS, SESSION_PIPE_METRICS, UNAVAILABLE_SUFFIX } =
   await import('../lib/report-config-validation.js')
 
 // ── (a) KEEP set: must NOT be gated ─────────────────────────────────────────────────
@@ -94,7 +99,7 @@ for (const dim of ['keyword', 'referrer_domain']) {
   test(`GATE: ${dim} -> gated (no pre-agg, no pipe, at any window)`, () => {
     const r = gatedReportReason({ group_by: dim, metric: 'revenue', preAggWindowMatches: true })
     assert.ok(r, `${dim} must be gated`)
-    assert.equal(r.error_code, 'gated_dead_store'); assert.match(r.message, /temporarily unavailable/)
+    assert.equal(r.error_code, 'gated_dead_store'); assert.ok(r.message.endsWith(UNAVAILABLE_SUFFIX), r.message)
   })
 }
 
@@ -108,7 +113,7 @@ for (const metric of ['ltv_revenue', 'ai_conversion_share', 'ai_revenue_share', 
   test(`GATE: ${metric} -> gated (bare queryHogQL / no pipe)`, () => {
     const r = gatedReportReason({ group_by: 'source', metric, preAggWindowMatches: true })
     assert.ok(r, `${metric} must be gated`)
-    assert.equal(r.error_code, 'gated_dead_store'); assert.match(r.message, /temporarily unavailable/)
+    assert.equal(r.error_code, 'gated_dead_store'); assert.ok(r.message.endsWith(UNAVAILABLE_SUFFIX), r.message)
   })
 }
 

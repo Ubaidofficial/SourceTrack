@@ -5,7 +5,7 @@
 // the rule holds identically everywhere.
 
 // Server-side GATES — not failures, and NOT retryable. The requested report shape has no live
-// backend while reporting moves to the new analytics store, so the server DENIES it (422) instead
+// backend, so the server DENIES it (422) instead
 // of querying a dead store and returning zeros. Retrying or narrowing the range cannot help, so
 // these render a calm "temporarily unavailable" state with NO retry affordance (offering Retry on a
 // permanent gate is its own small lie).
@@ -24,8 +24,10 @@ export function describeQueryError (error) {
       isGated: true,
       title: 'Temporarily unavailable',
       // Prefer the server's specific reason (it names the dim/metric); fall back to the generic line.
+      // Was '…while reporting moves to the new analytics store.' until 2026-07-21 — that migration
+      // completed 2026-07-19, so the clause described a finished transition.
       message: error?.message ||
-        'This view is temporarily unavailable while reporting moves to the new analytics store.'
+        'This view is not available yet.'
     }
   }
 

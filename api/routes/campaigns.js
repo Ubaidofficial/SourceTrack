@@ -1,7 +1,7 @@
 import express from 'express'
 import { getFlexibleReport, PREAGG_CONVERSION_METRICS, PREAGG_MULTITOUCH_METRICS } from '../lib/attribution-engine.js'
 import { getSupabase } from '../lib/supabase.js'
-import { ALLOWED_MODELS, servedByDeployedBackend } from '../lib/report-config-validation.js'
+import { ALLOWED_MODELS, servedByDeployedBackend, UNAVAILABLE_SUFFIX } from '../lib/report-config-validation.js'
 import { summarizeCurrencyStatus } from '../lib/ad-cost-imports.js'
 import { isValidTimezone, getLocalDateString, getNow } from '../lib/utils.js'
 
@@ -59,7 +59,9 @@ async function getCampaignsData(req) {
       tz
     })
     if (!backing) {
-      const err = new Error(`A "${dimension}" breakdown of "${m}" is temporarily unavailable while reporting moves to the new analytics store.`)
+      // Shared with gatedReportReason's messages — do NOT re-inline this sentence. Campaigns and
+      // Report Builder must say the same thing about the same gate (KI-57).
+      const err = new Error(`A "${dimension}" breakdown of "${m}" ${UNAVAILABLE_SUFFIX}`)
       err.statusCode = 422
       err.error_code = 'gated_dead_store'
       throw err

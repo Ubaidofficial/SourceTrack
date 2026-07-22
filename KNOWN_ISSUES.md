@@ -847,7 +847,7 @@ Export accepts 16 `ALLOWED_GROUPS`. Servable groups for `revenue` (and identical
 >
 > The real gate is `servedReportShape`/`servedByDeployedBackend` in `api/lib/report-config-validation.js`, which **the dashboard cannot import** (Railway `rootDirectory=/dashboard`; guarded by `dashboard-build-root.test.js:66` using this exact import as the canonical offender). Shipped fix: a static list in `dashboard/src/lib/` bound to the gate by test. Relocating the gate to `dashboard/src/lib/` (the `gate-constants.js` precedent) remains available as a follow-up.
 
-**(a) is trivially correct and I will say so plainly.** It is not a workaround — it is the product telling the truth about its own coverage, using machinery already shipped in a sibling page. It also composes with (b) and (c): whatever becomes servable later simply appears. **Ship (a) regardless of what you decide about (b)/(c).**
+**(a) is unambiguously the right call, and I will say so plainly** — the *decision* is obvious even though the *build* is not trivial (see the cost correction above). It is not a workaround — it is the product telling the truth about its own coverage, using machinery already shipped in a sibling page. It also composes with (b) and (c): whatever becomes servable later simply appears. **Ship (a) regardless of what you decide about (b)/(c).**
 
 **(b) is the highest-leverage follow-up**, because it is the only option that improves non-UTC sites without waiting on KI-51's blocked pipe work.
 
@@ -903,6 +903,16 @@ Filed 2026-07-21. `dashboard/src/pages/ForgotPassword.jsx:19` passes `redirectTo
 The app's recovery flow is otherwise complete and correct (`/forgot-password` → `/reset-password`, `ResetPassword.jsx:137` `updateUser({ password })`, plus `/auth/confirm` for `type=recovery`). Only the hardcoded host is wrong. Fix: `${window.location.origin}/reset-password` or an env var.
 
 ⚠️ **UNVERIFIED and higher severity if wrong:** is `app.sourcetrack.ai` actually the production dashboard host? `FRONTEND_URL` on `sourcetrack-email` carries the identical assumption, already recorded as "plausible but UNCONFIRMED". Two surfaces now depend on it. **If that host is wrong, password reset is broken in PRODUCTION for real customers.** Confirm before paid beta.
+
+### 57. Gate-unavailable copy was forked between the route and the gate module
+
+Filed 2026-07-21, found while attempting a one-line copy correction. `api/routes/campaigns.js:62` hand-inlined the same sentence that `api/lib/report-config-validation.js:269` exports as `UNAVAILABLE_SUFFIX`, while already importing `servedByDeployedBackend` from that module — so the import path existed and was not used. Campaigns and Report Builder could drift apart in what they tell a user about the same gate, and nothing would catch it.
+
+Same defect class as KI-32 (`AI_HOST_MAP` vs `AI_DOMAINS_MAP`) and KI-41 (`AGENTS.md` vs `CLAUDE.md`), applied to money-rail gate messaging. **RESOLVED in this PR** — campaigns.js now consumes the shared constant. Recorded because the shape recurs and because a copy fork inside the gate module is not obvious from either file alone.
+
+⚠️ `api/tests/report-picker-gating.test.js` pins the wording by regex, so gate copy is test-guarded — changing it is a deliberate spec edit, not a string tweak.
+
+⚠️ **`UNAVAILABLE_SUFFIX` was module-PRIVATE** — not in the export block — so the fork was not merely careless: consuming the constant was impossible without first exporting it. That is the mechanism by which this class of fork forms, and it is worth checking for wherever a shared string is expected.
 
 ---
 ## Recently fixed
