@@ -24,7 +24,7 @@ import { initTinybirdDualWrite } from '../tinybird/adapter/boot.js'
 import { dualWriteEvent, __getDualWriteBatcher } from '../tinybird/adapter/dual-write.js'
 import { esc } from '../api/lib/utils.js'
 import { assertStagingSeedTarget, assertStagingWorkspaceLive, decodeTinybirdWorkspaceId } from './lib/staging-seed-guard.mjs'
-import { FIXTURE_SITE_ID, V1, V2, V3, V4, DEMO_ANCHOR_UTC, buildDemoJourneys, demoConversionEventIds } from './lib/attribution-fixture.mjs'
+import { FIXTURE_SITE_ID, DEMO_SITE_ID, V1, V2, V3, V4, DEMO_ANCHOR_UTC, buildDemoJourneys, demoConversionEventIds } from './lib/attribution-fixture.mjs'
 
 const CONFIRM = process.argv.includes('--confirm')
 const TARGETING_STAGING = process.argv.includes('--i-am-targeting-staging')
@@ -33,6 +33,10 @@ const TARGETING_STAGING = process.argv.includes('--i-am-targeting-staging')
 // independently re-runnable: the V1–V4 markers being present must not block a demo seed (and vice
 // versa). Without --demo this script behaves EXACTLY as before.
 const DEMO = process.argv.includes('--demo')
+
+// The site this run WRITES to. --demo goes to the clean site; V1–V4 stay on the original fixture site.
+// Both start with de200000, so staging-seed-guard.mjs:52 accepts either — the guard is untouched.
+const TARGET_SITE_ID = DEMO ? DEMO_SITE_ID : FIXTURE_SITE_ID
 
 const pvProps = (tp) => ({
   site_id: FIXTURE_SITE_ID, event_id: tp.event_id,
@@ -83,7 +87,7 @@ const v4ConvProps = (c) => ({
 // touchpoints. `country`/`device_type`/`browser_name` are typed columns (tinybird/adapter/normalize.js)
 // and are what the Leads table's Country column and the Browser/Device panels read.
 const demoPvProps = (tp) => ({
-  site_id: FIXTURE_SITE_ID, event_id: tp.event_id,
+  site_id: TARGET_SITE_ID, event_id: tp.event_id,
   utm_source: tp.utm_source, utm_medium: tp.utm_medium, utm_campaign: tp.utm_campaign,
   ai_source: tp.ai_source, referrer: tp.referrer,
   gclid: tp.gclid, fbclid: tp.fbclid, li_fat_id: tp.li_fat_id,
@@ -91,7 +95,7 @@ const demoPvProps = (tp) => ({
   page_url: `https://www.example.com${tp.path}`, server_timestamp: tp.ts
 })
 const demoConvProps = (j) => ({
-  site_id: FIXTURE_SITE_ID, event_id: j.conversion.event_id,
+  site_id: TARGET_SITE_ID, event_id: j.conversion.event_id,
   conversion_value: j.conversion.value, currency: 'USD', conversion_type: 'purchase',
   country: j.touchpoints[0].country,
   ingestion_method: 'server_routed', occurred_at: j.conversion.ts
@@ -106,7 +110,7 @@ async function fixturePresent () {
   const markers = DEMO
     ? demoConversionEventIds()
     : [V1.conversionEventId, V2.conversionEventId, V3.conversionEventId, ...V4.conversions.map((c) => c.event_id)]
-  const q = `SELECT count() AS c FROM events WHERE site_id='${esc(FIXTURE_SITE_ID)}' AND event_id IN (${markers.map((m) => `'${esc(m)}'`).join(',')}) FORMAT JSON`
+  const q = `SELECT count() AS c FROM events WHERE site_id='${esc(TARGET_SITE_ID)}' AND event_id IN (${markers.map((m) => `'${esc(m)}'`).join(',')}) FORMAT JSON`
   try {
     const res = await fetch(`${host.replace(/\/$/, '')}/v0/sql?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${token}` } })
     if (!res.ok) return null
@@ -165,7 +169,7 @@ function dryRunDemo () {
 async function main () {
   const host = process.env.TINYBIRD_HOST
   const workspaceId = decodeTinybirdWorkspaceId(process.env.TINYBIRD_APPEND_TOKEN)
-  console.log(`[seed] write target — workspace=${workspaceId || '<undecodable>'}  SITE_ID=${FIXTURE_SITE_ID}  (--i-am-targeting-staging=${TARGETING_STAGING})`)
+  console.log(`[seed] write target — workspace=${workspaceId || '<undecodable>'}  SITE_ID=${TARGET_SITE_ID}  (--i-am-targeting-staging=${TARGETING_STAGING})`)
 
   if (!CONFIRM) {
     if (DEMO) return dryRunDemo()
@@ -183,8 +187,12 @@ async function main () {
   }
 
   // GATE 1 (pure) + GATE 2 (live): confirm the write target is the staging workspace.
-  const gate = assertStagingSeedTarget({ appendToken: process.env.TINYBIRD_APPEND_TOKEN, siteId: FIXTURE_SITE_ID, targetingStaging: TARGETING_STAGING })
+  const gate = assertStagingSeedTarget({ appendToken: process.env.TINYBIRD_APPEND_TOKEN, siteId: TARGET_SITE_ID, targetingStaging: TARGETING_STAGING })
   if (!gate.ok) { console.error(gate.reason); process.exit(3) }
+  // GATE 2 deliberately probes FIXTURE_SITE_ID, not TARGET_SITE_ID. Its job is to prove the WORKSPACE
+  // is ST_Staging by confirming it holds the original de200000 fixture (prod holds 0) — a workspace
+  // discriminator, not a write-target check. Pointed at a freshly created site it would find 0 events
+  // and fail closed forever. GATE 1 above is what gates the actual write target. Do not "align" these.
   const live = await assertStagingWorkspaceLive({ host, readToken: process.env.TINYBIRD_READ_TOKEN, siteId: FIXTURE_SITE_ID })
   if (!live.ok) { console.error(live.reason); process.exit(3) }
   console.log(`[seed] staging workspace CONFIRMED — de200000 fixture holds ${live.count} events.`)

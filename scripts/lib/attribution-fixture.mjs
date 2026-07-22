@@ -43,7 +43,21 @@
 // null below — intentional, not a bug. Any consumer joining last_touch_source against linear_attribution[].source
 // MUST account for it.
 
-export const FIXTURE_SITE_ID = 'de200000-babe-41d4-a716-446655441111' // ST_Staging fixture (guarded write target)
+// TWO staging sites, deliberately. Do NOT collapse them.
+//
+// FIXTURE_SITE_ID — the ORIGINAL fixture site. Holds the V1–V4 construction fixture (already seeded
+// and attributed) plus ~29 historical CC validation fixtures. verify-attribution-fixture.mjs reads
+// V1–V4 rows here, so this constant must NOT be repointed — doing so would make that verifier fail its
+// precondition on an empty site. Also serves as the guard's workspace-liveness discriminator: it is the
+// site the live probe counts events on to prove "this workspace is ST_Staging" (prod holds 0).
+// Renamed in Supabase to "SourceTrack Fixture (polluted — do not screenshot)".
+export const FIXTURE_SITE_ID = 'de200000-babe-41d4-a716-446655441111'
+
+// DEMO_SITE_ID — the CLEAN site, created 2026-07-22, holding ONLY the --demo dataset so website
+// screenshots carry no /4d-fixture/ paths, $0 carrier rows, or Stripe test rows. Supabase name:
+// "SourceTrack Demo (clean)". The de200000 prefix is REQUIRED — staging-seed-guard.mjs:52 refuses any
+// site id without it, and that guard is not ours to weaken.
+export const DEMO_SITE_ID = 'de200000-c1ea-4c1e-a000-000000000001'
 
 export const V1 = {
   visitor: 'fixt_v1_multitouch',

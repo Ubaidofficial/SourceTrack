@@ -20,7 +20,7 @@
 //   Run: node scripts/verify-demo-seed.mjs
 
 import { getSupabase } from '../api/lib/supabase.js'
-import { FIXTURE_SITE_ID, DEMO_VISITOR_PREFIX, buildDemoJourneys, demoConversionEventIds } from './lib/attribution-fixture.mjs'
+import { DEMO_SITE_ID, DEMO_VISITOR_PREFIX, buildDemoJourneys, demoConversionEventIds } from './lib/attribution-fixture.mjs'
 
 const HERO1_VISITOR = `${DEMO_VISITOR_PREFIX}h1_hero`
 const AI_SOURCES_EXPECTED = 4
@@ -34,7 +34,7 @@ async function main () {
   const { data: rows, error } = await supabase
     .from('attributed_conversions')
     .select('distinct_id, conversion_event_id, conversion_value, conversion_timestamp, touchpoint_count, first_touch_source, first_touch_channel, last_touch_channel, ai_influenced_source')
-    .eq('site_id', FIXTURE_SITE_ID)
+    .eq('site_id', DEMO_SITE_ID)
     .in('conversion_event_id', markers)
     .order('conversion_timestamp', { ascending: true })
   if (error) { console.error(`[verify-demo] query error: ${error.message}`); process.exit(2) }
