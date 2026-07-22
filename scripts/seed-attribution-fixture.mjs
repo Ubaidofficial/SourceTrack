@@ -24,10 +24,15 @@ import { initTinybirdDualWrite } from '../tinybird/adapter/boot.js'
 import { dualWriteEvent, __getDualWriteBatcher } from '../tinybird/adapter/dual-write.js'
 import { esc } from '../api/lib/utils.js'
 import { assertStagingSeedTarget, assertStagingWorkspaceLive, decodeTinybirdWorkspaceId } from './lib/staging-seed-guard.mjs'
-import { FIXTURE_SITE_ID, V1, V2, V3, V4 } from './lib/attribution-fixture.mjs'
+import { FIXTURE_SITE_ID, V1, V2, V3, V4, DEMO_ANCHOR_UTC, buildDemoJourneys, demoConversionEventIds } from './lib/attribution-fixture.mjs'
 
 const CONFIRM = process.argv.includes('--confirm')
 const TARGETING_STAGING = process.argv.includes('--i-am-targeting-staging')
+// --demo seeds the SCREENSHOT dataset (docs/marketing/demo_seed_spec.md) instead of the V1–V4
+// construction fixture. Same guard, same flags. Separate presence pre-check, so the two seeds are
+// independently re-runnable: the V1–V4 markers being present must not block a demo seed (and vice
+// versa). Without --demo this script behaves EXACTLY as before.
+const DEMO = process.argv.includes('--demo')
 
 const pvProps = (tp) => ({
   site_id: FIXTURE_SITE_ID, event_id: tp.event_id,
@@ -74,12 +79,33 @@ const v4ConvProps = (c) => ({
   ingestion_method: 'server_routed', occurred_at: c.ts
 })
 
+// DEMO event property builders — same dualWriteEvent path as V1–V4, so the nightly stitches real
+// touchpoints. `country`/`device_type`/`browser_name` are typed columns (tinybird/adapter/normalize.js)
+// and are what the Leads table's Country column and the Browser/Device panels read.
+const demoPvProps = (tp) => ({
+  site_id: FIXTURE_SITE_ID, event_id: tp.event_id,
+  utm_source: tp.utm_source, utm_medium: tp.utm_medium, utm_campaign: tp.utm_campaign,
+  ai_source: tp.ai_source, referrer: tp.referrer,
+  gclid: tp.gclid, fbclid: tp.fbclid, li_fat_id: tp.li_fat_id,
+  country: tp.country, device_type: tp.device_type, browser_name: tp.browser_name,
+  page_url: `https://www.example.com${tp.path}`, server_timestamp: tp.ts
+})
+const demoConvProps = (j) => ({
+  site_id: FIXTURE_SITE_ID, event_id: j.conversion.event_id,
+  conversion_value: j.conversion.value, currency: 'USD', conversion_type: 'purchase',
+  country: j.touchpoints[0].country,
+  ingestion_method: 'server_routed', occurred_at: j.conversion.ts
+})
+
 // Fixture already present? (idempotent — abort rather than double-seed.)
+// `markers` switches with --demo so the two seeds never block each other.
 async function fixturePresent () {
   const host = process.env.TINYBIRD_HOST
   const token = process.env.TINYBIRD_READ_TOKEN
   if (!host || !token) return null
-  const markers = [V1.conversionEventId, V2.conversionEventId, V3.conversionEventId, ...V4.conversions.map((c) => c.event_id)]
+  const markers = DEMO
+    ? demoConversionEventIds()
+    : [V1.conversionEventId, V2.conversionEventId, V3.conversionEventId, ...V4.conversions.map((c) => c.event_id)]
   const q = `SELECT count() AS c FROM events WHERE site_id='${esc(FIXTURE_SITE_ID)}' AND event_id IN (${markers.map((m) => `'${esc(m)}'`).join(',')}) FORMAT JSON`
   try {
     const res = await fetch(`${host.replace(/\/$/, '')}/v0/sql?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${token}` } })
@@ -90,12 +116,59 @@ async function fixturePresent () {
   } catch { return null }
 }
 
+// DRY RUN for --demo: prints every event that would be written, plus the shape summary the spec's
+// acceptance criteria are stated in. Touches nothing.
+function dryRunDemo () {
+  const journeys = buildDemoJourneys()
+  console.log(`DRY RUN --demo (no --confirm) — nothing written. Demo window anchor = ${DEMO_ANCHOR_UTC} (day 0).`)
+  console.log('Would seed into ST_Staging:')
+  let pv = 0; let conv = 0
+  for (const j of journeys) {
+    for (const tp of j.touchpoints) { console.log(`  $pageview   ${j.visitor} @ ${tp.ts}  ${JSON.stringify(demoPvProps(tp))}`); pv++ }
+    if (j.conversion) { console.log(`  $conversion ${j.visitor} @ ${j.conversion.ts}  ${JSON.stringify(demoConvProps(j))}`); conv++ }
+  }
+
+  // Shape summary — the spec's acceptance criteria, computed from the plan (not asserted by hand).
+  const converting = journeys.filter((j) => j.conversion)
+  const withAi = journeys.filter((j) => j.touchpoints.some((t) => t.ai_source))
+  const aiSources = [...new Set(journeys.flatMap((j) => j.touchpoints.map((t) => t.ai_source).filter(Boolean)))]
+  const firstPreset = (j) => j.touchpoints[0].preset
+  const BUCKETS = {
+    ai_chatgpt: 'AI', ai_perplexity: 'AI', ai_claude: 'AI', ai_gemini: 'AI',
+    paid_search: 'Paid Search', paid_brand: 'Paid Search',
+    paid_social: 'Paid Social', paid_li: 'Paid Social',
+    organic: 'Organic', organic_bing: 'Organic',
+    direct: 'Direct', referral: 'Referral/Email', email: 'Referral/Email'
+  }
+  const bucket = (p) => BUCKETS[p] || `?${p}`
+  const mix = {}
+  for (const j of journeys) { const b = bucket(firstPreset(j)); mix[b] = (mix[b] || 0) + 1 }
+  const revenue = converting.reduce((s, j) => s + j.conversion.value, 0)
+  const allTs = journeys.flatMap((j) => j.touchpoints.map((t) => t.ts)).sort()
+  const hero1 = journeys.find((j) => j.visitor.endsWith('h1_hero'))
+
+  console.log('\n── SHAPE (computed from the plan) ──')
+  console.log(`  visitors=${journeys.length}  converting=${converting.length}  non-converting=${journeys.length - converting.length}`)
+  console.log(`  events: ${pv} $pageview + ${conv} $conversion = ${pv + conv}`)
+  console.log(`  first-touch channel mix: ${Object.entries(mix).map(([k, v]) => `${k} ${v} (${Math.round(v / journeys.length * 100)}%)`).join(' · ')}`)
+  console.log(`  journeys with an AI touch: ${withAi.length}/${journeys.length} (${Math.round(withAi.length / journeys.length * 100)}%, spec floor 30%)`)
+  console.log(`  distinct AI sources: ${aiSources.length} — ${aiSources.join(', ')}`)
+  const depths = (arr) => `${Math.min(...arr.map((j) => j.touchpoints.length))}–${Math.max(...arr.map((j) => j.touchpoints.length))}`
+  console.log(`  touchpoint depth: converting ${depths(converting)} · non-converting ${depths(journeys.filter((j) => !j.conversion))} (single-touch = bounces, all non-converting by design)`)
+  console.log(`  revenue total=$${revenue}  values=${[...new Set(converting.map((j) => j.conversion.value))].sort((a, b) => a - b).join(', ')}`)
+  console.log(`  window: ${allTs[0]} → ${allTs[allTs.length - 1]} (${Math.round((new Date(allTs[allTs.length - 1]) - new Date(allTs[0])) / 86400000)} days)`)
+  console.log(`  HERO-1: ${hero1.visitor} — ${hero1.touchpoints.length} touches, first=${hero1.touchpoints[0].ai_source}, $${hero1.conversion.value}`)
+  console.log('\nWrite with: node scripts/seed-attribution-fixture.mjs --demo --confirm --i-am-targeting-staging')
+  console.log('Then run the nightly against staging so touchpoints stitch.')
+}
+
 async function main () {
   const host = process.env.TINYBIRD_HOST
   const workspaceId = decodeTinybirdWorkspaceId(process.env.TINYBIRD_APPEND_TOKEN)
   console.log(`[seed] write target — workspace=${workspaceId || '<undecodable>'}  SITE_ID=${FIXTURE_SITE_ID}  (--i-am-targeting-staging=${TARGETING_STAGING})`)
 
   if (!CONFIRM) {
+    if (DEMO) return dryRunDemo()
     console.log('DRY RUN (no --confirm) — nothing written. Would seed into ST_Staging:')
     V1.touchpoints.forEach((tp) => console.log(`  V1 $pageview   ${V1.visitor} @ ${tp.ts}  ${JSON.stringify(pvProps(tp))}`))
     console.log(`  V1 $conversion ${V1.visitor} @ ${V1.conversionTs}  ${JSON.stringify(v1ConvProps)}`)
@@ -118,7 +191,24 @@ async function main () {
 
   const present = await fixturePresent()
   if (present === null) { console.error('ABORT (fail-closed): could not verify ST_Staging — refusing to seed without a clean pre-check.'); process.exit(2) }
-  if (present > 0) { console.error(`ABORT: fixture already present (${present} of the 2 marker conversions exist). No double-seed.`); process.exit(2) }
+  if (present > 0) { console.error(`ABORT: ${DEMO ? 'demo dataset' : 'fixture'} already present (${present} marker conversion(s) exist). No double-seed.`); process.exit(2) }
+
+  if (DEMO) {
+    const journeys = buildDemoJourneys()
+    console.log(`pre-check clear. Seeding the DEMO dataset (${journeys.length} visitors, anchor ${DEMO_ANCHOR_UTC})...`)
+    initTinybirdDualWrite()
+    let pv = 0; let conv = 0
+    for (const j of journeys) {
+      // Touchpoints FIRST, then the conversion — replay order matters: the nightly stitches the chain
+      // that precedes the conversion. Never an attributed_conversions INSERT.
+      for (const tp of j.touchpoints) { dualWriteEvent({ distinctId: j.visitor, event: '$pageview', timestamp: tp.ts, properties: demoPvProps(tp) }); pv++ }
+      if (j.conversion) { dualWriteEvent({ distinctId: j.visitor, event: '$conversion', timestamp: j.conversion.ts, properties: demoConvProps(j) }); conv++ }
+    }
+    const db = __getDualWriteBatcher(); if (db) await db.flush()
+    console.log(`SEEDED DEMO — ${journeys.length} visitors, ${pv} pageviews, ${conv} conversions. Run the nightly against staging so touchpoints stitch, then verify by distinct_id.`)
+    return
+  }
+
   console.log('pre-check clear. Seeding the construction fixture...')
 
   initTinybirdDualWrite()
