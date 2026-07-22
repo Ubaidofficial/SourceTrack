@@ -90,6 +90,19 @@ const METRICS = [
   { key: 'conversion_sessions', label: 'Conversion Sessions', format: (v) => v.toLocaleString(), group: 'Session', desc: 'Sessions that contained at least one conversion event. Derived on read from pageview + conversion events. Computed on read — not materialized.' }
 ]
 
+// The Report Builder's opening view. MUST be a metric the server will actually serve: the previous
+// default was 'sessions' ("Unique Visitors"), which is in GATED_METRICS, so every user's first load
+// hit a 422 and — after React Query's retry backoff — a "Temporarily unavailable" panel. The same
+// component already DISABLES gated metrics in its picker, so the initial state contradicted the UI.
+// Derived from metricGateReason (the same gate the picker uses) rather than hardcoded, so the
+// default can never silently drift back onto a gated metric if GATED_METRICS changes.
+const PREFERRED_DEFAULT_METRICS = ['conversions', 'revenue', 'leads']
+export const DEFAULT_METRIC =
+  PREFERRED_DEFAULT_METRICS.find((k) => !metricGateReason(k)) ||
+  METRICS.map((m) => m.key).find((k) => !metricGateReason(k)) ||
+  'conversions'
+
+
 const CHART_TYPES = [
   { key: 'bar', label: 'Bar' },
   { key: 'line', label: 'Line' },
@@ -451,8 +464,8 @@ export default function ReportBuilder() {
   const [reportName, setReportName] = useState('')
   const [model, setModel] = useState('first_touch')
   const [groupBy, setGroupBy] = useState('channel')
-  const [metric, setMetric] = useState('sessions')
-  const [selectedMetrics, setSelectedMetrics] = useState(['sessions'])
+  const [metric, setMetric] = useState(DEFAULT_METRIC)
+  const [selectedMetrics, setSelectedMetrics] = useState([DEFAULT_METRIC])
 
   const toggleMetric = (key) => {
     setSelectedMetrics(prev =>

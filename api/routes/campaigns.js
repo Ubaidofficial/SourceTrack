@@ -284,12 +284,18 @@ async function getCampaignsData(req) {
       }
     }),
     kpis: {
-      total_revenue: totalRevenue,
-      total_conversions: totalConversions,
-      total_leads: totalLeads,
-      total_visits: totalVisits,
-      active_channels: activeChannels,
-      avg_value: avgValue,
+      // §6: when the analytics legs failed, these are computed from EMPTY arrays — that is "no
+      // data", not zero. Emitting 0 put literal 0 tiles beside the "temporarily unavailable"
+      // banner, which is exactly the fake zero the rule exists to prevent. null means "unknown",
+      // so every consumer renders an empty state instead of inventing a number.
+      // `total_spend` is deliberately NOT nulled: it comes from the Supabase campaign_costs read,
+      // which is independent of the Tinybird analytics legs and stays truthful when they fail.
+      total_revenue: analyticsAvailable ? totalRevenue : null,
+      total_conversions: analyticsAvailable ? totalConversions : null,
+      total_leads: analyticsAvailable ? totalLeads : null,
+      total_visits: analyticsAvailable ? totalVisits : null,
+      active_channels: analyticsAvailable ? activeChannels : null,
+      avg_value: analyticsAvailable ? avgValue : null,
       total_spend: totalSpend,
       avg_roas: (() => {
         if (overallCurrencySummary.status !== 'ok') return null
