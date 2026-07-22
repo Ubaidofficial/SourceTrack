@@ -127,6 +127,10 @@ This is a multi-tenant SaaS handling other companies' customer + revenue data. A
 - **Idempotency on all ingestion** (not just Stripe). Any endpoint ingesting events/conversions/revenue must be idempotent: claim the idempotency key **after** the write succeeds, so a retry can't double-count or drop.
 - **Cookieless identity is a security boundary, not only privacy.** Never introduce cross-site identifiers, third-party storage, or fingerprinting to "improve" matching. First-party, cookieless only.
 - **Agents never trigger live Stripe writes.** Billing/refund/subscription changes go through reviewed code or the human — never an agent-initiated Stripe MCP/API write. Live-money actions are human-gated, same class as `auth.users` (§0).
+- **New PII store ⇒ both GDPR paths, same PR.** Any PR that creates or adds a PII-bearing column/table MUST add that table to **both** `/gdpr/visitor` (Art. 17 erasure) **and** `/gdpr/subject` (Art. 15 access) in the **same PR**. A PII store outside the erasure/access path is a compliance defect, not a follow-up. **Reviewer checklist: new PII table → is it in both GDPR paths?**
+  - Match on the key the rows **actually** use, not the one the column is named after. `lead_qualifications.visitor_id` and `subscription_identity.anonymous_id` both hold a `distinct_id`; erasure matched `anonymous_id` and therefore matched **zero rows** while answering *"has been erased"* (fixed in #371, logged as a KI in #370).
+  - **An erasure that deletes nothing must never report success.** Count rows affected (`{ count: 'exact' }`) and let the count — never a status enum — decide what the response may claim. The false-success response is what hid two whole tables sitting outside erasure for months.
+  - Art. 15 access must disclose **exactly** what Art. 17 erasure removes. If the two lists ever diverge, one of them is lying.
 
 ---
 
