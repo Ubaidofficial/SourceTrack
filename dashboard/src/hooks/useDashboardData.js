@@ -138,6 +138,20 @@ export function useDashboardData() {
   })
   const recentActivity = recentActivityQuery?.data ?? recentActivityQuery ?? null
 
+  // Recent Conversions list. Same store (Supabase attributed_conversions) and same window
+  // (days=timeRange) as the `totalConversions` header count from /dashboard/overview, so the
+  // count and the list cannot disagree. Deliberately NOT recentActivity: that is a fixed
+  // 30-MINUTE Tinybird live feed, which disagreed with a range-scoped header by construction.
+  const { data: recentConversionsQuery } = useQuery({
+    queryKey: ['recent-conversions', site?.site_key, timeRange],
+    queryFn: async () => {
+      if (!site?.site_key) return null
+      return fetchApi(`/analytics/recent-conversions?site_key=${encodeURIComponent(site.site_key)}&days=${timeRange}`)
+    },
+    enabled: !!site?.site_key && !previewMode,
+  })
+  const recentConversions = recentConversionsQuery?.data ?? null
+
   useEffect(() => {
     if (overview) setLastRefresh(new Date())
   }, [overview])
@@ -270,7 +284,7 @@ export function useDashboardData() {
     timeRange, setTimeRange, liveCount, freshnessLabel, handleExport,
     isLoading, isError, error, refetch,
     // raw data
-    overview, analyticsSummary, recentActivity, dashboardReports,
+    overview, analyticsSummary, recentActivity, recentConversions, dashboardReports,
     // derived
     kpis, totalRevenue, totalConversions, totalLeads, leadsTracked, totalCustomers,
     leadConvRate, customerConvRate, avgValue, revenueDelta, leadsDelta, customersDelta,

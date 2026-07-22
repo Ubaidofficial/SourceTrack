@@ -31,7 +31,7 @@ export default function AttributionPage() {
     site, navigate, previewMode, timeRange, setTimeRange, liveCount, freshnessLabel, handleExport,
     isLoading, isError, error, refetch,
     hasRevenue, isGscConnected, activeResults, topPagesResults, aiSourceRows,
-    channelTrendResults, channelTrendData, chartOpts, convTooltipRows, recentActivity,
+    channelTrendResults, channelTrendData, chartOpts, convTooltipRows, recentConversions,
     totalConversions,
   } = useDashboardData()
 
@@ -52,7 +52,8 @@ export default function AttributionPage() {
     : null
 
   const trendHasData = channelTrendResults.filter(r => safeNumber(r.conversions, 0) > 0).length >= 2
-  const conversionEvents = (recentActivity?.events || []).filter(e => e.event === '$conversion').slice(0, 5)
+  // Already conversions-only and newest-first from the endpoint; no client-side filter or re-sort.
+  const conversionEvents = (recentConversions || []).slice(0, 5)
 
   return (
     <div className="st-container space-y-6">
@@ -243,10 +244,10 @@ export default function AttributionPage() {
             ) : (
               <DashboardTable
                 columns={[
-                  { key: 'source', label: 'Source', render: (r) => <SourceChip source={r.referrer || r.utm_source || 'Direct'} /> },
-                  { key: 'event', label: 'Event', render: (r) => r.event === '$conversion' ? 'Conversion' : r.event },
+                  { key: 'source', label: 'Source', render: (r) => <SourceChip source={r.first_touch_source || 'Direct'} /> },
+                  { key: 'event', label: 'Event', render: (r) => r.conversion_type || 'Conversion' },
                   { key: 'value', label: 'Value', render: (r) => safeNumber(r.conversion_value, 0) > 0 ? `$${safeNumber(r.conversion_value, 0).toFixed(2)}` : '—' },
-                  { key: 'time', label: 'Time', render: (r) => new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
+                  { key: 'time', label: 'Time', render: (r) => new Date(r.conversion_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
                   { key: 'action', label: '', render: (r) => (
                     r.visitor_id ? (
                       <button onClick={() => setJourneyLead(r)} className="text-xs text-st-black dark:text-dark-primary font-semibold hover:underline">
