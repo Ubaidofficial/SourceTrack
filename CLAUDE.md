@@ -181,7 +181,7 @@ Plus:
 
 ## 10. Verification Principles
 
-- **Design doc = intent, not current state.** The design spec (`sourcetrack_design_complete_v1.md`) and any roadmap describe what's *meant* to exist. Verify against the **fetched remote ref** (`git fetch`; `git show origin/main:<file>` / `git grep` on the fetched ref) — local working-tree reads can be stale.
+- **Design doc = intent, not current state.** The design spec (`docs/design/design.md`) and any roadmap describe what's *meant* to exist. Verify against the **fetched remote ref** (`git fetch`; `git show origin/main:<file>` / `git grep` on the fetched ref) — local working-tree reads can be stale.
 - **Only GREEN, prod-verified, with-real-data is "done"** or marketable. Test/QA/seed data ≠ proof. Cross-reference site IDs against known test/seed sites before concluding real-customer impact.
 - **Blast-radius first** for any attribution-semantics change: verify the real data path and who's affected on prod before greenlighting.
 - **Real-env only:** verify on staging/prod URLs — **never localhost.** A localhost pass proves nothing about production.
@@ -214,7 +214,9 @@ Plus:
 - Don't surface V1.1/V2 UI without a feature flag and explicit go-ahead.
 - Honor the design spec's §26 prohibited-elements list (no command palette, no fake AI predictions, no fake revenue/cost/zeros, no rank tracker, no live map in V1, etc.).
 
-**Authority order (when sources conflict):** `SCOPE_LOCKED.md` wins all scope conflicts → then `SECURITY_FINDINGS.md` → then `sourcetrack_design_complete_v1.md` → then this file. If two docs disagree on scope, the higher-authority doc wins; don't silently reconcile — surface the conflict.
+**Authority order (when sources conflict):** `docs/design/design.md` **§0 (Scope Gate)** wins all scope conflicts → then this file. If two docs disagree on scope, the higher-authority doc wins; don't silently reconcile — surface the conflict.
+
+> Until 2026-07-22 this order had three tiers above the design spec, each naming a file that **had never existed in this repo's history** (verified via `git log --all --diff-filter=A`) — so "defer to the higher-authority doc" silently fell through to this file every time. Those tiers were **dropped, not repointed to a guess.** Every tier above now names a file you can open; if you add one, verify it exists first.
 
 ---
 

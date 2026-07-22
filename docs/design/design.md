@@ -21,6 +21,13 @@ This version expands the prior V1.1 design system with the missing product surfa
 - Updated V1 customer navigation to reflect the current app structure while preserving scope gates
 - Updated required screen inventory for Stitch and implementation planning
 
+## 0.2 V1.3 Change Log
+
+- v1.3: website copy/positioning/SEO now owned by `docs/marketing/`; §29 defers.
+- v1.3: §26 gains the lead-intelligence / enrichment prohibitions (§26.1), carried from the retired
+  `docs/marketing/seo_content_backlog.md` — this doc's §0 Scope Gate is now the named scope authority
+  in `CLAUDE.md` / `AGENTS.md`.
+
 ---
 
 ## 0. Read First - Scope Gate
@@ -130,6 +137,8 @@ SourceTrack has two major pillars:
 - Minimal, not empty
 - Premium, not decorative
 - Founder-readable, not analyst-only
+
+Copy voice = practitioner specificity, not hype — see the voice rule in `docs/SourceTrack_GTM.md`.
 
 ### 2.2 Visual target
 
@@ -2531,6 +2540,44 @@ Remove from active V1 UI:
 - URL inspection
 - live map
 
+### 26.1 Lead intelligence & enrichment — not built, not planned pre-paid-beta
+
+Carried from the retired `docs/marketing/seo_content_backlog.md` on its consolidation into
+`docs/marketing/`. These are a **product-scope + privacy** rule, not a UI-removal list: do not build
+them, and do not write website copy that implies them.
+
+- company reveal / IP enrichment
+- contact enrichment
+- prospect database
+- target account lists
+- CRM account intelligence
+- technographic / firmographic enrichment
+- enrichment APIs
+- sales-intelligence suite
+- audience builder
+- automated sales workflows / sales outreach automation
+- browser extension
+- native Salesforce integration
+- production HubSpot sync
+- production Google Ads / Meta native sync
+- agency white-label public reporting
+
+*(Already prohibited above and deliberately not repeated here: predictive score, conversion
+probability, LLM analyzer, CRM Profile / Assign to Sales / Sync to CRM, public sharing, New Campaign /
+ad campaign actions.)*
+
+**Product rule:** any future lead-quality feature must use **first-party SourceTrack data only**,
+unless a separate privacy, legal, vendor, accuracy, and pricing review is approved first.
+
+**Allowed direction** (first-party only): lead-quality insights · journey summaries · source-quality
+explanations · campaign-quality notes · conversion-path summaries · simple qualification signals
+derived solely from captured SourceTrack data.
+
+Copy consequence — safe: *"See which sources bring qualified leads."* Unsafe: *"Reveal anonymous
+companies." · "Enrich every lead with contact data." · "Score leads automatically with AI." ·
+"Identify your ideal customer profiles automatically."* The copy-facing form of this rule is
+`docs/SourceTrack_GTM.md` §5.1; this section is the scope-facing form.
+
 ---
 
 ## 27. Final Design Approval Checklist
@@ -2589,13 +2636,8 @@ The public website must sell SourceTrack within five seconds without looking lik
 
 ### 29.1 Website positioning
 
-Primary message:
-
-> Know which sources actually make you money.
-
-Supporting message:
-
-> Track leads, revenue, campaigns, SEO pages, and AI referrals without a heavy analytics setup.
+Website positioning, hero copy, and voice are owned by `docs/SourceTrack_GTM.md` (canonical) and
+`docs/marketing/website_seo_plan.md`. Do not maintain a competing hero here.
 
 ### 29.2 Website visual direction
 
