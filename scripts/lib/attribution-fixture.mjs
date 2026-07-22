@@ -225,6 +225,17 @@ export const DEMO_TOUCH_PRESETS = {
 // First-touch channel mix across the 45 visitors — Organic 14 (31%) · Paid Search 9 (20%) ·
 // Paid Social 7 (16%) · AI 7 (16%) · Direct 4 (9%) · Referral+Email 4 (9%). 16 journeys carry an AI
 // touch somewhere (36% — spec floor is 30%).
+//
+// LAST-touch shape is deliberate and split, because both demo stories have to survive:
+//   - 12 campaign-first converters END on their own campaign touch (clicked the ad, came back,
+//     clicked again, converted). These are what give Campaigns real last-touch revenue — the
+//     Campaigns page sends model=last_touch, which reads the conversion's OWN utm_campaign
+//     (flexible_report_campaign_by_site.pipe:54-59). Every converter returning direct meant every
+//     campaign bucketed to 'unknown'.
+//   - The AI/organic/direct-first converters KEEP their direct last touch. That is the
+//     dark-traffic stitch (HERO-1: "the sale logged as Direct actually came from ChatGPT") and
+//     must not be reshaped away.
+// Reshaping moved PATHS only — no conversion value changed, so total stays $6,616 over 35.
 export const DEMO_PLAN = [
   // ── HERO-1 — the money shot. ChatGPT first touch → $2,000 annual. first_touch_source MUST be
   // 'chatgpt.com' (no utm_source, no gclid → derived_source falls to the referrer hostname).
@@ -263,23 +274,23 @@ export const DEMO_PLAN = [
   ['org_14', [['organic', 4, '/product'], ['direct', 2, '/pricing']], 99, 'SE', 'desktop', 'Chrome'],
 
   // ── Paid Search-first (9)
-  ['ps_01', [['paid_search', 27, '/marketing-attribution-software'], ['direct', 24, '/pricing']], 149, 'US', 'desktop', 'Chrome'],
-  ['ps_02', [['paid_search', 24, '/marketing-attribution-software'], ['organic', 20, '/product'], ['direct', 19, '/pricing']], 249, 'US', 'desktop', 'Chrome'],
-  ['ps_03', [['paid_brand', 22, '/'], ['direct', 20, '/pricing']], 49, 'GB', 'mobile', 'Chrome'],
+  ['ps_01', [['paid_search', 27, '/marketing-attribution-software'], ['paid_search', 24, '/pricing']], 149, 'US', 'desktop', 'Chrome'],
+  ['ps_02', [['paid_search', 24, '/marketing-attribution-software'], ['organic', 20, '/product'], ['paid_search', 19, '/pricing']], 249, 'US', 'desktop', 'Chrome'],
+  ['ps_03', [['paid_brand', 22, '/'], ['paid_brand', 20, '/pricing']], 49, 'GB', 'mobile', 'Chrome'],
   ['ps_04', [['paid_search', 19, '/marketing-attribution-software']], null, 'US', 'desktop', 'Edge'],
   ['ps_05', [['paid_search', 17, '/product'], ['ai_chatgpt', 15, '/blog/revenue-attribution'], ['direct', 14, '/pricing']], 249, 'CA', 'desktop', 'Chrome'],
-  ['ps_06', [['paid_brand', 14, '/'], ['organic', 11, '/product'], ['direct', 9, '/pricing']], 99, 'US', 'desktop', 'Chrome'],
-  ['ps_07', [['paid_search', 12, '/marketing-attribution-software'], ['direct', 9, '/pricing']], 149, 'DE', 'desktop', 'Firefox'],
+  ['ps_06', [['paid_brand', 14, '/'], ['organic', 11, '/product'], ['paid_brand', 9, '/pricing']], 99, 'US', 'desktop', 'Chrome'],
+  ['ps_07', [['paid_search', 12, '/marketing-attribution-software'], ['paid_search', 9, '/pricing']], 149, 'DE', 'desktop', 'Firefox'],
   ['ps_08', [['paid_search', 8, '/product']], null, 'US', 'mobile', 'Chrome'],
-  ['ps_09', [['paid_brand', 5, '/'], ['direct', 3, '/pricing']], 49, 'US', 'desktop', 'Chrome'],
+  ['ps_09', [['paid_brand', 5, '/'], ['paid_brand', 3, '/pricing']], 49, 'US', 'desktop', 'Chrome'],
 
   // ── Paid Social-first (7)
-  ['psoc_01', [['paid_social', 26, '/'], ['organic', 22, '/product'], ['direct', 21, '/pricing']], 99, 'US', 'mobile', 'Chrome'],
-  ['psoc_02', [['paid_li', 23, '/use-cases/saas'], ['direct', 20, '/pricing']], 249, 'US', 'desktop', 'Chrome'],
+  ['psoc_01', [['paid_social', 26, '/'], ['organic', 22, '/product'], ['paid_social', 21, '/pricing']], 99, 'US', 'mobile', 'Chrome'],
+  ['psoc_02', [['paid_li', 23, '/use-cases/saas'], ['paid_li', 20, '/pricing']], 249, 'US', 'desktop', 'Chrome'],
   ['psoc_03', [['paid_social', 20, '/'], ['ai_claude', 18, '/product'], ['direct', 16, '/pricing']], 149, 'NL', 'desktop', 'Chrome'],
   ['psoc_04', [['paid_li', 16, '/use-cases/saas']], null, 'US', 'desktop', 'Chrome'],
-  ['psoc_05', [['paid_social', 13, '/'], ['direct', 11, '/pricing']], 49, 'MX', 'mobile', 'Chrome'],
-  ['psoc_06', [['paid_li', 10, '/use-cases/agencies'], ['organic', 7, '/product'], ['direct', 6, '/pricing']], 99, 'GB', 'desktop', 'Safari'],
+  ['psoc_05', [['paid_social', 13, '/'], ['paid_social', 11, '/pricing']], 49, 'MX', 'mobile', 'Chrome'],
+  ['psoc_06', [['paid_li', 10, '/use-cases/agencies'], ['organic', 7, '/product'], ['paid_li', 6, '/pricing']], 99, 'GB', 'desktop', 'Safari'],
   ['psoc_07', [['paid_social', 7, '/']], null, 'US', 'mobile', 'Safari'],
 
   // ── Direct-first (4)
@@ -291,8 +302,8 @@ export const DEMO_PLAN = [
   // ── Referral + Email-first (4)
   ['ref_01', [['referral', 28, '/blog/revenue-attribution'], ['organic', 25, '/product'], ['direct', 23, '/pricing']], 249, 'US', 'desktop', 'Firefox'],
   ['ref_02', [['referral', 17, '/blog/cookieless-attribution']], null, 'US', 'desktop', 'Chrome'],
-  ['eml_01', [['email', 15, '/product'], ['direct', 12, '/pricing']], 99, 'US', 'desktop', 'Chrome'],
-  ['eml_02', [['email', 9, '/blog/multi-touch-attribution-models'], ['organic', 6, '/product'], ['direct', 4, '/pricing']], 149, 'CA', 'desktop', 'Chrome']
+  ['eml_01', [['email', 15, '/product'], ['email', 12, '/pricing']], 99, 'US', 'desktop', 'Chrome'],
+  ['eml_02', [['email', 9, '/blog/multi-touch-attribution-models'], ['organic', 6, '/product'], ['email', 4, '/pricing']], 149, 'CA', 'desktop', 'Chrome']
 ]
 
 // Deterministic timestamp: `daysBack` before DEMO_ANCHOR_UTC, at a fixed spread-out hour.

@@ -94,10 +94,31 @@ const demoPvProps = (tp) => ({
   country: tp.country, device_type: tp.device_type, browser_name: tp.browser_name,
   page_url: `https://www.example.com${tp.path}`, server_timestamp: tp.ts
 })
+// derived_source, mirroring nightly-attribution.js:799 exactly:
+// utm_source || gclid || referrer hostname (www-stripped) || 'direct'. This is what makes HERO-1
+// resolve to 'chatgpt.com' (no utm_source, no gclid → falls through to the referrer hostname).
+const demoDerivedSource = (tp) =>
+  tp.utm_source ||
+  tp.gclid ||
+  (tp.referrer ? (() => { try { return new URL(tp.referrer).hostname.replace('www.', '') } catch (_e) { return null } })() : null) ||
+  'direct'
+
+// A real $conversion carries BOTH the current page's utm_* (tracker.cookieless.js:115-127
+// utmFields) and a first-touch block (:95-110 deriveFirstTouch). The demo conversion events
+// carried neither, which bucketed every campaign to 'unknown' and — once the flexible_report
+// pipes deploy — would bucket ALL demo revenue to 'direct' on the source dim
+// (flexible_report_main_by_site.pipe:48 COALESCE(NULLIF(first_touch_source,''),'direct')).
+//   utm_campaign        <- LAST touch  (model=last_touch, the dim the Campaigns page sends)
+//   first_touch_campaign <- FIRST touch (model=first_touch)
+// Both stay null when that touch carried no campaign — a direct/organic last touch genuinely has
+// no campaign, and 'unknown' is the honest bucket for it. Never a filled-in default.
 const demoConvProps = (j) => ({
   site_id: TARGET_SITE_ID, event_id: j.conversion.event_id,
   conversion_value: j.conversion.value, currency: 'USD', conversion_type: 'purchase',
   country: j.touchpoints[0].country,
+  utm_campaign: j.touchpoints[j.touchpoints.length - 1].utm_campaign,
+  first_touch_source: demoDerivedSource(j.touchpoints[0]),
+  first_touch_campaign: j.touchpoints[0].utm_campaign,
   ingestion_method: 'server_routed', occurred_at: j.conversion.ts
 })
 
