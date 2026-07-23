@@ -2561,10 +2561,23 @@ them, and do not write website copy that implies them.
 - production HubSpot sync
 - production Google Ads / Meta native sync
 - agency white-label public reporting
+- CAPI payload attribution enrichment — sending an ad platform (Meta/Google/etc.) our first-touch source, AI-source, journey, or channel, i.e. more than the match/value fields (`event_id`, hashed email, click IDs, value/currency) their own pixel already collects
 
 *(Already prohibited above and deliberately not repeated here: predictive score, conversion
 probability, LLM analyzer, CRM Profile / Assign to Sales / Sync to CRM, public sharing, New Campaign /
 ad campaign actions.)*
+
+**CAPI payload note (2026-07-23).** The senders read only match/value fields; no sender reads
+`first_touch_source`, `ai_source`, `journey`, or `channel` (`props` carries `ai_source` at
+`api/routes/conversion.js:249`, but every formatter drops it at the payload boundary). Enriching the
+payload is prohibited on two grounds: **(a) positioning conflict** — sending Meta *more* than its own
+pixel could collect contradicts the privacy-first/cookieless wedge (PII is redacted on ingest, a
+tested guarantee); and **(b) value is UNVERIFIED** — it is not established that Meta meaningfully uses
+arbitrary `custom_data` for optimization (standard fields drive it; extra keys may be ignored). (b)
+must be verified against Meta's current docs *before* any build; absent that, enrichment trades the
+privacy position for nothing. The sanctioned alternative — invert it and show the customer what the
+platform can't see — is a reporting surface, not a payload change; it is a GTM differentiator idea,
+not a prohibited element, and is recorded in `docs/SourceTrack_GTM.md` §5.2.
 
 **Product rule:** any future lead-quality feature must use **first-party SourceTrack data only**,
 unless a separate privacy, legal, vendor, accuracy, and pricing review is approved first.
