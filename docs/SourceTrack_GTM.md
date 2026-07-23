@@ -192,6 +192,31 @@ These bind **all** marketing copy, page specs, sales decks, security questionnai
 > `docs/design/design.md` **§26.1**, under the Scope Gate that `CLAUDE.md` §12 names as the scope
 > authority. The row above is its copy-facing form; §26.1 is the whole rule.
 
+### 5.2 CAPI: parked scope, and the real differentiator (2026-07-23)
+
+The positioning already says CAPI is **"also,"** not the wedge (§7 truth-safe bundle: *"Headline =
+SEO-revenue + AI-source… CAPI = 'also.'"*). Two decisions from a 2026-07-23 architecture read make
+that concrete. *(There is no separate "CAPI is a proof-point, not a position" guardrail — that line
+is the whole of it; don't cite a section that doesn't exist.)*
+
+**Multi-platform CAPI is PARKED — and stays cheap to park.** The CAPI code is already
+normalized-event + per-platform-formatter shaped: one internal `evt` built at
+`api/routes/conversion.js:447` / `conversion-offline.js:254`, self-contained senders sharing an
+identical `(site, evt)` signature, zero Meta-vs-Google branching in shared code. Adding a platform
+(e.g. TikTok) is a ~35-line sender plus the four-touchpoint lockstep and a `sites` migration (S for
+code, M with migration ceremony — see the `KNOWN_ISSUES` "Dead CAPI senders" checklist). It's
+commodity work (Cometly ships ~10 platforms), we have open launch gates, and because the shape is
+already adapter-clean the option stays cheap indefinitely. **Revisit on customer demand, not
+competitor parity.**
+
+**The differentiator is a comparison surface, NOT a richer payload.** The tempting move — enrich the
+CAPI payload with our attribution signal — is **prohibited** (`design.md` §26.1: positioning conflict
++ unverified value). Invert it instead: don't send attribution *to* the platform, **show the customer
+what the platform can't see.** e.g. *"Meta reports 10 conversions from this campaign. SourceTrack
+shows 4 started on ChatGPT — Meta can't see that, and neither can your pixel."* It uses our unique
+signal, sends the platform nothing extra, **strengthens** the privacy story, and is more compelling
+to a marketer than "our CAPI has extra fields." **V1.1 idea — logged, not built.**
+
 ---
 
 ## 6. ICP
