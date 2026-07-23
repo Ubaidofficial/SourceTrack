@@ -272,6 +272,15 @@ export default function Campaigns() {
   const hasCost = (kpis?.total_spend || 0) > 0
   const analyticsAvailable = overview?.analytics_available !== false
   const analyticsWarning = overview?.warning?.message || null
+  // §6: the Source / Medium column rendered `r.source || 'direct'` / `r.medium || 'none'`, but
+  // /campaigns/overview emits NEITHER field on a row — the campaign dim is served by
+  // flexible_report_campaign_by_site, which returns only (dim_value, metric_value). So EVERY
+  // campaign, including ones whose real touch is google/cpc, was labelled "direct / none": an
+  // invented attribution claim, not a missing value. A REAL per-campaign source/medium needs a
+  // campaign x source two-dim read, and servedReportShape denies every group_by2 shape on the
+  // touch models this route uses (report-config-validation.js rules 6/7/8 all require !group_by2),
+  // so it needs a new pipe first. Until then, show the column only when the rows carry the fields.
+  const hasSourceMedium = rows.some(r => r.source || r.medium)
 
   const dateFrom = overview?.date_from || format(subDays(new Date(), dateRange), 'yyyy-MM-dd')
   const dateTo = overview?.date_to || format(new Date(), 'yyyy-MM-dd')
@@ -739,7 +748,7 @@ export default function Campaigns() {
                     <th className="text-left py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                       {DIMENSIONS.find(d => d.key === activeDim)?.label || 'Name'}
                     </th>
-                    {activeDim === 'campaign' && (
+                    {activeDim === 'campaign' && hasSourceMedium && (
                       <th className="text-left py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                         Source / Medium
                       </th>
@@ -841,7 +850,7 @@ export default function Campaigns() {
                             </div>
                           )}
                         </td>
-                        {activeDim === 'campaign' && (
+                        {activeDim === 'campaign' && hasSourceMedium && (
                           <td className="py-3 px-4 text-xs font-mono text-st-gray dark:text-gray-400">
                             {r.source || 'direct'} / {r.medium || 'none'}
                           </td>
@@ -1024,7 +1033,9 @@ export default function Campaigns() {
                   })()}
                 </div>
                 <p className="text-xs text-st-gray dark:text-gray-400 font-mono mt-0.5">
-                  {selectedCampaign.name} • {selectedCampaign.source || 'direct'} / {selectedCampaign.medium || 'none'}
+                  {selectedCampaign.name}
+                  {(selectedCampaign.source || selectedCampaign.medium) &&
+                    ` • ${selectedCampaign.source || 'direct'} / ${selectedCampaign.medium || 'none'}`}
                 </p>
               </div>
               <button onClick={() => setSelectedCampaign(null)} className="p-1.5 text-st-gray dark:text-gray-400 hover:text-st-black dark:text-dark-primary rounded-lg hover:bg-gray-100">

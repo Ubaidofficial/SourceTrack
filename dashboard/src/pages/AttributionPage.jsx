@@ -32,7 +32,7 @@ export default function AttributionPage() {
     isLoading, isError, error, refetch,
     hasRevenue, isGscConnected, activeResults, topPagesResults, aiSourceRows,
     channelTrendResults, channelTrendData, chartOpts, convTooltipRows, recentConversions,
-    totalConversions,
+    totalConversions, setupIncomplete,
   } = useDashboardData()
 
   // §9.1 one-sentence insight — deterministic, cite-the-rows only (NO LLM narration, §26).
@@ -92,7 +92,7 @@ export default function AttributionPage() {
       ) : (
         <div className="space-y-6">
           {/* Onboarding / Installation Alert Banner */}
-          {!previewMode && site && (!site.last_seen_at || site.onboarding_completed === false) && (
+          {!previewMode && setupIncomplete && (
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               <div className="flex items-start gap-2.5">
                 <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />

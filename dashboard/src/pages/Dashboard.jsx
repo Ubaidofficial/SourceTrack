@@ -70,7 +70,7 @@ export default function Dashboard() {
     models, modelRevenues, revTrendData, channelTrendResults, channelTrendData,
     revTooltipRows, convTooltipRows, chartOpts, hasRevenue, isGscConnected,
     trafficKpis, trafficVisitors, trafficPageviews, trafficSources, trafficTopPages,
-    hasConversions, hasTraffic,
+    hasConversions, hasTraffic, setupIncomplete,
   } = useDashboardData()
 
   // Already conversions-only and newest-first from the endpoint; no client-side filter or re-sort.
@@ -117,7 +117,7 @@ export default function Dashboard() {
       ) : (
         <>
           {/* Onboarding / Installation Alert Banner */}
-          {!isLoading && !previewMode && site && (!site.last_seen_at || site.onboarding_completed === false) && (
+          {!isLoading && !previewMode && setupIncomplete && (
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               <div className="flex items-start gap-2.5">
                 <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />

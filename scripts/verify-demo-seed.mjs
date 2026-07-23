@@ -23,7 +23,10 @@ import { getSupabase } from '../api/lib/supabase.js'
 import { DEMO_SITE_ID, DEMO_VISITOR_PREFIX, buildDemoJourneys, demoConversionEventIds } from './lib/attribution-fixture.mjs'
 
 const HERO1_VISITOR = `${DEMO_VISITOR_PREFIX}h1_hero`
-const AI_SOURCES_EXPECTED = 4
+// CEILING, not a target: the 4 demo AI domains (chatgpt.com, perplexity.ai, claude.ai,
+// gemini.google.com) PLUS the literal 'AI Search' — nightly-attribution.js:872 falls back to the
+// channel name when the AI touch is mid-journey, because that JSONB touchpoint carries source=null.
+const AI_SOURCES_MAX = 5
 
 async function main () {
   const supabase = getSupabase()
@@ -110,7 +113,7 @@ async function main () {
   console.log(`  conversion time-series span: ${spanDays} days`)
   console.log(`  revenue total: $${rows.reduce((s, r) => s + Number(r.conversion_value || 0), 0)}`)
   console.log(`  NOTE: ai_influenced_source is only set when the LAST touch is Direct (dark-traffic stitching).`)
-  console.log(`        AI-source VARIETY for the AI Sources panel reads from events, not this column — expect < ${AI_SOURCES_EXPECTED} here.`)
+  console.log(`        AI-source VARIETY for the AI Sources panel reads from events, not this column — expect <= ${AI_SOURCES_MAX} here.`)
 
   if (fails.length === 0) {
     console.log('\n✅ PASS — demo dataset is screenshot-ready: every row has a stitched journey, HERO-1 is intact, and the series has shape.')

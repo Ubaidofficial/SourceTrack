@@ -127,21 +127,12 @@ export function useDashboardData() {
   })
   const liveCount = liveData?.live_visitors ?? 0
 
-  const { data: recentActivityQuery } = useQuery({
-    queryKey: ['recent-activity', site?.site_key],
-    queryFn: async () => {
-      if (!site?.site_key) return null
-      return fetchApi(`/dashboard/recent-activity?site_key=${encodeURIComponent(site.site_key)}`)
-    },
-    enabled: !!site?.site_key && !previewMode,
-    refetchInterval: 30000,
-  })
-  const recentActivity = recentActivityQuery?.data ?? recentActivityQuery ?? null
-
   // Recent Conversions list. Same store (Supabase attributed_conversions) and same window
   // (days=timeRange) as the `totalConversions` header count from /dashboard/overview, so the
-  // count and the list cannot disagree. Deliberately NOT recentActivity: that is a fixed
-  // 30-MINUTE Tinybird live feed, which disagreed with a range-scoped header by construction.
+  // count and the list cannot disagree. Deliberately NOT /dashboard/recent-activity: that is a
+  // fixed 30-MINUTE Tinybird live feed, which disagreed with a range-scoped header by
+  // construction. #368 repointed both panels here, which left the recent-activity query polling
+  // every 30s with no consumer — removed.
   const { data: recentConversionsQuery } = useQuery({
     queryKey: ['recent-conversions', site?.site_key, timeRange],
     queryFn: async () => {
@@ -278,13 +269,24 @@ export function useDashboardData() {
         || topPagesResults.length > 0
         || safeNumber(overview?.kpis?.sessions, 0) > 0)
 
+  // "Tracking setup incomplete / No events received yet" banner (Dashboard + Attribution).
+  // Derived HERE so the two pages cannot drift. NEITHER flag proves the absence of events:
+  // last_seen_at is stamped ONLY by the live ingestion path (track.js / conversion.js /
+  // analytics.js), so a site whose rows arrived any other way keeps it NULL forever, and
+  // onboarding_completed stays false on a site that tracks fine but never finished the wizard.
+  // Either one alone claimed "No events received yet" over a site with conversions in range.
+  // §6: the DATA decides what the banner may claim, so require no traffic AND no conversions.
+  const setupIncomplete = !!site
+    && (!site.last_seen_at || site.onboarding_completed === false)
+    && !hasTraffic && !hasConversions
+
   return {
     // shell / identity
     user, site, siteLoading, navigate, previewMode, previewSiteName, previewSiteDomain,
     timeRange, setTimeRange, liveCount, freshnessLabel, handleExport,
     isLoading, isError, error, refetch,
     // raw data
-    overview, analyticsSummary, recentActivity, recentConversions, dashboardReports,
+    overview, analyticsSummary, recentConversions, dashboardReports,
     // derived
     kpis, totalRevenue, totalConversions, totalLeads, leadsTracked, totalCustomers,
     leadConvRate, customerConvRate, avgValue, revenueDelta, leadsDelta, customersDelta,
@@ -292,6 +294,6 @@ export function useDashboardData() {
     models, modelRevenues, revTrendData, channelTrendResults, channelTrendData,
     revTooltipRows, convTooltipRows, chartOpts, hasRevenue, isGscConnected,
     trafficKpis, trafficVisitors, trafficPageviews, trafficSources, trafficTopPages,
-    hasConversions, hasTraffic,
+    hasConversions, hasTraffic, setupIncomplete,
   }
 }
