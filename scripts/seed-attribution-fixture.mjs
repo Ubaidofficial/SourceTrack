@@ -24,7 +24,8 @@ import { initTinybirdDualWrite } from '../tinybird/adapter/boot.js'
 import { dualWriteEvent, __getDualWriteBatcher } from '../tinybird/adapter/dual-write.js'
 import { esc } from '../api/lib/utils.js'
 import { assertStagingSeedTarget, assertStagingWorkspaceLive, decodeTinybirdWorkspaceId } from './lib/staging-seed-guard.mjs'
-import { FIXTURE_SITE_ID, DEMO_SITE_ID, V1, V2, V3, V4, DEMO_ANCHOR_UTC, buildDemoJourneys, demoConversionEventIds } from './lib/attribution-fixture.mjs'
+import { FIXTURE_SITE_ID, DEMO_SITE_ID, V1, V2, V3, V4, DEMO_ANCHOR_UTC, buildDemoJourneys, demoConversionEventIds, demoVolunteeredContacts } from './lib/attribution-fixture.mjs'
+import { persistVolunteeredIdentity } from '../api/lib/volunteered-identity.js'
 
 const CONFIRM = process.argv.includes('--confirm')
 const TARGETING_STAGING = process.argv.includes('--i-am-targeting-staging')
@@ -234,7 +235,23 @@ async function main () {
       if (j.conversion) { dualWriteEvent({ distinctId: j.visitor, event: '$conversion', timestamp: j.conversion.ts, properties: demoConvProps(j) }); conv++ }
     }
     const db = __getDualWriteBatcher(); if (db) await db.flush()
-    console.log(`SEEDED DEMO — ${journeys.length} visitors, ${pv} pageviews, ${conv} conversions. Run the nightly against staging so touchpoints stitch, then verify by distinct_id.`)
+
+    // Volunteered identity (V1 Named Contacts) for the converters. Uses the SAME
+    // persistVolunteeredIdentity() the live identify() route calls — so the seed
+    // exercises the real capture code, not a hand-rolled insert. Keyed by
+    // distinct_id = j.visitor, which matches attributed_conversions.distinct_id the
+    // nightly builds. Non-converting demo visitors get NOTHING → they stay "—".
+    // Writes to the Supabase project the current env points at (founder runs with
+    // staging env, same assumption as the Tinybird target guarded above).
+    const contacts = demoVolunteeredContacts()
+    let identityWritten = 0
+    for (const c of contacts) {
+      const r = await persistVolunteeredIdentity({
+        siteId: DEMO_SITE_ID, distinctId: c.visitor, email: c.email, name: c.name, source: 'identify'
+      })
+      if (r.written) identityWritten++
+    }
+    console.log(`SEEDED DEMO — ${journeys.length} visitors, ${pv} pageviews, ${conv} conversions, ${identityWritten}/${contacts.length} volunteered contacts. Run the nightly against staging so touchpoints stitch, then verify by distinct_id.`)
     return
   }
 

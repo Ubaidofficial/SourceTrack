@@ -230,6 +230,18 @@ gdprRouter.delete('/visitor', async (req, res) => {
     if (linkErr) throw linkErr
     supabaseCounts.site_identity_links = linkCount ?? 0
 
+    // volunteered_identity — name/email a visitor VOLUNTARILY submitted via
+    // identify(). Keyed by distinct_id (the subject key). This is the PII store
+    // Named Contacts adds; per CLAUDE.md §6.5 it MUST be erased here in the same
+    // PR that creates it.
+    const { count: viCount, error: viErr } = await supabase
+      .from('volunteered_identity')
+      .delete({ count: 'exact' })
+      .eq('site_id', site.id)
+      .in('distinct_id', subjectIds)
+    if (viErr) throw viErr
+    supabaseCounts.volunteered_identity = viCount ?? 0
+
     const supabaseTotal = Object.values(supabaseCounts).reduce((a, b) => a + b, 0)
 
     // 2. Erase the subject's EVENT data from Tinybird (the sole event store). The
@@ -377,20 +389,30 @@ gdprRouter.get('/subject', async (req, res) => {
       .in('anonymous_id', subjectIds)
     if (subErr) throw subErr
 
+    // volunteered_identity — the name/email the subject volunteered. Art. 15
+    // access MUST disclose exactly what /visitor erases (CLAUDE.md §6.5).
+    const { data: volunteered, error: viErr } = await supabase
+      .from('volunteered_identity')
+      .select('distinct_id, email, name, source, first_seen_at, last_seen_at')
+      .eq('site_id', site.id)
+      .in('distinct_id', subjectIds)
+    if (viErr) throw viErr
+
     return res.json({
       success: true,
       subject: { site_key: site.site_key, visitor_id: anonymous_id, resolved_ids: subjectIds },
       generated_at: new Date().toISOString(),
       // Zero rows across every store is a real answer ("we hold no data") — but it must be
       // stated, not inferred from empty arrays by the reader.
-      has_data: (conversions.length + links.length + quals.length + subs.length) > 0 ||
+      has_data: (conversions.length + links.length + quals.length + subs.length + volunteered.length) > 0 ||
                 Number(events?.count ?? 0) > 0,
       sources: {
         tinybird_events: events,
         attributed_conversions: { count: conversions.length, rows: conversions },
         site_identity_links: { count: links.length, rows: links },
         lead_qualifications: { count: quals.length, rows: quals },
-        subscription_identity: { count: subs.length, rows: subs }
+        subscription_identity: { count: subs.length, rows: subs },
+        volunteered_identity: { count: volunteered.length, rows: volunteered }
       }
     })
   } catch (err) {

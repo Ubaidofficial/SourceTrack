@@ -353,6 +353,64 @@ export function buildDemoJourneys () {
   })
 }
 
+// Volunteered identity for the DEMO converters (V1 Named Contacts).
+// Deterministic name+email per CONVERTING journey, on realistic *.example demo
+// domains. Represents identity a buyer VOLUNTARILY submitted (the Leads Name/Email
+// columns). Non-converting demo visitors return null → they stay anonymous ("—"),
+// which is the correct privacy demonstration. Seeded via the REAL
+// persistVolunteeredIdentity() helper, keyed by distinct_id = j.visitor.
+const DEMO_CONTACTS = {
+  h1_hero:       ['Heidi Osei',        'heidi@sunnydalefoods.example'],
+  h2_seo:        ['Marcus Bianchi',    'marcus@northloop.example'],
+  h4_perplexity: ['Priya Nandakumar',  'priya@brightwave.example'],
+  h4_claude:     ['Tomás Alvarez',     'tomas@harborlight.example'],
+  h4_gemini:     ['Lena Fischer',      'lena@meridianlabs.example'],
+  ai_01:         ['Wei Chen',          'wei@arcadiatech.example'],
+  org_01:        ['Fatima Rahman',     'fatima@cedarworks.example'],
+  org_02:        ['Diego Santos',      'diego@lumenretail.example'],
+  org_03:        ['Ingrid Larsen',     'ingrid@fjordgoods.example'],
+  org_04:        ['Samuel Okoro',      'samuel@vantageapp.example'],
+  org_05:        ['Chloe Dubois',      'chloe@atelierparis.example'],
+  org_07:        ['Ravi Menon',        'ravi@keystonebooks.example'],
+  org_08:        ['Anna Kowalski',     'anna@wroclawtrade.example'],
+  org_10:        ['Pablo Herrera',     'pablo@solmarket.example'],
+  org_11:        ['Grace Thompson',    'grace@willowhome.example'],
+  org_12:        ['Yusuf Demir',       'yusuf@bosphorusco.example'],
+  org_14:        ['Elsa Nyström',      'elsa@nordictable.example'],
+  ps_01:         ['Nathan Brooks',     'nathan@peakgear.example'],
+  ps_02:         ['Sofia Rossi',       'sofia@milanomoda.example'],
+  ps_03:         ['Oliver Hughes',     'oliver@britbrew.example'],
+  ps_05:         ['Amara Nwosu',       'amara@savannaskin.example'],
+  ps_06:         ['Jack Miller',       'jack@frontporch.example'],
+  ps_07:         ['Klaus Werner',      'klaus@bavariabuild.example'],
+  ps_09:         ['Ruby Anderson',     'ruby@coastalcraft.example'],
+  psoc_01:       ['Tara Kapoor',       'tara@lotuswellness.example'],
+  psoc_02:       ['Daniel Kim',        'daniel@seoulstack.example'],
+  psoc_03:       ['Noor Haddad',       'noor@cedardigital.example'],
+  psoc_05:       ['Mateo Ramírez',     'mateo@aztecaeats.example'],
+  psoc_06:       ['Emily Clarke',      'emily@thistlebrand.example'],
+  dir_01:        ['Owen Wright',       'owen@bedrockapp.example'],
+  dir_02:        ['Hannah Scott',      'hannah@maplevine.example'],
+  dir_04:        ['Victor Popescu',    'victor@carpathiaco.example'],
+  ref_01:        ['Isabella Ferrari',  'isabella@veneziaware.example'],
+  eml_01:        ['Leon Hoffmann',     'leon@rheinretail.example'],
+  eml_02:        ['Zoe Bennett',       'zoe@harbourside.example']
+}
+
+// { visitor, name, email } for every converting demo journey. Drives the seeder's
+// volunteered-identity step. Throws if a converter is missing a contact, so the
+// map can never silently drift out of sync with DEMO_PLAN.
+export function demoVolunteeredContacts () {
+  return buildDemoJourneys()
+    .filter((j) => j.conversion)
+    .map((j) => {
+      const suffix = j.visitor.replace(DEMO_VISITOR_PREFIX, '')
+      const contact = DEMO_CONTACTS[suffix]
+      if (!contact) throw new Error(`demoVolunteeredContacts: no contact for converting journey ${suffix}`)
+      return { visitor: j.visitor, name: contact[0], email: contact[1] }
+    })
+}
+
 // Marker conversion ids — the seeder's demo-presence pre-check keys on these (NOT the V1–V4 markers,
 // so the two seeds stay independently re-runnable).
 export function demoConversionEventIds () {

@@ -459,9 +459,10 @@ test('🔴 (h) /visitor deletes from ALL FOUR PII tables, each site-scoped', asy
   const { seq } = installSupabase({ site: ROUTE_SITE, links: [] })
   installEraser(null, 'executed')
   await visitorHandler(visitorReq(), mockRes())
-  // lead_qualifications + subscription_identity were NEVER erased before this fix:
-  // a "completed" erasure left visitor PII in both.
-  for (const t of ['attributed_conversions', 'lead_qualifications', 'subscription_identity', 'site_identity_links']) {
+  // lead_qualifications + subscription_identity were NEVER erased before #371;
+  // volunteered_identity is the PII table Named Contacts adds — it MUST be erased
+  // in the same PR that creates it (CLAUDE.md §6.5).
+  for (const t of ['attributed_conversions', 'lead_qualifications', 'subscription_identity', 'site_identity_links', 'volunteered_identity']) {
     assert.ok(seq.includes(`delete:${t}`), `must erase ${t}`)
   }
 })
@@ -470,7 +471,7 @@ test('(i) /visitor reports the ACTUAL per-table rows affected, not a blanket cla
   t.after(() => { restoreSupabase(); __resetGdprEraseDeps() })
   installSupabase({
     site: ROUTE_SITE, links: [],
-    deleteCounts: { attributed_conversions: 3, lead_qualifications: 1, subscription_identity: 0, site_identity_links: 2 }
+    deleteCounts: { attributed_conversions: 3, lead_qualifications: 1, subscription_identity: 0, site_identity_links: 2, volunteered_identity: 1 }
   })
   installEraser(null, 'executed')
   const res = mockRes()
@@ -478,11 +479,11 @@ test('(i) /visitor reports the ACTUAL per-table rows affected, not a blanket cla
   assert.equal(res.body.success, true)
   assert.equal(res.body.erased, true)
   assert.deepEqual(res.body.rows_affected.supabase, {
-    attributed_conversions: 3, lead_qualifications: 1, subscription_identity: 0, site_identity_links: 2
+    attributed_conversions: 3, lead_qualifications: 1, subscription_identity: 0, site_identity_links: 2, volunteered_identity: 1
   })
-  assert.equal(res.body.rows_affected.supabase_total, 6)
+  assert.equal(res.body.rows_affected.supabase_total, 7)
   assert.equal(res.body.rows_affected.tinybird_total, 6, '3 + 3 across both datasources')
-  assert.match(res.body.message, /6 database row\(s\), 6 event row\(s\)/)
+  assert.match(res.body.message, /7 database row\(s\), 6 event row\(s\)/)
 })
 
 test('🔴 (j) Supabase rows deleted but Tinybird did NOT erase → partial, reports the real count', async (t) => {
