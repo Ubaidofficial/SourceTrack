@@ -6,8 +6,9 @@ import { Chart } from 'react-chartjs-2'
 import { fetchApi } from '../lib/api'
 import { useTheme } from '../contexts/ThemeContext'
 import { Eye, RefreshCw, Copy, Check, BarChart3, Globe, Monitor } from 'lucide-react'
-import { safeNumber } from '../utils/numbers'
+import { safeNumber, fmtMoney } from '../utils/numbers'
 import { flagEmoji, countryName } from '../utils/country'
+import DataRow from '../components/DataRow'
 import { tooltipPlugin, CHART_COLORS } from '../utils/chartTooltip'
 import { SourceIcon, normalizeSource } from '../components/SourceIcon'
 import { useActiveSite } from '../hooks/useActiveSite'
@@ -18,8 +19,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarEleme
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function stripOrigin(url = '') { return url.replace(/^https?:\/\/[^/]+/, '') || '/' }
 
-// Money is EXACT — always 2 decimals, never rounded (§5.2: $999.99 is not "$1,000").
-function fmtMoney(n) { return '$' + safeNumber(n, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+// fmtMoney (§5.2 exact money) moved VERBATIM to utils/numbers.js — imported above, same behavior.
 
 // Lime vertical fill under the visitors line: 18% at the line fading to transparent at
 // the bottom. A Chart.js scriptable backgroundColor (needs chartArea, so it's a function).
@@ -65,34 +65,8 @@ const OS_DOMAIN = {
 function browserDomain(name = '') { return BROWSER_DOMAIN[String(name).toLowerCase().trim()] || null }
 function osDomain(name = '') { return OS_DOMAIN[String(name).toLowerCase().trim()] || null }
 
-// ─── Bar-behind-label row (visitors bar; optional revenue accent bar) ──────────
-function DataRow({ label, count, max, icon, onClick, active, revenue, maxRevenue }) {
-  const n = safeNumber(count, 0)
-  const pct = max > 0 ? (n / max) * 100 : 0
-  const rev = safeNumber(revenue, 0)
-  const revPct = maxRevenue > 0 ? (rev / maxRevenue) * 100 : 0
-  return (
-    <div
-      onClick={onClick}
-      className={`flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 dark:border-dark-border last:border-0 transition-colors ${
-        onClick ? 'cursor-pointer' : ''
-      } ${active ? 'bg-st-lime/5' : 'hover:bg-gray-50 dark:hover:bg-dark-hover'}`}
-    >
-      {icon && <span className="flex-shrink-0 w-4 flex items-center justify-center">{icon}</span>}
-      <div className="flex-1 min-w-0">
-        <span className="text-xs truncate text-st-black dark:text-dark-primary block">{label}</span>
-        <div style={{ height: '2px', width: `${pct.toFixed(1)}%`, background: 'rgba(204,240,63,0.6)', borderRadius: '1px', marginTop: '3px' }} />
-        {rev > 0 && (
-          <div style={{ height: '2px', width: `${revPct.toFixed(1)}%`, background: '#C8F000', borderRadius: '1px', marginTop: '2px' }} />
-        )}
-      </div>
-      <div className="flex-shrink-0 text-right w-20">
-        <span className="text-sm font-medium text-st-black dark:text-dark-primary tabular-nums block">{n.toLocaleString()}</span>
-        {rev > 0 && <span className="text-[10px] text-st-gray dark:text-gray-400 tabular-nums">{fmtMoney(rev)}</span>}
-      </div>
-    </div>
-  )
-}
+// DataRow moved VERBATIM to components/DataRow.jsx (imported above) so the Dashboard's
+// Top Sources / AI Source Performance panels render through the same row, not a second copy.
 
 // ─── Section card (optional internal tabs) ─────────────────────────────────────
 function ListSection({ title, rows, getLabel, getCount, getIcon, onRowClick, isRowActive, emptyText = 'No data yet', tabs, activeTab, onTabChange }) {
