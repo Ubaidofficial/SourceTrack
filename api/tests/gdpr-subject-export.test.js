@@ -152,6 +152,7 @@ function installSupabase (cfg) {
     if (table === 'site_identity_links') return { data: cfg.links ?? [], error: cfg.linkError ?? null }
     if (table === 'lead_qualifications') return { data: cfg.quals ?? [], error: cfg.qualError ?? null }
     if (table === 'subscription_identity') return { data: cfg.subs ?? [], error: cfg.subError ?? null }
+    if (table === 'volunteered_identity') return { data: cfg.volunteered ?? [], error: cfg.volError ?? null }
     return { data: [], error: null }
   }
   // `.or()` is required: the subject key matches distinct_id OR anonymous_id.
@@ -205,6 +206,7 @@ test('(a) /subject WITH events → success bundle contains them; conversion coun
   // Art. 15 access must disclose exactly what Art. 17 erasure removes.
   assert.equal(res.body.sources.lead_qualifications.count, 0)
   assert.equal(res.body.sources.subscription_identity.count, 0)
+  assert.equal(res.body.sources.volunteered_identity.count, 0)
   assert.equal(res.body.has_data, true, 'a subject with rows must be reported as having data')
 })
 
@@ -225,6 +227,24 @@ test('(a2) /subject discloses lead_qualifications + subscription_identity rows w
   assert.equal(res.body.sources.lead_qualifications.rows[0].visitor_id, 'anon-9')
   assert.equal(res.body.sources.subscription_identity.count, 1)
   assert.equal(res.body.sources.subscription_identity.rows[0].stripe_customer_id, 'cus_x')
+})
+
+test('(a3) /subject discloses VOLUNTEERED identity (name/email) when present — Art.15 == Art.17', async (t) => {
+  t.after(() => { restoreSupabase(); __resetGdprExportDeps() })
+  installSupabase({
+    site: ROUTE_SITE,
+    conversions: [{ conversion_event_id: 'c1' }],
+    links: [],
+    volunteered: [{ distinct_id: 'anon-9', email: 'heidi@sunnydale.example', name: 'Heidi Osei', source: 'identify' }]
+  })
+  installReader(okEvents(1))
+  const res = mockRes()
+  await subjectHandler(req(), res)
+  assert.equal(res.statusCode, 200)
+  // The exact PII /visitor erases must be disclosed by /subject — else the two lists diverge.
+  assert.equal(res.body.sources.volunteered_identity.count, 1)
+  assert.equal(res.body.sources.volunteered_identity.rows[0].email, 'heidi@sunnydale.example')
+  assert.equal(res.body.sources.volunteered_identity.rows[0].name, 'Heidi Osei')
 })
 
 test('(b) /subject with NO data → success:true, explicitly empty (NOT a failure shape)', async (t) => {

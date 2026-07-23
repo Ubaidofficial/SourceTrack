@@ -1,4 +1,5 @@
 import { storeIdentityLink } from '../lib/identity-links.js'
+import { persistVolunteeredIdentity } from '../lib/volunteered-identity.js'
 
 /**
  * Validate and normalize email string for hashing.
@@ -139,6 +140,22 @@ export async function identify(req, res) {
     if (user_id && anonymous_id && user_id !== anonymous_id) {
       // Non-blocking storage
       storeIdentityLink(req.site.id, user_id, anonymous_id, 'identify')
+    }
+
+    // Persist VOLUNTEERED identity (V1 Named Contacts). email/name are taken ONLY
+    // from the identify body — a narrow two-field allowlist, validated in the
+    // helper — never the traits blob or arbitrary props. distinct_id == the
+    // anonymous_id the tracker sends, which is the SAME value track.js:352 /
+    // conversion.js:425 store as distinct_id, so this row joins to the visitor's
+    // conversions/leads. Non-blocking, fire-and-forget like the link write above.
+    if (anonymous_id && (typeof rawBody.email === 'string' || typeof rawBody.name === 'string')) {
+      persistVolunteeredIdentity({
+        siteId: req.site.id,
+        distinctId: anonymous_id,
+        email: rawBody.email,
+        name: rawBody.name,
+        source: 'identify'
+      }).catch(err => console.error('[identify] volunteered-identity persist failed:', err?.message || err))
     }
 
     res.status(200).json({ success: true, data: { received: true }, error: null })

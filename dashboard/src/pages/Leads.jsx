@@ -325,6 +325,7 @@ export default function Leads() {
                     />
                   </th>
                   {renderHeader('visitor', 'Visitor')}
+                  <th className="text-left py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Contact</th>
                   {renderHeader('source', 'Source')}
                   <th className="text-left py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">AI Source</th>
                   {renderHeader('event_type', 'Event Type')}
@@ -372,6 +373,20 @@ export default function Leads() {
                         >
                           {shortId}...
                         </button>
+                      </td>
+                      <td className="py-3 px-3">
+                        {(lead.name || lead.email) ? (
+                          <div className="flex flex-col gap-0.5 max-w-[200px]">
+                            {lead.name && (
+                              <span className="text-xs font-medium text-st-black dark:text-gray-200 truncate" title={lead.name}>{lead.name}</span>
+                            )}
+                            {lead.email && (
+                              <span className="text-[11px] text-st-gray dark:text-gray-400 truncate" title={lead.email}>{lead.email}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-st-gray dark:text-gray-500" title="This visitor has not volunteered contact details.">—</span>
+                        )}
                       </td>
                       <td className="py-3 px-3">
                         <div className="flex flex-col gap-0.5">

@@ -198,11 +198,35 @@ router.get('/', validateSiteKey, async (req, res) => {
       }
     })
 
+    // Stitch VOLUNTEERED identity (name/email the visitor submitted via identify()).
+    // Keyed by distinct_id — the SAME id in l.id — so this joins directly. Present
+    // ONLY for visitors who volunteered it; everyone else stays name/email = null,
+    // which the UI renders as "—". Never enriched/looked-up (CLAUDE.md §6, §6.5).
+    const identityMap = {}
+    if (distinctIds.length > 0) {
+      const { data: identities, error: idErr } = await getSupabase()
+        .from('volunteered_identity')
+        .select('distinct_id, email, name')
+        .eq('site_id', siteId)
+        .in('distinct_id', distinctIds)
+      if (idErr) {
+        console.error('Failed to query volunteered_identity:', idErr)
+      } else if (identities) {
+        for (const row of identities) identityMap[row.distinct_id] = row
+      }
+    }
+    leads = leads.map(l => {
+      const v = identityMap[l.id]
+      return { ...l, name: v?.name ?? null, email: v?.email ?? null }
+    })
+
     if (search) {
       leads = leads.filter(l =>
         (l.id && l.id.toLowerCase().includes(search)) ||
         (l.source && l.source.toLowerCase().includes(search)) ||
-        (l.campaign && l.campaign.toLowerCase().includes(search))
+        (l.campaign && l.campaign.toLowerCase().includes(search)) ||
+        (l.name && l.name.toLowerCase().includes(search)) ||
+        (l.email && l.email.toLowerCase().includes(search))
       )
     }
 
