@@ -1313,3 +1313,45 @@ Not fixed — logged. A fix needs to decide the canonical subject key (almost ce
 ### `DEMO_PLAN` header comment documents a fixture shape that does not match what the code builds (2026-07-22, docs-only)
 
 `scripts/lib/attribution-fixture.mjs` header claims *"45 visitors — Organic 14 (31%) … 16 journeys carry an AI touch somewhere (36%)"*. Executing `buildDemoJourneys()` on `origin/main` yields **46 visitors, Organic 15 (33%), 15 AI-touch journeys (33%)**. Pre-existing drift, verified against pristine `origin/main` (not introduced by the reshape in #369, which is exactly neutral on all three). Harmless today — the 30% AI floor still holds and the seeder prints the *computed* shape at run time, so nobody is misled operationally — but the comment is the thing a reader trusts when deciding whether a change broke an invariant. One-line correction whenever convenient.
+
+<!-- ─────────────────────────────────────────────────────────────────────────
+     Session 149 backlog (2026-07-23) — deferred polish + ecom feature gaps.
+     Logged, not fixed. Sessions B (named contacts) + C were live when filed;
+     items that collide with their surface say so.
+     ───────────────────────────────────────────────────────────────────────── -->
+
+### All Leads: "46 shown" vs "TOTAL LEADS 35" reads as a contradiction (2026-07-23, deferred polish)
+
+The All Leads page shows a row count of **46** alongside a **TOTAL LEADS 35** KPI. Both are correct and mean different things — **46 = all visitors** (converters + non-converting browsers), **35 = converters**. With no label distinguishing them they read as a bug. Needs a one-word qualifier on each (e.g. "46 visitors" / "35 converted"). **Deferred:** the fix lands on the same Leads surface as Session B's named-contacts columns; doing it now collides. Log-only until that PR settles.
+
+### Dashboard "Recent Conversions" uses a narrow recent window, not the selected range (2026-07-23, deferred polish)
+
+The Dashboard's Recent Conversions card renders "No conversions in the recent window" even when conversions exist inside the **selected date range**, because it reads a narrow recent window rather than the range picker. Attribution's equivalent card was already widened to the selected range in #368; Dashboard was not. Two fixes are viable: **(a)** widen to the selected range (parity with Attribution's post-#368 behaviour — preferred), or **(b)** relabel the card "last 24h" so the copy matches the narrow window it actually queries. Either is honest; the current state is not. Collides with Session C dashboard work — log-only for now.
+
+### recent-conversions is raw-UTC while /dashboard/overview is tz-aware — non-UTC sites diverge at the window edge (2026-07-23, deferred polish)
+
+`analytics.js:774` (`/analytics/recent-conversions`) computes its window in raw UTC, while `/dashboard/overview` is timezone-aware. For a non-UTC site the two can disagree by up to a day at the range boundary — a conversion can appear in one surface and not the other on the edge day. Already flagged in #368 as the accepted limitation of that PR (the 30-minutes-vs-30-days gulf was the fix; exact tz-boundary parity was explicitly not claimed). Demo site is UTC so it is invisible there. **Fix:** make the recent-conversions window tz-aware like overview. Log-only.
+
+### onboarding gate checks the SELECTED SITE, not the ACCOUNT (2026-07-23, latent, deliberately not fixed in #366)
+
+`onboarding.js:63-67` gates on "is the **selected site** onboarded" rather than "has the **account** onboarded". Latent today, but it bites a user whose first/selected site is un-onboarded while they already have other onboarded sites — they get pushed back into onboarding they have already completed. A correct fix is an auth-gate refactor (account-level onboarding state), which was deliberately out of scope for #366 (that PR fixed silent site-substitution, a different bug). **Log-only** until an onboarding/auth-gate pass is scheduled — not a one-line change.
+
+### 🔴 REFUNDS — LAUNCH GATE for ecom, not a feature request (2026-07-23, correctness defect)
+
+**Promoted from "nice-to-have" to launch gate.** Ecom return rates run 20–30%. With no refund handling, **attributed revenue is systematically OVERSTATED** — the product reports money that was returned as if it were kept. For an ecom customer that is a **§5.1 data-truth violation committed with our own numbers**, the exact class of defect the truth rules exist to prevent — not a missing feature. Already tracked as Phase 7 "money rail + refunds" (**NOT STARTED**). This entry reclassifies it: refunds must land before ecom revenue can be marketed as accurate. Until then, any ecom revenue figure carries an unstated upward bias equal to the return rate.
+
+### V1.1 — new-vs-returning CUSTOMER (not just visitor) + true CAC (2026-07-23, ecom feature gap)
+
+Today we track new/returning **visitors** (§6.1). Ecom needs new/returning **customers**: new-customer revenue and true CAC. A source that only re-converts **existing** customers is worth materially less than one that acquires **new** ones, and current attribution cannot tell them apart — so CAC is not truly computable. **V1.1**, gated; do not surface without a flag and real data. Not a V1 gap, recorded so it is not re-discovered from scratch.
+
+### V1.1 — cold-start / historical backfill (activation risk) (2026-07-23, ecom feature gap)
+
+We are forward-only, so a newly onboarded merchant sees an **empty dashboard for weeks** until data accrues — an activation risk precisely at the moment a new customer is deciding whether to keep the product. **Caveat that shapes the fix:** *orders* can be backfilled (Stripe/Shopify history is queryable), but *journeys* cannot (there were no first-party pageview events before the tracker was installed). So a backfill can seed revenue/customer history but not touch-level attribution — the honest framing is "historical orders, attribution starts now." **V1.1.**
+
+### Deferred boundary (NOT a gap): native Shopify app vs manual-webhook-only V1 (2026-07-23)
+
+V1 is manual-webhook-only for Shopify (§17.6); there is no native Shopify app / one-click install. This is **real ecom acquisition friction** (merchants expect an App Store install), but it is a **deliberate V1 boundary, not a defect**. Revisit when ecom is a proven segment worth the native-app build + review cost. Recorded so the friction is not mistaken for an oversight.
+
+### Explicitly REJECTED as wrong-lane (2026-07-23, scope guard)
+
+Logged so these are not re-proposed as gaps each competitive-analysis pass. **Out of lane** for SourceTrack's attribution-truth positioning: COGS / POAS / true-profit, per-SKU margin analytics, CLV/LTV cohorts, Google Shopping labelizer, ad-creative analytics, multi-market view, agency portal (§11.6), and a native mobile app. These belong to profit-analytics / ad-ops / agency tools — a different product. Rejecting them is a positioning decision, not a backlog; adding any of them would blur the lane, not extend it.
