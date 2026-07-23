@@ -1,6 +1,6 @@
 # Next Session Prompt
 
-_Last updated: **2026-07-21 — Session 145** (13 merges, KI-47…KI-54, two Tinybird prod-safety items). **Start at §0.5 — it supersedes everything below it.** Sections §1–§8 are prior-session reference and several facts there are superseded; §0.5 lists the corrections explicitly._
+_Last updated: **2026-07-23 — Session 149** (sessions 146–149 consolidated: 13 PRs `#366`–`#378`, incl. the 🔴 GDPR erasure-key fix #371 and the FK-cascade + rule extension #376; Tinybird deploy #24). **Start at §0.5 — it supersedes everything below it.** Sections §1–§8 are prior-session reference and several facts there are superseded; §0 and §0.5 carry the corrections explicitly._
 
 AI-agent workflow rules are governed by [docs/ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md).
 No AI-agent may commit or push before raw diff review and explicit user approval.
@@ -23,89 +23,61 @@ paste-ready command/dispatch blocks.
 |---|---|
 | **Me (founder, Ubaid)** | Runs **all** merges (`gh pr merge N --squash --admin`), deploys, prod-DB writes, secrets. I paste GitHub/Railway output to you. |
 | **You (Claude Chat)** | Orchestrate, verify, dispatch. Write docs + dispatch prompts as deliverables. **Never write prod code directly.** |
-| **CC (Claude Code)** | Executes in worktree `~/Desktop/trackiq-ccdesktop`, serial. Never self-merges. |
+| **CC (Claude Code)** | ⚠️ **(corrected 2026-07-23)** Executes in **per-session isolated worktrees** (`~/Desktop/trackiq-B`, `-C`, `-C3`, `-D`, …). **Parallel CC sessions run concurrently** — coordinated by **disjoint file sets + no simultaneous staging writes**, NOT serialized in one `ccdesktop` worktree. Never self-merges. |
 | **Antigravity (Gemini)** | Browser/E2E. Never reads `.env`, never queries `auth.users`, never prints raw `site_key`. |
 
-**Your MCP access (corrected 2026-07-20):** read-only **Supabase** (prod `zxjjjsipafojhzkkumvh`, staging `nrsvpwzekfrdrzkoecfk`) + **PostHog** (prod project 416017 only) + **Railway** + **Tinybird** + **GitHub**. Three constraints that each invalidate a class of check: **Tinybird MCP is ST_Staging ONLY** (prod events unreachable); **Railway MCP has NO env-var read tool** (`ENCRYPTION_KEY`/`SLACK_WEBHOOK_URL` checkable only by the founder in the Railway UI); **GitHub MCP returns 404 on the private repo** (PR diffs/file lists NOT MCP-verifiable — route PR checks through the founder's terminal or CC).
+**Your MCP access (corrected 2026-07-23):** read-only **Supabase** (prod `zxjjjsipafojhzkkumvh`, staging `nrsvpwzekfrdrzkoecfk`) + **Railway** + **Tinybird** + **GitHub**. ⚠️ **PostHog MCP is DEAD** — project 416017 was decommissioned/deleted 2026-07-19 (§1); do **not** treat it as an active source (this line previously listed it as live). Three constraints that each invalidate a class of check: **Tinybird MCP is ST_Staging ONLY** (prod events unreachable); **Railway MCP has NO env-var read tool** (`ENCRYPTION_KEY`/`SLACK_WEBHOOK_URL` checkable only by the founder in the Railway UI); **GitHub MCP returns 404 on the private repo** (PR diffs/file lists NOT MCP-verifiable — route PR checks through the founder's terminal or CC).
 
 ---
 
-## 0.5. SESSION 146 HANDOFF (from Session 145, 2026-07-21) — supersedes the Session 145 block
+## 0.5. SESSION 150 HANDOFF (from Session 149, 2026-07-23) — supersedes everything below it
 
-**13 merges shipped 2026-07-21**, all verified as ancestors of `main` (`a3d112d`):
-`cf18c69` api_keys scopes migration · `b3cb043` KI-43 scope enforcement · `12c1b0f` KI-47 filed + FEATURE_MAP:70 corrected · `19c64dd` explain API docs + `/llms.txt` · `06f1ba0` KI-44 zero-row detection · `33d37d6` KI-44/48/49 docs · `f3fed0e` KI-49 PR1 harness repair · `f355679` KI-49 PR2 register + guard · `ab9fc7b` verdicts deterministic · `541c5dc` KI-47 closed + 4 stale docs corrected · `38cccf8` KI-51/52 · `eadab29` boundary contract tests · `a3d112d` KI-53.
+**Sessions 146–149 (2026-07-22 → 07-23) shipped 13 PRs, `#366…#378`**, all verified ancestors of `main` (`306efc1`, #378). The prior §0.5 (the "Session 146 handoff" from Session 145) is **fully superseded**; its still-open items are carried forward at the end of this block. *(Two facts in §0 were also corrected this pass — parallel-CC worktrees and dead-PostHog MCP — see the ⚠️ markers there.)*
 
-**7 new KNOWN_ISSUES entries: KI-47 … KI-53**, plus **KI-54** (Tinybird prod/staging safety) added in this doc pass. *(Note: 7, not 6 — verified by diffing the heading set against `cf18c69~1`.)*
+### SHIPPED (`#366`–`#378`)
 
-### 🔴 READ FIRST — two prod-safety items
+- **#366** active-site desync — `SiteContext` discarded a valid saved selection **and** wrote the substitution back over it; now honors the explicit selection.
+- **#367** §6 fake-zero batch — Leads KPI → "—" + reason; Campaigns `0`-tiles hidden behind the "unavailable" banner instead of shown as measured zeros; Report Builder no longer defaults to the gated `sessions` metric.
+- **#368** recent-conversions repoint — was a fixed 30-min Tinybird ticker sitting beside a 30-day Supabase header; repointed both to one store / one window. Also fixed a latent `visitor_id` mis-keying.
+- **#369** seed reshape — 5 campaigns populated; HERO-1 dark-traffic story protected.
+- **#370** GDPR erasure-key + `DEMO_PLAN`-drift KIs logged.
+- **🔴 #371** GDPR erasure **and** access key fix — `gdpr.js` erased by `anonymous_id` while every row keys on `distinct_id`, so erasure matched **ZERO rows** and still returned "has been erased"; Art. 15 `/subject` had the identical bug (false "we hold no data about you"). Added `lead_qualifications` + `subscription_identity` to erasure, real rows-affected counts, and a **404 on no-match**.
+- **#372** PII-prevention rule — a new PII store must join `/gdpr/visitor` + `/gdpr/subject` in the same PR (CLAUDE.md §6.5 + AGENTS.md §5.5).
+- **#373** named contacts — `volunteered_identity` table, `identify.js` persist, both GDPR paths, Leads Name/Email columns.
+- **#374** polish batch — honest channel labels; false "setup incomplete" banner on 2 pages; **Campaigns source/medium FABRICATION REMOVED** (do **not** re-add invented `direct` / `none` defaults anywhere); 2 dead Report-Builder templates removed; orphan recent-activity query removed.
+- **#375** session-149 backlog → KNOWN_ISSUES (deferred polish + ecom feature gaps).
+- **#376** FK cascade — `volunteered_identity` had no FK to `sites`, so account deletion orphaned real PII; added `ON DELETE CASCADE`. Extended §6.5 to require **all three** GDPR paths (`/visitor`, `/subject`, `/account`).
+- **#377** C3 Leads redesign — merged Visitor/Contact, conditional AI badge (dedupe pure duplicates, **KEEP** the Google/Direct-+-"AI Search" dark-traffic differentiators), flags, "—" for non-converter zeros, column picker, converted-only toggle.
+- **#378** C3 Dashboard + Report Builder — Analytics-parity density, described attribution-model card, chart-type icon row, "display only dates with data" toggle.
 
-1. **Tinybird prod and staging are indistinguishable at the point of use (KI-54).** Test fixtures were written to **PRODUCTION** and deleted. **Both** workspaces carry a token named `dual_write_append` — **STILL OPEN, rename one.** The `.tinyb` cwd hazard is resolved. **`tb --cloud` prints `Running against … Workspace X` on every command — read it.** Three discriminators are in KI-54; note the `de200000` suffix is `…441111`, and the wrong suffix produces a convincing false "this is prod".
-2. **`DEEPSEEK_API_KEY` deleted from all 6 Railway prod services — but CONSOLE REVOCATION IS NOT CONFIRMED.** Deletion ≠ revocation, and the value is in git history. **Revoke in the DeepSeek console.** Safe to do now: `ai-client.js` has **zero code callers** (verified), so nothing breaks (KI-18).
+*(The clean-demo seed prep `#365`, merged 2026-07-22, is the precursor the whole verified state below rests on — so the arc is 14 PRs counting it, 13 in the `#366`–`#378` range.)*
 
-### Corrections to prior guidance — these drove priorities wrong
+### TINYBIRD
 
-- ❌ **"Scale tier unpurchasable" is NOT a launch blocker.** Scale is a **phantom tier**: present in `plan-features.js` (500k pv) and recognised at `billing.js:31/:56` and `Billing.jsx:15/:129`, but advertised **nowhere** (0 matches in `Pricing.jsx` / `PricingCards.jsx`, no upgrade path) and **no Stripe product exists**. Nobody can reach it, so nothing is blocked. Treat as a naming/cleanup question, not revenue.
-- ❌ **Missing `pv_limit` price metadata is not broken** — it falls back correctly via `getPvLimit(plan)` (`billing.js:77`).
-- ❌ **PR C (gen rate-limit + per-site key cap) does NOT depend on the Starter+ decision.** Starter+ should be settled before **1.3 (read REST API)** ships, not before PR C.
-- ❌ **FEATURE_MAP's "campaign pipes are INERT/undeployed" was false** — they are deployed and do serve; corrected this pass.
+**Deployment #24 is live on ST_Staging** — 3 campaign pipes + `privacy_signals` + `multitouch_pageviews_live` + 11 modified. This **cleared the deployment-parity debt** — 2 features were half-wired in prod code.
 
-### Queued, drafted, never dispatched
+### VERIFIED STATE
 
-1. **KI-53 option (a)** — hide unservable Campaigns dimensions. **Trivially correct**; the mechanism already exists (`dashboard/src/lib/reportGating.js`, already used by Report Builder). Ship regardless of (b)/(c).
-2. **`sk-` hyphen scanner fix** — `qa:secrets` has **no pattern for the `sk-` family** (only Stripe's `sk_live_`/`sk_test_` underscore forms). **Verified.** That is why a partial DeepSeek key sat in this file until `#354` redacted it.
-3. **`assertKnownDeps` seam hardening** — built, then deliberately reverted at a 54-file diff. All 18 `__set*Deps` seams silently discard unknown keys. Enabling the guard failed **274 tests** because `queryHog` is a **dead key** (HogQL deleted in D3) still passed by **40 registered test files**. ⚠️ Deleting those lines is behaviour-neutral, but that does **not** prove those 40 tests are meaningful — **spot-check a sample, do not delete blind.**
-4. **`timezone-reconciliation.test.js` split** — see the false-green item below.
-5. **Antigravity UTC-site browser check** — the **only** empirical discriminator between KI-51 and KI-53. The Paris run structurally cannot separate them.
-6. **1.3 read REST API → 1.5 MCP v1.** ⚠️ Do **not** reuse `api/middleware/api-key.js` (KI-42 — dead middleware with a plaintext fallback).
+- Demo site **`de200000-c1ea-4c1e-a000-000000000001`** = **"SourceTrack Demo (clean)"** — **35 converters, $6,616, 5 campaigns, 35 volunteered identities** (identity join verified 35/35).
+- **HERO-1** = Heidi Osei / `heidi@sunnydalefoods.example` / ChatGPT / first_touch=`chatgpt.com`, last_touch=`direct` / **$2,000**.
+- Old polluted site renamed **"SourceTrack Fixture (polluted — do not screenshot)"** (`de200000-babe-…1111`).
+- `volunteered_identity` exists in **staging AND prod**: RLS **on**, **0 policies (default-deny)**, FK cascade `confdeltype='c'` — both verified.
 
-### Test infrastructure — one live false green
+### ⚠️ TRAPS
 
-🔴 **`api/tests/timezone-reconciliation.test.js` IS registered** in `qa:attribution:unit`, prints `SKIPPING` in CI, and is scored **`pass 1, skipped 0`** on every run — it passes while asserting nothing. **Worse than being excluded.** Recommended split: pure boundary maths → a real CI unit test; cross-surface reconciliation → a named integration script **outside `api/tests/`**. Under that split the integration half stays **RED until the pipe exists — which is correct.**
+- **Staging dashboard = `https://sourcetrack-dashboard-staging.up.railway.app/`.** The `-production` URL is **PROD** — do not confuse them.
+- **Tinybird deploys need the `st_staging_deploy` token** — the plain workspace token lacks `WORKSPACE:DEPLOY`.
+- **Browser cache masks fresh deploys** — hard-reload before concluding a change didn't ship.
 
-It also carries a **hardcoded demo password**, present in **7 files** *(corrected: not 5 — `scripts/qa-sources-attribution.mjs` and `scripts/qa-multitouch-counts.mjs` also carry it)*, which `qa:secrets` does **not** flag.
+### NEXT UP
 
-19 files had never run in CI; **15 are now registered**, 4 deliberately excluded (integration tests that early-return without Supabase env), and a registration guard now enforces both directions.
+1. **🔴 REFUNDS — promoted to LAUNCH GATE.** Ecom return rates run 20–30%; with no refund handling, attributed revenue is **OVERSTATED**, a §5.1 truth violation committed with our own data. Phase 7, **NOT STARTED**. (Logged in KNOWN_ISSUES via #375.)
+2. **C4 UI/UX round 2** — Settings 4-tab split (§18; currently 12+ cards in one scroll); Setup & Health per-event status + an events-log stream (Cometly borrows); Attribution density pass; totals rows.
+3. **Tinybird pipe batch** — Leads Browser/Device **and** Campaigns source/medium in one deploy (see the two new KIs below; Campaigns needs a `campaign × source` read, and the current route **422s on `group_by2`**).
 
-### KI-51 / KI-53 state
+### Carried forward — still open from the prior handoff (now tracked in KNOWN_ISSUES / git)
 
-- **KI-51 blockers:** boundary fixture **CLEARED** (permanent, in `ST_Staging`). **`tb --cloud deploy --check` still OPEN** — CC has no Tinybird credentials (verified: no `.tinyb`, no `TB_*`).
-- **Scope is pipes AND the engine:** 8 flex pipes reachable, **6 carry revenue**, none tz-capable; `attribution-engine.js:2397` regex-extracts `_fbFrom`/`_fbTo` from the **UTC** branch and passes no tz and no local bounds.
-- **Regression timeline, all 2026-07-17:** `63761a7` (first gate Campaigns ever had) · `bbd7d6f` (deleted the `pipe=NONE` HogQL fallback — the only non-UTC backend) · `a0b8129` (`flexBreaker`). Dimensions shipped **2026-05-10**. One cutover, two axes → KI-51 (tz) and KI-53 (dimension×model).
-- ⚠️ **Multi-touch already serves `campaign`, `source` AND `medium`** — all four metrics, **not tz-gated**. So KI-53 option (b) is the only route to a working Campaigns page for non-UTC sites without KI-51's blocked pipe work. **But (b) CHANGES THE NUMBERS** — multi-touch and last-touch are different answers. It must be an **explicit user choice, never a silent fallback**, or it is a §5 violation.
-- ⚠️ **DST gap, dated:** `getDateFilterExpr` emits `toDateTime('<date> 00:00:00', tz)` and delegates resolution to ClickHouse. On **Paris 2026-10-25** the string is identical and correct while the resolved instant is **ambiguous**. The fixture is deliberately DST-free. **Real customers hit this in October.**
-- **The new boundary tests do NOT cover:** execution, DST, revenue aggregation/dedup, engine→pipe param wiring, pad sufficiency at extreme offsets.
-
-### Infra / credentials
-
-- **`SLACK_WEBHOOK_URL` is REAL** (founder-verified) on `nightly-attribution`, `sourcetrack-health`, `sourcetrack-dq` — but **set-but-unread on dq**, so DQ failures never reach Slack, and **no caller checks the fetch response**, so a revoked webhook fails silently. This **re-grades KI-46/48** from "no alerting" to **"alerting exists, last hop unverified"**.
-- **Needed-but-absent:** `FRONTEND_URL` on `sourcetrack-email` (falls back to `https://app.sourcetrack.ai`, used 124× — plausible but **UNCONFIRMED**, and that job has never successfully sent); `VITE_LOGODEV_TOKEN` on Dashboard (brand logos render as letter glyphs — browser-verified clean and intentional, **cosmetic only**).
-- **Set-but-unread:** `ST_IP_RESOLVER_MODE`, `VITE_STRIPE_PUBLISHABLE_KEY`, `SUPABASE_ANON_KEY` (×4), `TINYBIRD_READ_PIPES` (×2), `SLACK_WEBHOOK_URL` on dq.
-- ✅ **`nightly-attribution` has NO needed-but-absent** — a positive prior for the 02:00 GSC cron, since `ENCRYPTION_KEY` (KI-34) and `GOOGLE_CLIENT_*` both bit on that service before.
-- **Rotation queue** now includes `dual_write_append` — re-verify the current list before acting.
-- **Stripe:** live products are Founder $99/yr · Growth $79/mo · Starter $49/mo, **plus 1 archived whose contents are unknown** — if code references its price id that is a live 404. **"Needs info" on Managed Payments for all 3 live products is UNEXAMINED** — recorded as unknown severity, do not guess.
-
-### Process — two failure modes worth carrying forward
-
-- **Acting on a SUMMARY instead of the SOURCE** was the recurring orchestrator failure. It produced a brief that would have shipped a **one-day revenue off-by-one** (`dash_stages` uses `<=`; `getDateFilterExpr` is half-open `<`), a wrong conclusion about which Tinybird workspace was authoritative, and a wrong top priority (Scale). **All three were caught only by opening the artifact.** Briefs are a starting point, never a source.
-- **Explicit hard stops, stated up front with the reason, work.** Antigravity's first run edited a test in the founder's merge worktree, deleted 5 assertions to make a failing test pass, and mocked an integration test's `fetch`. All reverted. After the stops were moved to the top of the brief, three subsequent runs were clean and it volunteered its own observational limits.
-- **Never interpolate a pattern into a destructive command.** A loose `grep` inside `git branch -D` deleted `claude/cookieless-privacy-parity` (`6ae4fce`). **List first, delete by literal name.**
-- Housekeeping: ~120 stale local branches; a third worktree exists and is **unaudited**.
-
-### ⚠️ Nine overlapping session docs is itself a defect
-
-Four documents simultaneously carried the same false DeepSeek claim, so **cross-checking CONFIRMED something untrue** — the redundancy actively manufactured false confidence rather than catching the error. Concrete recommendation:
-
-| Doc | Verdict |
-|---|---|
-| `NEXT_SESSION_PROMPT.md` | **KEEP — the single entry point.** Everything a new session needs starts here. |
-| `KNOWN_ISSUES.md` | **KEEP — the defect ledger.** |
-| `FEATURE_MAP.md` | **KEEP — what exists and how well.** |
-| `SESSION_HANDOFF.md` (372 KB) · `SESSION_LOG.md` (261 KB) | **FREEZE.** Append-only historical narrative; nothing reads them to make a decision. Stop writing to them; leave them as an archive. |
-| `SESSION_STATE.md` | **RETIRE** — a prose stack of session titles, superseded by this handoff block. |
-| `PAID_BETA_SESSION_PLAN.md` · `POSTHOG_MIGRATION_HANDOFF.md` | **ARCHIVE** to `docs/archive/` — the migration is done; both are historical. |
-| `DEV_SESSION_CHECKLIST.md` | **KEEP** (3 KB, last touched 2026-06-04) — small and stable. |
-
-**Target: 4 living documents.** Rule going forward: **a fact lives in exactly one place**, and everything else links to it. The DeepSeek incident is the argument.
+These predate this arc and remain open; the defect ledger, not this block, is their home: **DeepSeek console revocation UNCONFIRMED** (deletion ≠ revocation; the value is in git history; `ai-client.js` has zero callers, so revoking breaks nothing) · **KI-51 / KI-53** — Campaigns timezone + dimension×model gaps · **`api/tests/timezone-reconciliation.test.js`** scores `pass 1` while asserting nothing (a live false green) · the doc-consolidation target (**4 living documents**; this pass advances it by retiring `SESSION_STATE.md`). Full detail: KNOWN_ISSUES.md and the Session-146 handoff in `git log`.
 
 
 ## 1. PRODUCT
