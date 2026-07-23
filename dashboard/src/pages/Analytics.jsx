@@ -7,6 +7,7 @@ import { fetchApi } from '../lib/api'
 import { useTheme } from '../contexts/ThemeContext'
 import { Eye, RefreshCw, Copy, Check, BarChart3, Globe, Monitor } from 'lucide-react'
 import { safeNumber } from '../utils/numbers'
+import { flagEmoji, countryName } from '../utils/country'
 import { tooltipPlugin, CHART_COLORS } from '../utils/chartTooltip'
 import { SourceIcon, normalizeSource } from '../components/SourceIcon'
 import { useActiveSite } from '../hooks/useActiveSite'
@@ -32,18 +33,8 @@ function visitorAreaGradient(ctx) {
   return g
 }
 
-// Emoji flag from an ISO-3166 alpha-2 code (regional indicators). NO network.
-function flagEmoji(code) {
-  if (!code || !/^[a-zA-Z]{2}$/.test(code)) return null
-  const cp = [...code.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65)
-  return String.fromCodePoint(...cp)
-}
-// Country NAME from an ISO code via Intl.DisplayNames (built-in, NO network).
-const REGION_NAMES = (() => { try { return new Intl.DisplayNames(['en'], { type: 'region' }) } catch { return null } })()
-function countryName(code) {
-  if (!code || code === 'Unknown') return 'Unknown'
-  try { return (REGION_NAMES && REGION_NAMES.of(String(code).toUpperCase())) || code } catch { return code }
-}
+// flagEmoji / countryName moved VERBATIM to utils/country.js (imported above) so the Leads table
+// renders locations through the same implementation instead of a second copy.
 // Title Case a raw DB value; proper-cased overrides for names that aren't simple words.
 const PROPER = { ios: 'iOS', ipados: 'iPadOS', macos: 'macOS', 'mac os': 'macOS', 'chrome os': 'ChromeOS', chromeos: 'ChromeOS' }
 function titleCase(s = '') {
