@@ -8,6 +8,10 @@ const MetricTile = ({
   isEmpty = false,
   trend = null,
   compact = false,
+  // Drops the tile's OWN card chrome (background, border, radius, shadow, hover) so a row of
+  // tiles can sit inside one shared divided strip — the treatment the Analytics page already
+  // uses. Purely presentational; defaults false, so every existing call site is unchanged.
+  flush = false,
   delta = null,
   sub = null,
   // Why this tile has no value. A bare "—" reads as broken; the reason is what makes it read as
@@ -78,19 +82,25 @@ const MetricTile = ({
   }
 
   const showTrend = !isEmptyState && (trend != null || delta)
+  const tight = compact || flush
 
   return (
     <div
       title={isEmptyState ? emptyReason : undefined}
-      className={`metric-tile bg-white dark:bg-dark-card rounded-xl shadow-sm card-hairline border border-gray-200 dark:border-dark-border flex flex-col justify-between transition-all hover:shadow-md duration-200 ${
-      compact ? 'px-4 py-3 gap-0.5' : 'p-5 gap-1.5'
+      className={`metric-tile flex flex-col justify-between ${
+      flush
+        ? 'flex-1 min-w-[120px] p-4 gap-0.5'
+        : 'bg-white dark:bg-dark-card rounded-xl shadow-sm card-hairline border border-gray-200 dark:border-dark-border transition-all hover:shadow-md duration-200 ' +
+          (compact ? 'px-4 py-3 gap-0.5' : 'p-5 gap-1.5')
     }`}>
+      {/* flush shares compact's type scale — that IS the Analytics strip's scale
+          (text-[10px] label / text-xl value). */}
       <div>
-        <p className={`text-st-gray dark:text-gray-400 font-semibold uppercase tracking-wider ${compact ? 'text-[10px] mb-1' : 'text-[11px] mb-1.5'}`}>{label}</p>
+        <p className={`text-st-gray dark:text-gray-400 font-semibold uppercase tracking-wider ${tight ? 'text-[10px] mb-1' : 'text-[11px] mb-1.5'}`}>{label}</p>
         {displayValue != null ? (
-          <p className={`text-st-black dark:text-dark-primary font-bold tabular-nums tracking-tight ${compact ? 'text-xl' : 'text-2xl'}`}>{displayValue}</p>
+          <p className={`text-st-black dark:text-dark-primary font-bold tabular-nums tracking-tight ${tight ? 'text-xl' : 'text-2xl'}`}>{displayValue}</p>
         ) : (
-          <p className={`text-st-black dark:text-dark-primary font-bold tracking-tight ${compact ? 'text-xl' : 'text-2xl'}`}>—</p>
+          <p className={`text-st-black dark:text-dark-primary font-bold tracking-tight ${tight ? 'text-xl' : 'text-2xl'}`}>—</p>
         )}
       </div>
       {(isEmptyState || showTrend || sub) && (

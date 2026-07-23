@@ -26,7 +26,8 @@ import { describeQueryError } from '../lib/queryError'
 import FilterBar from '../components/FilterBar'
 import JourneyModal from '../components/JourneyModal'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
-import { SourceChip } from '../components/SourceIcon'
+import { SourceChip, SourceIcon, normalizeSource } from '../components/SourceIcon'
+import DataRow from '../components/DataRow'
 import { safeNumber } from '../utils/numbers'
 import { useDashboardData, MODELS, TIME_RANGES } from '../hooks/useDashboardData'
 
@@ -75,6 +76,16 @@ export default function Dashboard() {
 
   // Already conversions-only and newest-first from the endpoint; no client-side filter or re-sort.
   const conversionRows = (recentConversions || []).slice(0, 5)
+
+  // Bar scales for the DataRow panels. Same rows and same values as before — a bar length is
+  // relative to the largest row on screen, so the max is computed over exactly what is rendered.
+  // Floor of 1 keeps a division by zero out of the width calc (DataRow already guards, this
+  // keeps the intent local).
+  const topSourceRows = activeResults.slice(0, 5)
+  const topSourceMax = Math.max(1, ...topSourceRows.map(r => safeNumber(r.conversions, 0)))
+  const topSourceMaxRevenue = hasRevenue ? Math.max(1, ...topSourceRows.map(r => safeNumber(r.revenue, 0))) : 0
+  const aiSourceMax = Math.max(1, ...aiSourceRows.map(r => safeNumber(r.visitors, 0)))
+  const aiSourceMaxRevenue = Math.max(1, ...aiSourceRows.map(r => safeNumber(r.revenue, 0)))
 
   return (
     <div className="st-container space-y-6">
@@ -234,11 +245,16 @@ export default function Dashboard() {
                 </>
               ) : (
                 <>
-                  {/* KPI Strip: strictly max 3 primary KPIs */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* KPI Strip: strictly max 3 primary KPIs (design.md §8.2 / §10.3 — "Overview
+                      shows max 3 KPIs"). Rendered as ONE divided strip rather than three separate
+                      shadowed boxes, which is the treatment the Analytics page already uses and
+                      the main reason the two pages read as different products. Same tiles, same
+                      data, same §6 empty-state behavior — only the chrome changed. */}
+                  <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-gray-100 dark:divide-dark-border overflow-hidden shadow-sm">
                 {hasRevenue ? (
                   <>
                     <MetricTile
+                      flush
                       label="Revenue"
                       value={totalRevenue}
                       format="currency"
@@ -246,6 +262,7 @@ export default function Dashboard() {
                       sub={avgValue > 0 ? `Avg value: $${avgValue.toFixed(2)}` : null}
                     />
                     <MetricTile
+                      flush
                       label="Leads"
                       value={leadsTracked ? totalLeads : null}
                       isEmpty={!leadsTracked}
@@ -254,6 +271,7 @@ export default function Dashboard() {
                       sub={leadsTracked && leadConvRate > 0 ? `${leadConvRate.toFixed(1)}% conversion rate` : null}
                     />
                     <MetricTile
+                      flush
                       label="Customers"
                       value={totalCustomers}
                       trend={customersDelta?.pct}
@@ -263,6 +281,7 @@ export default function Dashboard() {
                 ) : (
                   <>
                     <MetricTile
+                      flush
                       label="Total Leads"
                       value={leadsTracked ? totalLeads : null}
                       isEmpty={!leadsTracked}
@@ -270,11 +289,13 @@ export default function Dashboard() {
                       trend={leadsTracked ? leadsDelta?.pct : null}
                     />
                     <MetricTile
+                      flush
                       label="Customers"
                       value={totalCustomers}
                       trend={customersDelta?.pct}
                     />
                     <MetricTile
+                      flush
                       label="Lead Conversion Rate"
                       value={leadsTracked && totalLeads > 0 ? leadConvRate : null}
                       format="percent"
@@ -285,21 +306,6 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Secondary metric: Bounce Rate. Truth-gated — hidden entirely
-                  when null (Analytics path / no data); never a fake 0% placeholder. */}
-              {kpis.bounce_rate != null && (
-                <div className="flex flex-wrap gap-4">
-                  <div className="w-full sm:w-52" title="Bounce rate — share of sessions with only one page or action.">
-                    <MetricTile
-                      label="Bounce Rate"
-                      value={`${Number(kpis.bounce_rate).toFixed(1)}%`}
-                      compact
-                      sub="Sessions with one page/action"
-                    />
-                  </div>
-                </div>
-              )}
-
               {/* Command Center Nav */}
               <div className="flex flex-wrap gap-2">
                 <button onClick={() => navigate('/analytics')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Analytics <ArrowRight className="w-3 h-3" /></button>
@@ -308,8 +314,25 @@ export default function Dashboard() {
                 <button onClick={() => navigate('/app/integrations')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Integrations <ArrowRight className="w-3 h-3" /></button>
               </div>
 
-              {/* Performance Trend Chart */}
-              <DashboardCard title="Performance Trend" subtitle={`Last ${timeRange} days • ${site?.timezone || 'UTC'}`}>
+              {/* Performance Trend Chart.
+                  Bounce Rate rides in this card's header instead of sitting in a lone half-width
+                  card under the KPI row. It cannot join the KPI strip — design.md §8.2/§10.3 cap
+                  the Overview at 3 KPIs — and this card is the honest home for it: both are scoped
+                  to the SAME selected range, where the header pills above are live-scoped. Still
+                  truth-gated on != null; never a fake 0%. */}
+              <DashboardCard
+                title="Performance Trend"
+                subtitle={`Last ${timeRange} days • ${site?.timezone || 'UTC'}`}
+                action={kpis.bounce_rate != null && (
+                  <div
+                    className="flex items-baseline gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 dark:bg-[#1A1D1D] border border-gray-200 dark:border-dark-border"
+                    title="Bounce rate — share of sessions with only one page or action, over the selected range."
+                  >
+                    <span className="text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Bounce rate</span>
+                    <span className="text-sm font-bold text-st-black dark:text-dark-primary tabular-nums">{Number(kpis.bounce_rate).toFixed(1)}%</span>
+                  </div>
+                )}
+              >
                 <div className="h-64">
                   <Line data={hasRevenue ? revTrendData : channelTrendData} options={chartOpts(hasRevenue ? '$' : '', hasRevenue ? revTooltipRows : convTooltipRows)} />
                 </div>
@@ -317,18 +340,24 @@ export default function Dashboard() {
 
               {/* Top Sources & Recent Conversions */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <DashboardCard title="Top Sources" subtitle="Traffic and conversions by source">
+                {/* Bar-behind-label rows, the same DataRow the Analytics Sources panel uses.
+                    bodyClassName="p-0" so rows run edge-to-edge like Analytics' ListSection —
+                    the rows own their px-4. Same rows, same counts, same revenue values. */}
+                <DashboardCard title="Top Sources" subtitle="Traffic and conversions by source" bodyClassName="p-0">
                   {activeResults.length === 0 ? (
                     <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No traffic detected yet.</p>
                   ) : (
-                    <DashboardTable
-                      columns={[
-                        { key: 'source', label: 'Source', render: (r) => <SourceChip source={r.dim_value || r.source || 'Direct'} /> },
-                        { key: 'conversions', label: 'Conversions', render: (r) => r.conversions },
-                        { key: 'revenue', label: 'Revenue', render: (r) => hasRevenue ? `$${(r.revenue || 0).toFixed(2)}` : '—' }
-                      ].filter(c => hasRevenue || c.key !== 'revenue')}
-                      rows={activeResults.slice(0, 5)}
-                    />
+                    topSourceRows.map((r, i) => (
+                      <DataRow
+                        key={i}
+                        label={normalizeSource(r.dim_value || r.source || 'Direct').name}
+                        icon={<SourceIcon source={r.dim_value || r.source || 'Direct'} className="w-3.5 h-3.5" />}
+                        count={safeNumber(r.conversions, 0)}
+                        max={topSourceMax}
+                        revenue={hasRevenue ? safeNumber(r.revenue, 0) : 0}
+                        maxRevenue={topSourceMaxRevenue}
+                      />
+                    ))
                   )}
                 </DashboardCard>
 
@@ -368,15 +397,18 @@ export default function Dashboard() {
 
               {/* AI Source Performance (Only if real AI traffic or conversions exist) */}
               {aiSourceRows.length > 0 && (
-                <DashboardCard title="AI Source Performance" subtitle="Traffic and conversions from AI engines">
-                  <DashboardTable
-                    columns={[
-                      { key: 'source', label: 'AI Platform', render: (r) => <SourceChip source={r.name} /> },
-                      { key: 'visitors', label: 'Traffic', render: (r) => safeNumber(r.visitors, 0).toLocaleString() },
-                      { key: 'revenue', label: 'Revenue', render: (r) => r.revenue > 0 ? `$${r.revenue.toFixed(2)}` : '—' }
-                    ]}
-                    rows={aiSourceRows}
-                  />
+                <DashboardCard title="AI Source Performance" subtitle="Traffic and conversions from AI engines" bodyClassName="p-0">
+                  {aiSourceRows.map((r, i) => (
+                    <DataRow
+                      key={i}
+                      label={r.name}
+                      icon={<SourceIcon source={r.name} className="w-3.5 h-3.5" />}
+                      count={safeNumber(r.visitors, 0)}
+                      max={aiSourceMax}
+                      revenue={safeNumber(r.revenue, 0)}
+                      maxRevenue={aiSourceMaxRevenue}
+                    />
+                  ))}
                 </DashboardCard>
               )}
 

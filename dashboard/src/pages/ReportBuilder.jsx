@@ -19,11 +19,13 @@ import {
 import {
   RefreshCw, Bookmark, Trash2, Download, Copy,
   Search, ChevronDown, ArrowRight, Plus, HelpCircle,
-  BarChart3, X, Lock, Settings, Sparkles, AlertTriangle
+  BarChart3, X, Lock, Settings, Sparkles, AlertTriangle,
+  LineChart, AreaChart, PieChart, Hash, Table, CalendarX
 } from 'lucide-react'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
 import { describeQueryError } from '../lib/queryError'
 import { dimensionGateReason, metricGateReason } from '../lib/reportGating'
+import { modelSummary, isMultiTouchModel } from '../lib/attributionModels'
 import { hasFeature } from '../lib/planFeatures'
 import { useActiveSite } from '../hooks/useActiveSite'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
@@ -103,13 +105,15 @@ export const DEFAULT_METRIC =
   'conversions'
 
 
+// `icon` added for the picker row that replaced the dropdown. The key/label pairs are UNCHANGED —
+// saved reports store chartType by key, so every existing report keeps rendering as it did.
 const CHART_TYPES = [
-  { key: 'bar', label: 'Bar' },
-  { key: 'line', label: 'Line' },
-  { key: 'area', label: 'Area' },
-  { key: 'pie', label: 'Pie' },
-  { key: 'kpi', label: 'KPI' },
-  { key: 'table', label: 'Table Only' }
+  { key: 'bar', label: 'Bar', icon: BarChart3 },
+  { key: 'line', label: 'Line', icon: LineChart },
+  { key: 'area', label: 'Area', icon: AreaChart },
+  { key: 'pie', label: 'Pie', icon: PieChart },
+  { key: 'kpi', label: 'KPI', icon: Hash },
+  { key: 'table', label: 'Table Only', icon: Table }
 ]
 
 const DATE_PRESETS = [
@@ -481,6 +485,8 @@ export default function ReportBuilder() {
     setMetric(key)
   }
   const [chartType, setChartType] = useState('bar')
+  // OFF by default — see the chartRows comment: an empty date is data, so hiding it is opt-in.
+  const [hideEmptyDates, setHideEmptyDates] = useState(false)
   const [datePreset, setDatePreset] = useState(30)
   const [dateFrom, setDateFrom] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'))
   const [dateTo, setDateTo] = useState(format(new Date(), 'yyyy-MM-dd'))
@@ -984,7 +990,25 @@ export default function ReportBuilder() {
     'rgba(249, 115, 22, 0.85)',
   ]
   const isMultiMetric = selectedMetrics.length > 1
-  const chartLabels = results.slice(0, 15).map(r => groupBy2 ? `${r.dim_value} / ${r.dim_value2}` : r.dim_value)
+
+  // "Display only dates with data" (item 10). A sparse range renders a run of flat-zero days that
+  // squeezes the real points into a corner. This drops the all-zero rows FROM THE CHART ONLY.
+  //
+  // Three deliberate limits, because dropping rows is a truth-sensitive act (§6):
+  //   - It is OFF by default, so the default chart still shows every date in the range. A zero day
+  //     IS data ("nothing converted on the 4th"), and hiding it must be the reader's choice.
+  //   - It only applies on a TIME-SERIES (groupBy/groupBy2 === 'date'). On a categorical dim a
+  //     zero row is a named bucket, not a gap, and hiding it would silently shorten the answer.
+  //   - The Data View table below is NOT filtered — it stays the complete result set, so the
+  //     numbers behind the chart are always fully inspectable.
+  // Filtering runs BEFORE the 15-row cap, so hiding empty days surfaces MORE real days, not fewer.
+  const isTimeSeries = groupBy === 'date' || groupBy2 === 'date'
+  const canHideEmptyDates = isTimeSeries && chartType !== 'table' && chartType !== 'kpi'
+  const rowHasValue = (r) => (isMultiMetric ? selectedMetrics : [metric]).some(mk => getMetricValue(r, mk) !== 0)
+  const chartRows = (canHideEmptyDates && hideEmptyDates ? results.filter(rowHasValue) : results).slice(0, 15)
+  const hiddenDateCount = canHideEmptyDates ? results.length - results.filter(rowHasValue).length : 0
+
+  const chartLabels = chartRows.map(r => groupBy2 ? `${r.dim_value} / ${r.dim_value2}` : r.dim_value)
   const chartData = {
     labels: chartLabels,
     datasets: isMultiMetric
@@ -992,7 +1016,7 @@ export default function ReportBuilder() {
           const mDef = METRICS.find(x => x.key === mk)
           return {
             label: mDef?.label || mk,
-            data: results.slice(0, 15).map(r => getMetricValue(r, mk)),
+            data: chartRows.map(r => getMetricValue(r, mk)),
             backgroundColor: chartType === 'area' ? MULTI_COLORS[mi % MULTI_COLORS.length].replace('0.85)', '0.15)') : MULTI_COLORS[mi % MULTI_COLORS.length],
             borderColor: chartType === 'line' || chartType === 'area' ? MULTI_COLORS[mi % MULTI_COLORS.length] : undefined,
             borderRadius: chartType === 'bar' ? 4 : 0,
@@ -1003,8 +1027,8 @@ export default function ReportBuilder() {
         })
       : [{
           label: metricLabel,
-          data: results.slice(0, 15).map(r => getMetricValue(r)),
-          backgroundColor: results.slice(0, 15).map((_, i) => COLORS[i % COLORS.length]),
+          data: chartRows.map(r => getMetricValue(r)),
+          backgroundColor: chartRows.map((_, i) => COLORS[i % COLORS.length]),
           borderColor: chartType === 'line' || chartType === 'area' ? 'rgba(17, 24, 39, 1)' : undefined,
           borderRadius: chartType === 'bar' ? 4 : 0,
           tension: 0.3,
@@ -1114,8 +1138,6 @@ export default function ReportBuilder() {
     { value: 'original_source_date', label: 'Original Source Date' }
   ]
 
-  // Chart type options
-  const chartTypeOptions = CHART_TYPES.map(c => ({ value: c.key, label: c.label }))
 
   // Device options
   const deviceOptions = [
@@ -1655,14 +1677,36 @@ export default function ReportBuilder() {
                 />
               </div>
 
-              {/* 2. Chart Type */}
+              {/* 2. Chart Type — icon row, not a dropdown. Six choices that are all visual is
+                  exactly the case a segmented icon control fits: every option is visible and one
+                  click away, where the select hid five of them behind "Bar". Same keys, same
+                  setChartType, so saved reports are unaffected. */}
               <div className="space-y-1">
                 <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Chart / Report Type</label>
-                <CustomSelect
-                  value={chartType}
-                  onChange={setChartType}
-                  options={chartTypeOptions}
-                />
+                <div className="flex flex-wrap gap-1" role="group" aria-label="Chart type">
+                  {CHART_TYPES.map(c => {
+                    const Icon = c.icon
+                    const isActive = chartType === c.key
+                    return (
+                      <button
+                        key={c.key}
+                        type="button"
+                        onClick={() => setChartType(c.key)}
+                        title={c.label}
+                        aria-label={c.label}
+                        aria-pressed={isActive}
+                        className={`flex flex-col items-center justify-center gap-1 flex-1 min-w-[52px] px-2 py-2 rounded-lg border transition-colors ${
+                          isActive
+                            ? 'border-lime-500 bg-lime-50 dark:bg-lime-500/10 text-lime-700 dark:text-lime-400'
+                            : 'border-gray-200 dark:border-dark-border text-st-gray dark:text-gray-400 hover:border-gray-300 dark:hover:border-dark-border-strong hover:text-st-black dark:hover:text-dark-primary'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span className="text-[9px] font-semibold leading-none whitespace-nowrap">{c.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
               {/* 3. Date Range */}
@@ -1865,15 +1909,24 @@ export default function ReportBuilder() {
                       }}
                       options={modelOptions}
                     />
-                    {model === 'ai_platforms' ? (
-                      <p className="text-[10px] text-lime-600 dark:text-lime-400 mt-1">
-                        Groups conversions by the AI source detected on the conversion event.
+                    {/* The described card. The line under this selector used to be the SAME
+                        sentence for eight of the nine models ("How credit is assigned to each
+                        touchpoint…"), so the control that decides the numbers explained nothing
+                        about the choice being made. Now it names the selected model and says what
+                        it actually does, in one line, from the shared MODEL_SUMMARY. */}
+                    <div className="mt-1.5 rounded-lg border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg px-2.5 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-semibold text-st-black dark:text-dark-primary">
+                          {MODELS.find(m => m.key === model)?.label || model}
+                        </span>
+                        <span className="text-[9px] font-semibold uppercase tracking-wider text-st-gray dark:text-gray-400 whitespace-nowrap">
+                          {isMultiTouchModel(model) ? 'Multi-touch' : 'Single-touch'}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-st-gray dark:text-gray-400 mt-0.5 leading-normal">
+                        {modelSummary(model) || 'How credit is assigned to each touchpoint in the customer journey.'}
                       </p>
-                    ) : (
-                      <p className="text-[10px] text-st-gray dark:text-gray-400 mt-1">
-                        How credit is assigned to each touchpoint in the customer journey.
-                      </p>
-                    )}
+                    </div>
                     {!hasFeature(site?.plan, 'multi_touch_attribution') && (
                       <p className="text-[10px] text-st-gray dark:text-gray-400">
                         🔒 Multi-touch models require an Upgrade.
@@ -2165,6 +2218,33 @@ export default function ReportBuilder() {
                 /* Chart visual card */
                 (chartType === 'bar' || chartType === 'line' || chartType === 'area' || chartType === 'pie') && (
                   <div className="bg-white dark:bg-dark-card rounded-xl shadow-sm border border-gray-200 dark:border-dark-border p-6">
+                    {/* Time-series only, and only worth offering when there is actually an empty
+                        date to hide. The count is stated so the toggle never silently removes
+                        rows — the reader always knows exactly what came off the chart, and the
+                        Data View below still lists every row. */}
+                    {canHideEmptyDates && (hiddenDateCount > 0 || hideEmptyDates) && (
+                      <div className="mb-3 flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setHideEmptyDates(v => !v)}
+                          aria-pressed={hideEmptyDates}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-colors ${
+                            hideEmptyDates
+                              ? 'border-lime-500 bg-lime-50 dark:bg-lime-500/10 text-lime-700 dark:text-lime-400'
+                              : 'border-gray-200 dark:border-dark-border text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-primary'
+                          }`}
+                          title="Chart only — the Data View below always lists every row in the range."
+                        >
+                          <CalendarX className="w-3.5 h-3.5" />
+                          Display only dates with data
+                        </button>
+                        {hideEmptyDates && hiddenDateCount > 0 && (
+                          <span className="text-[10px] text-st-gray dark:text-gray-400">
+                            {hiddenDateCount} empty {hiddenDateCount === 1 ? 'date' : 'dates'} hidden from the chart
+                          </span>
+                        )}
+                      </div>
+                    )}
                     {nightlyNotice && results.length === 0 && !isLoading && (
                       <div className="mb-3 flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2">
                         <span className="text-amber-500 mt-0.5">⏳</span>
