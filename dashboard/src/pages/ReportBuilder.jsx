@@ -132,8 +132,13 @@ const PRESET_TEMPLATES = [
   // Universal
   { id: 'univ_channel_rev', name: 'Channel revenue', desc: 'Revenue grouped by high-level marketing channel', model: 'last_touch', groupBy: 'channel', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Universal', requiredData: 'revenue' },
   { id: 'univ_campaign_rev', name: 'Campaign revenue', desc: 'Revenue performance across campaigns', model: 'last_touch', groupBy: 'campaign', groupBy2: null, metric: 'revenue', days: 90, chartType: 'bar', granularity: 'day', filters: {}, category: 'Universal', requiredData: 'revenue' },
-  { id: 'univ_visitors', name: 'Unique Visitors by Channel', desc: 'Unique visitors across channels', model: 'first_touch', groupBy: 'channel', groupBy2: null, metric: 'sessions', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Universal', requiredData: 'none' },
-  { id: 'univ_cvr', name: 'Conversion Rate by Channel', desc: 'Conversion rate across traffic channels', model: 'last_touch', groupBy: 'channel', groupBy2: null, metric: 'conversion_rate', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Universal', requiredData: 'none' },
+  // REMOVED: univ_visitors (metric 'sessions') + univ_cvr (metric 'conversion_rate'). Both metrics
+  // are in GATED_METRICS (gate-constants.js:48, founder decision Option A) — dead on EVERY dim for
+  // EVERY site, so both templates were dead-on-click for everyone. They were also not `Locked`:
+  // requiredData:'none' means isTemplateGated returned null, so they rendered as working cards and
+  // only failed after the click. A locked badge would have been no better — every other lock reason
+  // (revenue/cost/gsc/ai) is something the user can fix, and this one is not. Re-add them in the
+  // same PR that lands a sessions/conversion_rate backend.
 
   // SaaS
   { id: 'saas_trials', name: 'Trials by Source', desc: 'Attributed trial signups by traffic source', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', filters: { conversion_type: 'trial' }, category: 'SaaS', requiredData: 'none' },
@@ -2334,7 +2339,11 @@ export default function ReportBuilder() {
                               <td className="py-2.5 px-4 text-st-black dark:text-gray-200 font-medium">
                                 <span className="inline-flex items-center">
                                   {['source', 'channel'].includes(groupBy) ? (
-                                    <SourceChip source={r.dim_value || 'Direct / None'} />
+                                    // raw for channel: normalizeSource is a SOURCE normalizer and
+                                    // channel values are already display labels, so it collapsed
+                                    // 'Paid Search' + 'Paid Social' into one 'Paid Ads' label while
+                                    // the chart (chartLabels, raw dim_value) kept them apart.
+                                    <SourceChip source={r.dim_value || 'Direct / None'} raw={groupBy === 'channel'} />
                                   ) : (
                                     <>
                                       {r.dim_value || 'Direct / None'}
