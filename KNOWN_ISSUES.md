@@ -1394,3 +1394,56 @@ The C3 Leads redesign (#377) ships a column picker but deliberately **omits Brow
 **Root cause worth recording — adding a CAPI platform needs FOUR touchpoints in lockstep:** (a) the sender fn in `conversion-sync.js`, (b) an entry in `CAPI_PLATFORMS` (`capi.js`), (c) a config card in `dashboard/src/components/CapiSettings.jsx`, (d) the hardcoded CAPI-column `SELECT` lists in `conversion.js` + `conversion-offline.js`. Miss any one and the sender is stillborn — exactly how Microsoft/LinkedIn ended up here. This is the checklist for any future platform (e.g. TikTok).
 
 **Not a blocker, and the delivery log needs no change:** `capi_deliveries` is platform-agnostic (`api/lib/capi-deliveries.js` — columns `site_id, platform, event_ref, status, http_status, error_message, attempt`; `platform` is a bare string), so it already records any platform without a schema change. Fix is either to wire Microsoft/LinkedIn through all four touchpoints or to drop the two dead senders; logged, not decided.
+
+### ✅ Ad-blocker survivability VERIFIED — tracker + /api/track are NOT blocked (2026-07-24)
+
+Tested against uBlock Origin's full default filter set (EasyPrivacy, EasyList,
+uBO privacy, Peter Lowe's) using @ghostery/adblocker, control test passing
+(google-analytics.com/analytics.js correctly BLOCKED, so list coverage confirmed):
+
+| request | verdict |
+|---|---|
+| `https://api.srctk.com/tracker.min.js` (script) | ALLOWED |
+| `https://api.srctk.com/api/track` (fetch/xhr) | ALLOWED |
+| `https://api.srctk.com/api/track` (sendBeacon/ping) | **BLOCKED** |
+
+No bare `/tracker.min.js` rule exists in any list — all 14 near-matches are
+prefixed variants (`/js_tracker.min.js`, `/keen-tracker.min.js`,
+`/utm-tracker.min.js`). `/api/track?guid` requires that literal query param,
+which the tracker does not send. `srctk` appears in zero rules.
+
+Standing risk, not a defect: filter lists change, and a generic path name becomes
+more likely to be listed as adoption grows. A CI guard is in flight to re-check
+on every run.
+
+### 🔴 Third-party sendBeacon is blocked by a blanket rule, and fails silently (2026-07-24)
+
+`easyprivacy_trackingservers.txt` contains the literal rule `$ping,third-party` —
+it blocks EVERY cross-origin beacon with no pattern matching. `api.srctk.com` is
+third-party to every customer site, so any `navigator.sendBeacon()` call is
+dropped for all uBlock / Adblock Plus / Brave users.
+
+It fails silently: `sendBeacon()` returns `true` once the request is QUEUED, and
+the blocker drops it afterward at the network layer. Any `.catch()` fallback never
+fires, and any code branching on the boolean return is dead under an adblocker.
+
+Scope UNVERIFIED pending CC step 1 — the observed pageview path is a POST with a
+CORS preflight (i.e. `fetch`, allowed), so sendBeacon is likely unload-only. If
+conversions or identify() route through it, this is a money-rail defect, not a
+metrics one.
+
+Fix: `fetch(url, { keepalive: true })` — survives unload, xhr-typed so `$ping`
+does not apply, 64KB body cap is far above any tracking payload.
+
+### Safari ITP storage cap untested against multi-touch windows (2026-07-24)
+
+Live tracker confirmed 25 days of first-touch persistence via localStorage key
+`st_aid` (`first_touch_timestamp` 2026-06-29, observed 2026-07-24) — in Chrome.
+Safari's ITP caps script-writable storage at roughly 7 days of no interaction,
+which would truncate longer journeys and silently bias multi-touch models toward
+last-touch on Safari traffic.
+
+Not practically automatable: Playwright's WebKit is not Safari's ITP, and the
+7-day timers cannot be waited out in CI. Safari's ITP Debug Mode compresses them
+for a manual pass. Apple's current threshold is UNVERIFIED — check WebKit's posts
+before designing to a specific number.
