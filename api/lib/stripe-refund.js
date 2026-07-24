@@ -2,12 +2,15 @@
 //
 // A refund is ingested as a $conversion with a NEGATIVE conversion_value, so a
 // signed-sum revenue MV nets it against the original purchase (gross − refund).
-// TINYBIRD-ONLY for now (founder decision Q1=A): the refund is dual-written to
-// Tinybird but NOT ph.capture'd to PostHog and NOT written to Supabase
-// attributed_conversions — so PostHog-read and Supabase revenue both stay GROSS
-// pending the deferred netting decision. (nightly-attribution.js already skips
-// convValue < 0, so even a PostHog-captured refund would never reach Supabase —
-// but we omit the capture entirely to keep PostHog-read revenue gross too.)
+// FACTUAL CORRECTION (PR3): this header used to say the refund is "TINYBIRD-ONLY …
+// NOT written to Supabase attributed_conversions" because "nightly-attribution.js
+// already skips convValue < 0". BOTH halves are now stale. #240 changed the nightly to
+// PERSIST refunds: nightly-attribution.js:720 skips negatives EXCEPT
+// conversion_type='refund', so a refund DOES reach Supabase attributed_conversions with
+// its negative value and Supabase revenue nets (gross − refund). The WEBHOOK still
+// writes only to Tinybird — the Supabase row arrives via the nightly, keyed
+// conversion_event_id = the Tinybird event_id (re_…) under
+// UNIQUE(site_id, conversion_event_id). (PostHog is fully decommissioned.)
 //
 // TWO DEDUP LANDMINES this module is built around (both verified in code):
 //   1. DB idempotency: a refund's Stripe payment_intent EQUALS the purchase's
@@ -28,6 +31,45 @@
 import { esc } from './utils.js'
 
 export const REFUND_EVENT_TYPE = 'refund.created'
+
+// PR3: Stripe emits BOTH `refund.created` AND `charge.refunded` for the SAME refund.
+// We subscribe both (charge.refunded is the safety net for a refund.created that is
+// never delivered), which makes the DEDUP KEY load-bearing. The key is `refund.id`
+// (re_…) — NOT the Stripe event id, which DIFFERS between the two event types for one
+// refund. See buildRefundIdempotencyKeys + extractChargeRefunds below.
+export const CHARGE_REFUNDED_EVENT_TYPE = 'charge.refunded'
+
+/**
+ * Pull the individual Refund objects out of a `charge.refunded` event.
+ *
+ * `charge.refunded`'s data.object is a CHARGE, not a Refund. Two consequences that
+ * make a naive "just point charge.refunded at the refund handler" WRONG:
+ *   1. `charge.amount` is the ORIGINAL charge total, NOT the refunded amount
+ *      (`amount_refunded` is the cumulative refunded figure). Feeding the charge to
+ *      buildRefundConversion would net the FULL charge on a partial refund.
+ *   2. `charge.id` is `ch_…`, so it produces a DIFFERENT idempotency key and a
+ *      DIFFERENT Tinybird event_id than the `re_…` that refund.created already used
+ *      → both rows write → the refund double-nets.
+ * So we descend to charge.refunds.data and treat each element as the unit of work,
+ * keyed by its own `re_…`.
+ *
+ * `refunds` is OPTIONAL and NULLABLE on the Charge type (node_modules/stripe/types/
+ * Charges.d.ts:194 `refunds?: ApiList<Stripe.Refund> | null`) — it is not guaranteed
+ * to be expanded on the event payload. When it is absent we return [] and the caller
+ * ACKS 200 WITHOUT WRITING. We deliberately do NOT synthesize a refund from
+ * `amount_refunded` + `ch_…`: that id is exactly the double-write key above, and
+ * refund.created already covers the refund. Missing data → write nothing, never guess.
+ *
+ * @returns {Array<object>} Refund objects (possibly empty), never null.
+ */
+export function extractChargeRefunds (event) {
+  const charge = event?.data?.object || {}
+  const list = charge?.refunds?.data
+  if (!Array.isArray(list)) return []
+  // Only refunds carrying a usable id — the id IS the dedup key, so an id-less entry
+  // cannot be deduped and must not be written.
+  return list.filter(r => r && typeof r.id === 'string' && r.id)
+}
 
 // ── Phase 7 PR1: resolve the refund to the ORIGINAL conversion ───────────────
 // The purchase write persists payment_intent in the Tinybird event's properties
@@ -133,7 +175,7 @@ export function refundDistinctId (refund) {
  * @param {object} site   resolved site row ({ id, site_key })
  * @param {string} [distinctId]  resolved visitor id; falls back to refundDistinctId
  */
-export function buildRefundConversion (event, site, distinctId, { unresolved = false } = {}) {
+export function buildRefundConversion (event, site, distinctId, { unresolved = false, stripeEventType = REFUND_EVENT_TYPE } = {}) {
   const refund = event?.data?.object || {}
   const amount = Number(refund.amount)
   if (!Number.isFinite(amount) || amount <= 0) {
@@ -161,7 +203,10 @@ export function buildRefundConversion (event, site, distinctId, { unresolved = f
     payment_id: refund.payment_intent || null, // traceability only; event_id dominates dedup
     provider: 'stripe',
     provider_event_id: event.id,
-    stripe_event_type: REFUND_EVENT_TYPE,
+    // Which Stripe event type produced THIS row — 'refund.created' or 'charge.refunded'.
+    // Traceability only; it is NOT part of dedup (event_id/re_… is). Defaults to
+    // refund.created so every existing call site is byte-identical.
+    stripe_event_type: stripeEventType,
     occurred_at: occurredAt,
     ingestion_method: 'webhook_stripe_refund',
     stitching_method: 'none',
