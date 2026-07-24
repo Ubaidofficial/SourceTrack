@@ -35,13 +35,11 @@ These are **not advisory.** They override any other instruction, including urgen
 
 ## 1. Quick Start — read these before any session (in order)
 
-1. `RULES.md` — coding behavior rules
-2. `AGENT_BRIEF.md` — product, stack, ports, commands, commit format
-3. `PROJECT_CONTEXT_COMPACT.md` — condensed overview
-4. `SESSION_STATE.md` — current session, branch, blockers
-5. `SESSION_HANDOFF.md` — last completed work, pending QA
-6. `KNOWN_ISSUES.md` — verified bugs/gaps only
-7. `AI_SESSION_PLAN.md` — upcoming session plan
+1. `CLAUDE.md` — the standing contract: coding rules (§1–4, §11), product/stack (§5), commit format. Supersedes `RULES.md`, `AGENT_BRIEF.md`, `PROJECT_CONTEXT_COMPACT.md` (archived 2026-07 → `docs/archive/2026-07/`).
+2. `NEXT_SESSION_PROMPT.md` §0.5 — current session handoff (last completed work + next steps). Supersedes `SESSION_HANDOFF.md` (archived 2026-07).
+3. `SESSION_STATE.md` — current session, branch, blockers
+4. `KNOWN_ISSUES.md` — verified bugs/gaps only
+5. `AI_SESSION_PLAN.md` — upcoming session plan
 
 Then use `DOCS_INDEX.md` to find task-specific docs.
 
@@ -54,10 +52,10 @@ Then use `DOCS_INDEX.md` to find task-specific docs.
 ## 2. Session Workflow
 
 ### Before every session
-- Read the 7 files above; check `SESSION_STATE.md` for current branch/blockers and `MANUAL_QA_BACKLOG.md` for pending QA.
+- Read the 5 files above; check `SESSION_STATE.md` for current branch/blockers and `MANUAL_QA_BACKLOG.md` for pending QA.
 
 ### During every session
-- Follow `RULES.md` and §3 below (surgical changes, no scope creep, verify before claiming).
+- Follow `CLAUDE.md` (§1–4, §11) and §3 below (surgical changes, no scope creep, verify before claiming).
 - Update `SESSION_STATE.md` when starting/ending work; log bugs in `BUG_REVIEW_LOG.md`.
 
 ### After every session
@@ -65,13 +63,13 @@ Then use `DOCS_INDEX.md` to find task-specific docs.
 - Run: `cd dashboard && npm run build`
 - Run: `git diff --check`
 - If the tracker changed: `npm run build:tracker`
-- Update `SESSION_HANDOFF.md` (done + remaining), `SESSION_LOG.md` (summary), `AI_SESSION_PLAN.md` (status).
+- Update `NEXT_SESSION_PROMPT.md` §0.5 (done + remaining; supersedes `SESSION_HANDOFF.md` / `SESSION_LOG.md`, archived 2026-07), `AI_SESSION_PLAN.md` (status).
 
 ### Before committing — **commit gate**
 - All checks above pass; manual QA performed if applicable (mark in `MANUAL_QA_BACKLOG.md`).
 - **No agent may commit or push before raw `git diff` review and explicit user approval** (governed by `docs/ai_agent_workflow_rules.md`).
 - Never commit `.env`, secrets, `.bak`, or test artifacts.
-- Commit message uses the HEREDOC format from `AGENT_BRIEF.md`.
+- Commit message uses the project HEREDOC commit format (from `AGENT_BRIEF.md`, archived 2026-07 → `docs/archive/2026-07/`).
 
 ---
 
@@ -233,14 +231,14 @@ Carry-forward role: **honest orchestrator + senior MarTech engineer + SaaS QA ma
 | File | Purpose |
 |---|---|
 | `CLAUDE.md` | Companion standing-rules file (Claude Code); mirrors §0 |
-| `RULES.md` | Coding behavior contract |
-| `AGENT_BRIEF.md` | Stack, ports, commands, commit format, core rules |
-| `PROJECT_CONTEXT_COMPACT.md` | Product/stack/design at a glance |
+| `docs/archive/2026-07/RULES.md` | Coding behavior contract — **archived 2026-07** (superseded by `CLAUDE.md`) |
+| `docs/archive/2026-07/AGENT_BRIEF.md` | Stack, ports, commands, commit format — **archived 2026-07** (superseded by `CLAUDE.md`) |
+| `docs/archive/2026-07/PROJECT_CONTEXT_COMPACT.md` | Product/stack/design at a glance — **archived 2026-07** (superseded by `CLAUDE.md`) |
 | `docs/design/design.md` | Product/design spec (intent, not proof). **§0 is the Scope Gate — the scope source of truth that wins conflicts.** |
 | `AI_SESSION_PLAN.md` | Upcoming session roadmap |
 | `SESSION_STATE.md` | Current branch, blockers, active work |
-| `SESSION_LOG.md` | Session history log |
-| `SESSION_HANDOFF.md` | Last completed work + pending QA |
+| `docs/archive/2026-07/SESSION_LOG.md` | Session history log — **archived 2026-07** (superseded by `NEXT_SESSION_PROMPT.md`) |
+| `docs/archive/2026-07/SESSION_HANDOFF.md` | Last completed work + pending QA — **archived 2026-07** (superseded by `NEXT_SESSION_PROMPT.md`) |
 | `KNOWN_ISSUES.md` | Verified bugs and risks |
 | `docs/archive/IMPLEMENTATION_GAP_LIST.md` | Built vs planned |
 | `MANUAL_QA_BACKLOG.md` | Per-session manual QA items |

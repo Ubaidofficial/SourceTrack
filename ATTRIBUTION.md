@@ -1,3 +1,5 @@
+_Last reviewed: 2026-07-24_
+
 Scope: This file governs SourceTrack’s attribution, identity, revenue credit, reporting, and measurement-truthfulness rules for engineers, analysts, and AI agents working on tracker, backend, reporting, and documentation surfaces.
 
 This file defines the canonical rules, principles, and standards for all attribution logic in SourceTrack.
@@ -25,7 +27,7 @@ If a report cannot compute a metric correctly, show “—” or remove the metr
 
 If an audit finds behavior that conflicts with this file, treat it as a correctness issue, not a wording preference.
 
-Use this file together with RULES.md, system.md, progress.md, and deepseek.md; this file governs attribution-specific logic, while the others govern broader engineering and session behavior.
+Use this file together with CLAUDE.md and AGENTS.md; this file governs attribution-specific logic, while the others govern broader engineering and session behavior.
 
 Part 1 — Core attribution principles
 These principles apply regardless of which features are implemented.
@@ -692,7 +694,7 @@ Super admins can view customer dashboards in a read-only support preview mode wi
 
 Access:
 - `POST /api/admin/preview` — initiates preview context (returns site metadata + install status + event counts)
-- `GET /api/admin/preview/:siteKey` — returns aggregated dashboard-safe data (KPI summary, top sources, install status) using PostHog HogQL filtered by siteKey
+- `GET /api/admin/preview/:siteKey` — returns aggregated dashboard-safe data (KPI summary, top sources, install status) filtered by siteKey
 - All routes require server-side `super_admin` role — enforced by `requireRole('super_admin')` middleware
 
 How it works:

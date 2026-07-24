@@ -162,9 +162,7 @@ const pathsToSearch = [
   'dashboard/src/pages',
   'dashboard/src/components',
   'tracker/tracker.js',
-  'SESSION_STATE.md',
-  'SESSION_LOG.md',
-  'SESSION_HANDOFF.md'
+  'SESSION_STATE.md'
 ];
 
 let grepFailure = false;

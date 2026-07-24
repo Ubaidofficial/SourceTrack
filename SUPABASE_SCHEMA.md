@@ -1,5 +1,7 @@
 # Supabase Schema Notes
 
+_Last reviewed: 2026-07-24_
+
 This file documents the current expected Supabase schema and migration state.
 
 `supabase/schema.sql` may be stale. Verify live schema using Supabase SQL Editor before making schema assumptions.
