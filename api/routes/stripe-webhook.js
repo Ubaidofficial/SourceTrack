@@ -7,7 +7,7 @@ import { claimIdempotencyKeys, logIngestionEvent, rollbackIdempotencyKeys } from
 import { resolveWebhookAnonymousId } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { SUBSCRIPTION_EVENTS, mapSubscriptionEvent, buildSubscriptionIdempotencyKeys, checkoutConversionValue } from '../lib/stripe-subscription.js'
-import { REFUND_EVENT_TYPE, buildRefundIdempotencyKeys, buildRefundConversion, resolveOriginalDistinctId } from '../lib/stripe-refund.js'
+import { REFUND_EVENT_TYPE, CHARGE_REFUNDED_EVENT_TYPE, buildRefundIdempotencyKeys, buildRefundConversion, resolveOriginalDistinctId, extractChargeRefunds } from '../lib/stripe-refund.js'
 import { writeConversionDirect } from '../../tinybird/adapter/conversion-write.js'
 
 
@@ -145,8 +145,15 @@ async function handleSubscriptionEvent(event, site, siteKey) {
 
 // Ingest a Stripe refund.created event as a compensating SIGNED $conversion
 // (negative conversion_value), so a signed-sum revenue MV nets it against the
-// original purchase (SCOPE_v3 §9). TINYBIRD-ONLY (founder decision Q1=A): NOT
-// ph.capture'd and NOT written to Supabase attributed_conversions.
+// original purchase (SCOPE_v3 §9).
+//
+// FACTUAL CORRECTION (PR3): this block used to say refunds are "TINYBIRD-ONLY … NOT
+// written to Supabase attributed_conversions". That is STALE — #240 made the nightly
+// PERSIST refunds (nightly-attribution.js:720 skips negatives EXCEPT
+// conversion_type='refund'), keyed conversion_event_id = the Tinybird event_id, under
+// UNIQUE(site_id, conversion_event_id). The webhook still writes only to Tinybird; the
+// refund reaches Supabase via the nightly. This matters for dedup: BOTH stores key off
+// the same re_… id, which is why one refund cannot become two rows in either.
 //
 // Identical to handleSubscriptionEvent (claim → write → rollback-on-failure →
 // logIngestionEvent) EXCEPT: (a) uses the refund helpers with their refund-specific
@@ -159,8 +166,103 @@ async function handleSubscriptionEvent(event, site, siteKey) {
 //
 // Returns { status, body } for the caller to send.
 async function handleRefundEvent(event, site, siteKey) {
+  return ingestOneRefund({
+    refund: event?.data?.object || {},
+    event,
+    site,
+    siteKey,
+    keys: buildRefundIdempotencyKeys(event),
+    stripeEventType: REFUND_EVENT_TYPE
+  })
+}
+
+// PR3: `charge.refunded` — the SAME refund Stripe already announced via refund.created.
+// Subscribed as a SAFETY NET (a refund.created that is never delivered still nets), which
+// makes dedup the whole job. It is NOT a second refund code path: it descends to the
+// individual Refund objects and hands each to the SAME ingestOneRefund() the
+// refund.created path uses, so resolution/build/write/rollback stay identical.
+//
+// TWO things this must get right, both verified against the Stripe Charge type:
+//   1. data.object is a CHARGE. `charge.amount` is the ORIGINAL total, not the refunded
+//      amount — feeding the charge straight in would net the full charge on a partial
+//      refund. So we use charge.refunds.data[] and each Refund's OWN amount.
+//   2. `charge.id` is ch_…, which would produce a DIFFERENT idempotency key AND a
+//      different Tinybird event_id than refund.created's re_… → double-write. Keying on
+//      each refund's re_… is what collapses the two events into one row.
+//
+// KEYS: refund_id (re_…) ONLY — deliberately dropping the provider_event_id key that
+// refund.created claims. Two reasons: (a) re_… is the ONLY key that dedups ACROSS the two
+// event types (the evt_… ids differ by construction), so it is the one doing the work;
+// (b) a charge.refunded carrying N refunds would claim the SAME evt_… N times and
+// self-collide — the claim is all-or-nothing (claim_revenue_idempotency_keys returns
+// false on ANY unique_violation), so refunds 2..N would be wrongly dropped as duplicates.
+async function handleChargeRefundedEvent(event, site, siteKey) {
+  const refunds = extractChargeRefunds(event)
+  if (refunds.length === 0) {
+    // No expandable refunds on the payload (`refunds` is optional/nullable on Charge).
+    // We ACK 200 and write NOTHING: the only id available here is ch_…, the exact key
+    // that double-writes against refund.created, and a 500 would make Stripe retry an
+    // array it is never going to materialise.
+    //
+    // BUT THIS MUST BE LOUD, NOT SILENT (§45 silent-success class). A merchant who
+    // subscribed ONLY charge.refunded and NOT refund.created would otherwise get zero
+    // refund netting forever, acked 200 every time — indistinguishable from "no refunds
+    // happened", while their attributed revenue silently overstates by the return rate.
+    // On modern API versions this is the DEFAULT shape, not an edge case: Stripe's
+    // 2024-10-28 Acacia release stopped auto-expanding Charge.refunds and states refund
+    // details are NOT available on charge.refunded, directing integrators to
+    // refund.created (the same change broke refund webhooks in woocommerce-gateway-stripe
+    // #2497 and Drupal Commerce #3407873 with a null refunds array).
+    const chargeId = event?.data?.object?.id || 'unknown'
+    console.warn(
+      `[stripe-webhook] charge.refunded ${event.id} for charge ${chargeId} carried NO ` +
+      `expandable refunds[] — NOTHING WRITTEN, this refund is NOT netted by this event. ` +
+      `Charge.refunds is not auto-expanded on modern Stripe API versions. If this site is ` +
+      `not also subscribed to '${REFUND_EVENT_TYPE}', its refunds are going UNRECORDED and ` +
+      `its attributed revenue is overstated — subscribe '${REFUND_EVENT_TYPE}' (the primary ` +
+      `refund path).`
+    )
+    return {
+      status: 200,
+      body: {
+        received: true,
+        ignored: true,
+        reason: 'no refund objects on charge payload',
+        // Surfaced in the response too, so the Stripe dashboard's delivery log shows the
+        // remedy rather than a bare success.
+        action_required: `Subscribe ${REFUND_EVENT_TYPE} — Charge.refunds is not expanded on this API version, so charge.refunded alone cannot net refunds.`
+      }
+    }
+  }
+
+  // Each refund is its own unit of work with its own claim, so a charge carrying an
+  // ALREADY-INGESTED refund plus a NEW one writes exactly the new one.
+  let written = 0, duplicate = 0, ignored = 0
+  for (const refund of refunds) {
+    const r = await ingestOneRefund({
+      refund,
+      event,
+      site,
+      siteKey,
+      keys: [{ key_type: 'refund_id', key_value: refund.id }],
+      stripeEventType: CHARGE_REFUNDED_EVENT_TYPE
+    })
+    // Any hard failure → 500 so Stripe redelivers the whole charge event. Refunds already
+    // committed on the first attempt dedup on the retry, so the redelivery is safe.
+    if (r.status >= 500) return r
+    if (r.body?.duplicate) duplicate++
+    else if (r.body?.ignored) ignored++
+    else written++
+  }
+  return { status: 200, body: { received: true, refunds_written: written, refunds_duplicate: duplicate, refunds_ignored: ignored } }
+}
+
+// The SINGLE refund ingestion path, shared by refund.created and charge.refunded.
+// `refund` is always an individual Stripe Refund object (re_…); `event` is the envelope
+// it arrived in (used for event.id / event.created only).
+async function ingestOneRefund({ refund: rawRefund, event, site, siteKey, keys, stripeEventType }) {
   const providerEventId = event.id
-  const refund = event?.data?.object || {}
+  const refund = rawRefund || {}
 
   // Amount validation up front. 200 (not 500) so Stripe does NOT retry a malformed
   // refund forever. buildRefundConversion throws on an invalid amount — guard here.
@@ -169,10 +271,14 @@ async function handleRefundEvent(event, site, siteKey) {
     return { status: 200, body: { received: true, ignored: true, reason: 'invalid refund amount' } }
   }
 
-  const keys = buildRefundIdempotencyKeys(event)
-  if (keys.length === 0) {
+  if (!Array.isArray(keys) || keys.length === 0) {
     return { status: 200, body: { received: true, ignored: true, reason: 'no refund idempotency key' } }
   }
+
+  // Every downstream helper reads the Refund off event.data.object, so wrap this ONE
+  // refund in an envelope carrying the real event's id/created. For refund.created this
+  // is byte-identical to the original event.
+  const refundEvent = { id: event.id, created: event.created, type: stripeEventType, data: { object: refund } }
 
   // Idempotency: claim → write → rollback-on-failure, so the claim is permanent only
   // after the write succeeds (§6.5) and a Stripe retry re-attempts rather than dropping.
@@ -210,7 +316,8 @@ async function handleRefundEvent(event, site, siteKey) {
       `— writing with phantom distinct_id + attribution_status=refund_unresolved`)
   }
   const { distinctId, value, currency, properties } = buildRefundConversion(
-    event, site, resolved ? resolution.distinctId : undefined, { unresolved: !resolved }
+    refundEvent, site, resolved ? resolution.distinctId : undefined,
+    { unresolved: !resolved, stripeEventType }
   )
 
   try {
@@ -305,9 +412,15 @@ router.post('/:site_key', async (req, res) => {
     const r = await handleSubscriptionEvent(event, site, siteKey)
     return res.status(r.status).json(r.body)
   }
-  // Refunds: compensating SIGNED (negative) $conversion — Tinybird-only (§9).
+  // Refunds: compensating SIGNED (negative) $conversion (§9). Stripe emits BOTH
+  // refund.created AND charge.refunded for the SAME refund; both are subscribed so a
+  // dropped refund.created still nets, and both dedup on the refund's re_… id.
   if (event.type === REFUND_EVENT_TYPE) {
     const r = await handleRefundEvent(event, site, siteKey)
+    return res.status(r.status).json(r.body)
+  }
+  if (event.type === CHARGE_REFUNDED_EVENT_TYPE) {
+    const r = await handleChargeRefundedEvent(event, site, siteKey)
     return res.status(r.status).json(r.body)
   }
   if (event.type !== 'checkout.session.completed') {
