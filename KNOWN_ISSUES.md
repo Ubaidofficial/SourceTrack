@@ -980,6 +980,39 @@ The "C4 UI/UX round 2" one-liner bundled four unrelated surfaces; only the Setup
 - **Settings 4-tab split** — the Settings page is 12+ cards in one scroll (design §18); split into tabs. Pure IA/layout, no data change. Separate PR.
 - **Attribution density / totals rows** — an Analytics-parity density pass on the Attribution surface + totals rows on tables. Presentation only. Separate PR; verify totals don't imply completeness (same §5.1 boundary as the rest).
 
+### 67. ✅ VERIFICATION RECORD — ad-blocker survivability confirmed (2026-07-24, evidence, NOT a defect)
+
+Recovered from PR #386, which was **CLOSED not merged** — its content existed nowhere in the repo (grep on `589bb41`: `safari`/`ITP`/`@ghostery`/`easyprivacy` all 0). Only the `$ping` KI survived, via #387.
+
+Tested against uBlock Origin's **full default filter set** (EasyPrivacy, EasyList, uBO privacy, Peter Lowe's) with `@ghostery/adblocker`, **control passing** (`google-analytics.com/analytics.js` correctly **BLOCKED**, so list coverage is confirmed, not silently empty):
+- `https://api.srctk.com/tracker.min.js` (script) → **ALLOWED**
+- `https://api.srctk.com/api/track` (fetch) → **ALLOWED**
+- `https://api.srctk.com/api/track` (ping) → **BLOCKED** (`$ping,third-party`) — the reason the tracker uses keepalive fetch, not sendBeacon (#387).
+
+No bare `/tracker.min.js` rule exists in any list — all 14 near-matches are **prefixed** variants (`/js_tracker.min.js`, `/keen-tracker.min.js`, `/utm-tracker.min.js`, …). `/api/track?guid` requires that literal query param, which the tracker does not send. `"srctk"` appears in **zero** rules. **CONFIRMED LIVE** in Chrome with uBlock active on `techrupt.pk`: `/api/track` returns **200**, `Type=fetch`, initiator `tracker.min.js:1`.
+
+**Standing risk:** filter lists change, and a generic path name gets likelier to be listed as adoption grows. `api/tests/adblock-guard.test.js` re-checks this on **every CI run** (added #387) — a new listing goes red there.
+
+### 68. 🔴 Safari ITP storage cap — first-touch persistence untested against multi-touch windows (2026-07-24, attribution risk, NOT fixed)
+
+First-touch persistence is confirmed for **25 days** via the `localStorage` key `st_aid` (`first_touch_timestamp` 2026-06-29, observed 2026-07-24) — **in CHROME**. Safari's **ITP caps script-writable storage at ~7 days of no interaction**, which would **truncate longer journeys and silently bias multi-touch models toward last-touch on Safari traffic** — a §5.1-class distortion that is invisible (the data just isn't there).
+
+**Not practically automatable:** Playwright's WebKit is **not** Safari's ITP, and the 7-day timers can't be waited out in CI. Safari's **ITP Debug Mode** compresses them for a **manual** pass. **Apple's current threshold is UNVERIFIED** — check WebKit's posts before designing to a specific number (do not hard-code "7 days").
+
+**Interacts with KI-65** (cookieless + SPA fabricates Direct): both concern first-touch survival, and a **cookieless SPA on Safari** would hit both simultaneously.
+
+### 69. ✅ VERIFICATION RECORD — capture chain verified live on prod (2026-07-24, evidence, NOT a defect)
+
+`techrupt.pk`, Chrome, real install. Two runs proving both directions:
+- **RETURNING VISITOR** (existing `localStorage`, arriving WITH new UTMs): `gclid "TESTGCLID123"` ✅ · `st_campaign_id "999"` ✅ · full-query `page_url` intact ✅. `first_touch_source` stayed `"direct"` with `first_touch_timestamp` `2026-07-24T10:01Z` — **CORRECT: a later visit must not overwrite an existing first touch.**
+- **FRESH VISITOR** (incognito, no prior storage, same URL): `first_touch_source "st_test"` · `first_touch_medium "cpc"` · `first_touch_campaign "verify_2607"` · `first_touch_timestamp 2026-07-24T18:53Z` · `gclid` + `st_campaign_id` captured · new `anonymous_id` issued.
+
+So **UTM capture, click-ID capture, Google Ads ValueTrack capture, first-touch capture, AND first-touch persistence** are all verified against a live prod install — a claim that can now be made truthfully. (Caveat: verified in **Chrome only** — see KI-68 for the Safari/ITP window boundary.)
+
+### 70. ⚠️ Form auto-fill + cross-domain decoration — shipped, never exercised live (2026-07-24, "built but never run", NOT a defect)
+
+`FEATURE_MAP §2` lists both as ✅ SHIPPED, but both are **OPT-IN** (`data-auto-fields="true"`, `data-cross-domains="..."`) and **no live install has either enabled**. Same "built but never run" class as the other instances logged this session (`ai-client.js`, MS/LinkedIn CAPI senders, `analytics.js`, the Supabase pre-agg netting, the SPA path). **Not urgent** — nobody is using them — **but do not treat them as proven.** For the record: **"automatic insertion" means automatic ONCE ENABLED, not on by default** — a customer installing the plain snippet gets neither.
+
 ---
 ## Recently fixed
 
