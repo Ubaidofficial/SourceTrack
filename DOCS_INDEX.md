@@ -30,7 +30,6 @@ Trust tier per doc. **Precedence when sources conflict:** code → `KNOWN_ISSUES
 | `ATTRIBUTION.md` | Attribution truthfulness contract. | Maintained |
 | `SUPABASE_SCHEMA.md` | Supabase tables/RLS/verification queries. | Maintained |
 | `.env.example` | Canonical env template (includes the Tinybird block since #328). | Maintained |
-| `IDENTITY_DESIGN.md` | Identity-stitching architecture. | Maintained |
 | `docs/post_verdict_roadmap.md` | **Build sequencing after the 2026-07-20/21 verdicts** — Tier 1 forced chain (api_keys scopes → read REST API → MCP v1), Tiers 2–4, metrics-coverage audit, positioning, held items, due proof points. Every claim carries an explicit evidence grade (VERIFIED / INFERRED / JUDGMENT / UNPROVEN) — **do not flatten them.** Also holds the §0 verification-methods note (squash merges defeat `merge-base --is-ancestor`). Distinct from `docs/paid_beta_go_no_go_master_audit.md`, which is a launch *gate*, not a roadmap. | Maintained |
 | `COMMANDCODE_RUNBOOK.md` | **Operational runbook** — Production Deployment Checklist, Emergency Rollback Runbook (incl. Scenario C: webhook-decryption failures), and Observability & Monitoring procedures. Incident-response — kept live at root, **not** archived. | Maintained |
 
@@ -42,15 +41,15 @@ Trust tier per doc. **Precedence when sources conflict:** code → `KNOWN_ISSUES
 
 ## Reference (context / navigation — not proof)
 
-`AGENT_BRIEF.md` · `PROJECT_CONTEXT_COMPACT.md` · `DEVELOPER_CONTEXT.md` · `RULES.md` · `DEV_SESSION_CHECKLIST.md` · `NEXT_SESSION_PROMPT.md` · `QA_RUNBOOK.md` · `MANUAL_QA_BACKLOG.md` · `BUG_REVIEW_LOG.md` · `CHANGELOG.md`. *(The superseded planning/spec docs — `IMPLEMENTATION_GAP_LIST`, `IMPLEMENTATION_STATUS`, the `FIGMA_*` / `BUSINESS_DASHBOARDS_SPEC` / `ONBOARDING_FLOW_SPEC` / `COMPETITOR_PARITY` specs — were archived to `docs/archive/` in this batch; see Historical below.)*
+`DEV_SESSION_CHECKLIST.md` · `NEXT_SESSION_PROMPT.md` · `QA_RUNBOOK.md` · `MANUAL_QA_BACKLOG.md` · `BUG_REVIEW_LOG.md` · `CHANGELOG.md`. *(`AGENT_BRIEF.md`, `PROJECT_CONTEXT_COMPACT.md`, `DEVELOPER_CONTEXT.md`, `RULES.md` were archived 2026-07-24 → `docs/archive/2026-07/`; see the dated section below.)* *(The superseded planning/spec docs — `IMPLEMENTATION_GAP_LIST`, `IMPLEMENTATION_STATUS`, the `FIGMA_*` / `BUSINESS_DASHBOARDS_SPEC` / `ONBOARDING_FLOW_SPEC` / `COMPETITOR_PARITY` specs — were archived to `docs/archive/` in this batch; see Historical below.)*
 
 ## Session tracking
 
 | File | Purpose | Tier |
 |---|---|---|
 | `SESSION_STATE.md` | Current session, branch, blockers, active work. | Maintained |
-| `SESSION_HANDOFF.md` | Last completed work + carried-forward items. | Maintained |
-| `SESSION_LOG.md` | Running one-line log of sessions 75+. Append-only. | Maintained |
+
+*(`SESSION_HANDOFF.md` and `SESSION_LOG.md` — the rolling session narrative — were archived 2026-07-24 → `docs/archive/2026-07/`, superseded by `NEXT_SESSION_PROMPT.md §0.5`; see the dated section below.)*
 
 ## Historical (point-in-time — not current)
 
@@ -66,6 +65,22 @@ Trust tier per doc. **Precedence when sources conflict:** code → `KNOWN_ISSUES
 | `docs/archive/qa/` | 172 frozen sprint QA reports (#324). `api/middleware/tier-check.js` cites `pageview_limit_enforcement_140G-4.md` as the rationale for live quota enforcement. |
 | `tinybird/archive/` | 15 migration-planning docs (#325). 8 are cited in deployed `.pipe` descriptions + code comments (e.g. `PHASE4_4C_PLAN.md` is the evidence for the argMax null-skip in `last_touch_by_site.pipe`). |
 | `docs/archive/` (root-doc batch, this PR) | 18 superseded root docs (session history + planning/spec + point-in-time audits). Verified **zero** code references — archived for provenance, **not deleted** so their history survives. Their internal cross-references stay stale by design (frozen). |
+
+## Archived 2026-07-24 → `docs/archive/2026-07/`
+
+Seven undated/stale root docs moved out (`git mv`, history preserved) because they were being read as current. See `docs/archive/2026-07/README.md` for the full metadata table. Live successors: `CLAUDE.md` (contract), `NEXT_SESSION_PROMPT.md` (handoff), `KNOWN_ISSUES.md`.
+
+| File | Reason | Superseded by |
+|---|---|---|
+| `SESSION_HANDOFF.md` | Session narrative (2026-05-23 → 2026-07-20) | `NEXT_SESSION_PROMPT.md §0.5` |
+| `SESSION_LOG.md` | Session narrative (2026-05-13 → 2026-07-19) | `NEXT_SESSION_PROMPT.md` + git log |
+| `IDENTITY_DESIGN.md` | Identity design built on the **decommissioned PostHog** person model (`ph.alias()`) | current identity code + `ATTRIBUTION.md` |
+| `AGENT_BRIEF.md` | Names PostHog as the live event store (PostHog-era) | `CLAUDE.md` |
+| `DEVELOPER_CONTEXT.md` | "queries use PostHog HogQL API" (PostHog-era) | `CLAUDE.md` |
+| `PROJECT_CONTEXT_COMPACT.md` | PostHog/HogQL overview + points at `SESSION_HANDOFF.md` | `CLAUDE.md` |
+| `RULES.md` | Reading list points at a dead doc set (`system.md`/`progress.md`/`deepseek.md`) | `CLAUDE.md` |
+
+Benign prose mentions of these names (in `NEXT_SESSION_PROMPT.md`, `COMMANDCODE_RUNBOOK.md`, `DEV_SESSION_CHECKLIST.md`, `CHANGELOG.md`, `tinybird/archive/*`) were left as-is — historical narrative, not live pointers. `AGENTS.md` and `scripts/qa-static-launch-check.mjs` were the only **live** references and were repointed in this PR.
 
 ## Maintenance rules
 

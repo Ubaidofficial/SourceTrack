@@ -1,5 +1,7 @@
 # Data Capture Spec
 
+_Last reviewed: 2026-07-24_
+
 This document is the current source of truth for what SourceTrack captures, accepts, stores, and exposes.
 
 Treat this as verified only for fields confirmed in tracker/API code. Mark future fields as roadmap until implemented.
@@ -179,9 +181,9 @@ Detected AI sources currently include:
 
 AI source is derived from HTTP referrer. Some AI products strip referrers, so AI attribution may be undercounted.
 
-## PostHog properties
+## Event properties
 
-PostHog receives event properties through backend routes.
+The event store (Tinybird, since the 2026-07-19 PostHog decommission) receives these properties through backend routes.
 
 Core properties used by reporting:
 
