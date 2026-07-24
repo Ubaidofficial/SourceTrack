@@ -38,13 +38,14 @@ SQL >
     (
         SELECT
             conv.conversion_value AS conversion_value,
+            conv.conversion_type AS conversion_type,
             src.utm_source AS utm_source,
             med.utm_medium AS utm_medium,
             camp.utm_campaign AS utm_campaign,
             ai.ai_source AS ai_source
         FROM
         (
-            SELECT event_id, distinct_id, timestamp, conversion_value
+            SELECT event_id, distinct_id, timestamp, conversion_value, conversion_type
             FROM events
             WHERE site_id = {{ String(site_id, required=True) }}
               AND event_type = '$conversion'
