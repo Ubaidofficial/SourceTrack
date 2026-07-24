@@ -14,6 +14,14 @@
 // (nightly-attribution.js) and by a request-path lib (attribution-engine.js).
 // ANTI-DRIFT: api/tests/url-normalize.test.js asserts parsePathname is defined exactly once in the
 // repo, and pins its behaviour against the pre-extraction implementation.
+//
+// PATH-NORMALIZER #1 of TWO (by design — the second is normalizePath() in api/lib/url-normalization.js).
+// This one is CASE-PRESERVED and keeps the trailing slash: it writes attributed_conversions.landing_page,
+// which is a report/groupby dimension on the MONEY RAIL — lowercasing it would re-bucket landing-page
+// revenue/conversion reports. DELIBERATELY DIFFERENT from normalizePath(), which LOWERCASES + strips the
+// slash for the GSC cross-source join. They are NOT interchangeable; do NOT unify (both are load-bearing
+// on persisted output). A drift guard — api/tests/url-normalizer-drift-guard.test.js — fails if a THIRD
+// path-normalizer appears anywhere in source.
 
 /**
  * A page URL -> its pathname, for landing-page bucketing.
