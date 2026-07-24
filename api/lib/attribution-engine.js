@@ -2684,14 +2684,19 @@ export async function getPreAggregatedAttribution({
     if (!aggregated[dimValue]) {
       aggregated[dimValue] = { revenue: 0, conversions: 0, leads: 0, customers: 0 }
     }
-    aggregated[dimValue].revenue += parseFloat(row.conversion_value || 0)
-    aggregated[dimValue].conversions += 1
+    aggregated[dimValue].revenue += parseFloat(row.conversion_value || 0)   // (A) signed SUM nets — leave unconditional
+    // (A) PR2d: a refund (conversion_type='refund') must NOT add to any conversion count — it nets the
+    // revenue above; a refunded order is still a conversion that happened, so counts must not decrement
+    // either. #382 fixed the dashboard/analytics/leads-server route handlers; this engine reader was missed.
+    if (row.conversion_type !== 'refund') {
+      aggregated[dimValue].conversions += 1
 
-    const typeClass = classifyConversionType(row.conversion_type)
-    if (typeClass === 'lead') {
-      aggregated[dimValue].leads += 1
-    } else if (typeClass === 'customer') {
-      aggregated[dimValue].customers += 1
+      const typeClass = classifyConversionType(row.conversion_type)
+      if (typeClass === 'lead') {
+        aggregated[dimValue].leads += 1
+      } else if (typeClass === 'customer') {
+        aggregated[dimValue].customers += 1
+      }
     }
   }
 
@@ -2771,7 +2776,7 @@ export async function getUShapedAttribution({
 
   const { data, error } = await supabase
     .from('attributed_conversions')
-    .select('u_shaped_attribution')
+    .select('u_shaped_attribution, conversion_type')
     .eq('site_id', siteId)
     .gte('conversion_date', dateFrom)
     .lte('conversion_date', dateTo)
@@ -2782,6 +2787,7 @@ export async function getUShapedAttribution({
   const aggregated = {}
   for (const row of data || []) {
     // Safety: legacy rows may have been stored as JSON string instead of JSONB array
+    const isRefund = row.conversion_type === 'refund'   // (A) PR2d — see the count gate below
     let uShapedData = row.u_shaped_attribution || []
     if (typeof uShapedData === 'string') {
       try { uShapedData = JSON.parse(uShapedData) } catch { uShapedData = [] }
@@ -2792,8 +2798,9 @@ export async function getUShapedAttribution({
       if (!aggregated[dimValue]) {
         aggregated[dimValue] = { revenue: 0, conversions: 0 }
       }
-      aggregated[dimValue].revenue += parseFloat(touch.attributed_value || 0)
-      aggregated[dimValue].conversions += parseFloat(touch.fraction || 0)
+      aggregated[dimValue].revenue += parseFloat(touch.attributed_value || 0)   // (A) signed SUM nets
+      // (A) PR2d: skip a refund's fractional credit (not add-zero) — revenue still nets above.
+      if (!isRefund) aggregated[dimValue].conversions += parseFloat(touch.fraction || 0)
     }
   }
 
@@ -2819,7 +2826,7 @@ export async function getTimeDecayAttribution({
 
   const { data, error } = await supabase
     .from('attributed_conversions')
-    .select('time_decay_attribution')
+    .select('time_decay_attribution, conversion_type')
     .eq('site_id', siteId)
     .gte('conversion_date', dateFrom)
     .lte('conversion_date', dateTo)
@@ -2829,6 +2836,7 @@ export async function getTimeDecayAttribution({
 
   const aggregated = {}
   for (const row of data || []) {
+    const isRefund = row.conversion_type === 'refund'   // (A) PR2d — see the count gate below
     let tdData = row.time_decay_attribution || []
     if (typeof tdData === 'string') {
       try { tdData = JSON.parse(tdData) } catch { tdData = [] }
@@ -2837,8 +2845,9 @@ export async function getTimeDecayAttribution({
     for (const touch of tdData) {
       const dimValue = multiTouchDimValue(touch, groupBy)
       if (!aggregated[dimValue]) aggregated[dimValue] = { revenue: 0, conversions: 0 }
-      aggregated[dimValue].revenue += parseFloat(touch.attributed_value || 0)
-      aggregated[dimValue].conversions += parseFloat(touch.fraction || 0)
+      aggregated[dimValue].revenue += parseFloat(touch.attributed_value || 0)   // (A) signed SUM nets
+      // (A) PR2d: skip a refund's fractional credit (not add-zero) — revenue still nets above.
+      if (!isRefund) aggregated[dimValue].conversions += parseFloat(touch.fraction || 0)
     }
   }
 
@@ -2864,7 +2873,7 @@ export async function getWShapedAttribution({
 
   const { data, error } = await supabase
     .from('attributed_conversions')
-    .select('w_shaped_attribution')
+    .select('w_shaped_attribution, conversion_type')
     .eq('site_id', siteId)
     .gte('conversion_date', dateFrom)
     .lte('conversion_date', dateTo)
@@ -2874,6 +2883,7 @@ export async function getWShapedAttribution({
 
   const aggregated = {}
   for (const row of data || []) {
+    const isRefund = row.conversion_type === 'refund'   // (A) PR2d — see the count gate below
     let wsData = row.w_shaped_attribution || []
     if (typeof wsData === 'string') {
       try { wsData = JSON.parse(wsData) } catch { wsData = [] }
@@ -2882,8 +2892,10 @@ export async function getWShapedAttribution({
     for (const touch of wsData) {
       const dimValue = multiTouchDimValue(touch, groupBy)
       if (!aggregated[dimValue]) aggregated[dimValue] = { revenue: 0, conversions: 0 }
-      aggregated[dimValue].revenue += parseFloat(touch.attributed_value || 0)
-      aggregated[dimValue].conversions += parseFloat(touch.fraction || 0)
+      aggregated[dimValue].revenue += parseFloat(touch.attributed_value || 0)   // (A) signed SUM nets
+      // (A) PR2d: do NOT add a refund's fractional credit to the conversion count — skip the add
+      // entirely (not add-zero), so the count reflects only real conversions. Revenue still nets above.
+      if (!isRefund) aggregated[dimValue].conversions += parseFloat(touch.fraction || 0)
     }
   }
 
@@ -2909,7 +2921,7 @@ export async function getLinearAttribution({
 
   const { data, error } = await supabase
     .from('attributed_conversions')
-    .select('linear_attribution')
+    .select('linear_attribution, conversion_type')
     .eq('site_id', siteId)
     .gte('conversion_date', dateFrom)
     .lte('conversion_date', dateTo)
@@ -2919,6 +2931,7 @@ export async function getLinearAttribution({
 
   const aggregated = {}
   for (const row of data || []) {
+    const isRefund = row.conversion_type === 'refund'   // (A) PR2d — see the count gate below
     let linearData = row.linear_attribution || []
     if (typeof linearData === 'string') {
       try { linearData = JSON.parse(linearData) } catch { linearData = [] }
@@ -2929,8 +2942,9 @@ export async function getLinearAttribution({
       if (!aggregated[dimValue]) {
         aggregated[dimValue] = { revenue: 0, conversions: 0 }
       }
-      aggregated[dimValue].revenue += parseFloat(touch.attributed_value || 0)
-      aggregated[dimValue].conversions += parseFloat(touch.fraction || 0)
+      aggregated[dimValue].revenue += parseFloat(touch.attributed_value || 0)   // (A) signed SUM nets
+      // (A) PR2d: skip a refund's fractional credit (not add-zero) — revenue still nets above.
+      if (!isRefund) aggregated[dimValue].conversions += parseFloat(touch.fraction || 0)
     }
   }
 
