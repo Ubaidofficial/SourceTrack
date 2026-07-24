@@ -5,7 +5,27 @@
   // Opt-out signaled by the browser/OS — abort before any id fetch or beacon.
   // Parity with the cookie build (tracker.js). Opt-in is still possible via the
   // data-consent-required attribute (consent system below).
-  if (navigator.doNotTrack === '1' || window.doNotTrack === '1' || navigator.globalPrivacyControl === true) return
+  // Under suppression we still expose window.sourcetrack as an all-no-op stub, so a
+  // customer page calling sourcetrack.conversion(...) never throws. The send() try/catch
+  // cannot help here — the throw would be in the CUSTOMER's code, before send() is
+  // reached. No sender fires → no network call → suppression semantics preserved.
+  if (navigator.doNotTrack === '1' || window.doNotTrack === '1' || navigator.globalPrivacyControl === true) {
+    window.sourcetrack = {
+      conversion: function () {}, identify: function () {}, track: function () {},
+      optOut: function () {}, consent: function () {}, fillHiddenFields: function () {},
+      // optIn is a no-op ON PURPOSE: GPC is a legally recognised opt-out signal (CPRA +
+      // several US state laws), so an in-page consent widget must NOT override it. Do not
+      // "fix" this into a real opt-in to re-enable tracking — that is a compliance defect.
+      optIn: function () {},
+      getToken: function () { return null },
+      // false = "actively opted out" under GPC/DNT — NOT "no consent recorded yet".
+      hasConsent: function () { return false },
+      getContext: function () { return {} },           // object — callers read/destructure it
+      getHandoffParams: function () { return {} },     // object — same
+      decorateUrl: function (url) { return url }       // MUST return its input unchanged
+    }
+    return
+  }
 
   // ─── Config ────────────────────────────────────────────────────────────────
   var sc = document.currentScript || document.querySelector('script[data-site-key]')

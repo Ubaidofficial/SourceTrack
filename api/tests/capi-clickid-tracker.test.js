@@ -68,8 +68,9 @@ test('cookieless build: forwards event_id but NOT _fbp/_fbc (reads no cookies)',
   assert.ok(!('fbc' in conv.body), 'cookieless must not read _fbc')
 })
 
-test('cookie build: DNT aborts the tracker (no capture surface at all)', () => {
+test('cookie build: DNT exposes an all-no-op stub — a conversion() call captures nothing', () => {
   const h = run(trackerCode, { doNotTrack: '1', cookie: '_fbp=fb.1.111.AAA' })
-  assert.strictEqual(h.window.sourcetrack, undefined)
-  assert.strictEqual(h.payloads.length, 0)
+  assert.ok(h.window.sourcetrack, 'stub exists so customer calls never throw')
+  h.window.sourcetrack.conversion({ event_id: 'e', value: 10, order_id: 'o' })  // must be a safe no-op
+  assert.strictEqual(h.payloads.length, 0, 'no capture surface under DNT — no _fbp, no payloads')
 })
