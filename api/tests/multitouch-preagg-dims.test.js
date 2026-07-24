@@ -122,7 +122,13 @@ test('the new-vintage dims stay OPEN (real for rows written since 87ee5e7)', () 
 
 test('group_by2 is gated on the same contract', () => {
   assert.ok(G({ group_by: 'source', group_by2: 'date' }), 'a gated dim in group_by2 must deny too')
-  assert.equal(G({ group_by: 'source', group_by2: 'medium' }), null)
+  // PR-A / KI-60: source×medium is a TWO-DIM shape, and the linear reader (getLinearAttribution)
+  // takes groupBy ONLY — it silently drops medium. This assertion used to expect `null` (servable),
+  // which PINNED THE SILENT-DROP BUG OPEN (same class as the else->sourceField fix below). The
+  // correct contract: no pre-agg/multi-touch/ai reader honors a 2nd dim, so a two-dim shape here is
+  // DENIED (only the session-report path serves two dims). See group-by2-silent-drop-guard.test.js.
+  assert.equal(G({ group_by: 'source', group_by2: 'medium' })?.error_code, 'gated_dead_store',
+    'source×medium two-dim must DENY (its reader drops the 2nd dim), not return single-dim data')
 })
 
 // ── the gate fires ONLY on the route's real pre-agg ENTRY condition ─────────────────────
