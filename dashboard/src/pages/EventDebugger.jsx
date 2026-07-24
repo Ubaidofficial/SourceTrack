@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useActiveSite } from '../hooks/useActiveSite'
 import { getEventHealth, getEdgeCases, fetchApi, getLatestEvents } from '../lib/api'
+import { dedupeEventsById, shouldPoll, LIVE_FEED_POLL_MS } from '../lib/liveFeed'
 import {
   RefreshCw,
   Bug,
@@ -105,7 +106,9 @@ export default function EventDebugger({ isEmbedded = false }) {
           }
         })()
       ])
-      setEvents(eventsData?.events || [])
+      // Merge + de-dupe so a re-fetch (initial or polled) surfaces new events at the top and
+      // collapses re-seen ones, rather than stacking duplicates.
+      setEvents(prev => dedupeEventsById([...(eventsData?.events || []), ...prev]))
       setHealth(healthData)
       setEdge(edgeData)
       setHygiene(hygieneData)
@@ -121,6 +124,20 @@ export default function EventDebugger({ isEmbedded = false }) {
   useEffect(() => {
     if (site) fetchAll()
   }, [site, fetchAll])
+
+  // Live feed: poll ONLY the latest-events list every LIVE_FEED_POLL_MS (not the full health/edge
+  // bundle). Paused when the tab is hidden. Merged + de-duped into the existing list.
+  useEffect(() => {
+    if (!site) return
+    const id = setInterval(async () => {
+      if (!shouldPoll(typeof document !== 'undefined' && document.hidden)) return
+      try {
+        const d = await getLatestEvents(site.site_key)
+        setEvents(prev => dedupeEventsById([...(d?.events || []), ...prev]))
+      } catch (_) { /* transient poll error — keep the last good list */ }
+    }, LIVE_FEED_POLL_MS)
+    return () => clearInterval(id)
+  }, [site])
 
   const updateFilter = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }))

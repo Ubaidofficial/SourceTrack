@@ -5,6 +5,8 @@ import { fetchApi } from '../lib/api'
 import { format, subDays } from 'date-fns'
 import { Line } from 'react-chartjs-2'
 import { hasFeature } from '../lib/planFeatures'
+import { hasHistoricalData } from '../lib/liveFeed'
+import EventDebugger from './EventDebugger'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -127,6 +129,20 @@ export default function Dashboard() {
         <QueryError isError={isError} error={error} onRetry={refetch} />
       ) : (
         <>
+          {/* C4 cold-start: while there is NO historical data to show, prove the install works with a
+              live feed of arriving events. Disappears the moment real aggregates exist — this is a
+              cold-start affordance, not permanent furniture. Cheap: reuses hasConversions/hasTraffic
+              from the dashboard payload already fetched (no new pipe). */}
+          {!previewMode && site && !hasHistoricalData({ hasConversions, hasTraffic, totalConversions, trafficSources, trafficTopPages }) && (
+            <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">Your install is live — here are events as they arrive</h3>
+                <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">Reports fill in as data accrues. This live feed is a floor of what we received — ad blockers and privacy settings can hide arrivals we never see.</p>
+              </div>
+              <EventDebugger isEmbedded />
+            </div>
+          )}
+
           {/* Onboarding / Installation Alert Banner */}
           {!isLoading && !previewMode && setupIncomplete && (
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">

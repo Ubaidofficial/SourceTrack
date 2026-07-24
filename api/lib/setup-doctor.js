@@ -385,6 +385,10 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
     status: overallStatus,
     severity,
     message,
+    // C4: surface the 30-day count that was previously computed and discarded. NOTE this is the
+    // doctor_pageviews_30d pipe, which counts ONLY event_type='$pageview' — so the UI labels it
+    // "Pageviews received (last 30 days)", NOT "Events received" (which would over-claim).
+    pageviews_30d: pageviews30d,
     tracker_install: {
       installed: lastSeen !== null,
       last_seen_at: site.last_seen_at || null,

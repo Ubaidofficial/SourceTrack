@@ -217,6 +217,8 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
     paid_tracking,
     verification_token,
     recommended_next_action,
+    privacy_suppression,
+    pageviews_30d,
     checks = []
   } = diagnostics
 
@@ -386,6 +388,26 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
           </div>
         ))}
       </div>
+
+      {/* C4: the 30-day count, truthfully labelled. doctor_pageviews_30d counts $pageview ONLY, so
+          this says "Pageviews", not "Events". Floor caveat: we cannot see what a blocker dropped. */}
+      {typeof pageviews_30d === 'number' && (
+        <div className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-gray-50 dark:bg-[#252929]/30 border border-gray-100 dark:border-transparent">
+          <span className="font-medium text-gray-600 dark:text-gray-400">Pageviews received (last 30 days)</span>
+          <span className="font-semibold text-st-black dark:text-dark-primary tabular-nums">{pageviews_30d.toLocaleString()}</span>
+        </div>
+      )}
+      {privacy_suppression && typeof privacy_suppression.suppressed_count === 'number' && privacy_suppression.suppressed_count > 0 && (
+        <div className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-gray-50 dark:bg-[#252929]/30 border border-gray-100 dark:border-transparent">
+          <span className="font-medium text-gray-600 dark:text-gray-400">Privacy signals honored (GPC/DNT), last 30 days</span>
+          <span className="font-semibold text-st-black dark:text-dark-primary tabular-nums">at least {privacy_suppression.suppressed_count.toLocaleString()} browser-days</span>
+        </div>
+      )}
+
+      {/* C4 TRUTH FOOTER — the page must never imply completeness (§5.1). Every count above is a floor. */}
+      <p className="text-[11px] leading-relaxed text-gray-500 dark:text-gray-500 pt-1">
+        These figures cover the <span className="font-medium">last 30 days</span> and count only what SourceTrack received. Events blocked by ad blockers, browser privacy settings, or network failures are undetectable, so every number here is a <span className="font-medium">floor — not a guaranteed total</span>. Privacy-signal counts are unique browser-days (the tracker script is cached for 24h), not per-visit. A new install starts empty; visitor journeys before install cannot be backfilled.
+      </p>
 
       {/* 3. Single Next Action Recommendation */}
       {recommended_next_action && recommended_next_action.action_key !== 'none' && (
