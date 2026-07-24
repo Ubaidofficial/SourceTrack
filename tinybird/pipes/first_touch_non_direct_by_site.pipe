@@ -44,6 +44,9 @@ SQL >
         SELECT
             conv.event_id AS event_id,
             conv.conversion_value AS conversion_value,
+            -- Thread conversion_type to the outer countIf refund filter. any() (not GROUP BY) so the
+            -- argMinIf grouping (event_id unique per conv row) is untouched; any() is deterministic here.
+            any(conv.conversion_type) AS conversion_type,
             argMinIf(pv.utm_source, pv.timestamp, pv.timestamp <= conv.timestamp) AS utm_source,
             argMinIf(pv.utm_medium, pv.timestamp, pv.timestamp <= conv.timestamp) AS utm_medium,
             -- nullIf(campaign,'') so argMinIf's val-null-skip ENGAGES on Tinybird's empty-string
@@ -55,7 +58,7 @@ SQL >
             argMinIf(nullIf(pv.utm_campaign, ''), pv.timestamp, pv.timestamp <= conv.timestamp) AS utm_campaign
         FROM
         (
-            SELECT event_id, distinct_id, timestamp, conversion_value
+            SELECT event_id, distinct_id, timestamp, conversion_value, conversion_type
             FROM events
             WHERE site_id = {{ String(site_id, required=True) }}
               AND event_type = '$conversion'
