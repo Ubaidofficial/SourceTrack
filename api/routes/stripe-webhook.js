@@ -7,7 +7,7 @@ import { claimIdempotencyKeys, logIngestionEvent, rollbackIdempotencyKeys } from
 import { resolveWebhookAnonymousId } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { SUBSCRIPTION_EVENTS, mapSubscriptionEvent, buildSubscriptionIdempotencyKeys, checkoutConversionValue } from '../lib/stripe-subscription.js'
-import { REFUND_EVENT_TYPE, buildRefundIdempotencyKeys, buildRefundConversion } from '../lib/stripe-refund.js'
+import { REFUND_EVENT_TYPE, buildRefundIdempotencyKeys, buildRefundConversion, resolveOriginalDistinctId } from '../lib/stripe-refund.js'
 import { writeConversionDirect } from '../../tinybird/adapter/conversion-write.js'
 
 
@@ -188,7 +188,30 @@ async function handleRefundEvent(event, site, siteKey) {
 
   // NO claimConversionUsage gate — a refund must NOT consume the monthly quota.
 
-  const { distinctId, value, currency, properties } = buildRefundConversion(event, site)
+  // Phase 7 PR1: resolve the refund to its original conversion (by payment_intent,
+  // then stripe_invoice_id) and inherit the ORIGINAL's distinct_id — so the nightly
+  // rebuilds the refund's Supabase attribution from the real visitor's touchpoints
+  // and it nets against the acquiring source (not 'stripe'/'direct'). DEGRADED PATH
+  // (§requirement): a miss OR a Tinybird failure NEVER drops the refund and NEVER
+  // silently writes today's phantom — it keeps the phantom distinct_id AND stamps
+  // attribution_status='refund_unresolved' so the gap is queryable. resolve* never
+  // throws (returns 'unavailable' on a null read), so this cannot break the write.
+  // payment_intent is the ONLY join key (Stripe Refund has no `invoice`; purchase
+  // stores payment_id=session.payment_intent). A subscription-mode refund with no
+  // payment_intent resolves as refund_unresolved — Invoice Payment lookup deferred.
+  const resolution = await resolveOriginalDistinctId({
+    paymentId: refund.payment_intent || null,
+    siteId: site.id
+  })
+  const resolved = resolution.status === 'resolved'
+  if (!resolved) {
+    console.warn(`[stripe-webhook] refund ${refund.id} attribution ${resolution.status} ` +
+      `(payment_intent=${refund.payment_intent || 'null'}) ` +
+      `— writing with phantom distinct_id + attribution_status=refund_unresolved`)
+  }
+  const { distinctId, value, currency, properties } = buildRefundConversion(
+    event, site, resolved ? resolution.distinctId : undefined, { unresolved: !resolved }
+  )
 
   try {
     // MONEY PATH (Wave-1): Tinybird is the SOLE writer — DIRECT, AWAITED, RETRIED.
