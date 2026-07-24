@@ -303,12 +303,22 @@
   }
 
   // ─── Send ──────────────────────────────────────────────────────────────────
+  // Prefer fetch keepalive over sendBeacon: it survives page unload AND is
+  // xhr-typed, so it is NOT caught by the adblock "$ping,third-party" rule that
+  // silently drops sendBeacon's ping request (uBlock/ABP/Brave). sendBeacon is
+  // only the fallback where keepalive is unsupported, so unload sends still
+  // survive there. Feature-detected once — never trust a UA/version string.
+  var supportsKeepalive = (function () {
+    try { return 'keepalive' in new Request('') } catch (_) { return false }
+  })()
   function send(ep, data) {
     var b = JSON.stringify(data), u = B + ep
     try {
-      navigator.sendBeacon
-        ? navigator.sendBeacon(u, new Blob([b], { type: 'application/json' }))
-        : fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: b, keepalive: true }).catch(function () {})
+      if (supportsKeepalive) {
+        fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: b, keepalive: true }).catch(function () {})
+      } else if (navigator.sendBeacon) {
+        navigator.sendBeacon(u, new Blob([b], { type: 'application/json' }))
+      }
     } catch (_) {}
   }
 
