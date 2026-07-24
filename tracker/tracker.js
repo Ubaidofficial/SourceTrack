@@ -370,6 +370,13 @@
     if (_pvTimer) clearTimeout(_pvTimer)
     _pvTimer = setTimeout(function () { _pvTimer = null; sendPageview() }, 100)
   }
+  // We wrap pushState (forward SPA nav) + listen to popstate (back/forward). We deliberately do NOT
+  // wrap replaceState: routers use it for query-only updates (filters / sort / pagination), and the
+  // de-dupe keys on the full location.href — so `?sort=price` is a distinct href and a blanket
+  // replaceState wrap would fire a pageview on every filter click, inflating the highest-traffic page
+  // severalfold (e.g. a hotel-search results page). A correct future fix would wrap replaceState but
+  // only emit a pageview when the PATH changes (not query-only). hashchange is likewise NOT listened
+  // for: hash routing done via pushState is already caught here; a bare `location.hash = …` is not.
   history.pushState = function () {
     _ps.apply(this, arguments)
     _schedulePv()
