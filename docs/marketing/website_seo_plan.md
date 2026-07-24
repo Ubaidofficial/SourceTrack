@@ -22,7 +22,7 @@ competitor CSV export.
 
 ## PART 1 — LOCKED DECISIONS (stop reversing these)
 
-These are settled by the 6-CSV analysis in Appendix A. Do not relitigate without new data.
+These are settled by the 7-CSV analysis in Appendix A. Do not relitigate without new data.
 
 1. 🟢 **Architecture: Astro static marketing site + separate React app.** Marketing pages are
    brochureware that never needed React. Astro ships zero JS, renders real HTML to crawlers, embeds
@@ -279,7 +279,7 @@ Confidence demands naming these rather than papering over them:
 4. 🟡 **Exact industry-page value** — competitors have them but they're not in the traffic clusters;
    sequenced late deliberately.
 
-Everything else in Parts 1–5 is 🟢 — backed by agreement across 6 competitor exports. Those are the
+Everything else in Parts 1–5 is 🟢 — backed by agreement across 7 competitor exports. Those are the
 ones to build without second-guessing.
 
 ---
@@ -594,7 +594,7 @@ different pages, and the link between them is the whole mechanism:
 
 # APPENDIX A — COMPETITOR TRAFFIC EVIDENCE
 
-*The data behind every ranking above. Six competitor exports (Ahrefs, 2026-06-16 / 2026-07-22).*
+*The data behind every ranking above. Seven competitor exports (Ahrefs/Semrush, 2026-06-16 / 2026-07-22 / 2026-07-24).*
 
 ## A.1 The finding that reframes everything — real traffic data
 
@@ -730,6 +730,18 @@ of it — not tools.** `[DATA]`
   engine matters: it's the only non-brand traffic source that works, and it seeds brand over time.
 - **Hyros is the control case:** 88% brand, no blog, no tools → no organic engine beyond its name.
   Proof that skipping content caps you at brand-demand traffic. Do not be Hyros.
+
+## A.4 Attributer's export (1,370 keywords) — a seventh source, and it corroborates `[DATA]`
+
+Attributer.io's organic keyword export adds a seventh competitor, and it moves nothing — which is the point. It makes three points, none redundant with A.1–A.3.
+
+1. **The ranking≠traffic pattern holds a SEVENTH time.** `[DATA]` Attributer ranks for **1,370 keywords** and captures just **329 organic visits/mo** total — the same shape as Usermaven (67% zero-traffic) and Cometly (48%): a large ranked footprint pulling almost nothing. This *strengthens* the locked A.1/A.3 finding; it does not change it. Seven exports, one verdict — nobody measures this plan in page count.
+
+2. **First direct ranked-traffic evidence that Silo 7's hidden-fields play earns.** `[DATA]` Silo 7 previously rested on SourceLoop's *pattern* plus inference. Attributer actually RANKS on the hidden-field sub-cluster with tiny pages: `typeform hidden fields` (12, pos 5.9), `contact form 7 hidden field` (9, pos 4.5), `hidden fields typeform` (4). Small but real — and it maps directly onto a SourceTrack capability that is **shipped and verified live** (form auto-fill into hidden fields, confirmed on prod 2026-07-24), so the guide topic and the product back each other. Build the hidden-field guides knowing they earn.
+
+3. **A weak-but-real signal on Silo 7's ICP-builder question — still UNCONFIRMED (Part 6 #1).** `[DATA]` Part 6 flags "which form builders the ICP uses" as a WordPress-heavy *guess*, to confirm from real signups. Attributer earns on **enterprise MAP/CRM** terms the current Silo-7 list omits: `pardot seo` (22, pos 1), `activecampaign google ads integration` (9), `marketo utm tracking` (7). This does **not** resolve the question — confirm it from signup data as the doc already says — but it's a data point to weigh: the ICP may skew more MAP/CRM than WordPress-forms. Hold `pardot` / `marketo` / `activecampaign` UTM-tracking guides as CANDIDATES pending that confirmation, not additions.
+
+*Source: Attributer Ahrefs/Semrush export, 2026-07-24 (summarized in the doc's own words, not committed — licensed SEO-tool export, handled the same as A.1–A.3).*
 
 ---
 
