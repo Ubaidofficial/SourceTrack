@@ -922,10 +922,10 @@ Confirmed live **2026-07-24** — this is **KI-54's token-collision risk as a li
 **The only reliable check is the `Running against Tinybird Cloud: Workspace <X>` line** every `tb --cloud` command prints — read it before every deploy/check. **`tb --cloud workspace ls` is NOT a reliable check:** it lists only `imubaid93_workspace` and does **not** show the workspace the `.tinyb` is actually pointed at.
 
 Two adjacent traps, both of which bit in Session 150:
-- **Deploys need `st_staging_deploy` (`WORKSPACE:DEPLOY` scope).** The default workspace token returns `workspace requires scope WORKSPACE:DEPLOY`. Pattern that worked **without** re-authing `.tinyb`: `ST_DEPLOY=$(pbpaste); TB_TOKEN="$ST_DEPLOY" tb --cloud deploy; unset ST_DEPLOY`.
+- **Deploys need `st_staging_deploy` (`WORKSPACE:DEPLOY` scope).** The default workspace token returns `workspace requires scope WORKSPACE:DEPLOY`. Pass the token **inline, single-quoted**, for one command, **without** re-authing `.tinyb`: `PD='<token>'; TB_TOKEN="$PD" tb --cloud deploy; unset PD`. ⚠️ **Do NOT use `pbpaste`** (captures the last clipboard entry — usually the command, not the token) or **`read -rs`** (silently returned empty twice on 2026-07-24). See `docs/tinybird_cutover_runbook.md` step 5.
 - **`TB_TOKEN` persists in a shell** and silently overrides `.tinyb` for **every later command** — so a later "staging" command can run against whatever that token points to. Unset it explicitly.
 
-**Recommended (NOT built):** a predeploy guard that reads the `Running against` line and **refuses on workspace mismatch** — same shape as the pipe-refund guard. See also **KI-54** (rename `dual_write_append` before the prod cutover) and **KI-59** (prod drift).
+**Recommended (NOT built):** a predeploy guard that reads the `Running against` line and **refuses on workspace mismatch** — same shape as the pipe-refund guard. See also **KI-54** (rename `dual_write_append` before the prod cutover) and **KI-59** (prod drift). **Full procedure:** `docs/tinybird_cutover_runbook.md` (steps 2 and 7 exist specifically to disarm this KI).
 
 ### 59. Prod Tinybird carries pre-existing Phase-4 drift — 4 pipes modified vs repo HEAD, independent of PR2b
 

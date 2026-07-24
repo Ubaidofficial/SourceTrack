@@ -58,10 +58,10 @@ paste-ready command/dispatch blocks.
 - **privacy_signals WORKS in prod:** 15 `append-hfi` ops, latest `2026-07-24 09:59:32`. The earlier "0 rows" KI was a **staging-only** observation and was **WRONG** (corrected in #388).
 - **PROD TINYBIRD UNTOUCHED** — deployment #25 is staging only.
 
-### ⚠️ TRAPS — Tinybird (read before ANY `tb` command; see KI-58 / KI-59)
+### ⚠️ TRAPS — Tinybird (read before ANY `tb` command; see KI-58 / KI-59). **Full procedure: `docs/tinybird_cutover_runbook.md`.**
 
 1. **The MAIN worktree's `tinybird/.tinyb` is authenticated to PROD**, `TB_TOKEN` unset — `tb --cloud deploy` from that directory hits **production with no prompt**. **ALWAYS read the `Running against Tinybird Cloud: Workspace <X>` line** every `tb --cloud` command prints. `tb --cloud workspace ls` lists only `imubaid93_workspace` and does **NOT** show the workspace you're actually pointed at — it is **not** a reliable check.
-2. **Deploys need `st_staging_deploy` (`WORKSPACE:DEPLOY`).** The default token → `workspace requires scope WORKSPACE:DEPLOY`. Pattern that worked without re-authing `.tinyb`: `ST_DEPLOY=$(pbpaste); TB_TOKEN="$ST_DEPLOY" tb --cloud deploy; unset ST_DEPLOY`.
+2. **Deploys need `st_staging_deploy` (`WORKSPACE:DEPLOY`).** The default token → `workspace requires scope WORKSPACE:DEPLOY`. Pass the token **inline, single-quoted**, for one command: `PD='<token>'; TB_TOKEN="$PD" tb --cloud deploy; unset PD`. **Do NOT use `pbpaste`** (it captures whatever was last copied — usually the command, not the token) and **NOT `read -rs`** (silently returned empty twice on 2026-07-24). Don't re-auth `.tinyb` to prod.
 3. **`TB_TOKEN` persists in a shell** and silently overrides `.tinyb` for every later command. **Unset it explicitly** after use.
 - (Still true from prior handoff) **Staging dashboard = `https://sourcetrack-dashboard-staging.up.railway.app/`** — the `-production` URL is PROD. **Browser cache masks fresh deploys** — hard-reload before concluding a change didn't ship.
 
