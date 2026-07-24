@@ -2148,6 +2148,27 @@ Add Conversion Event button.
 
 ---
 
+## 18.9 Setup & Health page (added 2026-07-24, C4)
+
+**Route:** `/setup` (alias `/snippet`). The page a customer uses to confirm the install works and to see what SourceTrack is receiving. Composed of `SetupDoctorCard` (the "Tracking Doctor"), `AttributionCoverageCard`, `CapiDeliveryStatus`, an embedded live event feed (`EventDebugger`), and a $0 test-conversion button. Data: `GET /install/doctor` → `getSetupDiagnostics` (`api/lib/setup-doctor.js`), which reads six deployed Tinybird `doctor_*` pipes.
+
+**What each check means (all over a trailing 30-day window unless noted):**
+- **Tracker events** — have we received any event, and how recently (`last_seen_at`). "Passed" means events are arriving; it does NOT mean *all* of them are.
+- **Domain match** — the domain sending events matches the registered domain (catches "installed on the wrong site / staging").
+- **Conversion tracking** — has a `$conversion` been received in 30 days, and its last type.
+- **Paid tracking parameters** — have UTM / ad-click IDs (`gclid`, `fbclid`, …) been seen.
+- **Privacy signals (GPC/DNT)** — a **floor of unique browser-days** where a browser sent GPC/DNT on the tracker-script GET and was not tracked. The script is cached `max-age=86400`, so this is at most one signal per browser per day — a floor, never a per-visit count.
+- **Pageviews received (last 30 days)** — the `doctor_pageviews_30d` count. It counts **`$pageview` only** (not conversions/identify/custom), so it is labelled "Pageviews", not "Events".
+- **Verify a live pageview** — an active check: the user fires a tokenised pageview / a $0 test conversion and the page confirms receipt.
+
+**What this page CANNOT claim (hard truth boundary — §5.1):**
+- It **cannot show completeness.** The server only knows what *arrived*. Events dropped by ad blockers, browser privacy features, or network failures are **undetectable by design** — so every count is a **floor, not a guaranteed total.** No copy on this page may imply "nothing was lost."
+- All doctor windows are **30 days**, not all-time.
+- **Cold start is genuinely empty.** A new install has no history, and visitor **journeys before install cannot be backfilled** (orders can be; journeys cannot). The Dashboard shows a live event feed during cold start to prove the install works, and it disappears once real aggregates exist.
+- Privacy-signal counts are **browser-days**, not suppressed pageviews.
+
+**Explicitly NOT on this page (see KNOWN_ISSUES):** a separate "per-event status" block (the doctor checks already do this job; if it returns it is per-event-*type* presence only — pageview/conversion/identify seen yes/no — never per-event *delivery success*, which cannot be known).
+
 ## 19. Global States
 
 ### 19.1 Script not detected banner

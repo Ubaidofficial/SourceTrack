@@ -973,6 +973,13 @@ Both tracker builds correctly handle SPA navigation — wrap `history.pushState`
 
 The **cookie** build persists first-touch in `localStorage` (`storeFirstTouch` writes once; `getFT` reads it), so a SPA nav that drops the `utm_*` params still reports the **entry's** first_touch — verified in the new SPA test. The **cookieless** build has **no client storage** (`tracker.cookieless.js:73`); `deriveFirstTouch` re-derives from the **current** URL every pageview. So a cookieless SPA nav is first-touch-stable ONLY when first-touch came from `document.referrer` (unchanged across pushState) — **not** when it came from `utm_*` params on the entry URL (the nav re-derives to `'direct'`). Both behaviours are asserted in the SPA test. **The attribution backstop is server-side:** the nightly re-derives `first_touch` from the visitor's pageview touchpoint sequence (`nightly-attribution.js:866`), so the entry pageview (with the utm) is the first touchpoint and the authoritative first_touch should come out correct regardless of the cookieless client's per-nav value — **but this server-side correction for the cookieless-SPA case is UNVERIFIED end-to-end.** Not fixed; logged so the client/server split is on record before a cookieless SPA customer onboards.
 
+### 66. C4 backlog — three items split OUT of the Setup & Health round (2026-07-24, backlog, NOT built)
+
+The "C4 UI/UX round 2" one-liner bundled four unrelated surfaces; only the Setup & Health / live-feed / truth-copy part shipped (PR for KI/design §18.9). These three are deferred, each with its one-line scope:
+- **Per-event status as a NEW surface — do NOT build.** The Tracking Doctor checks already report presence per event kind. A second status block on the same page is duplication. If it ever returns, it is **per-event-TYPE presence only** (pageview / conversion / identify seen: yes/no), **never** per-event *delivery success* — delivery success cannot be known (ad-blocker/network loss is undetectable, §5.1). Likely not worth building at all.
+- **Settings 4-tab split** — the Settings page is 12+ cards in one scroll (design §18); split into tabs. Pure IA/layout, no data change. Separate PR.
+- **Attribution density / totals rows** — an Analytics-parity density pass on the Attribution surface + totals rows on tables. Presentation only. Separate PR; verify totals don't imply completeness (same §5.1 boundary as the rest).
+
 ---
 ## Recently fixed
 
