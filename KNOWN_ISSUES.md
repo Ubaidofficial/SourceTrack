@@ -1450,3 +1450,9 @@ GROUP BY site_id
 HAVING expected_drop > 0
 ORDER BY expected_drop DESC
 ```
+
+### tracker/analytics.js posts to legacy /api/analytics/collect via the same blocked sendBeacon pattern (2026-07-24, dead-code-or-fix decision)
+
+The adblock-transport fix (keepalive fetch, both shipped trackers) deliberately **EXCLUDED** `tracker/analytics.js`. That file still sends via `navigator.sendBeacon` (`:46`) to the **legacy** `/api/analytics/collect` endpoint — the identical `$ping,third-party` blocked-beacon pattern the fix removed from `tracker.js` / `tracker.cookieless.js`. It was excluded because it is **unbuilt** (not in `build:tracker`, no `.min.js` artifact) and has **no verified consumer** — status UNVERIFIED whether any live site loads it. **Do NOT fix it in place** (that maintains a fourth dead-code-that-looks-live surface — the `ai-client.js` / MS+LinkedIn CAPI-sender class). **Next step:** determine whether any live site loads `tracker/analytics.js`; if none, **DELETE** it (and confirm the legacy `/api/analytics/collect` route's remaining consumers before touching that). Fix only if a real consumer is found — and then via the keepalive transport, not sendBeacon.
+
+**Residual-population note (from the keepalive fix):** Firefox gained `fetch` keepalive only in **133 (Dec 2024)**, so pre-133 Firefox feature-detects false and falls back to the blocked `sendBeacon` path. Small and shrinking — but Firefox is a **high-adblocker-usage** browser, so the residual gap sits in exactly the wrong population. No code change (the feature-detect is correct); logged for visibility.
