@@ -30,6 +30,7 @@ SQL >
     FROM events
     WHERE site_id = {{ String(site_id, required=True) }}
       AND event_type = '$conversion'
+      AND lower(coalesce(conversion_type, '')) != 'refund'   -- (A) a refund is not an additional converter (no revenue in this query → WHERE is safe)
       {% if defined(date_from_ts) %}
       AND timestamp >= {{ DateTime(date_from_ts, '1970-01-01 00:00:00') }}
       AND timestamp < {{ DateTime(date_to_ts, '1970-01-01 00:00:00') }}

@@ -17,6 +17,7 @@ SQL >
     FROM events
     WHERE site_id = {{ String(site_id, required=True) }}
       AND event_type = '$conversion'
+      AND lower(coalesce(conversion_type, '')) != 'refund'
       AND timestamp >= now() - INTERVAL 2 DAY
 
 TYPE endpoint

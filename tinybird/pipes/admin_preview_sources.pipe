@@ -26,7 +26,7 @@ SQL >
     SELECT
         COALESCE(utm_source, 'direct') AS source,
         sumIf(toFloat64OrZero(toString(conversion_value)), event_type = '$conversion') AS revenue,
-        countIf(event_type = '$conversion') AS conversions
+        countIf(event_type = '$conversion' AND lower(coalesce(conversion_type, '')) != 'refund') AS conversions
     FROM events
     WHERE site_id = {{ String(site_id, required=True) }}
       AND timestamp >= now() - INTERVAL 30 DAY
