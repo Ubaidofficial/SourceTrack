@@ -32,7 +32,7 @@ SQL >
         COALESCE(NULLIF(utm_source, ''), NULLIF(ai_source, ''), 'direct') AS source,
         COALESCE(NULLIF(utm_medium, ''), 'none') AS medium,
         COALESCE(utm_campaign, '') AS campaign,
-        count() AS conversions,
+        countIf(lower(coalesce(conversion_type, '')) != 'refund') AS conversions,
         SUM(toFloat64OrZero(toString(conversion_value))) AS revenue
     FROM
     (

@@ -9,7 +9,7 @@ NODE bench_conversions_by_site_node
 SQL >
     %
     SELECT
-        count() AS conversions,
+        countIf(lower(coalesce(conversion_type, '')) != 'refund') AS conversions,
         sum(conversion_value) AS net_revenue
     FROM events
     WHERE site_id = {{ String(site_id, required=True) }}

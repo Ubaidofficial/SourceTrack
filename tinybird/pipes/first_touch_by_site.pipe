@@ -26,7 +26,7 @@ SQL >
         COALESCE(NULLIF(first_touch_source, ''), 'direct') AS source,
         COALESCE(NULLIF(first_touch_medium, ''), 'none') AS medium,
         COALESCE(first_touch_campaign, '') AS campaign,
-        count() AS conversions,
+        countIf(lower(coalesce(conversion_type, '')) != 'refund') AS conversions,
         SUM(toFloat64OrZero(toString(conversion_value))) AS revenue
     FROM events
     WHERE site_id = {{ String(site_id, required=True) }}

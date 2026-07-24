@@ -23,7 +23,7 @@ SQL >
         SELECT
             distinct_id,
             MIN(timestamp) AS min_ts,
-            MAX(CASE WHEN event_type = '$conversion' THEN 1 ELSE 0 END) AS is_converted
+            MAX(CASE WHEN event_type = '$conversion' AND lower(coalesce(conversion_type, '')) != 'refund' THEN 1 ELSE 0 END) AS is_converted
         FROM events
         WHERE site_id = {{ String(site_id, required=True) }}
           AND (event_type = '$pageview' OR event_type = '$conversion')

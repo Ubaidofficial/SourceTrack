@@ -60,7 +60,7 @@ SQL >
         {% if String(metric, 'conversions') == 'revenue' %}
         SUM(toFloat64OrZero(toString(conversion_value)))
         {% else %}
-        count()
+        countIf(lower(coalesce(conversion_type, '')) != 'refund')
         {% end %} AS metric_value
     FROM events
     WHERE site_id = {{ String(site_id, required=True) }}
