@@ -1,3 +1,11 @@
+// PATH-NORMALIZER #2 of TWO (by design — the first is parsePathname() in api/lib/url-normalize.js).
+// Produces the canonical path used to JOIN two INDEPENDENT sources — Google Search Console's reported
+// paths vs the tracker's captured page_url (see seo-revenue.js / gsc-daily-sync.js). It LOWERCASES +
+// strips the trailing slash for match ROBUSTNESS across those sources (case/slash differences would
+// otherwise miss the join); empty -> '/'. DELIBERATELY DIFFERENT from parsePathname(), which is
+// case-PRESERVED for the money rail. They are NOT interchangeable — making this case-sensitive would
+// risk silently missing GSC↔tracker matches (the SEO-revenue moat). Do NOT unify (both are load-bearing
+// on persisted output). Drift guard: api/tests/url-normalizer-drift-guard.test.js (fails on a THIRD).
 /**
  * Shared URL path normalization helper.
  * Strips protocols, subdomains, trailing slashes, queries, and hashes to get a canonical pathname.

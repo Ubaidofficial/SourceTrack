@@ -1013,6 +1013,12 @@ So **UTM capture, click-ID capture, Google Ads ValueTrack capture, first-touch c
 
 `FEATURE_MAP §2` lists both as ✅ SHIPPED, but both are **OPT-IN** (`data-auto-fields="true"`, `data-cross-domains="..."`) and **no live install has either enabled**. Same "built but never run" class as the other instances logged this session (`ai-client.js`, MS/LinkedIn CAPI senders, `analytics.js`, the Supabase pre-agg netting, the SPA path). **Not urgent** — nobody is using them — **but do not treat them as proven.** For the record: **"automatic insertion" means automatic ONCE ENABLED, not on by default** — a customer installing the plain snippet gets neither.
 
+### 71. Test-registration guard covers `api/tests/` ONLY — a scan-SCOPE gap, not registration drift (2026-07-24, corrects an imprecise claim)
+
+**Correcting a chat claim** ("~6 test files are unregistered — registration drift is back"): imprecise. `test-registration-guard.test.js` deliberately excludes exactly **four** files by design (`DELIBERATELY_UNREGISTERED`, lines 42-45: `analytics-sources-join-ms`, `leads-journey-attribution`, `report-builder-leads`, `source-normalization`) — those are **not** drift. The real gap is narrower and structural: the guard scans **`api/tests/` only** (`readdirSync(join(REPO, 'api', 'tests'))`, `:57`), so any test under **`dashboard/`** (e.g. `dashboard/src/pages/seoRevenueTruthGate.test.js`) or **`tinybird/adapter/__tests__/`** is **outside its coverage entirely** — the guard can neither confirm nor deny their registration. That is a **scan-scope gap**, not drift. Related: `api/lib/url-normalize.js`'s header cited a nonexistent `api/tests/url-normalize.test.js` (corrected in this PR — the real single-source check is `served-allowlist.test.js:113`).
+
+**Do NOT expand the guard's scope as a quick fix** — `dashboard/` and `tinybird/adapter/` tests run under **different runners** (vitest / node), so registration-in-`package.json`-qa-scripts is not the right membership check for them. Widening coverage is a separate, considered change. Logged as a scope gap, not built.
+
 ---
 ## Recently fixed
 
