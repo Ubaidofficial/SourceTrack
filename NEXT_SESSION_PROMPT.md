@@ -1,6 +1,6 @@
 # Next Session Prompt
 
-_Last updated: **2026-07-23 — Session 149** (sessions 146–149 consolidated: 13 PRs `#366`–`#378`, incl. the 🔴 GDPR erasure-key fix #371 and the FK-cascade + rule extension #376; Tinybird deploy #24). **Start at §0.5 — it supersedes everything below it.** Sections §1–§8 are prior-session reference and several facts there are superseded; §0 and §0.5 carry the corrections explicitly._
+_Last updated: **2026-07-24 — Session 150** (Phase 7 refund netting + two tracker money-rail fixes: PRs `#381`–`#389`, incl. 🔴 keepalive-over-sendBeacon #387 and the 🔴 GPC/DNT no-op stub #388; Tinybird deploy **#25 — ST_Staging ONLY, PROD UNTOUCHED**). **Start at §0.5 — it supersedes everything below it.** Sections §1–§8 are prior-session reference; several facts there are superseded — §0 and §0.5 carry the corrections explicitly._
 
 AI-agent workflow rules are governed by [docs/ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md).
 No AI-agent may commit or push before raw diff review and explicit user approval.
@@ -30,54 +30,69 @@ paste-ready command/dispatch blocks.
 
 ---
 
-## 0.5. SESSION 150 HANDOFF (from Session 149, 2026-07-23) — supersedes everything below it
+## 0.5. SESSION 151 HANDOFF (from Session 150, 2026-07-24) — supersedes everything below it
 
-**Sessions 146–149 (2026-07-22 → 07-23) shipped 13 PRs, `#366…#378`**, all verified ancestors of `main` (`306efc1`, #378). The prior §0.5 (the "Session 146 handoff" from Session 145) is **fully superseded**; its still-open items are carried forward at the end of this block. *(Two facts in §0 were also corrected this pass — parallel-CC worktrees and dead-PostHog MCP — see the ⚠️ markers there.)*
+> **PROD TINYBIRD IS UNTOUCHED.** Every Tinybird change this session (deployment **#25**) is **ST_Staging only**. The prod cutover has **NOT** run.
+> **KNOWN_ISSUES:1341 (refunds launch gate) remains OPEN** — code-complete (`#381`–`#384`), staging-verified (`#383`/`#389`, deploy #25), **prod pending**, and **no real refund payload has ever been processed on either provider** (every test is an in-process fixture). Refund netting is not marketable as accurate until a real refund is verified end-to-end on a connected merchant.
 
-### SHIPPED (`#366`–`#378`)
+**Session 150 (2026-07-24) shipped Phase 7 (refund netting) + two tracker money-rail fixes, PRs `#381…#389`**, all merged to `main` (`067f4ec`, #389). The prior §0.5 (Session 150 handoff, from Session 149) is **fully superseded**; its still-open items are carried forward at the end of this block.
 
-- **#366** active-site desync — `SiteContext` discarded a valid saved selection **and** wrote the substitution back over it; now honors the explicit selection.
-- **#367** §6 fake-zero batch — Leads KPI → "—" + reason; Campaigns `0`-tiles hidden behind the "unavailable" banner instead of shown as measured zeros; Report Builder no longer defaults to the gated `sessions` metric.
-- **#368** recent-conversions repoint — was a fixed 30-min Tinybird ticker sitting beside a 30-day Supabase header; repointed both to one store / one window. Also fixed a latent `visitor_id` mis-keying.
-- **#369** seed reshape — 5 campaigns populated; HERO-1 dark-traffic story protected.
-- **#370** GDPR erasure-key + `DEMO_PLAN`-drift KIs logged.
-- **🔴 #371** GDPR erasure **and** access key fix — `gdpr.js` erased by `anonymous_id` while every row keys on `distinct_id`, so erasure matched **ZERO rows** and still returned "has been erased"; Art. 15 `/subject` had the identical bug (false "we hold no data about you"). Added `lead_qualifications` + `subscription_identity` to erasure, real rows-affected counts, and a **404 on no-match**.
-- **#372** PII-prevention rule — a new PII store must join `/gdpr/visitor` + `/gdpr/subject` in the same PR (CLAUDE.md §6.5 + AGENTS.md §5.5).
-- **#373** named contacts — `volunteered_identity` table, `identify.js` persist, both GDPR paths, Leads Name/Email columns.
-- **#374** polish batch — honest channel labels; false "setup incomplete" banner on 2 pages; **Campaigns source/medium FABRICATION REMOVED** (do **not** re-add invented `direct` / `none` defaults anywhere); 2 dead Report-Builder templates removed; orphan recent-activity query removed.
-- **#375** session-149 backlog → KNOWN_ISSUES (deferred polish + ecom feature gaps).
-- **#376** FK cascade — `volunteered_identity` had no FK to `sites`, so account deletion orphaned real PII; added `ON DELETE CASCADE`. Extended §6.5 to require **all three** GDPR paths (`/visitor`, `/subject`, `/account`).
-- **#377** C3 Leads redesign — merged Visitor/Contact, conditional AI badge (dedupe pure duplicates, **KEEP** the Google/Direct-+-"AI Search" dark-traffic differentiators), flags, "—" for non-converter zeros, column picker, converted-only toggle.
-- **#378** C3 Dashboard + Report Builder — Analytics-parity density, described attribution-model card, chart-type icon row, "display only dates with data" toggle.
+### SHIPPED (`#381`–`#389`)
 
-*(The clean-demo seed prep `#365`, merged 2026-07-22, is the precursor the whole verified state below rests on — so the arc is 14 PRs counting it, 13 in the `#366`–`#378` range.)*
-
-### TINYBIRD
-
-**Deployment #24 is live on ST_Staging** — 3 campaign pipes + `privacy_signals` + `multitouch_pageviews_live` + 11 modified. This **cleared the deployment-parity debt** — 2 features were half-wired in prod code.
+- **#381** Stripe `refund.created` → original conversion resolution by `payment_intent`; inherits `distinct_id` **only** (the nightly re-derives Supabase attribution from touchpoints — never the event stamp); degraded path sets `attribution_status='refund_unresolved'`. **Boundary:** a subscription-mode refund with no `payment_intent` resolves unresolved.
+- **#382** Supabase read paths refund-aware — conversion COUNTs exclude `conversion_type='refund'` (never the SUM); unresolved refunds bucket to an explicit "Unattributed refunds" line, never `direct`.
+- **#383** 19 Tinybird pipes refund-filtered (`countIf(... != 'refund')`, **counts only — SUMs untouched**) + a **syntactic** guard test (`pipe-refund-guard.test.js`).
+- **#384** Shopify `refunds/create` netting (mirrors #381). `$0` split: a restock-only refund acks **200**; a payload parse-failure returns **500** so Shopify retries (never a silent $0 ack).
+- **#385** docs reconciliation — GDPR erasure KI closed (#371/#376), FEATURE_MAP corrected.
+- **#386** ad-blocker verification logged.
+- **🔴 #387** **MONEY RAIL** — keepalive `fetch` over `sendBeacon`. `sendBeacon` was the **default transport for every send**, incl. `conversion()` and `identify()`, and EasyPrivacy's blanket `$ping,third-party` **silently drops all cross-origin beacons** (uBlock/ABP/Brave). No code read the boolean return, so there was **no fallback attempt at all**.
+- **🔴 #388** all-no-op `window.sourcetrack` stub under GPC/DNT. Previously the tracker `return`ed **before** defining the global, so a customer's `conversion()`/`identify()` call **threw `ReferenceError` for every GPC/DNT visitor** (Firefox Private Browsing sends GPC by default). `optIn` is a **deliberate** no-op (GPC is a legally recognised opt-out — do **not** "fix" it).
+- **#389** threaded `conversion_type` through nested projections so 3 refund-filtered pipes (`last_touch_by_site_agg`, `first_touch_non_direct_by_site`, `last_touch_non_direct_by_site`) **compile** — PR2b (#383) added the filter to the outer aggregate without projecting the column through the subqueries; `tb --cloud deploy --check` caught it (the syntactic guard could not).
 
 ### VERIFIED STATE
 
-- Demo site **`de200000-c1ea-4c1e-a000-000000000001`** = **"SourceTrack Demo (clean)"** — **35 converters, $6,616, 5 campaigns, 35 volunteered identities** (identity join verified 35/35).
-- **HERO-1** = Heidi Osei / `heidi@sunnydalefoods.example` / ChatGPT / first_touch=`chatgpt.com`, last_touch=`direct` / **$2,000**.
-- Old polluted site renamed **"SourceTrack Fixture (polluted — do not screenshot)"** (`de200000-babe-…1111`).
-- `volunteered_identity` exists in **staging AND prod**: RLS **on**, **0 policies (default-deny)**, FK cascade `confdeltype='c'` — both verified.
+- **Tinybird ST_Staging deployment #25 LIVE** (staging only). Both refund-count gates passed on site `ff8d5426-1713-48af-811b-5c12bd2257dd`:
+  - `bench_conversions_by_site`: **85 → 68** conversions, `net_revenue 13346.39` **UNCHANGED**.
+  - `last_touch_by_site_agg` (`2019-01-01` → `2027-01-01`): **85 → 68** total; all **ten** `(conversions=2, revenue=0)` purchase+refund pairs became `(1, 0)`; **every revenue figure byte-identical**, incl. the float artifacts `206.66000000000003` / `199.20999999999998` / `113.94999999999999`. **Any** revenue movement = a SUM was touched = ROLLBACK. (This pipe exercised the #389 nested-projection fix; `bench` did not.)
+- **Ad-blocker (#387):** `tracker.min.js` and `/api/track` are **NOT** on any default filter list (`@ghostery/adblocker`, control passing) **AND** confirmed live in Chrome + uBlock: `/api/track` **200**, `Type=fetch`, initiator `tracker.min.js:1`.
+- **privacy_signals WORKS in prod:** 15 `append-hfi` ops, latest `2026-07-24 09:59:32`. The earlier "0 rows" KI was a **staging-only** observation and was **WRONG** (corrected in #388).
+- **PROD TINYBIRD UNTOUCHED** — deployment #25 is staging only.
 
-### ⚠️ TRAPS
+### ⚠️ TRAPS — Tinybird (read before ANY `tb` command; see KI-58 / KI-59)
 
-- **Staging dashboard = `https://sourcetrack-dashboard-staging.up.railway.app/`.** The `-production` URL is **PROD** — do not confuse them.
-- **Tinybird deploys need the `st_staging_deploy` token** — the plain workspace token lacks `WORKSPACE:DEPLOY`.
-- **Browser cache masks fresh deploys** — hard-reload before concluding a change didn't ship.
+1. **The MAIN worktree's `tinybird/.tinyb` is authenticated to PROD**, `TB_TOKEN` unset — `tb --cloud deploy` from that directory hits **production with no prompt**. **ALWAYS read the `Running against Tinybird Cloud: Workspace <X>` line** every `tb --cloud` command prints. `tb --cloud workspace ls` lists only `imubaid93_workspace` and does **NOT** show the workspace you're actually pointed at — it is **not** a reliable check.
+2. **Deploys need `st_staging_deploy` (`WORKSPACE:DEPLOY`).** The default token → `workspace requires scope WORKSPACE:DEPLOY`. Pattern that worked without re-authing `.tinyb`: `ST_DEPLOY=$(pbpaste); TB_TOKEN="$ST_DEPLOY" tb --cloud deploy; unset ST_DEPLOY`.
+3. **`TB_TOKEN` persists in a shell** and silently overrides `.tinyb` for every later command. **Unset it explicitly** after use.
+- (Still true from prior handoff) **Staging dashboard = `https://sourcetrack-dashboard-staging.up.railway.app/`** — the `-production` URL is PROD. **Browser cache masks fresh deploys** — hard-reload before concluding a change didn't ship.
 
-### NEXT UP
+### ORCHESTRATOR TOOLING NOTE — reason about PROD from ORG-LEVEL datasources, not staging data
 
-1. **🔴 REFUNDS — promoted to LAUNCH GATE.** Ecom return rates run 20–30%; with no refund handling, attributed revenue is **OVERSTATED**, a §5.1 truth violation committed with our own data. Phase 7, **NOT STARTED**. (Logged in KNOWN_ISSUES via #375.)
-2. **C4 UI/UX round 2** — Settings 4-tab split (§18; currently 12+ cards in one scroll); Setup & Health per-event status + an events-log stream (Cometly borrows); Attribution density pass; totals rows.
-3. **Tinybird pipe batch** — Leads Browser/Device **and** Campaigns source/medium in one deploy (see the two new KIs below; Campaigns needs a `campaign × source` read, and the current route **422s on `group_by2`**).
+The orchestrator's Tinybird MCP is bound to **ST_Staging**, and this caused **four** wrong conclusions in one session, all in the same direction — **reasoning about PROD from STAGING data**: the `de200000-refd` phantom refund row; the `'tiktok'` fixture that masked the real `first_touch_source='stripe'` behaviour; the `privacy_signals` "0 rows" KI, which was simply staging having no GPC traffic; and a claim that Railway MCP could not see the SourceTrack project, when it is there under the name **`determined-reverence`**.
 
-### Carried forward — still open from the prior handoff (now tracked in KNOWN_ISSUES / git)
+What actually reaches prod are the **ORG-LEVEL service datasources**, readable from the staging-bound connection:
 
-These predate this arc and remain open; the defect ledger, not this block, is their home: **DeepSeek console revocation UNCONFIRMED** (deletion ≠ revocation; the value is in git history; `ai-client.js` has zero callers, so revoking breaks nothing) · **KI-51 / KI-53** — Campaigns timezone + dimension×model gaps · **`api/tests/timezone-reconciliation.test.js`** scores `pass 1` while asserting nothing (a live false green) · the doc-consolidation target (**4 living documents**; this pass advances it by retiring `SESSION_STATE.md`). Full detail: KNOWN_ISSUES.md and the Session-146 handoff in `git log`.
+- `organization.workspaces` → all workspace ids incl. prod `SourceTrack` (`3c371bb9-2021-429c-b0d7-0758bff75f9d`)
+- `organization.pipe_stats` → per-workspace pipe call/error counts
+- `organization.datasources_ops_log` → append/create ops per workspace; this is what proved `privacy_signals` works in prod
+
+**Reach for `organization.*` before concluding anything about prod.** They expose operational **metadata only**, not row-level event data.
+
+### NEXT UP (in order)
+
+1. **PROD Tinybird cutover.** Prereqs: **rename `dual_write_append` FIRST** (KI-54); run `tb --cloud deploy --check` and **read the datasource section** (`privacy_signals` has 15 live appends — do **not** disturb it); know the **rollback target** from `tb deployment ls` **before** promoting. **Prod's `--check` diff is LARGER than staging's** — it also carries pre-existing Phase-4 drift on `pageviews_by_visitors`, `conversions_by_site`, `pageviews_windowed_by_site`, `last_touch_by_site`, plus `multitouch_pageviews_live` running a **pre-rename** version in prod (params `lookback`/`to`; **40 of 59** calls 400'd). See **KI-58 / KI-59**.
+2. **Refund exercise (end-to-end).** No staging site has a Shopify shared secret, so **PR4 (#384) is unexercisable end-to-end**; only `de200000-babe-…` and `cdf6d291-…` carry Stripe secrets, and they're **encrypted** — the plaintext must be reset to sign a synthetic payload.
+3. **PR3 — `charge.refunded`** (not subscribed; Stripe emits it alongside `refund.created`).
+4. **PR2c — `excludeRefunds()` helper.** The (A) predicate is inlined ~10× across `dashboard.js` / `analytics.js` / `leads-server.js`; extracting it also makes `analytics.js /summary` unit-testable and closes that logged coverage gap.
+5. **`bookin.pk` as first beta tester — DECISION PENDING, not engineering.** Blocker is the **install surface**: the site runs **Google mod_pagespeed AND Cloudflare**, both of which rewrite/defer/combine JS, and the tracker is a `<script async data-site-key="...">` that reads its own `data-` attribute — **untested against an optimising proxy**. Also: payment rails are **JazzCash / Easypaisa / VISA** — **Stripe does not operate in Pakistan**, so none of Phase 7's refund netting applies and revenue would need the **manual conversion API**. Their site advertises **free cancellation**, so the overstatement problem this session fixed would be **live and uncovered** for them.
+
+### Carried forward — still open from prior handoffs (tracked in KNOWN_ISSUES / git)
+
+- **C4 UI/UX round 2** — Settings 4-tab split (§18; 12+ cards in one scroll); Setup & Health per-event status + an events-log stream (Cometly borrows); Attribution density pass; totals rows.
+- **Tinybird pipe batch** — Leads Browser/Device **and** Campaigns source/medium (Campaigns needs a `campaign × source` read; the route currently **422s on `group_by2`**).
+- **DeepSeek console revocation UNCONFIRMED** (deletion ≠ revocation; the value is in git history; `ai-client.js` has zero callers, so revoking breaks nothing).
+- **KI-51 / KI-53** — Campaigns timezone + dimension×model gaps.
+- **`api/tests/timezone-reconciliation.test.js`** scores `pass 1` while asserting nothing (a live false green).
+- **Doc-consolidation target** (living documents). Full detail: KNOWN_ISSUES.md and prior handoffs in `git log`.
 
 
 ## 1. PRODUCT

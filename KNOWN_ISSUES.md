@@ -915,6 +915,25 @@ Same defect class as KI-32 (`AI_HOST_MAP` vs `AI_DOMAINS_MAP`) and KI-41 (`AGENT
 
 ⚠️ **`UNAVAILABLE_SUFFIX` was module-PRIVATE** — not in the export block — so the fork was not merely careless: consuming the constant was impossible without first exporting it. That is the mechanism by which this class of fork forms, and it is worth checking for wherever a shared string is expected.
 
+### 58. `tinybird/.tinyb` in the MAIN worktree is authenticated to PROD — `tb --cloud deploy` there hits production with no prompt
+
+Confirmed live **2026-07-24** — this is **KI-54's token-collision risk as a live configuration**, not a hypothesis. The main worktree's `tinybird/.tinyb` is authenticated to the **`SourceTrack` (PROD)** workspace, and `TB_TOKEN` is **unset** — so `tb --cloud deploy` run from that directory targets **production with no confirmation prompt**.
+
+**The only reliable check is the `Running against Tinybird Cloud: Workspace <X>` line** every `tb --cloud` command prints — read it before every deploy/check. **`tb --cloud workspace ls` is NOT a reliable check:** it lists only `imubaid93_workspace` and does **not** show the workspace the `.tinyb` is actually pointed at.
+
+Two adjacent traps, both of which bit in Session 150:
+- **Deploys need `st_staging_deploy` (`WORKSPACE:DEPLOY` scope).** The default workspace token returns `workspace requires scope WORKSPACE:DEPLOY`. Pattern that worked **without** re-authing `.tinyb`: `ST_DEPLOY=$(pbpaste); TB_TOKEN="$ST_DEPLOY" tb --cloud deploy; unset ST_DEPLOY`.
+- **`TB_TOKEN` persists in a shell** and silently overrides `.tinyb` for **every later command** — so a later "staging" command can run against whatever that token points to. Unset it explicitly.
+
+**Recommended (NOT built):** a predeploy guard that reads the `Running against` line and **refuses on workspace mismatch** — same shape as the pipe-refund guard. See also **KI-54** (rename `dual_write_append` before the prod cutover) and **KI-59** (prod drift).
+
+### 59. Prod Tinybird carries pre-existing Phase-4 drift — 4 pipes modified vs repo HEAD, independent of PR2b
+
+Discovered accidentally **2026-07-24** when a `tb --cloud deploy --check` ran against **prod** (see KI-58 for how that happens by default). Four pipes show as **modified against repo HEAD** on the `SourceTrack` (PROD) workspace, **unrelated** to the PR2b refund work:
+`pageviews_by_visitors`, `conversions_by_site`, `pageviews_windowed_by_site`, `last_touch_by_site`.
+
+**Consequence for the prod Tinybird cutover:** prod's `--check` diff will be **LARGER** than staging's — it carries this Phase-4 drift **plus** `multitouch_pageviews_live`, which runs a **pre-rename** version in prod (params `lookback`/`to`; **40 of 59** calls 400'd). The cutover operator must **expect** these and confirm each is intended before promoting — they are **NOT** introduced by the refund PRs, so do not read them as such. Capture the **rollback target** from `tb deployment ls` **before** promoting.
+
 ---
 ## Recently fixed
 
