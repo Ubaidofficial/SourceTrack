@@ -12,8 +12,11 @@
 //
 // ⚠️ Keep this module PURE: no imports, no node-only APIs. It is imported by a job
 // (nightly-attribution.js) and by a request-path lib (attribution-engine.js).
-// ANTI-DRIFT: api/tests/url-normalize.test.js asserts parsePathname is defined exactly once in the
-// repo, and pins its behaviour against the pre-extraction implementation.
+// ANTI-DRIFT: `api/tests/served-allowlist.test.js` asserts parsePathname is defined exactly ONCE in
+// the repo (the SINGLE-SOURCE #248 check), and `api/tests/url-normalizer-drift-guard.test.js` fails
+// if a THIRD, differently-named path-normalizer appears. (An earlier version of this header cited
+// `api/tests/url-normalize.test.js` and a behaviour-pinning test — NEITHER was ever created; the real
+// assertion lives in served-allowlist.test.js. Corrected 2026-07-24.)
 //
 // PATH-NORMALIZER #1 of TWO (by design — the second is normalizePath() in api/lib/url-normalization.js).
 // This one is CASE-PRESERVED and keeps the trailing slash: it writes attributed_conversions.landing_page,
