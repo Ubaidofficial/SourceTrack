@@ -348,7 +348,7 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     try {
       const { data: convRows, error: convErr } = await supabase
         .from('attributed_conversions')
-        .select('conversion_date, conversion_value, first_touch_source, first_touch_channel, first_touch_country, first_touch_device, first_touch_browser, first_touch_landing_page, ai_influenced_source, conversion_timestamp, distinct_id, anonymous_id')
+        .select('conversion_date, conversion_value, conversion_type, first_touch_source, first_touch_channel, first_touch_country, first_touch_device, first_touch_browser, first_touch_landing_page, ai_influenced_source, conversion_timestamp, distinct_id, anonymous_id')
         .eq('site_id', siteId)
         .gte('conversion_date', currentPadded.from)
         .lte('conversion_date', currentPadded.to)
@@ -390,14 +390,18 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     const revenueUnavailable = revenueGated || conversionsReadFailed
     const revenueUnavailableReason = conversionsReadFailed ? 'read_error' : (revenueGated ? 'unsupported_filter' : null)
 
+    // (A) refund-aware COUNTS: a refund nets revenue (SUM keeps it) but is NOT an
+    // additional conversion, and its distinct_id must not add a converter. Revenue
+    // still sums ALL rows; only the count surfaces exclude conversion_type='refund'.
+    const nonRefundConversions = conversions.filter(r => r.conversion_type !== 'refund')
     const totalRevenue = revenueUnavailable ? null : conversions.reduce((s, r) => s + (Number(r.conversion_value) || 0), 0)
-    const conversionCount = revenueUnavailable ? null : conversions.length
+    const conversionCount = revenueUnavailable ? null : nonRefundConversions.length
     // Rate numerator = DISTINCT converters (same canonical visitor identity the
     // denominator uses — distinct_id/anonymous_id), NOT raw conversion rows. A
     // visitor converting N times is one converter. cappedRate also guards >100%.
     // Numerator (scoped conversions) and denominator (scoped uniqueVisitors) now match — the old
     // unfiltered-numerator ÷ filtered-denominator was what produced the bogus 100%.
-    const distinctConverters = countDistinctConverters(conversions)
+    const distinctConverters = countDistinctConverters(nonRefundConversions)   // (A): a refund never adds a converter
     const conversionRate = revenueUnavailable ? null : cappedRate(distinctConverters, uniqueVisitors)
     const revenuePerVisitor = revenueUnavailable ? null : (uniqueVisitors > 0 ? totalRevenue / uniqueVisitors : 0)
 
