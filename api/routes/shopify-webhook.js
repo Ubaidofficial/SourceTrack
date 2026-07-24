@@ -5,6 +5,7 @@ import { decryptSecret } from '../lib/utils.js'
 import { claimIdempotencyKeys, logIngestionEvent, rollbackIdempotencyKeys } from '../lib/idempotency.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
+import { SHOPIFY_REFUND_TOPIC, extractShopifyRefundAmount, refundHasAmountSource, buildShopifyRefundIdempotencyKeys, buildShopifyRefundConversion, resolveOriginalDistinctIdByOrderId } from '../lib/shopify-refund.js'
 
 
 const router = Router()
@@ -90,8 +91,14 @@ router.post('/:site_key', async (req, res) => {
     return res.status(400).json({ error: 'Invalid JSON body' })
   }
 
-  // 7. Verify topic and filter for paid orders
+  // 7. Verify topic and filter for paid orders. Refunds route to their OWN path
+  // BELOW (after this shared HMAC verify — NOT a second, weaker verification), so
+  // orders/paid keeps its strict value guard (:110) unchanged. Negatives are
+  // permitted ONLY on the refund path (STEP 2).
   const topic = req.headers['x-shopify-topic']
+  if (topic === SHOPIFY_REFUND_TOPIC) {
+    return handleShopifyRefund(req, res, { site, siteKey, payload })
+  }
   if (topic !== 'orders/paid' && topic !== 'orders/create') {
     return res.status(200).json({ received: true, ignored: true, reason: `Topic ${topic} ignored` })
   }
@@ -285,5 +292,76 @@ router.post('/:site_key', async (req, res) => {
     return res.status(500).json({ error: 'Temporary processing failure' })
   }
 })
+
+// ── Shopify refunds/create → compensating negative $conversion ───────────────
+// Mirrors the Stripe refund path (#381) on the Shopify rail: refund-specific
+// idempotency keys (claim-after-write via the SAME rail), resolve the original
+// order by order_id and inherit its distinct_id, negative value, conversion_type
+// 'refund'. DEGRADED PATH: a resolution miss or Tinybird failure keeps the phantom
+// distinct_id AND stamps attribution_status='refund_unresolved', logs at warn,
+// still writes, never throws. Uses dualWriteEvent (the SAME writer as the order
+// path). No claimConversionUsage — a refund must not consume the monthly quota.
+async function handleShopifyRefund (req, res, { site, siteKey, payload }) {
+  const providerEventId = req.headers['x-shopify-webhook-id'] || null
+  const orderId = payload?.order_id != null ? String(payload.order_id) : null
+
+  // Validate the refunded amount BEFORE claiming (mirrors the order path). A `0`
+  // amount splits two ways — a payload-shape failure must NOT be acked as a silent
+  // $0 (that would be money-rail loss behind a 200 — the email-reports/gsc pattern):
+  //   - amount 0 with a source PRESENT  -> genuine restock-only refund. Ack 200, no row.
+  //   - amount 0 with BOTH sources ABSENT -> PARSE FAILURE. Log ERROR + return 500 so
+  //     Shopify's retry window (8 attempts / 4h) redelivers, and repeated failures
+  //     surface loudly in the Shopify admin rather than vanishing.
+  const amount = extractShopifyRefundAmount(payload)
+  if (!(amount > 0)) {
+    if (refundHasAmountSource(payload)) {
+      return res.status(200).json({ received: true, ignored: true, reason: 'restock-only refund (no money moved)' })
+    }
+    console.error(`[shopify-webhook] refund ${payload?.id} for order ${orderId || 'null'}: NO amount source ` +
+      `(transactions[] and refund_line_items[] both absent) — possible payload-shape / include_fields issue. ` +
+      `Returning 500 for Shopify retry so the refund is NOT silently lost.`)
+    return res.status(500).json({ error: 'Refund payload missing amount source — retry expected' })
+  }
+
+  const keys = buildShopifyRefundIdempotencyKeys(payload, providerEventId)
+  if (keys.length === 0) {
+    return res.status(200).json({ received: true, ignored: true, reason: 'no refund idempotency key' })
+  }
+
+  const claim = await claimIdempotencyKeys(siteKey, 'shopify', keys)
+  if (claim.duplicate) {
+    await logIngestionEvent(siteKey, 'shopify', { providerEventId, orderId, value: amount, currency: null, status: 'duplicate' })
+    return res.status(200).json({ received: true, duplicate: true })
+  }
+  if (!claim.success) {
+    await logIngestionEvent(siteKey, 'shopify', { providerEventId, orderId, value: amount, currency: null, status: 'error', errorMessage: claim.error || 'Failed to claim idempotency keys' })
+    return res.status(500).json({ error: 'Temporary processing failure' })
+  }
+
+  // Resolve the original order (by order_id → its event_id) and inherit its
+  // distinct_id, so the nightly re-derives attribution from the real visitor's
+  // touchpoints. resolve* never throws (null read → 'unavailable').
+  const resolution = await resolveOriginalDistinctIdByOrderId({ orderId, siteId: site.id })
+  const resolved = resolution.status === 'resolved'
+  if (!resolved) {
+    console.warn(`[shopify-webhook] refund ${payload?.id} for order ${orderId || 'null'} attribution ${resolution.status} — writing with phantom distinct_id + attribution_status=refund_unresolved`)
+  }
+
+  const built = buildShopifyRefundConversion(payload, site, resolved ? resolution.distinctId : undefined, { unresolved: !resolved })
+  if (!built) {
+    // extractShopifyRefundAmount re-checked inside build; amount>0 guaranteed above.
+    return res.status(200).json({ received: true, ignored: true, reason: 'refund with no money movement' })
+  }
+  const { distinctId, value, currency, properties } = built
+  properties.provider_event_id = providerEventId
+  const occurredAt = properties.occurred_at
+
+  // Fire-and-forget batcher (same writer as the order path). Never throws on a
+  // Tinybird hiccup; the persistent idempotency claim above is what makes a
+  // webhook retry a no-op.
+  dualWriteEvent({ distinctId, event: '$conversion', timestamp: occurredAt, properties })
+  await logIngestionEvent(siteKey, 'shopify', { providerEventId, orderId, value: -value, currency, status: 'success' })
+  return res.status(200).json({ received: true, refund: true, resolved })
+}
 
 export { router as shopifyWebhookRouter }
