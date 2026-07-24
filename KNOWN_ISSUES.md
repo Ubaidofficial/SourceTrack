@@ -1278,7 +1278,7 @@ The only app path that erases Tinybird on delete is `gdpr.js`. **Any other site 
 ### events datasource accepts any present site_id with no sites-existence check (2026-07-19, log-only)
 `tinybird/adapter/normalize.js:224` validates only that `site_id` is **present/non-empty** ("refusing to assign a default tenant") — it never checks the id **exists in `sites`**, and `events.datasource` (ClickHouse `MergeTree`) has no FK. **Not exploitable via the routes** — `/api/track`, `/api/pixel`, `/proxy/{e,c}` all resolve `site_id` server-side from a `site_key → sites` lookup (unknown key → 401/no-write; client `properties.site_id` lands in `custom_properties`, not top-level), so an arbitrary UUID cannot be injected there. But it is a **missing defence-in-depth guard** at the write boundary: any non-route writer (a script, `tb` CLI, cutover smoke-test) can write an unchecked `site_id`. **One orphan event exists in prod Tinybird for `site_id 79638a99-3500-4357-9e61-7c356cba1957`** (no `sites` row; timestamp = the dual-write cutover moment `2026-07-07 10:30:00.000`; UUID not in the repo) — almost certainly a cutover smoke-test write. **Read isolation holds** (82 read pipes require `site_id`; reads scope to the authenticated `req.site.id`, so it can never surface in a customer dashboard). **Leave the row; log the gap.** Not fixed.
 
-### 🔴 GDPR visitor erasure keys off `anonymous_id`, but every row keys off `distinct_id` — erasure matches ZERO rows and still reports success (2026-07-22, launch-blocker class)
+### ✅ FIXED (#371/#376) — GDPR visitor erasure keyed off `anonymous_id`, but every row keys off `distinct_id` — erasure matched ZERO rows and still reported success (logged 2026-07-22, FIXED 2026-07-22/23)
 
 **Right-to-erasure requests silently succeed while deleting nothing.** Found as by-catch while investigating whether the erasure path would cover new PII (it does not cover the *existing* data either).
 
@@ -1309,7 +1309,7 @@ That is a **false confirmation on a GDPR Article 17 request** — the compliance
 
 **Blast radius today is small** (5 prod rows, 1 site, and there is no evidence any erasure request has been served), but the code path is wrong and scales wrong: every future conversion row inherits the same NULL `anonymous_id`.
 
-Not fixed — logged. A fix needs to decide the canonical subject key (almost certainly `distinct_id`, matching every other read path), match on it in **both** legs, and **assert rows-affected** so a zero-row delete can never again report success. `erasure_log` should record the matched count, not just a status.
+**✅ FIXED in #371 (2026-07-22), extended in #376 (2026-07-23).** #371 keyed both legs on `distinct_id` (matched across both id columns, site-scoped), added `{ count: 'exact' }` so a zero-row delete can never again report success, and brought `lead_qualifications` + `subscription_identity` into the erasure/access paths. #376 added the `volunteered_identity` FK cascade and extended the standing rule to **all three** GDPR paths (`CLAUDE.md:131` / `AGENTS.md:141` record it). **Ledger note (why this stayed open):** #370 logged it, #371 fixed it — but the fixing PR never closed this entry, so it read "Not fixed" for two days while the code was correct. That is the exact stale-doc trap that cost a full exchange this session; hence this reconciliation.
 
 ### `DEMO_PLAN` header comment documents a fixture shape that does not match what the code builds (2026-07-22, docs-only)
 
@@ -1339,7 +1339,9 @@ The Dashboard's Recent Conversions card renders "No conversions in the recent wi
 
 ### 🔴 REFUNDS — LAUNCH GATE for ecom, not a feature request (2026-07-23, correctness defect)
 
-**Promoted from "nice-to-have" to launch gate.** Ecom return rates run 20–30%. With no refund handling, **attributed revenue is systematically OVERSTATED** — the product reports money that was returned as if it were kept. For an ecom customer that is a **§5.1 data-truth violation committed with our own numbers**, the exact class of defect the truth rules exist to prevent — not a missing feature. Already tracked as Phase 7 "money rail + refunds" (**NOT STARTED**). This entry reclassifies it: refunds must land before ecom revenue can be marketed as accurate. Until then, any ecom revenue figure carries an unstated upward bias equal to the return rate.
+**Promoted from "nice-to-have" to launch gate.** Ecom return rates run 20–30%. With no refund handling, **attributed revenue is systematically OVERSTATED** — the product reports money that was returned as if it were kept. For an ecom customer that is a **§5.1 data-truth violation committed with our own numbers**, the exact class of defect the truth rules exist to prevent — not a missing feature. Already tracked as Phase 7 "money rail + refunds". This entry reclassifies it: refunds must land before ecom revenue can be marketed as accurate. Until then, any ecom revenue figure carries an unstated upward bias equal to the return rate.
+
+**STATUS 2026-07-24 — code complete (#381 / #382 / #383 / #384), gate NOT discharged.** #381 nets a Stripe refund to its original conversion; #382 makes Supabase read paths refund-aware; #383 does the same for 19 Tinybird pipes (**authored, NOT deployed**); #384 adds Shopify `refunds/create` netting. **Why the gate stays OPEN:** (1) **PR2b (#383) is merged but undeployed**, so Tinybird conversion counts still include refunds in **both** workspaces until the deferred cutover; and (2) **no real refund payload has ever been processed on either provider** — all 620 tests use in-process fixtures, and prod has **no connected Stripe or Shopify webhook**. The gate discharges only after the Tinybird cutover AND a real refund is verified end-to-end on a connected merchant.
 
 ### V1.1 — new-vs-returning CUSTOMER (not just visitor) + true CAC (2026-07-23, ecom feature gap)
 
@@ -1399,3 +1401,52 @@ The C3 Leads redesign (#377) ships a column picker but deliberately **omits Brow
 ### analytics.js /summary refund exclusion is covered by-pattern, not directly (2026-07-23, PR2a)
 
 PR2a excludes `conversion_type='refund'` from the `/analytics/summary` conversion COUNT and distinct-converter numerator (`analytics.js` `nonRefundConversions = conversions.filter(...)`). That predicate is **inline** in the route handler — there is no importable function to unit-test, and exercising it directly means booting the full `/summary` handler (pageview `dispatchPageviews` machinery + Supabase mock). Per the founder's call (and the `timezone-reconciliation.test.js`-becomes-a-no-op caution), a heavy handler test was **not** built. The identical `filter(r => r.conversion_type !== 'refund')` pattern **is** exercised directly against the real `/overview` and `leads/` handlers in `api/tests/refund-aware-reads.test.js`, so the logic is proven; `/summary`'s copy is **covered by-pattern, not directly**. Close the gap by either (a) extracting a shared `excludeRefunds(rows)` helper the three read paths call (one narrow unit test covers all), or (b) a `/summary` handler test if the pageview mock is deemed worth it.
+
+### privacy_signals datasource has 0 ingested rows since Tinybird deployment #24 (2026-07-24, log-only)
+
+The orchestrator queried `ST_Staging` directly: the `privacy_signals` datasource has received **0 rows** since deployment #24. Either the tracker's GPC/DNT suppression path is **not emitting** the signal, or the write is **not wired**. Consequence: `doctor_privacy_signals_30d` (read by Setup & Health) honestly returns empty until something writes — so the "N visitors suppressed" surface will show nothing, which is correct-given-the-data but hides that the *capture* may be broken. This is distinct from the datasource being dormant-by-design: it was deployed to receive writes (PR #224) and receives none. **Not fixed — logged.** Next step: confirm whether `api/lib/privacy-suppression.js` fires on a real GPC/DNT hit against a connected tracker, or whether the write path never reaches Tinybird.
+
+### 🔴 Tinybird event plane stamps `first_touch_source='stripe'` on ALL Stripe conversions (purchases included) — the two stores disagree on per-source revenue for every Stripe sale (2026-07-24, pre-existing, NOT refund-specific)
+
+The Stripe webhook writes `first_touch_source='stripe'` / `first_touch_medium='webhook'` on the `$conversion` **event** (`stripe-webhook.js`, purchases AND refunds). Orchestrator verified on `ST_Staging`: **11 of 11** real `cs_*` webhook purchases carry `'stripe'`/`'webhook'`. **Supabase is correct** because the nightly re-derives `first_touch_source` from the visitor's pageview touchpoints (`nightly-attribution.js:866`), overriding the event stamp; **Tinybird is NOT** — its read pipes read the stamped `'stripe'` directly. So **per-source revenue disagrees between the two stores for every Stripe sale** (Supabase → the real acquiring source; Tinybird → 'stripe'). This is **pre-existing and NOT refund-specific** — the refund PRs (#381–#384) kept the refund SYMMETRIC with the purchase precisely so this pre-existing gap isn't made worse. **Fixing it requires stamping the TRUE acquiring source on the purchase AND the refund writes in the SAME change** — doing the refund alone would fabricate negative revenue on a source that never earned it (§5.1). **Not fixed — logged.**
+
+### 🔴 Tinybird prod cutover batch — four items, gated on the token rename, with the acceptance baseline (2026-07-24)
+
+The deferred Tinybird prod cutover carries **four** authored-but-undeployed changes. `tb --cloud deploy --check` against prod is the mandatory pre-deploy gate (founder-only, §8). **Order matters — item (a) is a hard prerequisite:**
+
+- **(a) Rename `dual_write_append` FIRST (KI-54).** Both `ST_Staging` and `SourceTrack` (prod) contain a token with the **identical name** `dual_write_append` — no workspace information in the name, which is what caused a prior prod write. The cutover deploys a datasource that binds this token, so the rename (e.g. `dual_write_append_staging`) MUST land before the batch, or the ambiguity is deployed in.
+- **(b) `multitouch_pageviews_live`** — prod runs a **pre-rename** version whose params are `lookback`/`to`; **40 of 59 calls 400'd (66%)**. The cutover ships the fixed param names.
+- **(c) PR2b's 19 refund-filtered pipes (#383)** — exclude `conversion_type='refund'` from conversion COUNTs. Until deployed, Tinybird counts include refunds in **both** workspaces.
+- **(d) `privacy_signals` datasource** — deployed but see the 0-rows KI above.
+
+**Cutover acceptance baseline** (from PR #383; copied here because the person running the cutover will look at the KI, not a merged PR description). Live-queried on `ST_Staging` (deployment #24, pre-PR2b) by the orchestrator 2026-07-24 — **regenerate before the cutover; do not trust this snapshot if staging received new data since:**
+
+| site_id | conversions NOW | conversions AFTER | drop | revenue (MUST NOT CHANGE) |
+|---|---:|---:|---:|---:|
+| site-00 | 16262 | 13795 | 2467 | 2918519.97 |
+| site-01 | 16261 | 13814 | 2447 | 2958558.04 |
+| site-02 | 16314 | 13886 | 2428 | 2983380.40 |
+| site-04 | 16161 | 13768 | 2393 | 2947122.61 |
+| site-03 | 16039 | 13708 | 2331 | 2938146.91 |
+| 13777fda-3d1e-48eb-a1d3-6b3bdb18f609 | 249 | 207 | 42 | 46577.50 |
+| ebce5c1e-879a-4a41-9da2-d34a7964f3eb | 249 | 207 | 42 | 46577.50 |
+| ad643f7e-ff73-42e0-8f53-7289f02292a9 | 209 | 172 | 37 | 39030.89 |
+| ff8d5426-1713-48af-811b-5c12bd2257dd | 85 | 68 | 17 | 13346.39 |
+| de200000-refd-41d4-a716-446655443333 | 2 | 1 | 1 | 60.00 |
+
+**Invariant 1** — post-deploy conversion counts equal the AFTER column exactly. **Invariant 2** — revenue is **byte-identical**; any movement means a `SUM` was touched that shouldn't have been → **ROLLBACK**.
+
+Regenerate the baseline with (read-only, `ST_Staging`):
+
+```sql
+SELECT site_id,
+       count() AS conversions_NOW,
+       countIf(conversion_type != 'refund' OR conversion_type IS NULL) AS conversions_AFTER,
+       count() - countIf(conversion_type != 'refund' OR conversion_type IS NULL) AS expected_drop,
+       round(sum(conversion_value), 2) AS revenue_must_not_change
+FROM events
+WHERE event_type = '$conversion'
+GROUP BY site_id
+HAVING expected_drop > 0
+ORDER BY expected_drop DESC
+```
