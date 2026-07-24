@@ -1,17 +1,26 @@
 DESCRIPTION >
-    Nightly-attribution conversion row-pull. Faithful 1:1 port of the nightly's
-    per-site conversionsQuery (api/jobs/nightly-attribution.js processSite, :396-413)
-    — the 14-column shape the nightly maps positionally: uuid, distinct_id, timestamp
-    + the 11 properties at :396-405. One row per $conversion, site-scoped, windowed,
+    Nightly-attribution conversion row-pull. Port of the nightly's per-site
+    conversionsQuery (api/jobs/nightly-attribution.js processSite, :396-413) — the
+    original 14-column shape the nightly maps positionally (uuid, distinct_id, timestamp
+    + the 11 properties at :396-405), PLUS one KI-62 column appended last (15th):
+    original_conversion_event_id. One row per $conversion, site-scoped, windowed,
     ORDER BY timestamp ASC LIMIT 1000 (matching the nightly exactly, NOT the DESC/10000
     of the live-read siblings).
+
+    KI-62 (write-path PR): original_conversion_event_id is the bag pointer a refund
+    stamps to the ORIGINAL conversion it reverses (stripe-refund.js / shopify-refund.js).
+    It is APPENDED LAST and the nightly maps by NAME (mapConversionPipeRow), so this is
+    purely additive: the current 14-field consumer ignores it. The nightly consumer that
+    READS it (verbatim-inheritance) is the SEPARATE KI-62 inheritance PR; this pipe change
+    only makes the pointer reach the nightly and does NOT deploy here (founder-gated).
 
     §2.6 typed-column translation (events.datasource): properties.site_id -> site_id,
     event -> event_type, uuid -> event_id (no `uuid` column; event_id is the Tinybird
     identifier). TYPED columns: distinct_id, timestamp, conversion_type, conversion_value,
     external_event_id, webhook_customer_id, stripe_subscription_id, stripe_invoice_id,
     currency, occurred_at, provider. BAG-only (no typed column, JSONExtractString):
-    provider_event_id, stripe_event_type. The ''-vs-NULL bag trap is INERT for both —
+    provider_event_id, stripe_event_type, original_conversion_event_id. The ''-vs-NULL
+    bag trap is INERT for all —
     the nightly consumer collapses via `row[10] || null` / `row[12] || null`, so plain
     JSONExtractString (no nullIf) is faithful; there is no count(DISTINCT ...) here.
     MONEY: conversion_value = toFloat64OrZero(toString(conversion_value)) (ClickHouse
@@ -40,7 +49,8 @@ SQL >
         JSONExtractString(properties, 'provider_event_id') AS provider_event_id,
         occurred_at,
         JSONExtractString(properties, 'stripe_event_type') AS stripe_event_type,
-        provider
+        provider,
+        JSONExtractString(properties, 'original_conversion_event_id') AS original_conversion_event_id
     FROM events
     WHERE site_id = {{ String(site_id, required=True) }}
       AND event_type = '$conversion'

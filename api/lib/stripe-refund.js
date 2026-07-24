@@ -108,7 +108,13 @@ async function envResolveOriginalRead ({ siteId, key, value }, { fetchImpl } = {
   // value are esc()'d → they can only ever be string literals. (`key` is always
   // 'payment_id'; kept in the seam signature for a legible call site.)
   const predicate = `JSONExtractString(properties, 'payment_id') = '${esc(value)}'`
-  const sql = `SELECT distinct_id FROM events WHERE site_id = '${esc(siteId)}' ` +
+  // KI-62: also read the original's TYPED event_id. That column is exactly what the
+  // nightly stores as attributed_conversions.conversion_event_id (pipe projects
+  // `event_id AS uuid` -> nightly record.conversion_event_id: conversion.uuid), so it is
+  // the precise key the inheritance PR needs to look the original up by — whatever
+  // deriveEventId branch produced it. Reading the stored column keeps refund and
+  // original symmetric by construction.
+  const sql = `SELECT distinct_id, event_id FROM events WHERE site_id = '${esc(siteId)}' ` +
     `AND event_type = '$conversion' AND conversion_type != 'refund' AND ${predicate} ` +
     `ORDER BY timestamp ASC LIMIT 1 FORMAT JSON`
   const url = `${String(host).replace(/\/$/, '')}/v0/sql?q=${encodeURIComponent(sql)}`
@@ -129,8 +135,10 @@ export function __resetRefundResolveRead () { _resolveRead = envResolveOriginalR
 
 /**
  * Resolve a refund to its original conversion's distinct_id, by payment_intent.
- * @returns {Promise<{status:'resolved', distinctId:string} | {status:'not_found'} | {status:'unavailable'}>}
- *   - resolved   : a real original conversion was found; inherit its distinct_id.
+ * @returns {Promise<{status:'resolved', distinctId:string, originalConversionEventId:(string|null)} | {status:'not_found'} | {status:'unavailable'}>}
+ *   - resolved   : a real original conversion was found; inherit its distinct_id, and
+ *                  carry originalConversionEventId (KI-62 pointer) = its typed event_id,
+ *                  which equals its attributed_conversions.conversion_event_id.
  *   - not_found  : no payment_intent to look up, OR the read matched nothing.
  *   - unavailable: the read FAILED (null) — Tinybird unreachable / misconfigured.
  *   Both not_found and unavailable route to the degraded path (phantom +
@@ -142,8 +150,12 @@ export async function resolveOriginalDistinctId ({ paymentId, siteId }, { readFn
   if (!paymentId) return { status: 'not_found' }                // no join key (e.g. subscription-mode refund w/o payment_intent)
   const rows = await read({ siteId, key: 'payment_id', value: paymentId })
   if (rows === null) return { status: 'unavailable' }           // read FAILED — never a silent miss
-  const did = rows.length > 0 ? rows[0]?.distinct_id : null
-  return did ? { status: 'resolved', distinctId: did } : { status: 'not_found' }
+  const row = rows.length > 0 ? rows[0] : null
+  const did = row?.distinct_id || null
+  if (!did) return { status: 'not_found' }
+  // KI-62 pointer, best-effort: absent on an older read seam that only selected
+  // distinct_id (undefined -> null), so resolution never depends on it.
+  return { status: 'resolved', distinctId: did, originalConversionEventId: row?.event_id || null }
 }
 
 // Idempotency-claim keys for a refund. DELIBERATELY excludes order_id and
@@ -175,7 +187,7 @@ export function refundDistinctId (refund) {
  * @param {object} site   resolved site row ({ id, site_key })
  * @param {string} [distinctId]  resolved visitor id; falls back to refundDistinctId
  */
-export function buildRefundConversion (event, site, distinctId, { unresolved = false, stripeEventType = REFUND_EVENT_TYPE } = {}) {
+export function buildRefundConversion (event, site, distinctId, { unresolved = false, stripeEventType = REFUND_EVENT_TYPE, originalConversionEventId = null } = {}) {
   const refund = event?.data?.object || {}
   const amount = Number(refund.amount)
   if (!Number.isFinite(amount) || amount <= 0) {
@@ -201,6 +213,15 @@ export function buildRefundConversion (event, site, distinctId, { unresolved = f
     conversion_event_id: refund.id,
     order_id: null,
     payment_id: refund.payment_intent || null, // traceability only; event_id dominates dedup
+    // KI-62 pointer: the ORIGINAL conversion this refund reverses, so the nightly can
+    // INHERIT its attribution verbatim rather than re-derive on the refund's own
+    // (later, wrongly-anchored) window. = the original's typed event_id, which is
+    // exactly its attributed_conversions.conversion_event_id. Present ONLY when the
+    // original was resolved (Stripe's pointer requires the write-time read); the
+    // unresolved/degraded path stamps no pointer and the inheritance PR marks it.
+    // Bag-only field — projected by nightly_conversions_by_site.pipe. The nightly
+    // consumer + custom_properties persistence land in the SEPARATE inheritance PR.
+    ...(originalConversionEventId ? { original_conversion_event_id: originalConversionEventId } : {}),
     provider: 'stripe',
     provider_event_id: event.id,
     // Which Stripe event type produced THIS row — 'refund.created' or 'charge.refunded'.

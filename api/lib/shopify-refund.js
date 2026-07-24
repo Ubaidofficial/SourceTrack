@@ -137,6 +137,16 @@ export function buildShopifyRefundConversion (payload, site, distinctId, { unres
     event_id: refundEventId,
     conversion_event_id: refundEventId,
     order_id: payload?.order_id != null ? String(payload.order_id) : null,  // traceability only; event_id dominates
+    // KI-62 pointer: the ORIGINAL order this refund reverses, so the nightly can INHERIT
+    // its attribution verbatim rather than re-derive on the refund's own (wrongly-
+    // anchored) window. The original orders/paid write sets both event_id and
+    // conversion_event_id = String(order.id) (deriveEventId branch-5; shopify-webhook.js:
+    // 220/268-270), and the refund payload carries that same order id — so the pointer is
+    // intrinsic to the payload and stamped WHENEVER order_id is present (no read needed,
+    // and independent of whether the original was resolvable at write time; if it was not
+    // yet ingested, the pointer still lets a later nightly find it). Bag-only field —
+    // projected by nightly_conversions_by_site.pipe. Consumer lands in the inheritance PR.
+    ...(payload?.order_id != null ? { original_conversion_event_id: String(payload.order_id) } : {}),
     provider: 'shopify',
     provider_event_id: null,             // set by the route from the refund webhook header
     occurred_at: occurredAt,
