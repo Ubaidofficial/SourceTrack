@@ -65,7 +65,7 @@ export async function handlePrivacySuppression(req) {
     }
 
     if (!site || !site.id) {
-      console.warn(`[privacy-suppression] skipped reason=site_not_found domain=${domain}`)
+      console.warn(`[privacy-suppression] skipped reason=site_not_found domain=${hostname}`)
       return
     }
 

@@ -181,6 +181,7 @@ Plus:
 - `mergeable_state` **CLEAN** before merge. If `UNKNOWN`, wait for it to resolve — never merge on UNKNOWN.
 - **CC does NOT merge.** The human merges. CC stops at "PR up, CI green, bundle delivered."
 - After a squash-merge, dependent branches must be **rebased onto the new `main`** with fresh CI before merging.
+- **Editing this file:** agents may correct **factual** statements in CLAUDE.md when they have evidence (e.g. a URL/route that no longer matches what ships). Agents **propose but do not unilaterally change behavioural rules** — a rule change needs explicit human go-ahead. The distinction is what keeps a factual fix safe.
 
 ---
 
@@ -205,7 +206,7 @@ Plus:
 - **ESM only** — `import`/`export`, never `require()`.
 - **Supabase client:** use `getSupabase()` from `api/lib/supabase.js` only — never call `createClient()` directly in routes. Every `createClient()` must use `{ realtime: { transport: WebSocket } }`.
 - **Jobs:** `dotenv.config()` must be the **first line** in all job/cron files.
-- **Tracker URL** is `/tracker/tracker.min.js` — never `/tracker/loader.min.js`.
+- **Tracker URL:** the shipped embed snippet (Onboarding + all Solution/Docs pages) is the **root alias** `/tracker.min.js` (and `/tracker.cookieless.min.js`) — that is the canonical customer-facing URL. `/tracker/tracker.min.js` also serves the same file (`express.static`), and both forms now count GPC/DNT suppression. Never `/tracker/loader.min.js`.
 - **Tinybird pipe SQL** (`tinybird/pipes/*.pipe`, ClickHouse; founder-gated deploys, `tb --cloud deploy --check` is the mandatory pre-deploy gate): parameterize with pipe template params — `site_id` is a required param, never raw `${variable}` interpolation. `{{DateTime(p, required=True)}}` takes **no** `toDateTime()` wrapper; optional dates default `{{DateTime(p,'1970-01-01 00:00:00')}}`; timezones `{{String(tz,'UTC')}}` (never `required=True` — breaks `toTimeZone()` under `--check`); array params as repeated query keys. ClickHouse idioms still apply: `toFloatOrZero` never `toFloat64OrZero`, prefer `countIf(...)` over `COUNT(CASE WHEN ...)`. `JSONExtractString` returns `''` not `NULL` — wrap `nullIf(...,'')` where NULL semantics matter.
 - **Channel classifier:** `ORGANIC_SEARCH_ENGINE_HOSTS` / `ORGANIC_SEARCH_SOURCES` are the single exported source of truth, shared between the Tinybird pipe SQL (e.g. `seo_revenue_landing_pages.pipe`) and `channelFromEvent`. Don't fork or duplicate this logic.
 - **Attribution accuracy > speed** — verify the math before committing. When in doubt about attribution logic, **read `nightly-attribution.js` and `attribution-engine.js` before changing anything.**

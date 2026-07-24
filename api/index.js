@@ -359,6 +359,12 @@ app.use('/tracker', (req, res, next) => {
   // Cache .min.js (production artifacts); leave .js (dev) uncached
   if (req.path.endsWith('.min.js')) {
     res.setHeader('Cache-Control', TRACKER_CACHE_HEADER)
+    // Count GPC/DNT suppression on this URL form too. Prod installs use the root
+    // alias (/tracker.min.js, above), which is already wired; this covers any install
+    // that loads the /tracker/<file>.min.js form so both paths count. Fire-and-forget.
+    setImmediate(() => {
+      handlePrivacySuppression(req).catch(() => {})
+    })
   }
   next()
 })

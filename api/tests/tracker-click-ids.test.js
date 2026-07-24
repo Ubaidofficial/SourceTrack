@@ -167,8 +167,12 @@ test('Tracker Client Context Helper Static Checks', async (t) => {
     // 1. Verify getContext is defined
     assert.ok(code.includes('getContext: function'), `${fileName} must implement getContext`)
 
-    // 2. Verify all click IDs are referenced inside getContext
-    const getContextStart = code.indexOf('getContext: function')
+    // 2. Verify all click IDs are referenced inside getContext.
+    // POSITIONAL HEURISTIC — do NOT revert to indexOf: the GPC/DNT suppression stub near
+    // the top of each build defines an earlier, trivial `getContext: function () { return {} }`.
+    // indexOf would match THAT stub (no click IDs) and the check would silently pass while
+    // verifying nothing. lastIndexOf targets the substantive getContext that carries the IDs.
+    const getContextStart = code.lastIndexOf('getContext: function')
     const getContextBody = code.slice(getContextStart, getContextStart + 3000)
 
     for (const key of clickIdKeys) {

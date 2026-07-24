@@ -58,26 +58,34 @@ function run(code, opts = {}) {
   return { window: context.window, payloads, settle }
 }
 
-// ── DNT / GPC hard-abort (both builds) ──────────────────────────────────────
-test('cookieless — DNT="1" aborts the whole tracker (no API, no payloads)', async () => {
-  const h = run(cookielessCode, { doNotTrack: '1' })
-  await h.settle()
-  assert.strictEqual(h.window.sourcetrack, undefined)
-  assert.strictEqual(h.payloads.length, 0)
-})
+// ── DNT / GPC suppression → all-no-op stub (both builds) ─────────────────────
+// Under suppression the tracker exposes window.sourcetrack as a no-op stub (so a
+// customer's sourcetrack.conversion(...) never throws) but fires NO network call.
+const STUB_METHODS = ['conversion', 'identify', 'track', 'optOut', 'optIn', 'consent',
+  'fillHiddenFields', 'getToken', 'hasConsent', 'getContext', 'getHandoffParams', 'decorateUrl']
 
-test('cookieless — GPC=true aborts the whole tracker', async () => {
-  const h = run(cookielessCode, { gpc: true })
-  await h.settle()
-  assert.strictEqual(h.window.sourcetrack, undefined)
-  assert.strictEqual(h.payloads.length, 0)
-})
-
-test('cookie — DNT="1" aborts (parity sanity — unchanged)', async () => {
-  const h = run(trackerCode, { doNotTrack: '1' })
-  await h.settle()
-  assert.strictEqual(h.window.sourcetrack, undefined)
-})
+for (const [label, code] of [['cookieless', cookielessCode], ['cookie', trackerCode]]) {
+  for (const [sig, opts] of [['DNT="1"', { doNotTrack: '1' }], ['GPC=true', { gpc: true }]]) {
+    test(`${label} — ${sig} exposes an all-no-op stub, fires no payloads`, async () => {
+      const h = run(code, opts)
+      await h.settle()
+      const st = h.window.sourcetrack
+      assert.ok(st, 'stub must EXIST so customer code never throws')
+      // every public method is present and callable without throwing
+      for (const m of STUB_METHODS) {
+        assert.strictEqual(typeof st[m], 'function', `${m} must be a function`)
+        assert.doesNotThrow(() => st[m]({}), `${m}() must be a safe no-op`)
+      }
+      // the two non-obvious contracts
+      assert.strictEqual(st.decorateUrl('https://x.example/p?a=1'), 'https://x.example/p?a=1',
+        'decorateUrl MUST return its input unchanged')
+      assert.strictEqual(typeof st.getContext(), 'object', 'getContext() must be an object')
+      assert.strictEqual(typeof st.getHandoffParams(), 'object', 'getHandoffParams() must be an object')
+      // and after all those calls: NO network request was made
+      assert.strictEqual(h.payloads.length, 0, 'suppression: not one payload may be transmitted')
+    })
+  }
+}
 
 // ── Consent gate (cookieless port) ──────────────────────────────────────────
 test('cookieless — consent-required holds events, then flushes on consent(true)', async () => {
