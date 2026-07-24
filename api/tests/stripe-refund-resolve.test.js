@@ -34,15 +34,22 @@ const SITE = { id: 'site-refund-1', site_key: 'sk_live_refundtest' }
 
 // ── UNIT: resolveOriginalDistinctId ─────────────────────────────────────────
 
-test('(a) resolved: resolves the original distinct_id from a payment_id match', async () => {
+test('(a) resolved: resolves the original distinct_id AND the KI-62 pointer (its event_id) from a payment_id match', async () => {
   const reads = []
+  // The real read now SELECTs distinct_id, event_id (stripe-refund.js) — the row carries both.
   const readFn = async ({ siteId, key, value }) => {
     reads.push({ siteId, key, value })
-    return key === 'payment_id' && value === 'pi_1' ? [{ distinct_id: 'visitor-real-1' }] : []
+    return key === 'payment_id' && value === 'pi_1' ? [{ distinct_id: 'visitor-real-1', event_id: 'cs_original_1' }] : []
   }
   const r = await resolveOriginalDistinctId({ paymentId: 'pi_1', siteId: SITE.id }, { readFn })
-  assert.deepEqual(r, { status: 'resolved', distinctId: 'visitor-real-1' })
+  assert.deepEqual(r, { status: 'resolved', distinctId: 'visitor-real-1', originalConversionEventId: 'cs_original_1' })
   assert.equal(reads[0].key, 'payment_id')
+})
+
+test('(a2) KI-62: an older read seam that returns only distinct_id → resolved with a NULL pointer (never breaks resolution)', async () => {
+  const readFn = async () => [{ distinct_id: 'visitor-real-1' }]   // no event_id in the row
+  const r = await resolveOriginalDistinctId({ paymentId: 'pi_1', siteId: SITE.id }, { readFn })
+  assert.deepEqual(r, { status: 'resolved', distinctId: 'visitor-real-1', originalConversionEventId: null })
 })
 
 test('(c) not_found: read succeeds but matches nothing → not_found (resolved-to-nothing)', async () => {

@@ -317,7 +317,9 @@ async function ingestOneRefund({ refund: rawRefund, event, site, siteKey, keys, 
   }
   const { distinctId, value, currency, properties } = buildRefundConversion(
     refundEvent, site, resolved ? resolution.distinctId : undefined,
-    { unresolved: !resolved, stripeEventType }
+    // KI-62: carry the resolved original's conversion_event_id onto the refund event
+    // (undefined when unresolved → no pointer stamped).
+    { unresolved: !resolved, stripeEventType, originalConversionEventId: resolution.originalConversionEventId }
   )
 
   try {
