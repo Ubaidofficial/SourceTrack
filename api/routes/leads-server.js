@@ -250,7 +250,7 @@ router.get('/', validateSiteKey, async (req, res) => {
     try {
       let convQ = getSupabase()
         .from('attributed_conversions')
-        .select('distinct_id, conversion_value')
+        .select('distinct_id, conversion_value, conversion_type')   // (A): conversion_type to exclude refunds from COUNTS
         .eq('site_id', siteId)
       if (dateFrom && dateTo) convQ = convQ.gte('conversion_date', dateFrom).lte('conversion_date', dateTo)
       const { data: convAgg, error: aggErr } = await convQ
@@ -258,8 +258,11 @@ router.get('/', validateSiteKey, async (req, res) => {
         console.error('[leads] attributed_conversions totals read FAILED (keeping page fallback):', aggErr.message || aggErr)
       } else {
         const convRows = convAgg || []
-        total = new Set(convRows.map(r => r.distinct_id)).size
-        totalConversions = convRows.length
+        // (A) counts exclude refunds (a refund is not an additional converter/conversion);
+        // revenue still nets over ALL rows so the refunded amount comes back off the total.
+        const nonRefund = convRows.filter(r => r.conversion_type !== 'refund')
+        total = new Set(nonRefund.map(r => r.distinct_id)).size
+        totalConversions = nonRefund.length
         totalRevenue = convRows.reduce((s, r) => s + (Number(r.conversion_value) || 0), 0)
       }
     } catch (e) {

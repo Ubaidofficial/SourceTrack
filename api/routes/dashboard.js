@@ -8,6 +8,14 @@ import { getSetupDiagnostics } from '../lib/setup-doctor.js'
 import { classifyConversionType } from '../lib/conversion-classifier.js'
 import { normalizeSource } from '../lib/source-normalizer.js'
 
+// PR2 refund-aware reads. (A) A refund (conversion_type='refund') is a NEGATIVE-value
+// row; its revenue must net (SUM keeps it) but it must NOT ADD to any conversion
+// COUNT — the original purchase is still the conversion that happened. (B) An
+// UNRESOLVED refund (attribution_status='refund_unresolved') has a phantom
+// distinct_id → NULL first_touch → 'direct'; its revenue is routed to this explicit
+// line instead of debiting 'direct' (or any acquiring source) it never earned.
+const UNATTRIBUTED_REFUNDS = 'Unattributed refunds'
+
 
 
 const router = Router()
@@ -80,7 +88,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     ] = await Promise.all([
       supabase
         .from('attributed_conversions')
-        .select('first_touch_source, first_touch_channel, last_touch_channel, first_touch_campaign, conversion_value, conversion_type, conversion_date, status, touchpoint_count, conversion_timestamp, distinct_id, anonymous_id')
+        .select('first_touch_source, first_touch_channel, last_touch_channel, first_touch_campaign, conversion_value, conversion_type, attribution_status, conversion_date, status, touchpoint_count, conversion_timestamp, distinct_id, anonymous_id')
         .eq('site_id', req.site.id)
         .gte('conversion_date', currentPadded.from)
         .lte('conversion_date', currentPadded.to),
@@ -184,8 +192,13 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       const ltChannel = r.last_touch_channel || 'Direct'
       const ai = isAISource(r.first_touch_source)
 
+      // PR2 (A)/(B): a refund nets revenue but never adds to a COUNT; an unresolved
+      // refund's revenue is bucketed separately (not onto 'direct'/any source).
+      const isRefund = r.conversion_type === 'refund'
+      const isUnresolvedRefund = isRefund && r.attribution_status === 'refund_unresolved'
+
       totalRevenue += val
-      totalConversions++
+      if (!isRefund) totalConversions++            // (A)
 
       const typeClass = classifyConversionType(r.conversion_type)
       if (typeClass === 'customer') {
@@ -194,51 +207,60 @@ router.get('/overview', validateSiteKey, async (req, res) => {
 
       // Leads counted as DISTINCT lead identities (people), not raw conversion
       // rows — unifies the unit with the Leads page and dedupes repeat submitters.
+      // (A): a refund never adds a converter — a resolved refund's visitor is already
+      // counted via the purchase; an unresolved refund's phantom id must not appear.
       const convId = r.distinct_id || r.anonymous_id
-      if (convId) {
+      if (convId && !isRefund) {
         converters.add(convId)
         if (typeClass === 'lead') leadConverters.add(convId)
         else if (typeClass === 'customer') customerConverters.add(convId)
       }
 
-      if (r.status === 'sql') sqlCount++
+      if (!isRefund && r.status === 'sql') sqlCount++
       if (ftChannel !== 'Direct') ftNonDirectRevenue += val
       if (ltChannel !== 'Direct') ltNonDirectRevenue += val
 
-      // source breakdown
-      const normSource = normalizeSource(source).name
-      if (!sourceMap[normSource]) sourceMap[normSource] = { dim_value: normSource, revenue: 0, conversions: 0, sessions: 0, rpv: 0 }
-      sourceMap[normSource].revenue += val
-      sourceMap[normSource].conversions++
+      // source breakdown — (B) an unresolved refund goes to a dedicated line, NEVER
+      // 'direct'; a resolved refund nets its real acquiring source; purchases add gross.
+      if (isUnresolvedRefund) {
+        if (!sourceMap[UNATTRIBUTED_REFUNDS]) sourceMap[UNATTRIBUTED_REFUNDS] = { dim_value: UNATTRIBUTED_REFUNDS, revenue: 0, conversions: 0, sessions: 0, rpv: 0 }
+        sourceMap[UNATTRIBUTED_REFUNDS].revenue += val
+      } else {
+        const normSource = normalizeSource(source).name
+        if (!sourceMap[normSource]) sourceMap[normSource] = { dim_value: normSource, revenue: 0, conversions: 0, sessions: 0, rpv: 0 }
+        sourceMap[normSource].revenue += val
+        if (!isRefund) sourceMap[normSource].conversions++      // (A)
+      }
 
-      // campaign breakdown
+      // campaign breakdown (an unresolved refund has a NULL campaign → excluded here)
       if (campaign) {
         if (!campaignMap[campaign]) campaignMap[campaign] = { dim_value: campaign, revenue: 0, conversions: 0 }
         campaignMap[campaign].revenue += val
-        campaignMap[campaign].conversions++
+        if (!isRefund) campaignMap[campaign].conversions++      // (A)
       }
 
-      // revenue trend by date
+      // revenue trend by date — revenue always nets (the money moved on that date)
       if (localDate) {
         if (!revTrendMap[localDate]) revTrendMap[localDate] = { dim_value: localDate, revenue: 0 }
         revTrendMap[localDate].revenue += val
       }
 
-      // conversions trend by date — ALL attributed conversions, not just leads
-      // (a customer-only site has no leads, so a leads-only trend read empty).
-      if (localDate) {
+      // conversions trend by date — (A) a refund is not a new conversion.
+      if (localDate && !isRefund) {
         if (!channelTrendMap[localDate]) channelTrendMap[localDate] = { dim_value: localDate, conversions: 0 }
         channelTrendMap[localDate].conversions++
       }
 
-      // AI source breakdown
+      // AI source breakdown (an unresolved refund's first_touch is NULL → not AI → never here)
       if (ai) {
         totalAIRevenue += val
         const aiSrc = r.first_touch_source
         if (!aiSourceMap[aiSrc]) aiSourceMap[aiSrc] = { dim_value: aiSrc, ai_revenue: 0, ai_conversions: 0, ai_leads: 0 }
         aiSourceMap[aiSrc].ai_revenue += val
-        aiSourceMap[aiSrc].ai_conversions++
-        aiSourceMap[aiSrc].ai_leads++
+        if (!isRefund) {                                        // (A)
+          aiSourceMap[aiSrc].ai_conversions++
+          aiSourceMap[aiSrc].ai_leads++
+        }
         if (localDate) {
           if (!aiTrendMap[localDate]) aiTrendMap[localDate] = { dim_value: localDate, ai_revenue: 0 }
           aiTrendMap[localDate].ai_revenue += val
@@ -301,7 +323,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       }
       const val = Number(r.conversion_value) || 0
       prevRevenue += val
-      prevConversions++
+      if (r.conversion_type !== 'refund') prevConversions++   // (A): match the current-period count treatment so the delta is meaningful
 
       const typeClass = classifyConversionType(r.conversion_type)
       if (typeClass === 'lead') {
@@ -500,7 +522,7 @@ router.get('/cac', validateSiteKey, async (req, res) => {
         .lte('period_end', dateTo),
       supabase
         .from('attributed_conversions')
-        .select('first_touch_channel, conversion_value')
+        .select('first_touch_channel, conversion_value, conversion_type')  // (A): need conversion_type to exclude refunds from the CAC denominator
         .eq('site_id', siteId)
         .gte('conversion_date', dateFrom)
         .lte('conversion_date', dateTo)
@@ -523,7 +545,7 @@ router.get('/cac', validateSiteKey, async (req, res) => {
       const ch = (row.first_touch_channel || '').trim().toLowerCase()
       if (!ch) continue
       if (!convByChannel[ch]) convByChannel[ch] = { conversions: 0, totalValue: 0 }
-      convByChannel[ch].conversions++
+      if (row.conversion_type !== 'refund') convByChannel[ch].conversions++   // (A): refund nets value below, but must not inflate the CAC denominator
       convByChannel[ch].totalValue += parseFloat(row.conversion_value || 0)
     }
 

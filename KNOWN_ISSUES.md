@@ -279,6 +279,7 @@ three different formats.
 | `supabase/schema.sql` | 1 KB, stale (see issue 1) | regenerate or delete |
 | `site_annotations` / `annotations` tables | routes deleted in #315, tables remain | DDL — needs explicit founder go-ahead |
 | 67 test files reference `process.env.POSTHOG_*` | legitimate fail-closed scaffolding, but named after a deleted system | rename to a neutral env var |
+| `api/lib/attribution-engine.js:2434-2454` `flexible_ai_share` block (`count()` at :2437) | UNREACHABLE — throws unconditionally at :2453; `ai_conversion_share`/`ai_revenue_share` are gated → 422 upstream, so the read never runs (confirmed while scoping PR2). Listed as a refund-count site but it is dead. | delete the block (keep the `throw`/gate); do NOT refund-guard dead SQL |
 
 **Script wiring:** see issue 24 — 40 `qa-*` scripts, 6 npm script names, 1 in CI. Same backlog,
 not duplicated here.
@@ -1394,3 +1395,7 @@ The C3 Leads redesign (#377) ships a column picker but deliberately **omits Brow
 **Root cause worth recording — adding a CAPI platform needs FOUR touchpoints in lockstep:** (a) the sender fn in `conversion-sync.js`, (b) an entry in `CAPI_PLATFORMS` (`capi.js`), (c) a config card in `dashboard/src/components/CapiSettings.jsx`, (d) the hardcoded CAPI-column `SELECT` lists in `conversion.js` + `conversion-offline.js`. Miss any one and the sender is stillborn — exactly how Microsoft/LinkedIn ended up here. This is the checklist for any future platform (e.g. TikTok).
 
 **Not a blocker, and the delivery log needs no change:** `capi_deliveries` is platform-agnostic (`api/lib/capi-deliveries.js` — columns `site_id, platform, event_ref, status, http_status, error_message, attempt`; `platform` is a bare string), so it already records any platform without a schema change. Fix is either to wire Microsoft/LinkedIn through all four touchpoints or to drop the two dead senders; logged, not decided.
+
+### analytics.js /summary refund exclusion is covered by-pattern, not directly (2026-07-23, PR2a)
+
+PR2a excludes `conversion_type='refund'` from the `/analytics/summary` conversion COUNT and distinct-converter numerator (`analytics.js` `nonRefundConversions = conversions.filter(...)`). That predicate is **inline** in the route handler — there is no importable function to unit-test, and exercising it directly means booting the full `/summary` handler (pageview `dispatchPageviews` machinery + Supabase mock). Per the founder's call (and the `timezone-reconciliation.test.js`-becomes-a-no-op caution), a heavy handler test was **not** built. The identical `filter(r => r.conversion_type !== 'refund')` pattern **is** exercised directly against the real `/overview` and `leads/` handlers in `api/tests/refund-aware-reads.test.js`, so the logic is proven; `/summary`'s copy is **covered by-pattern, not directly**. Close the gap by either (a) extracting a shared `excludeRefunds(rows)` helper the three read paths call (one narrow unit test covers all), or (b) a `/summary` handler test if the pageview mock is deemed worth it.
