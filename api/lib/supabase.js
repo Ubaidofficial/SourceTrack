@@ -45,6 +45,11 @@ export function getSupabase() {
   return _client
 }
 
+// Test-only injection seam: lets unit tests drive readers with a fixture/stub client instead of a
+// live DB (there is no other Supabase mock in this repo). NEVER referenced by any production path.
+export function __setSupabaseClient (client) { _client = client }
+export function __resetSupabaseClient () { _client = null }
+
 // Convenience default export so legacy `import supabase from '../lib/supabase.js'`
 // patterns work too. Most call sites should use the named getSupabase() export.
 export default { getSupabase }
