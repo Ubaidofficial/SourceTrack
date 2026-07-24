@@ -210,6 +210,15 @@ function servedReportShape ({
   if (SESSION_PIPE_METRICS.has(metric)) {
     return every(SESSION_REPORT_DIMS) ? 'session_report_pipes' : null
   }
+  // Only the session-report path above honors a SECOND dimension (getSessionReport takes groupBy2,
+  // engine:676). Every backend below — the Supabase pre-agg, the four multi-touch pre-agg readers,
+  // and the multitouch/ai LIVE readers — takes groupBy ONLY and silently DROPS groupBy2 (single-dim
+  // by signature: getPreAggregatedAttribution has no groupBy2 param; getMultiTouchAttributionLive /
+  // getAiPlatformAttributionLive accept it but never read it). Claiming to serve a two-dim shape
+  // here is what let attribution.js's pre-agg short-circuit return campaign-ONLY data for a
+  // campaign×source request. Gate it: an unservable second dimension is an honest 422, never a
+  // silent single-dim answer mislabeled as two-dim.
+  if (group_by2) return null
   // 2/3. route pre-agg short-circuit — Supabase, not a pipe (attribution.js:179 / :200-248)
   const preAggDims = every(PREAGG_DIMS) && !dims.some(d => PREAGG_EXCLUDED_DIMS.has(d))
   if (viaRoutePreAgg && preAggWindowMatches && preAggDims) {
