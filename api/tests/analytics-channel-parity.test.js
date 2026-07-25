@@ -137,3 +137,62 @@ test('🔴 ANTI-DRIFT: the filter_channel block is byte-identical across all 5 a
     assert.strictEqual(extract(p), ref, `${p} filter_channel block diverged from summary`)
   }
 })
+
+// ── (4) KNOWN_ISSUES #13 — the SAME classifier in the 3 pipes test (3) never covered ──
+// Test (3) compares the whole `{% if defined(filter_channel) %}` BLOCK, which only exists in — and is
+// only shaped the same across — the 5 analytics pipes. Three other pipes carry their own copy of the
+// classifier in a DIFFERENT wrapper, so they sat outside every assertion above and drifted to a stale,
+// click-ID-blind clone (mis-classifying paid clicks as Organic Search / Organic Social):
+//   session_report_pageviews / session_report_conversions — `COALESCE(multiIf(...), 'Other') = <one channel>`
+//   seo_revenue_landing_pages                            — `multiIf(...) = 'Organic Search'` (organic-only filter)
+// So this binds the multiIf EXPRESSION itself, which is wrapper-independent and therefore covers all 8.
+// Deliberately NOT normalizing whitespace: byte-identity is the property that keeps 8 copies in step.
+const CHANNEL_PIPES = ['summary', 'sources_ai', 'sources_ref', 'browsers', 'os',
+  'session_report_pageviews', 'session_report_conversions', 'seo_revenue_landing_pages']
+
+const extractMultiIf = (p) => {
+  const s = pipeSrc(p)
+  const a = s.indexOf("multiIf(\n          ai_source IS NOT NULL")
+  assert.ok(a > 0, `${p}: canonical channel multiIf not found (stale clone or different indentation?)`)
+  const end = s.indexOf("'Other Campaign'", a)
+  assert.ok(end > a, `${p}: multiIf has no 'Other Campaign' fallback — not the canonical block`)
+  return s.slice(a, end + "'Other Campaign'".length)
+}
+
+test('🔴 ANTI-DRIFT (KI #13): the channel multiIf is byte-identical across ALL 8 pipes that carry one', () => {
+  const ref = extractMultiIf('summary')
+  for (const p of CHANNEL_PIPES.slice(1)) {
+    assert.strictEqual(extractMultiIf(p), ref,
+      `${p}: channel multiIf diverged from summary.pipe — §11 forbids forking this logic`)
+  }
+})
+
+test('🔴 ANTI-DRIFT (KI #13): every channel pipe carries all 13 click-ID branches', () => {
+  for (const p of CHANNEL_PIPES) {
+    const sql = extractMultiIf(p)
+    for (const cid of ['gclid', 'gbraid', 'wbraid', 'msclkid', 'fbclid', 'ttclid', 'li_fat_id', 'li_fatid', 'twclid', 'snapclid', 'pclid', 'sccid', 'dclid']) {
+      assert.ok(sql.includes(cid), `${p}: classifier is click-ID-blind — missing ${cid}`)
+    }
+    for (const ch of ['Display', 'Affiliate', 'SMS', 'Other Campaign']) {
+      assert.ok(sql.includes(`'${ch}'`), `${p}: classifier missing channel ${ch}`)
+    }
+  }
+})
+
+// The SEO pipe is not a channel FILTER but an organic-only row filter: its contract is that a row is
+// included iff the canonical classifier calls it Organic Search. Asserted separately because a
+// byte-identical multiIf that is then compared to the WRONG channel would still pass test (4).
+test("🔴 KI #13: seo_revenue_landing_pages gates on the canonical classifier = 'Organic Search'", () => {
+  const src = pipeSrc('seo_revenue_landing_pages')
+  // EXECUTABLE SQL ONLY. The DESCRIPTION above it quotes the old `referrer ILIKE '%google.%'` filter
+  // verbatim to record what was wrong and why — scanning the whole file would make that history
+  // impossible to write down, which is the opposite of what this repo wants.
+  const sql = src.slice(src.indexOf('SQL >'))
+  assert.ok(sql.length > 0, 'SQL section not found')
+  assert.match(sql, /multiIf\([\s\S]*?'Other Campaign'\s*\)\s*=\s*'Organic Search'/,
+    'the organic filter must be the canonical multiIf compared to Organic Search, not a hand-rolled host list')
+  // The pre-fix filter matched a bare host list with no click-ID/medium guard, so an auto-tagged
+  // Google Ads click (gclid + google.com referrer) counted as SEO revenue. That shape must be gone.
+  assert.doesNotMatch(sql, /referrer ILIKE '%google\.%'/,
+    'the click-ID-blind ILIKE host filter must be replaced, not kept alongside the classifier')
+})

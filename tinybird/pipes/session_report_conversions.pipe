@@ -9,9 +9,15 @@ DESCRIPTION >
     DYNAMIC FILTERS: the live code appends ${filterClauses} built from the `filters` object
     (:841-880) — reproduced here as {% if defined %} blocks so an omitted filter adds no
     predicate (queryTinybirdPipe drops undefined params, so the block is skipped). The `channel`
-    filter is the inline multiIf channel-classifier snapshot from :844-859, translated typed;
-    it is a point-in-time copy of that route's inline classifier (NOT channel-classifier.js) —
-    if :844-859 changes, this block must be updated in lockstep.
+    filter's multiIf is now the CANONICAL classifier — byte-identical to the block in
+    summary/sources_ai/sources_ref/browsers/os and a port of channelFromEvent
+    (api/lib/channel-classifier.js), per CLAUDE.md §11 (don't fork this logic). It was previously a
+    point-in-time copy of getSessionReport's own inline SQL, which is stale and click-ID-blind (no
+    gclid/fbclid/dclid branches, no Display/Affiliate/SMS/Other Campaign) — KNOWN_ISSUES.md #13.
+    Bound by api/tests/analytics-channel-parity.test.js across all EIGHT channel pipes.
+    Same REACHABILITY caveat as session_report_pageviews: `filter_channel` is never passed today
+    (getSessionReport sends 3 params and skips the pipe whenever a filter is set), so this block is
+    correct-but-dormant — it fixes no live number, it stops a future caller inheriting the stale clone.
     NOT YET PUSHED — authored only (token lacks WORKSPACE:DEPLOY); founder deploys.
 
 NODE session_report_conversions_node
@@ -29,16 +35,23 @@ SQL >
       AND COALESCE(
         multiIf(
           ai_source IS NOT NULL AND ai_source != '', 'AI Search',
-          lower(COALESCE(utm_medium, '')) IN ('cpc','ppc','paid','paid_search','sem'), 'Paid Search',
-          lower(COALESCE(utm_medium, '')) IN ('paid_social','paidsocial','social_paid'), 'Paid Social',
-          lower(COALESCE(utm_medium, '')) IN ('email','newsletter'), 'Email',
-          lower(COALESCE(utm_medium, '')) IN ('social','organic_social'), 'Organic Social',
-          lower(COALESCE(utm_medium, '')) IN ('organic','seo'), 'Organic Search',
-          lower(COALESCE(utm_source, '')) IN ('google','bing','duckduckgo','yahoo','brave') AND lower(COALESCE(utm_medium, '')) NOT IN ('cpc','ppc','paid','paid_search','sem'), 'Organic Search',
-          lower(COALESCE(utm_source, '')) IN ('facebook','instagram','linkedin','twitter','x','tiktok','youtube','reddit') AND lower(COALESCE(utm_medium, '')) NOT IN ('paid_social','paidsocial','social_paid'), 'Organic Social',
-          lower(COALESCE(utm_source, '')) IN ('mailchimp','klaviyo','hubspot','sendgrid','customer.io'), 'Email',
-          referrer IS NULL OR referrer = '', 'Direct',
-          'Referral'
+          (gclid IS NOT NULL AND gclid != '') OR (gbraid IS NOT NULL AND gbraid != '') OR (wbraid IS NOT NULL AND wbraid != '') OR (msclkid IS NOT NULL AND msclkid != ''), 'Paid Search',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('cpc','ppc','paid','paid_search','paidsearch','sem'), 'Paid Search',
+          (fbclid IS NOT NULL AND fbclid != '') OR (ttclid IS NOT NULL AND ttclid != '') OR (li_fat_id IS NOT NULL AND li_fat_id != '') OR (li_fatid IS NOT NULL AND li_fatid != '') OR (twclid IS NOT NULL AND twclid != '') OR (snapclid IS NOT NULL AND snapclid != '') OR (pclid IS NOT NULL AND pclid != '') OR (sccid IS NOT NULL AND sccid != ''), 'Paid Social',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('paid_social','paidsocial','social_paid'), 'Paid Social',
+          dclid IS NOT NULL AND dclid != '', 'Display',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('display','banner','gdn','expandable','retargeting'), 'Display',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('affiliate','affiliates','partner','cpa','cps'), 'Affiliate',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('email','e-mail','newsletter','mailing','edm'), 'Email',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('sms','text','mms'), 'SMS',
+          arrayExists(h -> position(if(referrer IS NOT NULL AND referrer != '' AND domain(referrer) = domain(page_url), '', lower(COALESCE(referrer, ''))), h) > 0, ['google.','bing.','yahoo.','duckduckgo.','ecosia.','kagi.','brave.','yandex.','baidu.']), 'Organic Search',
+          lower(trim(COALESCE(utm_source, ''))) IN ('google','bing','yahoo','duckduckgo','baidu','yandex','brave','ecosia') AND lower(trim(COALESCE(utm_medium, ''))) = '', 'Organic Search',
+          arrayExists(h -> position(if(referrer IS NOT NULL AND referrer != '' AND domain(referrer) = domain(page_url), '', lower(COALESCE(referrer, ''))), h) > 0, ['facebook.com','instagram.com','linkedin.com','twitter.com','x.com','tiktok.com','pinterest.com','reddit.com','youtube.com','snapchat.com','threads.net']), 'Organic Social',
+          lower(trim(COALESCE(utm_source, ''))) IN ('facebook','instagram','linkedin','twitter','x','tiktok','pinterest','reddit','youtube','snapchat') AND lower(trim(COALESCE(utm_medium, ''))) = '', 'Organic Social',
+          lower(trim(COALESCE(utm_source, ''))) IN ('mailchimp','klaviyo','hubspot','sendgrid','customer.io','brevo','activecampaign','drip','omnisend','postmark','mailerlite'), 'Email',
+          length(if(referrer IS NOT NULL AND referrer != '' AND domain(referrer) = domain(page_url), '', lower(COALESCE(referrer, '')))) > 5, 'Referral',
+          lower(trim(COALESCE(utm_source, ''))) = '' OR lower(trim(COALESCE(utm_source, ''))) = 'direct', 'Direct',
+          'Other Campaign'
         ),
         'Other'
       ) = {{ String(filter_channel, required=True) }}

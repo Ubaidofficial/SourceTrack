@@ -15,12 +15,32 @@ DESCRIPTION >
     page_url is genuinely Nullable in the typed schema (no DEFAULT per
     §2.6) — ClickHouse's null-skip on the typed column matches live HogQL's
     bag-side null-skip exactly. No divergence, no fix needed.
-    ORGANIC_SEARCH_ENGINE_HOSTS / ORGANIC_SEARCH_SOURCES (api/lib/
-    channel-classifier.js:25-26, the project's single source of truth per
-    CLAUDE.md §11) are inlined as literal SQL below since Tinybird pipes
-    can't import JS constants — this is a point-in-time snapshot; if that
-    list is edited in channel-classifier.js this pipe will silently drift
-    and needs re-syncing (flagged, not solved here).
+    ORGANIC FILTER (KNOWN_ISSUES.md #13): was a bare host/source list — the
+    ORGANIC_SEARCH_ENGINE_HOSTS / ORGANIC_SEARCH_SOURCES literals from
+    api/lib/channel-classifier.js:25-26. Those two lists were in sync, but the
+    filter was CLICK-ID-BLIND and, on the referrer branch, MEDIUM-BLIND:
+    `referrer ILIKE '%google.%'` fired regardless of gclid or utm_medium, so an
+    auto-tagged Google Ads click (gclid + google.com referrer, no UTMs) AND a
+    manually-tagged one (utm_medium=cpc + google.com referrer) both counted as
+    SEO revenue. Paid revenue in an SEO report is a §6 violation.
+    Now gated on the CANONICAL channel classifier = 'Organic Search' — the same
+    multiIf carried byte-identically by summary/sources_ai/sources_ref/browsers/os
+    and the two session_report pipes, a port of channelFromEvent. Paid Search /
+    Paid Social / Display are excluded by construction because their branches run
+    BEFORE Organic Search, exactly as in the JS. Bound by
+    api/tests/analytics-channel-parity.test.js (byte-identity across all 8 pipes
+    + this pipe's `= 'Organic Search'` contract), so it can no longer drift.
+    NOTE — a dead sibling: api/routes/seo-revenue.js still BUILDS an equivalent
+    host-list HogQL string and passes it to readTb() as `hogSql`, but that helper
+    THROWS on a null pipe read (the HogQL fallback is deleted), so the string is
+    never executed. This pipe is the sole live read path; the dead string now
+    disagrees with it and should be removed separately (out of scope here).
+    AMBIGUOUS BY DESIGN, needs a product call: kagi.com is BOTH an
+    ORGANIC_SEARCH_ENGINE_HOST and an AI_DOMAINS_MAP entry. The canonical order
+    puts AI Search first, so a Kagi visit whose ai_source was stamped at ingest is
+    now AI Search and drops OUT of SEO revenue; one without ai_source still counts
+    as Organic Search. That asymmetry is inherited from the canonical classifier,
+    not introduced here — flagged, not silently resolved.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
     DEPLOY FIX (tb --cloud deploy --check, ST_Staging v4.6.4): date/datetime
     params were declared String(param, required=True) then wrapped in
@@ -43,12 +63,26 @@ SQL >
       AND distinct_id IN {{ Array(visitor_ids, 'String', required=True) }}
       AND timestamp >= {{ DateTime(from_ts, required=True) }}
       AND timestamp <= {{ DateTime(to_ts, required=True) }}
-      AND (
-        referrer ILIKE '%google.%' OR referrer ILIKE '%bing.%' OR referrer ILIKE '%yahoo.%'
-        OR referrer ILIKE '%duckduckgo.%' OR referrer ILIKE '%ecosia.%' OR referrer ILIKE '%kagi.%'
-        OR referrer ILIKE '%brave.%' OR referrer ILIKE '%yandex.%' OR referrer ILIKE '%baidu.%'
-        OR (lower(utm_source) IN ('google','bing','yahoo','duckduckgo','baidu','yandex','brave','ecosia') AND coalesce(utm_medium, '') = '')
-      )
+      AND multiIf(
+          ai_source IS NOT NULL AND ai_source != '', 'AI Search',
+          (gclid IS NOT NULL AND gclid != '') OR (gbraid IS NOT NULL AND gbraid != '') OR (wbraid IS NOT NULL AND wbraid != '') OR (msclkid IS NOT NULL AND msclkid != ''), 'Paid Search',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('cpc','ppc','paid','paid_search','paidsearch','sem'), 'Paid Search',
+          (fbclid IS NOT NULL AND fbclid != '') OR (ttclid IS NOT NULL AND ttclid != '') OR (li_fat_id IS NOT NULL AND li_fat_id != '') OR (li_fatid IS NOT NULL AND li_fatid != '') OR (twclid IS NOT NULL AND twclid != '') OR (snapclid IS NOT NULL AND snapclid != '') OR (pclid IS NOT NULL AND pclid != '') OR (sccid IS NOT NULL AND sccid != ''), 'Paid Social',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('paid_social','paidsocial','social_paid'), 'Paid Social',
+          dclid IS NOT NULL AND dclid != '', 'Display',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('display','banner','gdn','expandable','retargeting'), 'Display',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('affiliate','affiliates','partner','cpa','cps'), 'Affiliate',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('email','e-mail','newsletter','mailing','edm'), 'Email',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('sms','text','mms'), 'SMS',
+          arrayExists(h -> position(if(referrer IS NOT NULL AND referrer != '' AND domain(referrer) = domain(page_url), '', lower(COALESCE(referrer, ''))), h) > 0, ['google.','bing.','yahoo.','duckduckgo.','ecosia.','kagi.','brave.','yandex.','baidu.']), 'Organic Search',
+          lower(trim(COALESCE(utm_source, ''))) IN ('google','bing','yahoo','duckduckgo','baidu','yandex','brave','ecosia') AND lower(trim(COALESCE(utm_medium, ''))) = '', 'Organic Search',
+          arrayExists(h -> position(if(referrer IS NOT NULL AND referrer != '' AND domain(referrer) = domain(page_url), '', lower(COALESCE(referrer, ''))), h) > 0, ['facebook.com','instagram.com','linkedin.com','twitter.com','x.com','tiktok.com','pinterest.com','reddit.com','youtube.com','snapchat.com','threads.net']), 'Organic Social',
+          lower(trim(COALESCE(utm_source, ''))) IN ('facebook','instagram','linkedin','twitter','x','tiktok','pinterest','reddit','youtube','snapchat') AND lower(trim(COALESCE(utm_medium, ''))) = '', 'Organic Social',
+          lower(trim(COALESCE(utm_source, ''))) IN ('mailchimp','klaviyo','hubspot','sendgrid','customer.io','brevo','activecampaign','drip','omnisend','postmark','mailerlite'), 'Email',
+          length(if(referrer IS NOT NULL AND referrer != '' AND domain(referrer) = domain(page_url), '', lower(COALESCE(referrer, '')))) > 5, 'Referral',
+          lower(trim(COALESCE(utm_source, ''))) = '' OR lower(trim(COALESCE(utm_source, ''))) = 'direct', 'Direct',
+          'Other Campaign'
+        ) = 'Organic Search'
     GROUP BY distinct_id
 
 TYPE endpoint
