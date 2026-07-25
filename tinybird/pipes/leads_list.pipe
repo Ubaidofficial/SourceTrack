@@ -59,9 +59,14 @@ DESCRIPTION >
     conditional-aggregate-over-empty-set behavior, unrelated to the §2.6
     DEFAULT-column issue above. Fixed with nullIf(argMaxIf(...), '') — safe
     because every real $conversion event on the gating site has a genuine
-    non-empty conversion_type (verified: closed_won/lead_created/purchase
-    only, never ''), so there's no legitimate '' value this could wrongly
-    clobber.
+    non-empty conversion_type (that site's data at verification time held
+    closed_won/lead_created/purchase, never '' — a point-in-time observation,
+    NOT the taxonomy: api/lib/conversion-classifier.js is the full list and it
+    also carries the Stripe lifecycle types trial_start/trial_converted/
+    subscription plus renewal/churn). The safety argument does not depend on
+    WHICH values occur, only that none is '' — so new types strengthen it
+    rather than weakening it, and there's no legitimate '' value this could
+    wrongly clobber.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
     DEPLOY FIX (tb --cloud deploy --check, ST_Staging v4.6.4): date/datetime
     params were declared String(param, required=True) then wrapped in
