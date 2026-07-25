@@ -8,6 +8,7 @@ import { resolveCname, verifySslAndRouting, normalizeDnsName } from '../lib/dns-
 import { addPullZoneHostname, loadFreeCertificate, removePullZoneHostname } from '../lib/bunny-edge.js'
 import { invalidateProxyCache } from '../middleware/managed-proxy.js'
 import { validateCrossDomainSettings } from '../lib/cross-domain-validation.js'
+import { normalizeDomain } from './onboarding.js'
 import { requireFeature } from '../lib/plan-features.js'
 import { normalizeRequestedScopes } from '../lib/api-key-scopes.js'
 
@@ -526,6 +527,32 @@ router.patch('/settings', async (req, res) => {
       cookielessMode = req.body.cookieless_mode
     }
 
+    let name = undefined
+    if (req.body.name !== undefined) {
+      if (typeof req.body.name !== 'string' || req.body.name.trim() === '') {
+        return res.status(400).json({ success: false, data: null, error: 'Site name is required' })
+      }
+      if (req.body.name.trim().length > 200) {
+        return res.status(400).json({ success: false, data: null, error: 'Site name must be 200 characters or fewer' })
+      }
+      name = req.body.name.trim()
+    }
+
+    // Canonicalize with the SAME normalizer onboarding uses, so a domain edited here
+    // collapses to the one stored form the sites_normalized_domain_uniq index and the
+    // tracker's Referer lookup both expect. Storing the raw typed value would let
+    // Settings recreate the www-vs-bare duplicate class that normalizer exists to prevent.
+    // A present-but-empty domain is rejected rather than nulled: blanking it would
+    // silently break tracker domain matching and the setup doctor.
+    let domain = undefined
+    if (req.body.domain !== undefined) {
+      const normalized = normalizeDomain(req.body.domain)
+      if (!normalized) {
+        return res.status(400).json({ success: false, data: null, error: 'Please enter a valid domain, for example yoursite.com' })
+      }
+      domain = normalized
+    }
+
     let crossDomainDomains = undefined
     let crossDomainCookieDomain = undefined
     if (req.body.cross_domain_domains !== undefined || req.body.cross_domain_cookie_domain !== undefined) {
@@ -544,6 +571,8 @@ router.patch('/settings', async (req, res) => {
     const supabase = getSupabase()
 
     const updates = {}
+    if (name !== undefined) updates.name = name
+    if (domain !== undefined) updates.domain = domain
     if (windowDays !== null) updates.attribution_window_days = windowDays
     if (timezone !== undefined) updates.timezone = timezone
     if (excludedPaths !== null) updates.excluded_paths = excludedPaths
@@ -560,10 +589,21 @@ router.patch('/settings', async (req, res) => {
       .from('sites')
       .update(updates)
       .eq('site_key', siteKey)
-      .select('id, attribution_window_days, excluded_paths, timezone, custom_url_params, cookieless_mode, cross_domain_domains, cross_domain_cookie_domain')
+      .select('id, name, domain, attribution_window_days, excluded_paths, timezone, custom_url_params, cookieless_mode, cross_domain_domains, cross_domain_cookie_domain')
       .single()
 
     if (error) {
+      // The DB — not this handler — is the authority on free-tier PaaS-subdomain abuse
+      // (trigger sites_free_tier_abuse_guards, BEFORE INSERT OR UPDATE, reads
+      // paas_subdomain_blocklist) and on domain uniqueness (sites_normalized_domain_uniq,
+      // which is GLOBAL, not per-tenant). Both are actionable user input, so surface them
+      // as 400s; a generic 500 would read as "something broke" and hide the real reason.
+      if (error.code === '23514') {
+        return res.status(400).json({ success: false, data: null, error: error.message })
+      }
+      if (error.code === '23505') {
+        return res.status(400).json({ success: false, data: null, error: 'That domain is already registered to another site.' })
+      }
       // Graceful degradation if column doesn't exist yet (migration not run)
       if (error.message?.includes('attribution_window_days')) {
         return res.status(503).json({
