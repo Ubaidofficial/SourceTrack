@@ -94,23 +94,49 @@ Sites/seats/conversions advertised but not enforced. plan-features.js and
 site-limits.js exist as the likely home. Check for Settings.jsx collision with
 any future UI work before parallelizing with anything else touching that file.
 
-## Onboarding — one real bug, plus an old audited backlog never actioned
+## Onboarding — the "one real bug" was NOT a bug; an old audited backlog remains
 
-**Priority pick for next session, if picking one:** the account-vs-site gate bug
-below — it's the most recent, most concretely scoped, and has a clear owner-
-flagged fix shape.
+> ⚠️ **CLOSED 2026-07-26 — NOT REPRODUCIBLE. This section named the account-vs-site
+> gate the "priority pick for next session"; it opened a session and was wrong.**
+> Verdict (b) NOT REPRODUCIBLE, from an Antigravity investigation plus a direct
+> re-verification of the code path at `da0815f`. **Do not re-dispatch it.**
+>
+> **The code trace that closes it** (`api/routes/onboarding.js`, `resolveDashboardSite()`):
+> the explicit-selection branches are guarded by `&& matched.onboarding_completed`
+> (`:63` for `site_key`, `:68` for `site_id`) — so an **incomplete** selected site does
+> **not** return. Control falls through to `:70-71`
+> (`const completed = sites.find(s => s.onboarding_completed); if (completed) return completed`),
+> which returns the account's completed site. `onboarding.completed` is therefore true, so
+> `App.jsx:262`'s `if (pathname !== '/onboarding' && !onboarding.completed)` redirect
+> **never fires**. The premise "the user can get pushed back into onboarding they already
+> finished" does not hold: the guard the original claim cites is precisely what prevents it.
+>
+> **What actually happens instead** is #366's intended behaviour — an amber **"Resume setup"**
+> button (`Layout.jsx:188-198`), rendered only when `activeSite.onboarding_completed === false`,
+> which navigates to `/onboarding?site_id=…&mode=onboarding` **on click**. That is an opt-in
+> affordance, not a forced redirect.
+>
+> **Evidence that closed it:** the code trace above, plus **zero staging accounts meet the
+> precondition** (no account has both an incomplete and a completed site), so there was no
+> reproduction to find. The original entry's "confirmed directly against `onboarding.js:63-67`"
+> is what made this look verified — it cited the right lines while reading them backwards.
+>
+> **Lesson, same class as KI #13 and #14:** a citation is not a verification. This is the third
+> stale doc claim this session to send planning down a wrong path.
 
-**Onboarding gate checks the SELECTED SITE, not the ACCOUNT** (logged
-2026-07-23, still open). Confirmed directly against `onboarding.js:63-67`
-(`resolveDashboardSite()`): it prioritizes whatever site was explicitly
-requested via `site_key`/`site_id`; if that site is incomplete but the account
-has OTHER fully-onboarded sites, the user can get pushed back into onboarding
-they already finished. Deliberately deferred out of `#366` (which fixed a
-different, related bug — silent site-substitution). Per the log: "a correct
-fix is an auth-gate refactor (account-level onboarding state)... not a
-one-line change." Needs its own scheduled pass, not a quick patch — start
-with an investigation dispatch (same pattern as tonight's Item 14/date-gap
-work) to scope the actual refactor before writing code.
+**Original text, kept for the record:**
+
+> **Onboarding gate checks the SELECTED SITE, not the ACCOUNT** (logged
+> 2026-07-23, still open). Confirmed directly against `onboarding.js:63-67`
+> (`resolveDashboardSite()`): it prioritizes whatever site was explicitly
+> requested via `site_key`/`site_id`; if that site is incomplete but the account
+> has OTHER fully-onboarded sites, the user can get pushed back into onboarding
+> they already finished. Deliberately deferred out of `#366` (which fixed a
+> different, related bug — silent site-substitution). Per the log: "a correct
+> fix is an auth-gate refactor (account-level onboarding state)... not a
+> one-line change." Needs its own scheduled pass, not a quick patch — start
+> with an investigation dispatch (same pattern as tonight's Item 14/date-gap
+> work) to scope the actual refactor before writing code.
 
 **Older, audited-but-never-built backlog** (from a prior session's onboarding
 audit — states below reflect what's ACTUALLY built, not the design spec's

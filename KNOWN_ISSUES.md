@@ -125,9 +125,21 @@ Within `getFlexibleReport`, queries for the metrics `revenue`, `conversions`, an
 To avoid untested blast-radius risks, the calculations inside `getMultiTouchAttributionLive`, `getSessionReport`, and `getAiPlatformAttributionLive` have been reverted to query using UTC. Consequently, users selecting linear/u_shaped/time_decay or viewing sessions will still see timezone discrepancies (e.g. conversions showing on different days compared to the dashboard).
 - **Follow-up Task**: `Task-0: Lock timezone ground truth for linear/u-shaped/time-decay and session calculations, then roll out timezone-aware query bounds (getDateFilterExpr) with targeted integration tests.`
 
-### 13. Stale click-ID-blind channel CASE classifier in 3 pipes
+### 13. Stale click-ID-blind channel CASE classifier in 3 pipes (RESOLVED — diagnosis corrected)
 
 Three pipes (`session_report_pageviews`, `session_report_conversions`, and `seo_revenue_landing_pages`) contain a click-ID-blind channel classifier that disagrees with `channelFromEvent` in the JS engine and other pipes. This causes live mis-classification in session reports and SEO revenue. A dedicated PR is required to copy CC's corrected SQL over to these pipes.
+
+> ⚠️ **"This causes live mis-classification in session reports" was WRONG, and the sentence sent one planning pass at the wrong target.** #415 traced the two session pipes and found their classifier was **unreachable dead SQL**: `filter_channel` is never passed to them. `getSessionReport` sends only `site_id`/`date_from_ts`/`date_to_ts` (+ optional `custom_key1/2`), and its FILTER GATE (`_sessionPipeEligible = filterClauses === ''`) **skips those pipes entirely** whenever any content filter is set. So the stale block could not affect a single live number; syncing it was hygiene against a future filter-aware caller.
+>
+> **The real live defect was `seo_revenue_landing_pages` alone** — and not for the reason stated either. Its host/source lists already matched `ORGANIC_SEARCH_ENGINE_HOSTS` / `ORGANIC_SEARCH_SOURCES` exactly, so "disagrees with the canonical list" was also wrong for that pipe. The actual bug was that its filter was **click-ID-blind AND, on the referrer branch, medium-blind**: `referrer ILIKE '%google.%'` fired regardless of `gclid` or `utm_medium`, so both an auto-tagged Google Ads click (gclid + google.com referrer, no UTMs) and a manually-tagged one (`utm_medium=cpc`) **counted as SEO revenue**. Paid revenue in an SEO report is a §6 violation, and that pipe is the sole live read path (`seo-revenue.js:173`; `readTb` throws on a null pipe read, the HogQL fallback is deleted).
+>
+> **Also corrected:** this entry was never actually marked resolved after #415 merged — the heading above carried no RESOLVED marker until now.
+
+**✅ RESOLVED** by `418598b` (PR #415). All eight pipes carrying a channel classifier now share ONE byte-identical `multiIf` (hash-verified), copied verbatim from the five that were already canonical (`browsers`, `os`, `sources_ai`, `sources_ref`, `summary`) rather than re-derived. Bound by `api/tests/analytics-channel-parity.test.js`, which previously compared only the whole `{% if defined(filter_channel) %}` block — a shape the other three pipes do not share, which is exactly why they sat outside every assertion and drifted. It now binds the `multiIf` **expression** across all eight.
+
+> **Deploy caveat (unverified from the repo):** the corrected `.pipe` files are merged, but prod pipe deployment is founder-gated and could not be confirmed here. Until deployed, the repo and the live workspace disagree. Same caveat applies to #416's `flexible_report_campaign_leads_by_site` (14 → 15 lead types).
+>
+> **Ambiguity flagged, not resolved:** `kagi.com` is both an `ORGANIC_SEARCH_ENGINE_HOST` and an `AI_DOMAINS_MAP` entry. The canonical order puts AI Search first, so a Kagi visit whose `ai_source` was stamped at ingest now leaves SEO revenue, while one without it stays Organic Search. Inherited from the canonical classifier, not introduced by #415. Product call.
 
 ### 14. admin and leads_count swallow Tinybird throws (RESOLVED — two separate fixes)
 
@@ -1030,6 +1042,58 @@ So **UTM capture, click-ID capture, Google Ads ValueTrack capture, first-touch c
 **Correcting a chat claim** ("~6 test files are unregistered — registration drift is back"): imprecise. `test-registration-guard.test.js` deliberately excludes exactly **four** files by design (`DELIBERATELY_UNREGISTERED`, lines 42-45: `analytics-sources-join-ms`, `leads-journey-attribution`, `report-builder-leads`, `source-normalization`) — those are **not** drift. The real gap is narrower and structural: the guard scans **`api/tests/` only** (`readdirSync(join(REPO, 'api', 'tests'))`, `:57`), so any test under **`dashboard/`** (e.g. `dashboard/src/pages/seoRevenueTruthGate.test.js`) or **`tinybird/adapter/__tests__/`** is **outside its coverage entirely** — the guard can neither confirm nor deny their registration. That is a **scan-scope gap**, not drift. Related: `api/lib/url-normalize.js`'s header cited a nonexistent `api/tests/url-normalize.test.js` (corrected in this PR — the real single-source check is `served-allowlist.test.js:113`).
 
 **Do NOT expand the guard's scope as a quick fix** — `dashboard/` and `tinybird/adapter/` tests run under **different runners** (vitest / node), so registration-in-`package.json`-qa-scripts is not the right membership check for them. Widening coverage is a separate, considered change. Logged as a scope gap, not built.
+
+### 72. `mapSubscriptionEvent` reads only `obj.subscription` — newer Stripe payloads moved it (2026-07-26, OPEN, needs sandbox verification)
+
+`api/lib/stripe-subscription.js:29` sets `out.subscriptionId = obj.subscription || null` for `invoice.paid`. Recent Stripe API versions **removed** the top-level `invoice.subscription` and moved the id to `parent.subscription_details.subscription`. If the account's webhook payloads render at such a version, `subscriptionId` is `null` for **every** `invoice.paid`.
+
+**The pin at `stripe-webhook.js:16` does NOT settle this** — and assuming it does is the trap. `new Stripe(..., { apiVersion: '2024-06-20' })` governs **outbound API calls the server makes**; incoming **webhook payloads render at the version configured on the webhook endpoint / account**, not the SDK's. So the SDK pin is not evidence either way.
+
+**Blast radius, traced — smaller than it looks:**
+- `stripe-webhook.js:104` `conversion_event_id` → falls back to `invoiceId ||`, which is always present on `invoice.paid`. **Unaffected.**
+- `buildSubscriptionIdempotencyKeys` → takes the `invoice_id` branch when `invoiceId` is set, so the `subscription_id` branch never runs here. **Unaffected.**
+- `stripe-webhook.js:119` `stripe_subscription_id: subscriptionId || null` → **AFFECTED.** This is the only material consequence: it gates subscription-identity seeding (`nightly-attribution.js:1079` requires it truthy).
+
+So this is an **identity-stitching gap, not a metric corruption**. Deliberately **not** bundled into #416: it is a money-rail-adjacent data change and that PR's bar was per-event validation, which cannot be done from the repo. **Needs its own Stripe sandbox check** of a real `invoice.paid` payload before any fix. The one-line defensive fallback (`obj.subscription || obj.parent?.subscription_details?.subscription`) is strictly additive but would change `stripe_subscription_id` from null → populated on live rows, so it earns its own verification.
+
+### 73. OPEN DECISION — should a $0-priced free-plan signup count as a "customer"? (2026-07-26, product call, NOT a defect)
+
+#416's trial-start guard skips an `invoice.paid` when `amount_paid === 0 && subtotal === 0` (nothing was ever **owed**), which is what distinguishes a trial-start carrier from a 100%-discount coupon on a real acquisition (`subtotal > 0`, reduced to 0). **A genuinely $0-priced plan also has `subtotal === 0`**, so a free-tier signup is skipped too and never counts as a customer.
+
+Today's answer — *a free-plan signup is not a paying customer* — matches what the customers metric means everywhere else, and is the reason it was left as-is. But it is a **product decision, not an engineering one**, and it was flagged rather than decided. If the answer should be "yes, count it", the discriminator needs a third signal (the guard cannot distinguish the two cases from the invoice object alone).
+
+### 74. `POST /api/server/event` returns `received:true` with no durability signal (2026-07-26, OPEN — scope corrected)
+
+The route answers `{"success":true,"data":{"received":true}}` while the **only** Supabase write is `api_keys.last_used_at` (`server-events.js:234`). The event itself goes solely through `dualWriteEvent` (`:232`), which is **not awaited** and returns a boolean the route **discards**.
+
+> ⚠️ **Two corrections to the original framing, both verified.**
+>
+> **(1) This is NOT server-events-specific — it is the shared post-PostHog ingestion architecture.** `track.js:420-427` does exactly the same thing and says so in its own comment: *"Tinybird is the SOLE writer here — if dual-write is ON but the event did NOT enqueue (no transport wired, or normalize rejected it), this 200 persists NOTHING."* What is **actually unique to server-events** is that `track.js` **captures** the return value and logs `not-enqueued` when `!enqueued && isDualWriteEnabled()`, whereas server-events discards it and logs nothing. The gap here is **observability**, not a uniquely missing write.
+>
+> **(2) "Nothing is durably stored" is not unconditional.** When the flag is ON **and** a transport is wired, `dual-write.js:62-65` documents a real durability path — the batcher dead-letters permanent 4xx and re-queues 429/5xx **before** rejecting, so the swallowed `.catch(() => {})` "does not lose the event". The silent-drop window is specifically: flag **OFF** (`isDualWriteEnabled()` reads `TINYBIRD_DUAL_WRITE`, `:30-33` → returns `false` immediately), flag ON but **no batcher**, or a **normalize throw**. In all three, `received:true` is still returned.
+
+**Not verifiable from the repo:** the live value of `TINYBIRD_DUAL_WRITE` per environment. Railway env state is founder-only (no env-var read tool on the orchestrator MCP), so the observation *"zero rows in ST_Staging for a site that had just received an accepted event"* is **consistent with the flag being off in staging** but cannot be confirmed here. Confirm the flag before treating this as a code defect rather than a configuration state.
+
+**Smallest honest fix** (not built): mirror `track.js` — capture the return and log the not-enqueued case. Making the 200 conditional on durability is a larger contract change and would need its own decision.
+
+### 75. `team_members` and `webhooks` plan limits are defined but never enforced (2026-07-26, OPEN, recorded by #419)
+
+`PLAN_STRUCTURAL_LIMITS` (`api/lib/plan-features.js`) defines five keys; three are enforced (`conversion_events`, `sites`, `retention_days` — see `docs/pricing_plan_limits_audit.md` for the file:line table). Two are not:
+
+- **`team_members`** — no consumer. Currently unreachable rather than exploitable: there is no in-product invite/member-add mechanism at all (membership is provisioned out-of-band), so a user cannot exceed a seat count they have no way to increase. **It becomes a real hole the moment invites ship.**
+- **`webhooks`** — the subtler one, and the one most likely to be mis-read as enforced. `api/routes/webhooks.js` gates the **feature** (`requireFeature(..., 'webhook_outbound')` in `enforceWebhookOutbound`, `:12-16`) but never the **count**. The `.limit(10)` at `:53` is the **page size of the recent-deliveries log query** (`select id, event_type, status_code, ... .eq('destination_id', ...).order('created_at', desc).limit(10)`) — it has nothing to do with how many destinations a site may create. `getStructuralLimits(...).webhooks` has **zero** consumers repo-wide. So on Growth (20) and Scale (99) a customer can create unbounded outbound webhook destinations.
+
+Recorded in the audit doc by #419 but not previously in this file, which is where enforcement gaps get looked for.
+
+### 76. Metering asymmetry: the same event costs 0 via the tracker and 1 unit via the server API (2026-07-26, DELIBERATE stopgap, feeds the pageviews→events migration)
+
+After #420, `POST /api/server/event` meters the **complement of the conversion test** — every non-conversion event consumes one pageview unit. The tracker paths meter only a **literal `$pageview`** (`track.js:329`, `proxy.js:72`). So an identical custom event is **free client-side and billable server-side**.
+
+**This was the only rule that closes the hole**, and that reasoning must survive: `event` is caller-supplied and documented free-form, so `{"event":"page_view"}` evades a name gate, and pattern-matching pageview-ish names still leaves `{"event":"x"}` free. Complement-of-conversion is the only rule under which every event on that route hits exactly one meter.
+
+**But it is a stopgap, not a coherent model.** The coherent fix is the deferred **pageviews → events metering migration**: one unit definition applied identically on every ingestion path. Whoever picks up the Astro pricing work should inherit this reasoning rather than rediscover it — and should treat the asymmetry as the argument *for* the migration, not as a bug to "make consistent" by weakening the server-API gate (that would reopen the hole).
+
+**Copy consequence, flagged not fixed:** `dashboard/src/pages/Pricing.jsx:121` answers *"What counts toward my plan?"* with *"Tracked pageviews per month: 50,000 on Starter, and 150,000 on Growth and Founder."* That is now **incomplete for API users**, whose custom events consume the same allowance. One clause of copy; a marketing call, deliberately not made here. Reach is bounded — `api_access` is trial/growth/scale only, so free and starter cannot call the route at all.
 
 ---
 ## Recently fixed
