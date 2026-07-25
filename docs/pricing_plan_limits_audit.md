@@ -59,8 +59,24 @@ During the audit, we identified several functional gaps where the code behavior 
 *   **Issue:** The structural limit bounds (such as `conversion_events` monthly limit, active site limits, and team member limits defined in `PLAN_STRUCTURAL_LIMITS`) are **never actually checked** in backend ingestion routes or dashboard creation endpoints.
 *   **Impact:** A Free or Starter user can create infinite active sites or invite team members if they bypass the UI forms, and the ingestion pipeline will continue capturing conversions past 30/150 conversions without checking counts.
 
+> ⚠️ **CORRECTED 2026-07-25 (verified against `main` @ `c9a4113`) — "never actually checked" is NO LONGER TRUE, and this stale claim misled a planning session.** Three of the five `PLAN_STRUCTURAL_LIMITS` keys **are** enforced. Enforcement status per key, with the file:line that does it:
+>
+> | Key | Status | Enforced at |
+> |---|---|---|
+> | `conversion_events` | ✅ **ENFORCED** — all 8 ingestion paths | `claimConversionUsage` (`api/lib/conversion-limits.js:11`) called from `conversion.js:378` · `conversion-offline.js:214` · `track.js:440` · `proxy.js:145` · `stripe-webhook.js:88` + `:582` · `shopify-webhook.js:242` · `webhook-incoming.js:146` · **`server-events.js` (added by this PR — it was the one unmetered path)** |
+> | `sites` | ✅ **ENFORCED** | `checkSiteCreationLimit` (`api/lib/site-limits.js:11`, limit read at `:41-43`), called at `api/routes/onboarding.js:247` |
+> | `retention_days` | ✅ **ENFORCED** — see the correction on item 4 below | `api/routes/gdpr.js:584-598` |
+> | `team_members` | ❌ **NOT ENFORCED** | No consumer. The key appears **only** in the `PLAN_STRUCTURAL_LIMITS` table (`api/lib/plan-features.js:64-70`). Currently unreachable rather than exploitable: there is no in-product invite/member-add mechanism at all (FEATURE_MAP §22 — membership must be provisioned out-of-band), so a user cannot exceed a seat count they have no way to increase. It becomes a real hole the moment invites ship. |
+> | `webhooks` | ❌ **NOT ENFORCED** (previously unknown — nobody had checked) | The per-plan webhook **count** is never read: `getStructuralLimits(...).webhooks` has **zero** consumers repo-wide (the only `.webhooks` matches are `stripe.webhooks.constructEvent`, unrelated SDK calls). `api/routes/webhooks.js` gates the **feature** (`requireFeature(…, 'webhook_outbound')` at `:14`) but never the count, and the `.limit(10)` at `:53` is a query page size, not a plan cap. So on Growth (limit 20) and Scale (99) a customer can create unbounded outbound webhooks. |
+>
+> **Two of the three impacts claimed above are therefore wrong today:** infinite active sites is **blocked**, and unbounded conversion capture is **blocked**. Only the team-member claim still stands, and only in principle — see the row above. **Fixed in this PR: `server-events.js` only.** The `team_members` and `webhooks` gaps are **recorded, deliberately not fixed** (scope discipline), and are the honest remaining answer to this item.
+
 ### 4. Unenforced Data Retention Settings [Missing Gating]
 *   **Issue:** GDPR settings (`PUT /api/gdpr/retention`) allow any user (including Free) to set their site retention days to 365 or 0 (keep forever), despite the pricing matrix stating Free is capped at 30 days. No backend validation scopes the retention selection to the user's plan.
+
+> ⚠️ **CORRECTED 2026-07-25 (verified against `main` @ `c9a4113`) — this item is FALSE as written.** `PUT /api/gdpr/retention` **does** scope the selection to the plan, at `api/routes/gdpr.js:584-598`: it reads `getStructuralLimits(site.plan)` and returns **402** both when `days === 0` and the plan lacks keep-forever (`limits.retention_days < 1825`), and when `days > limits.retention_days`. A Free site (30 days) cannot set 365 or 0.
+>
+> **Scope of the correction — what is verified and what is not:** this confirms enforcement at the **configuration boundary** (you cannot *set* a retention longer than your plan allows). It does **not** verify that the purge job actually deletes on schedule; that is a separate question about `retention-purge.js` and was not re-checked here. Do not read this correction as "retention is fully proven end-to-end".
 
 ### 5. Ad Cost Sync & Cohort Routes Lack Backend Gates [Missing Gating]
 *   **Issue:** `api/routes/ad-platforms.js` (Google and Meta Ads OAuth/sync setup) and `api/routes/cohorts.js` contain no plan-checking middleware. Free/Starter users can sync ad platforms or run cohort queries if they hit those endpoints directly, despite `ad_cost_sync` and `funnels_cohorts` being marketed as Growth/Scale features.

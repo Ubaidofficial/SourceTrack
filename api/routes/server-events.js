@@ -5,6 +5,7 @@ import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import { getSupabase } from '../lib/supabase.js'
 import { requireFeature } from '../lib/plan-features.js'
+import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { storeIdentityLink, resolveAnonymousId } from '../lib/identity-links.js'
 import { trackGlobalIpLimit } from '../middleware/rate-limit.js'
 import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
@@ -58,6 +59,59 @@ router.post('/event', trackGlobalIpLimit, async (req, res) => {
     const block = requireFeature(site.plan, 'api_access', 'API access')
     if (block) {
       return res.status(402).json(block)
+    }
+
+    // Monthly conversion-cap gate, mirroring the seven sibling ingestion routes (track,
+    // conversion, conversion-offline, proxy, webhook-incoming, stripe-webhook,
+    // shopify-webhook). This route was the one unmetered ingestion path: its only
+    // middleware is trackGlobalIpLimit, which is an IP rate limit, not a plan cap.
+    //
+    // Runs BEFORE any side effect (storeIdentityLink below writes on a non-blocking path),
+    // so a rejected conversion leaves nothing behind.
+    //
+    // WHAT MAKES AN EVENT A CONVERSION HERE IS THE PAYLOAD, NOT THE EVENT NAME. The public
+    // contract (dashboard/src/pages/developers/DevelopersApi.jsx) documents `event` as a
+    // free-form label — "Event label. Defaults to $pageview" — and its own worked example
+    // posts "purchase_completed" with conversion_value. Keying on event === '$conversion'
+    // would let the documented example through unmetered. `!= null` rather than truthiness
+    // so an explicit conversion_value of 0 (a real $0 lead conversion) still meters.
+    //
+    // Self-asserted refunds are deliberately NOT exempt here, unlike stripe-webhook.js:295
+    // and shopify-webhook.js:303 where refund-ness is derived from the PROVIDER's event.
+    // conversion_type is caller-supplied on this route, so exempting it would make
+    // `conversion_type: 'refund'` a one-line cap bypass on the monetization rail.
+    const isConversion = req.body.event === '$conversion' ||
+      req.body.conversion_value != null ||
+      req.body.conversion_type != null
+
+    if (isConversion) {
+      // Fail-open on a limit-check DB error, matching every sibling: a limit-check outage
+      // must not become an ingestion outage.
+      let allowed = true
+      try {
+        // The `sites` select above returns ONLY `plan`. claimConversionUsage throws when
+        // site.id is missing, and that throw would be swallowed by the fail-open catch —
+        // yielding a gate that silently never blocks. Pass the API key's site id explicitly.
+        const limitCheck = await claimConversionUsage({ id: siteId, plan: site.plan })
+        if (!limitCheck.allowed) allowed = false
+      } catch (limitErr) {
+        console.error('[server-events] Conversion limit check failed, failing open:', limitErr.message || limitErr)
+      }
+
+      if (!allowed) {
+        // DELIBERATE DIVERGENCE from the stripe/shopify siblings' 200 {ignored:true}
+        // (founder-decided 2026-07-25): that shape is right for a third-party webhook
+        // sender, which retries on 4xx, and wrong for a first-party API client, which can
+        // read and act on a 402. Returning 200 {received:true} while dropping the event
+        // would also be the #413 fake-success violation. Do not "fix" this to match the
+        // webhooks in a consistency pass.
+        return res.status(402).json({
+          success: false,
+          data: null,
+          error: 'Conversion limit reached for your plan',
+          error_code: 'conversion_limit_reached'
+        })
+      }
     }
 
     const customerIp = req.body.user_ip || resolveClientIp(req) || ''
