@@ -10,16 +10,46 @@ Related: **KI-58** (main-worktree `.tinyb` is authed to PROD — the reason step
 
 ---
 
-## 0. Confirm a clean tree on `main` at the intended SHA
+## 0. HARD GATE — clean tree on `main` at the intended SHA
+
+**This is a gate, not a checklist item. If any line below does not hold, STOP: no
+`--check` output from this worktree may be trusted or quoted, and no deploy may proceed.
+Re-run step 0 after fixing the tree — do not "read past" a failure.**
 
 ```bash
-git fetch origin
-git -C <worktree> status --porcelain     # must be EMPTY
-git -C <worktree> rev-parse HEAD          # must equal the SHA you intend to deploy
-git -C <worktree> log origin/main -1      # confirm it matches origin/main
+git fetch origin                          # ALWAYS first — a stale ref invalidates every check below
+git -C <worktree> status --porcelain      # must print NOTHING
+git -C <worktree> rev-parse HEAD          # must equal the SHA you reviewed
+git -C <worktree> rev-parse origin/main   # must equal the line above, unless deploying a PR branch
+git -C <worktree> log -1 --oneline        # eyeball it: is this the commit you think it is?
 ```
 
-⚠️ **WHY:** a stale worktree produced a `--check` diff against the **wrong source** once today and cost a full round-trip. `tb --cloud deploy --check` compares the **local `.pipe` files** against the remote workspace — if the working tree is behind, the diff is meaningless. Deploy from a worktree that is clean and at the exact `main` SHA you reviewed.
+⚠️ **WHY — it fired TWICE in one session (2026-07-25/26), in two different shapes:**
+
+- **(a) A false "no-op".** `tb --cloud deploy --check` reported **"No changes to be deployed"**
+  from a worktree **2 commits behind** `main`. That output is **indistinguishable from a genuine
+  no-op** — it is exactly what a correctly-synced, already-deployed workspace prints. Only an
+  unrelated `grep` for `trial_start` in the local `.pipe` file revealed the tree was stale. Nothing
+  in the `--check` output itself would ever have surfaced it.
+- **(b) A false CI green.** A PR's CI was green **against an old base**; the branch then conflicted
+  on merge. The green tick was true about a tree nobody was going to ship.
+
+> ### The general principle — applies well beyond this runbook
+>
+> **A pass computed against a stale base is not a pass.** Every verification tool here — `--check`,
+> CI, a parity query, a diff — answers a question about **the tree it was given**, not about the tree
+> you intend to ship. When those differ, the tool reports success and the success is meaningless.
+>
+> Two consequences worth internalising:
+> - **A clean "no changes" result is the most dangerous output**, not the most reassuring one: a
+>   correct no-op and a stale-tree no-op are byte-identical. Establish the base *before* reading the
+>   result, never after.
+> - **Re-establish the base after any rebase, merge, or branch switch.** A check that was valid ten
+>   minutes ago is not evidence about the tree you have now.
+
+`tb --cloud deploy --check` compares the **local `.pipe` files** against the remote workspace — if
+the working tree is behind, the diff is meaningless. Deploy from a worktree that is clean and at the
+exact `main` SHA you reviewed.
 
 ## 1. Capture a BEFORE baseline — by QUERY, not by snapshot
 
