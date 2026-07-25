@@ -28,7 +28,8 @@ const wave1PipeRow = {
   conversion_type: 'purchase', conversion_value: 444.44, external_event_id: null,
   webhook_customer_id: null, stripe_subscription_id: null, stripe_invoice_id: null,
   currency: 'USD', provider_event_id: 'evt_1', occurred_at: '2026-07-09T12:00:00Z',
-  stripe_event_type: 'checkout.session.completed', provider: 'stripe'
+  stripe_event_type: 'checkout.session.completed', provider: 'stripe',
+  original_conversion_event_id: ''   // KI-62: '' for a non-refund (JSONExtractString empty)
 }
 // A pageviews_by_visitors pipe row (named), for that visitor.
 const pv = (ts, utm_source = 'google') => ({
@@ -54,11 +55,11 @@ function inject(pvRows, capture = {}) {
 
 // ── the field mapping is byte-identical to the HogQL positional shape ─────────
 
-test('mapConversionPipeRow → the exact positional order of the HogQL conversion SELECT (row[0..13])', () => {
+test('mapConversionPipeRow → the exact positional order of the HogQL conversion SELECT (row[0..14])', () => {
   assert.deepEqual(mapConversionPipeRow(wave1PipeRow), [
     'wave1_454a720e', 'anon-buyer-9', '2026-07-09T12:00:00Z', 'purchase', 444.44,
     null, null, null, null, 'USD', 'evt_1', '2026-07-09T12:00:00Z',
-    'checkout.session.completed', 'stripe'
+    'checkout.session.completed', 'stripe', ''   // row[14] = KI-62 original_conversion_event_id
   ])
 })
 

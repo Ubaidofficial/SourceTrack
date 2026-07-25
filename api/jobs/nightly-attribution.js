@@ -99,27 +99,39 @@ const supabase = _supabase
 // (queryTinybirdPipe logs `served pipe … rows=N`), never the absence of a fallback warning.
 let _queryPipe = queryTinybirdPipe
 let _tbReadEnabled = isTinybirdReadEnabled
-export function __setNightlyReadDeps ({ queryPipe, tbReadEnabled } = {}) {
+// KI-62 Step C — refund attribution inheritance resolver seam (swappable for tests).
+// Reads the ORIGINAL conversion's persisted attribution from attributed_conversions,
+// keyed by the refund's original_conversion_event_id pointer. Injected so the
+// inheritance tests stay token-free / network-free like the rest of the nightly suite.
+let _resolveOriginalAttribution = defaultResolveOriginalAttribution
+export function __setNightlyReadDeps ({ queryPipe, tbReadEnabled, resolveOriginal } = {}) {
   if (queryPipe) _queryPipe = queryPipe
   if (tbReadEnabled) _tbReadEnabled = tbReadEnabled
+  if (resolveOriginal) _resolveOriginalAttribution = resolveOriginal
 }
-export function __resetNightlyReadDeps () { _queryPipe = queryTinybirdPipe; _tbReadEnabled = isTinybirdReadEnabled }
+export function __resetNightlyReadDeps () {
+  _queryPipe = queryTinybirdPipe
+  _tbReadEnabled = isTinybirdReadEnabled
+  _resolveOriginalAttribution = defaultResolveOriginalAttribution
+}
 
 // Map a nightly_conversions_by_site pipe row (named) to the EXACT positional array the
-// processSite loop consumes (row[0..13]) — so the downstream mapping is byte-identical
-// whether the rows came from the pipe or the HogQL fallback.
+// processSite loop consumes (row[0..14]) — so the downstream mapping is byte-identical
+// whether the rows came from the pipe or the HogQL fallback. row[14] is the KI-62
+// original_conversion_event_id pointer, appended LAST by the pipe (purely additive).
 export function mapConversionPipeRow (r) {
   return [
     r.uuid, r.distinct_id, r.timestamp, r.conversion_type, r.conversion_value,
     r.external_event_id, r.webhook_customer_id, r.stripe_subscription_id,
     r.stripe_invoice_id, r.currency, r.provider_event_id, r.occurred_at,
-    r.stripe_event_type, r.provider
+    r.stripe_event_type, r.provider, r.original_conversion_event_id
   ]
 }
 
-// SINGLE SOURCE OF TRUTH for the conversion row[0..13] → object mapping — shared by processSite,
+// SINGLE SOURCE OF TRUTH for the conversion row[0..14] → object mapping — shared by processSite,
 // the backfill loop, and the B1 --validate harness, so they can NEVER drift. Positional order
-// matches mapConversionPipeRow and the HogQL conversion SELECT exactly.
+// matches mapConversionPipeRow and the HogQL conversion SELECT exactly. original_conversion_event_id
+// (row[14]) is the KI-62 refund→original pointer; '' (empty JSONExtractString) collapses to null.
 export function conversionRowToObject (row) {
   return {
     uuid: row[0], distinct_id: row[1], timestamp: row[2],
@@ -127,7 +139,8 @@ export function conversionRowToObject (row) {
     webhook_customer_id: row[6] || null, stripe_subscription_id: row[7] || null,
     stripe_invoice_id: row[8] || null, currency: row[9] || null,
     provider_event_id: row[10] || null, occurred_at: row[11] || null,
-    stripe_event_type: row[12] || null, provider: row[13] || null
+    stripe_event_type: row[12] || null, provider: row[13] || null,
+    original_conversion_event_id: row[14] || null
   }
 }
 
@@ -704,6 +717,40 @@ function calculateConfidence(touchpoints, channel) {
   return Math.min(100, Math.max(0, score))
 }
 
+// KI-62 Step C — the attribution DESCRIPTOR columns a refund inherits VERBATIM from the
+// conversion it reverses. Identity/value/type/timestamps/external_event_id are NOT here:
+// the refund keeps its OWN id + negative value + refund date (revenue nets on the refund's
+// date, against the ORIGINAL's source). This is the exact set of source-bearing columns in
+// the record built below — keep the two in lockstep.
+export const REFUND_INHERITED_FIELDS = [
+  'first_touch_source', 'first_touch_medium', 'first_touch_campaign', 'first_touch_timestamp',
+  'last_touch_source', 'last_touch_medium', 'last_touch_campaign', 'last_touch_timestamp',
+  'linear_attribution', 'u_shaped_attribution', 'time_decay_attribution', 'w_shaped_attribution',
+  'touchpoint_count', 'first_touch_channel', 'last_touch_channel', 'channel', 'channel_30d',
+  'ai_influenced_source', 'ai_influenced_session_at', 'attribution_confidence', 'confidence_signals',
+  'first_touch_country', 'last_touch_country', 'first_touch_device', 'last_touch_device',
+  'first_touch_browser', 'last_touch_browser', 'first_touch_landing_page', 'last_touch_landing_page'
+]
+
+// KI-62 Step C — resolve the ORIGINAL conversion's persisted attribution by the refund's
+// pointer. Read-only, tenant-scoped (site_id). A DB error or a miss both return null → the
+// caller marks the refund refund_unresolved (never a guessed/Direct source). NOT fail-closed
+// by throwing: skipping the refund would drop its negative value and OVER-report revenue —
+// worse than persisting it unresolved (the value still nets at the site level).
+async function defaultResolveOriginalAttribution (site, originalEventId) {
+  const { data, error } = await supabase
+    .from('attributed_conversions')
+    .select(REFUND_INHERITED_FIELDS.join(', '))
+    .eq('site_id', site.id)
+    .eq('conversion_event_id', originalEventId)
+    .maybeSingle()
+  if (error) {
+    logWarn(`refund-inheritance: original lookup failed for site ${site.site_key} (pointer ${originalEventId}): ${error.message}`)
+    return null
+  }
+  return data || null
+}
+
 // `dryRun` (D2 B1 --validate) computes and RETURNS the exact attributed_conversions `record` with
 // ZERO side effects — it skips the subscription_identity / subscription_revenue writes below. The
 // record itself is unaffected (it is built purely from the conversion + touchpoints + attribution),
@@ -714,9 +761,11 @@ export async function processConversion(site, conversion, { dryRun = false } = {
   // A refund is a LEGITIMATE negative $conversion (Phase 2): it MUST persist to
   // attributed_conversions with its negative value so the existing Supabase SUM nets
   // Dashboard/Attribution revenue (gross − refund). All OTHER negative values remain
-  // skipped as invalid. (Refund distinct_id 'stripe_refund:…' has no pageviews →
-  // attribution resolves to null/direct, unattributed — nets into Direct at the site
-  // level; per-source exactness is a documented deferred limitation.)
+  // skipped as invalid. Per-source exactness is handled by KI-62 Step C below: a
+  // refund's own (later) window rarely reaches the acquiring touch, so re-derived
+  // attribution collapses to Direct — instead we COPY the original's attribution
+  // verbatim via the original_conversion_event_id pointer (see the refund block after
+  // the record is built). Unresolvable refunds stay explicitly refund_unresolved.
   if ((convValue < 0 && conversion.conversion_type !== 'refund') || !conversion.distinct_id) {
     logWarn(`Skipping invalid conversion ${conversion.uuid}`)
     return
@@ -953,6 +1002,43 @@ export async function processConversion(site, conversion, { dryRun = false } = {
     last_touch_browser: lastTp.browser || 'unknown',
     first_touch_landing_page: firstTp.landing_page || 'unknown',
     last_touch_landing_page: lastTp.landing_page || 'unknown'
+  }
+
+  // KI-62 Step C — refund attribution inheritance. For a refund, the record above was
+  // derived from the REFUND's own (later) window, which rarely reaches the acquiring
+  // touch → it collapses to Direct/null, silently misattributing the reversal away from
+  // the source that earned the sale. Instead COPY the original conversion's attribution
+  // VERBATIM, resolved via the original_conversion_event_id pointer the write-path stamps
+  // into the event's custom_properties bag (Step B). The pointer is READ from that bag
+  // (projected by nightly_conversions_by_site as original_conversion_event_id) — NEVER
+  // external_event_id, whose partial unique (site_id, external_event_id) index would drop
+  // the refund row. This is a READ, so it runs in dryRun too (the --validate record must
+  // reflect the true written shape). Marks are written to custom_properties:
+  //   resolved   → refund_attribution:'inherited' + original_conversion_event_id
+  //   unresolved → refund_attribution:'unresolved' (never guessed, never silent Direct)
+  // Subscription-mode refunds (no payment_intent) carry NO pointer (Step B stamps none) →
+  // pointer null → no lookup attempted → refund_unresolved (founder-confirmed v1 boundary).
+  // LIMITATION: resolution reads the original from attributed_conversions, so an original
+  // first materialized in the SAME batched run (reprocess/backfill) that has not yet been
+  // written is not yet visible → that refund degrades to refund_unresolved. The 24h cron
+  // path is unaffected (originals are from prior runs, or upserted earlier in ASC order).
+  if (conversion.conversion_type === 'refund') {
+    const pointer = conversion.original_conversion_event_id || null
+    const inherited = pointer ? await _resolveOriginalAttribution(site, pointer) : null
+    if (inherited) {
+      for (const field of REFUND_INHERITED_FIELDS) record[field] = inherited[field]
+      record.custom_properties = {
+        ...(record.custom_properties || {}),
+        refund_attribution: 'inherited',
+        original_conversion_event_id: pointer
+      }
+    } else {
+      record.custom_properties = {
+        ...(record.custom_properties || {}),
+        refund_attribution: 'unresolved',
+        ...(pointer ? { original_conversion_event_id: pointer } : {})
+      }
+    }
   }
 
   // Step 2: acquisition-locked subscription→source link. Phase 5c: SEED on stripe
