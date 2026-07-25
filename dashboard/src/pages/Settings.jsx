@@ -308,7 +308,17 @@ export default function Settings() {
       }
 
       if (site) {
-        await supabase.from('sites').update({ name, domain }).eq('id', site.id)
+        // Routed through the API, not supabase.from('sites').update(...): prod RLS on
+        // `sites` has no UPDATE policy, so a client-side update matches zero rows and
+        // returns error: null — the write silently vanished while this reported "Saved!".
+        const updated = await fetchApi(`/integrations/settings?site_key=${site.site_key}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ name, domain })
+        })
+        // Show what was actually stored — the server canonicalizes the domain, so the
+        // input must not keep displaying a value that differs from the persisted row.
+        if (updated?.name) setName(updated.name)
+        if (updated?.domain) setDomain(updated.domain)
       } else {
         // Don't pass `plan` — the DB column DEFAULT 'free' applies. Passing
         // an explicit value would override the default and risk drifting from
@@ -319,8 +329,8 @@ export default function Settings() {
         setSite(data)
       }
       setMessage('Saved!')
-    } catch (_err) {
-      setMessage('Error saving')
+    } catch (err) {
+      setMessage(err?.message || 'Error saving')
     } finally {
       setSaving(false)
     }
