@@ -129,9 +129,21 @@ To avoid untested blast-radius risks, the calculations inside `getMultiTouchAttr
 
 Three pipes (`session_report_pageviews`, `session_report_conversions`, and `seo_revenue_landing_pages`) contain a click-ID-blind channel classifier that disagrees with `channelFromEvent` in the JS engine and other pipes. This causes live mis-classification in session reports and SEO revenue. A dedicated PR is required to copy CC's corrected SQL over to these pipes.
 
-### 14. admin and leads_count swallow Tinybird throws
+### 14. admin and leads_count swallow Tinybird throws (RESOLVED — two separate fixes)
 
 The `/admin` endpoints (containing 6 inner catches) and the `/leads/count` endpoint swallow the Tinybird read error throws. Instead of propagating the error to trigger a proper 500 error, they catch the error internally and return an HTTP 200 response with zeroed KPIs. This means `TINYBIRD_FORCE_READ=true` cannot reach the handler-level catches. The inner try-catch blocks in these handlers need to be stripped.
+
+> ⚠️ **The "6 inner catches" framing above was imprecise.** The count of 6 is right (one per `readTb` call site), but only **3** faked a success value. The other 3 already set an explicit `{ status: 'error' }` and were never lying — stripping all 6 indiscriminately, as the paragraph instructs, would have escalated three honest error states into 500s.
+
+**✅ RESOLVED.** Both halves closed independently, by different fixes at different times:
+
+- **`/admin`** — FIXED, commit `a527e8b` (PR #413). The 3 fake-success inner catches were removed so a dead pipe now surfaces a real 5xx instead of HTTP 200 with plausible data: `admin_preview_kpis` (all-zero `kpis`), `admin_preview_sources` (`sources = []`), and `events_health_day` (`recentEventCount = 0`). The 3 already-honest catches — `admin_preview_install`, `admin_preview_overview`, `admin_site_detail`, all reporting `{ status: 'error' }` — were intentionally left alone and are now pinned by tests so a later sweep cannot "fix" them into 500s. Per-catch inventory and the anti-regression guard live in `api/tests/admin-tinybird-error-surface.test.js`. Founder-confirmed deployed to staging + production 2026-07-25 (deploy state is not verifiable from the repo).
+  - **Why propagate rather than null the field:** the support-preview UI reads this payload through the same hook as the normal dashboard, and `useDashboardData.js` does `overview?.kpis || {}` then `kpis.revenue || 0` — so a null or absent `kpis` **still renders 0**. Nulling would have moved the lie from the API to the frontend. Only a failed request keeps the fake zero off the screen.
+
+- **`/leads/count`** — ALREADY RESOLVED well before this session: commit `ed714dc` (PR #289), not #413. The `leads_count` pipe is retired — verified at `a527e8b` that `leads_count` appears **nowhere** in `api/routes/leads-server.js` (only 2 `readTb` sites remain, `leads_list` and `lead_detail`), and totals are computed from Supabase `attributed_conversions` directly. Pinned by `api/tests/leads-server-read-cutover.test.js:85`.
+  - **Precisely what its failure path does** (it is *not* the same shape as the `/admin` fix): on an aggregate-read failure it logs loudly (`[leads] attributed_conversions totals read FAILED / THREW (keeping page fallback)`) and degrades to page-scoped totals — still **HTTP 200 with approximate (undercounting) numbers**, not a 5xx and not a flagged/degraded field. That is deliberately not a fake zero, but the response carries no marker telling the caller the totals are page-scoped. If that residual matters, it is a separate decision, not part of this entry.
+
+> **Claim-decay note (same lesson as #18):** both halves above are dated and name the ref they were verified at, because "X is retired / nothing uses this" is exactly the class of claim that silently stops being true when a later feature re-adds it. Re-verify against a fetched ref before relying on either bullet.
 
 ### 15. Scoped summary revenue regression (#278)
 
