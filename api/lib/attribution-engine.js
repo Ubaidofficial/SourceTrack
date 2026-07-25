@@ -466,14 +466,7 @@ export async function getAiPlatformAttributionLive({
     else if (groupBy === 'stitching_method') dimVal = conv.stitching_method || 'unknown'
     else if (groupBy === 'date') {
       const refDate = new Date(attributeBy === 'first_seen_date' && visitorPvs[0] ? visitorPvs[0].timestamp : conv.timestamp)
-      if (granularity === 'quarter') {
-        const q = Math.floor(refDate.getUTCMonth() / 3) + 1
-        dimVal = `${refDate.getUTCFullYear()}-Q${q}`
-      } else if (granularity === 'month') {
-        dimVal = refDate.toISOString().slice(0, 7)
-      } else {
-        dimVal = refDate.toISOString().slice(0, 10)
-      }
+      dimVal = dateBucket(refDate, granularity)
     } else {
       dimVal = '—'
     }
@@ -491,14 +484,7 @@ export async function getAiPlatformAttributionLive({
       else if (groupBy2 === 'stitching_method') dimVal2 = conv.stitching_method || 'unknown'
       else if (groupBy2 === 'date') {
         const refDate = new Date(attributeBy === 'first_seen_date' && visitorPvs[0] ? visitorPvs[0].timestamp : conv.timestamp)
-        if (granularity === 'quarter') {
-          const q = Math.floor(refDate.getUTCMonth() / 3) + 1
-          dimVal2 = `${refDate.getUTCFullYear()}-Q${q}`
-        } else if (granularity === 'month') {
-          dimVal2 = refDate.toISOString().slice(0, 7)
-        } else {
-          dimVal2 = refDate.toISOString().slice(0, 10)
-        }
+        dimVal2 = dateBucket(refDate, granularity)
       } else {
         dimVal2 = '—'
       }
@@ -1276,6 +1262,54 @@ const GRANULARITY_MAP = {
   year: "'%Y'"
 }
 
+// The LIVE (JS) equivalent of GRANULARITY_MAP above, which only ever formatted HogQL strings and is
+// now stranded on the deleted dead-store path. ALL FIVE of ALLOWED_GRANULARITY are handled here.
+//
+// WHY THIS EXISTS: the two live readers (getAiPlatformAttributionLive, getMultiTouchAttributionLive)
+// each open-coded a quarter -> month -> else-day ladder — three byte-identical copies that handled
+// only 3 of the 5 granularities. `week` and `year` fell to the else and returned DAILY buckets
+// labelled as if the request had been honored: a §6 confident-wrong-bucket, not a gap. Support was
+// lost in the Tinybird migration (the old HogQL path had all five via GRANULARITY_MAP), never
+// deliberately dropped. ONE helper, not three ladders, so the next granularity can't be added to
+// two sites and forgotten in the third.
+//
+// UTC, DELIBERATELY. day/month/quarter reproduce the previous expressions EXACTLY
+// (toISOString() is UTC), so this change adds week/year WITHOUT moving any bucket that works today.
+// The surrounding pipeline is timezone-aware (filters.timezone) while this bucketing is not — a real
+// pre-existing gap, but re-bucketing existing month/quarter reports for non-UTC sites is NOT in this
+// change's scope. Do not "fix" it here; it is filed separately.
+//
+// `week` is MONDAY-ANCHORED and labelled with the week's start date (YYYY-MM-DD) — the same
+// algorithm and label shape as getLocalWeekString (api/lib/utils.js), so Report Builder and
+// /analytics/summary name the same week the same way. NOT GRANULARITY_MAP's ISO week-number
+// ('%Y-W%V'): that format never shipped on a live path, and two pages labelling one week
+// differently is worse than either format alone.
+//
+// Every label sorts correctly under mergeGoogleResults' lexicographic date sort (`String.localeCompare`
+// on dim_value) — day/week YYYY-MM-DD, month YYYY-MM, quarter YYYY-Qn, year YYYY.
+// An unknown/absent granularity falls to day, exactly as the replaced `else` did.
+function dateBucket (refDate, granularity) {
+  if (granularity === 'quarter') {
+    const q = Math.floor(refDate.getUTCMonth() / 3) + 1
+    return `${refDate.getUTCFullYear()}-Q${q}`
+  }
+  if (granularity === 'year') return String(refDate.getUTCFullYear())
+  if (granularity === 'month') return refDate.toISOString().slice(0, 7)
+  if (granularity === 'week') {
+    // getUTCDay(): 0=Sun..6=Sat. Mirrors getLocalWeekString's `dayIndex === 0 ? 6 : dayIndex - 1`
+    // so Sunday anchors to the PRECEDING Monday, not the following one.
+    const dayIndex = refDate.getUTCDay()
+    const daysToSubtract = dayIndex === 0 ? 6 : dayIndex - 1
+    return new Date(refDate.getTime() - daysToSubtract * 86400000).toISOString().slice(0, 10)
+  }
+  return refDate.toISOString().slice(0, 10)
+}
+
+// Test seam ONLY — same `__` convention as __multiTouchDimValue / __evictSessionReportCache below.
+// The granularity test must bind to THIS function, not to a re-typed copy that can drift and
+// false-green. No production caller imports it.
+export function __dateBucket (refDate, granularity) { return dateBucket(refDate, granularity) }
+
 // attributeBy: determines which timestamp is used for date-based grouping.
 // - 'conversion_date': uses the conversion event's own timestamp (default, current behavior)
 // - 'first_seen_date': uses the visitor's first event timestamp (MIN(timestamp) per distinct_id)
@@ -1527,14 +1561,7 @@ export async function getMultiTouchAttributionLive({
       else if (groupBy === 'stitching_method') dimVal = conv.stitching_method || 'unknown'
       else if (groupBy === 'date') {
         const refDate = new Date(attributeBy === 'first_seen_date' && touchpoints[0] ? touchpoints[0].timestamp : conv.timestamp)
-        if (granularity === 'quarter') {
-          const q = Math.floor(refDate.getUTCMonth() / 3) + 1
-          dimVal = `${refDate.getUTCFullYear()}-Q${q}`
-        } else if (granularity === 'month') {
-          dimVal = refDate.toISOString().slice(0, 7)
-        } else {
-          dimVal = refDate.toISOString().slice(0, 10)
-        }
+        dimVal = dateBucket(refDate, granularity)
       }
 
       // Apply UTM filters if present
