@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { getSupabase } from '../lib/supabase.js'
 import { requireFeature } from '../lib/plan-features.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
+import { claimPageviewUsage } from '../lib/pageview-limits.js'
 import { storeIdentityLink, resolveAnonymousId } from '../lib/identity-links.js'
 import { trackGlobalIpLimit } from '../middleware/rate-limit.js'
 import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
@@ -48,7 +49,10 @@ router.post('/event', trackGlobalIpLimit, async (req, res) => {
     const siteId = apiKey.site_id
     const { data: site, error: siteErr } = await getSupabase()
       .from('sites')
-      .select('plan')
+      // pv_limit as well as plan: it is the PER-SITE override ("set by Stripe webhook from price
+      // metadata"), so metering a Starter@50K site against the plan default would be a billing
+      // error, not merely a metering one. Same shape as the site.id trap #419 documented below.
+      .select('plan, pv_limit')
       .eq('id', siteId)
       .maybeSingle()
 
@@ -110,6 +114,50 @@ router.post('/event', trackGlobalIpLimit, async (req, res) => {
           data: null,
           error: 'Conversion limit reached for your plan',
           error_code: 'conversion_limit_reached'
+        })
+      }
+    } else {
+      // ── PAGEVIEW CAP — the complement of the conversion test above ──────────────────────────
+      // #419 closed the conversion hole here and left this one open. Pageviews are the PRIMARY
+      // metering unit on every plan (5k/10k/50k/150k/500k), so this was the larger hole.
+      //
+      // WHY THE COMPLEMENT AND NOT A LITERAL `$pageview` CHECK (founder-decided 2026-07-25):
+      // `event` is caller-supplied and documented as a free-form label, so {"event":"page_view"}
+      // (no $) would evade a name gate — shipping a second unmetered path immediately after
+      // closing the first. Pattern-matching pageview-ish names does not help either: {"event":"x"}
+      // would still be free. Complement-of-conversion is the ONLY rule under which every event on
+      // this route hits exactly one meter and nothing is unmetered. Note dualWriteEvent below
+      // stores `req.body.event || '$pageview'`, so an unnamed event genuinely IS a pageview.
+      //
+      // DELIBERATE DIVERGENCE from the tracker paths, which meter only a literal `$pageview`
+      // (track.js:329, proxy.js:72) — so the same custom event costs 0 there and 1 unit here.
+      // pageview-limits.js:8 ("Only called for true $pageview events") is meaningful on the
+      // tracker, where OUR code picks the event name, and meaningless here, where the caller does.
+      // Closing the hole beats nominal cross-route consistency. Pinned by
+      // api/tests/server-events-pageview-cap.test.js — do not "fix" this in a consistency pass.
+      //
+      // Runs BEFORE storeIdentityLink below, so a rejected event leaves nothing behind.
+      let allowed = true
+      try {
+        // Explicit id for the same reason the conversion gate above needs it: the `sites` select
+        // returns no id, claimPageviewUsage THROWS without one, and the fail-open catch would
+        // swallow that throw — yielding a gate that silently never blocks.
+        const limitCheck = await claimPageviewUsage({ id: siteId, plan: site.plan, pv_limit: site.pv_limit })
+        if (!limitCheck.allowed) allowed = false
+      } catch (limitErr) {
+        // Fail-open, matching every sibling and pageview-limits.js:12: a limit-check outage must
+        // not become an ingestion outage.
+        console.error('[server-events] Pageview limit check failed, failing open:', limitErr.message || limitErr)
+      }
+
+      if (!allowed) {
+        // Same first-party-API contract #419 pinned: a 402 a client can read and act on, never a
+        // 200 {received:true} while dropping the event (the #413 fake-success violation).
+        return res.status(402).json({
+          success: false,
+          data: null,
+          error: 'Monthly pageview limit reached for your plan. Events sent to this API count toward that allowance.',
+          error_code: 'pageview_limit_reached'
         })
       }
     }
