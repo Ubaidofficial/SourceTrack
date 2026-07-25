@@ -163,6 +163,15 @@ test('at cap: an explicit conversion_value of 0 is still metered', async (t) => 
 
 // ── what must NOT be gated ────────────────────────────────────────────────────
 
+// UPDATED when the pageview cap landed. The INTENT of both tests below is unchanged and still
+// load-bearing — the CONVERSION meter must not touch a non-conversion — but their original
+// assertions (`statusCode === 200`, `calls.length === 0`) also happened to encode the fact that
+// non-conversions were metered by NOTHING. That was the open hole, now closed, so those two
+// assertions are narrowed to the conversion meter specifically rather than deleted. See
+// api/tests/server-events-pageview-cap.test.js for the pageview side.
+const CONV_RPC = 'claim_site_conversion_usage'
+const conversionClaims = (calls) => calls.filter(c => c.fn === CONV_RPC)
+
 test('pageviews do NOT consume conversion quota (metered separately)', async (t) => {
   t.after(restore)
   const calls = install({ rpcMode: 'at-cap' })
@@ -172,18 +181,22 @@ test('pageviews do NOT consume conversion quota (metered separately)', async (t)
   const res = mockRes()
   await postEvent(req({ event: '$pageview', anonymous_id: 'anon-1', page_url: 'https://x.test/' }), res)
 
-  assert.strictEqual(res.statusCode, 200, 'a pageview must not be blocked by the CONVERSION cap')
-  assert.strictEqual(calls.length, 0, 'the conversion cap must not even be consulted for a non-conversion')
+  assert.strictEqual(conversionClaims(calls).length, 0,
+    'the conversion cap must not even be consulted for a non-conversion — one event, one meter')
+  // (The 402 here now comes from the PAGEVIEW cap, which this fixture also pins at 'at-cap'.
+  // That path is asserted in server-events-pageview-cap.test.js; what matters here is WHICH
+  // meter was consulted, not the status.)
 })
 
-test('an event with no conversion payload at all is not gated', async (t) => {
+test('an event with no conversion payload at all does not touch the conversion meter', async (t) => {
   t.after(restore)
   const calls = install({ rpcMode: 'at-cap' })
 
   const res = mockRes()
   await postEvent(req({ event: 'app_opened', anonymous_id: 'anon-1' }), res)
-  assert.strictEqual(res.statusCode, 200)
-  assert.strictEqual(calls.length, 0)
+  assert.strictEqual(conversionClaims(calls).length, 0)
+  assert.notStrictEqual(res.body?.error_code, 'conversion_limit_reached',
+    'a custom event must never be rejected AS A CONVERSION')
 })
 
 // ── under cap + tenant scoping ────────────────────────────────────────────────
