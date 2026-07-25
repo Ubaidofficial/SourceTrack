@@ -25,7 +25,13 @@ SQL >
     FROM events
     WHERE site_id = {{ String(site_id, required=True) }}
       AND distinct_id = {{ String(distinct_id, required=True) }}
-      AND (event_type = '$pageview' OR event_type = '$conversion')
+      -- $heartbeat is a ONE-SHOT page-exit beacon (tracker.js:432-436), admitted so
+      -- deriveSessions can compute real dwell time: without it a single-page session
+      -- ends on its only event and reports 0s (sessionization.js finalizeSession).
+      -- SAFE because pageview_count is gated on '$pageview' at sessionization.js:69/:93
+      -- (so bounce rate, pageviews-per-visitor, is unmoved) and the beacon carries NO
+      -- utm_*/click IDs, so acquisitionKey() returns null and it cannot split a session.
+      AND event_type IN ('$pageview', '$conversion', '$heartbeat')
     ORDER BY timestamp ASC
     LIMIT 500
 
