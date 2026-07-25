@@ -346,16 +346,15 @@ export default function Settings() {
     setCookielessLoading(true)
     try {
       const newMode = !cookielessMode
-      const { error } = await supabase
-        .from('sites')
-        .update({ cookieless_mode: newMode })
-        .eq('id', site.id)
-      if (error) throw error
+      await fetchApi(`/integrations/settings?site_key=${site.site_key}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ cookieless_mode: newMode })
+      })
       setCookielessMode(newMode)
       setMessage(newMode ? 'Cookieless mode enabled.' : 'Cookieless mode disabled.')
       setTimeout(() => setMessage(''), 3000)
-    } catch (_err) {
-      setMessage('Error updating tracking mode')
+    } catch (err) {
+      setMessage(err?.message || 'Error updating tracking mode')
     } finally {
       setCookielessLoading(false)
     }
@@ -606,9 +605,9 @@ export default function Settings() {
         </div>
       </section>
 
-      {/* ── Site Settings ──────────────────────────────────────────────── */}
+      {/* ── General ───────────────────────────────────────────────────── */}
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
-        <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Site Settings</h3>
+        <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">General</h3>
         <form onSubmit={handleSave} className="space-y-3">
           <div>
             <label className="block text-xs text-st-gray dark:text-gray-400 mb-1">Site Name</label>
@@ -913,11 +912,11 @@ export default function Settings() {
         </p>
       </section>
 
-      {/* ── Site Settings (Timezone & Path Exclusions) ───────────────── */}
+      {/* ── Reporting & Tracking (Timezone & Path Exclusions) ────────── */}
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Globe className="w-4 h-4 text-st-gray dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Site Settings</h3>
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Reporting &amp; Tracking</h3>
         </div>
         <p className="text-xs text-st-gray dark:text-gray-400">
           Configure default reporting timezone boundaries and exclude specific client paths from tracking.

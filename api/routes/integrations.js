@@ -512,6 +512,20 @@ router.patch('/settings', async (req, res) => {
       customUrlParams = uniqueParams
     }
 
+    // cookieless_mode is a plan-gated feature. Gate only the ENABLE direction —
+    // a downgraded site must always be able to switch back off.
+    let cookielessMode = undefined
+    if (req.body.cookieless_mode !== undefined) {
+      if (typeof req.body.cookieless_mode !== 'boolean') {
+        return res.status(400).json({ success: false, data: null, error: 'cookieless_mode must be a boolean' })
+      }
+      if (req.body.cookieless_mode === true) {
+        const block = requireFeature(req.site?.plan, 'cookieless_mode', 'Cookieless tracking')
+        if (block) return res.status(402).json(block)
+      }
+      cookielessMode = req.body.cookieless_mode
+    }
+
     let crossDomainDomains = undefined
     let crossDomainCookieDomain = undefined
     if (req.body.cross_domain_domains !== undefined || req.body.cross_domain_cookie_domain !== undefined) {
@@ -534,6 +548,7 @@ router.patch('/settings', async (req, res) => {
     if (timezone !== undefined) updates.timezone = timezone
     if (excludedPaths !== null) updates.excluded_paths = excludedPaths
     if (customUrlParams !== null) updates.custom_url_params = customUrlParams
+    if (cookielessMode !== undefined) updates.cookieless_mode = cookielessMode
     if (crossDomainDomains !== undefined) updates.cross_domain_domains = crossDomainDomains
     if (crossDomainCookieDomain !== undefined) updates.cross_domain_cookie_domain = crossDomainCookieDomain
 
@@ -545,7 +560,7 @@ router.patch('/settings', async (req, res) => {
       .from('sites')
       .update(updates)
       .eq('site_key', siteKey)
-      .select('id, attribution_window_days, excluded_paths, timezone, custom_url_params, cross_domain_domains, cross_domain_cookie_domain')
+      .select('id, attribution_window_days, excluded_paths, timezone, custom_url_params, cookieless_mode, cross_domain_domains, cross_domain_cookie_domain')
       .single()
 
     if (error) {
