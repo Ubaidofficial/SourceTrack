@@ -256,3 +256,87 @@ test('7: trial_start/trial_converted/churn funnel events -> isSubscriptionChecko
     assert.strictEqual(isSubscriptionCheckoutCarrier(funnelConversion), false, `${conversion_type} must not be excluded`)
   }
 })
+
+// ── TRIAL-START $0 INVOICE REGRESSION ────────────────────────────────────────────────────
+// Found by empirical sandbox testing (test clock clock_1Tx8mJLZY0IPZEmwX9lYJQva, sim
+// 'trial-billing-reason-check'), NOT by reasoning — the assumption that a trial-end invoice
+// carries billing_reason='subscription_cycle' was right, but the trial START also emits an
+// invoice.paid, and that one was missed:
+//
+//   trial start | customer.subscription.created          | —                   | —    | trial_start     | LEAD
+//   trial start | invoice.paid                           | subscription_create | 0    | subscription    | <-- became CUSTOMER
+//   trial end   | customer.subscription.updated          | — (trialing→active) | —    | trial_converted | CUSTOMER
+//   trial end   | invoice.paid                           | subscription_cycle  | 4900 | renewal         | other
+//
+// So EVERY trial start registered a customer whether or not it ever converted: 100 trials +
+// 10 conversions would report ~110 customers. Revenue was unaffected ($0), the COUNT was not.
+//
+// DISCRIMINATOR: `amount_paid === 0` alone is too blunt — a 100%-discount coupon on a REAL
+// acquisition is also $0 and IS a customer. The signal is whether anything was ever OWED:
+// a trial-start invoice has subtotal 0 (its only line is the $0 "Free trial for …" item),
+// while a fully-discounted acquisition has subtotal > 0 reduced to 0 by the discount.
+// Both must be EXPLICITLY 0 — a missing/undefined subtotal must NOT trigger the skip, so
+// malformed data keeps the acquisition rather than silently dropping it (the same
+// fail-toward-keeping stance isSubscriptionCheckoutCarrier documents).
+import { classifyConversionType } from '../lib/conversion-classifier.js'
+
+const bucketOf = (event) => {
+  const m = mapSubscriptionEvent(event)
+  return m.skipReason ? 'SKIPPED' : classifyConversionType(m.conversionType)
+}
+
+test('🔴 REGRESSION: the trial-start $0 invoice must NOT register a customer', () => {
+  const m = mapSubscriptionEvent(invoicePaid({ id: 'in_trial0', billing_reason: 'subscription_create', amount_paid: 0, subtotal: 0 }))
+  assert.notEqual(classifyConversionType(m.conversionType), 'customer',
+    'a $0 trial-start invoice counted as a customer — every trial start would inflate the metric')
+  assert.ok(m.skipReason, 'it should be skipped outright: the trial is already recorded by trial_start')
+})
+
+test('🔴 the full verified trial lifecycle buckets correctly, event by event', () => {
+  // 1. trial start — subscription.created (trialing)
+  assert.equal(bucketOf(subEvent('customer.subscription.created', { id: 'sub_t', status: 'trialing' })), 'lead')
+  // 2. trial start — the $0 invoice. MUST NOT be a customer.
+  assert.equal(bucketOf(invoicePaid({ id: 'in_t0', billing_reason: 'subscription_create', amount_paid: 0, subtotal: 0 })), 'SKIPPED')
+  // 3. trial end — subscription.updated trialing→active. THE acquisition.
+  assert.equal(bucketOf(subEvent('customer.subscription.updated', { id: 'sub_t', status: 'active' }, { status: 'trialing' })), 'customer')
+  // 4. trial end — the real $49 invoice, billing_reason=subscription_cycle.
+  assert.equal(bucketOf(invoicePaid({ id: 'in_t1', billing_reason: 'subscription_cycle', amount_paid: 4900, subtotal: 4900 })), 'other')
+
+  // EXACTLY ONE customer across the whole trial lifecycle.
+  const buckets = [
+    bucketOf(subEvent('customer.subscription.created', { id: 'sub_t', status: 'trialing' })),
+    bucketOf(invoicePaid({ id: 'in_t0', billing_reason: 'subscription_create', amount_paid: 0, subtotal: 0 })),
+    bucketOf(subEvent('customer.subscription.updated', { id: 'sub_t', status: 'active' }, { status: 'trialing' })),
+    bucketOf(invoicePaid({ id: 'in_t1', billing_reason: 'subscription_cycle', amount_paid: 4900, subtotal: 4900 }))
+  ]
+  assert.equal(buckets.filter(b => b === 'customer').length, 1, 'a trial lifecycle must yield exactly ONE customer')
+  assert.equal(buckets.filter(b => b === 'lead').length, 1, 'and exactly ONE lead')
+})
+
+test('🔴 THE TRAP: a no-trial direct signup is STILL a customer (the case #416 set out to fix)', () => {
+  // Confirmed real instance: $99 subscription, billing_reason=subscription_create, amount_paid=9900.
+  const m = mapSubscriptionEvent(invoicePaid({ id: 'in_99', billing_reason: 'subscription_create', amount_paid: 9900, subtotal: 9900 }))
+  assert.equal(m.skipReason, null, 'a genuinely paid first invoice must never be skipped')
+  assert.equal(m.conversionType, 'subscription')
+  assert.equal(classifyConversionType(m.conversionType), 'customer')
+  assert.equal(m.value, 99)
+})
+
+test('🔴 a 100%-DISCOUNT acquisition is $0 but STILL a customer (why amount_paid alone is not the signal)', () => {
+  // subtotal > 0 reduced to 0 by a coupon: money WAS owed, so this is a real acquisition.
+  const m = mapSubscriptionEvent(invoicePaid({ id: 'in_free', billing_reason: 'subscription_create', amount_paid: 0, subtotal: 4900 }))
+  assert.equal(m.skipReason, null, 'a fully-discounted real acquisition must not be skipped')
+  assert.equal(classifyConversionType(m.conversionType), 'customer')
+})
+
+test('a $0 invoice with NO subtotal field keeps the acquisition (uncertain data must not drop a row)', () => {
+  const m = mapSubscriptionEvent(invoicePaid({ id: 'in_odd', billing_reason: 'subscription_create', amount_paid: 0 }))
+  assert.equal(m.skipReason, null, 'missing subtotal is not proof of a trial — fail toward keeping')
+  assert.equal(m.conversionType, 'subscription')
+})
+
+test('a $0 SUBSCRIPTION_CYCLE invoice is still a renewal, never skipped', () => {
+  const m = mapSubscriptionEvent(invoicePaid({ id: 'in_cyc0', billing_reason: 'subscription_cycle', amount_paid: 0, subtotal: 0 }))
+  assert.equal(m.skipReason, null, 'the trial-start guard must not touch renewals')
+  assert.equal(m.conversionType, 'renewal')
+})

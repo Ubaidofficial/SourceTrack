@@ -7,7 +7,7 @@
 // DIFFERENT pipe the harness returns null for). queryHog is NEVER called for name==='flexible_report'.
 //
 // HogQL-INTENT reproduced by the pipe (attribution-engine.js:2397-2402 + dedup :2456-2469): count() over
-// event_type='$conversion' AND lower(coalesce(conversion_type,'')) IN (14 LEAD_TYPES), external_event_id
+// event_type='$conversion' AND lower(coalesce(conversion_type,'')) IN (15 LEAD_TYPES), external_event_id
 // dedup ($conversion only), GROUP BY campaign dim. Per-bucket + total conservation asserted here on the
 // mapping layer; true cross-store VALUE parity on the staging fixture de200000-babe-41d4-a716-446655441111
 // is FOUNDER-GATED post-deploy. The stub rows below ARE the HogQL-INTENT result for that fixture.

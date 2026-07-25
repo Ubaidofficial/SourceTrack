@@ -29,8 +29,39 @@ export function mapSubscriptionEvent(event) {
     out.subscriptionId = obj.subscription || null
     out.billingReason = obj.billing_reason || null
     out.value = obj.amount_paid != null ? obj.amount_paid / 100 : 0
-    // Renewals (subscription_cycle) vs the first paid invoice of a subscription.
-    out.conversionType = out.billingReason === 'subscription_cycle' ? 'renewal' : 'subscription'
+    if (out.billingReason === 'subscription_cycle') {
+      // Renewals. Never skipped, even at $0 (a fully-credited period is still a renewal).
+      out.conversionType = 'renewal'
+    } else if (obj.amount_paid === 0 && obj.subtotal === 0) {
+      // TRIAL-START CARRIER. A subscription created WITH a trial also emits an invoice.paid at
+      // trial START: billing_reason='subscription_create', amount_paid=0, whose only line is the
+      // $0 "Free trial for 1 × <plan>" item. Verified empirically on a Stripe sandbox test clock
+      // (clock_1Tx8mJLZY0IPZEmwX9lYJQva) — reasoning alone had missed it.
+      //
+      // Skipped rather than typed, mirroring the 'active subscription create' skip below: this
+      // invoice is a billing artifact of a trial that is ALREADY recorded — the trial start by
+      // trial_start (subscription.created), and the eventual conversion by trial_converted
+      // (subscription.updated). Typing it 'subscription' made EVERY trial start register a
+      // customer whether or not it ever converted: 100 trials + 10 conversions -> ~110 customers.
+      //
+      // THE DISCRIMINATOR IS `subtotal`, NOT `amount_paid`. amount_paid===0 alone would also skip
+      // a 100%-discount coupon on a REAL acquisition, which IS a customer. The question is whether
+      // anything was ever OWED: a trial-start invoice has subtotal 0 (its only line is $0), while a
+      // fully-discounted acquisition has subtotal > 0 reduced to 0 by the discount.
+      //
+      // BOTH must be EXPLICITLY 0. A missing/undefined subtotal must NOT trigger the skip — that
+      // keeps the acquisition instead of silently dropping a real conversion, the same
+      // fail-toward-keeping stance isSubscriptionCheckoutCarrier documents below.
+      //
+      // KNOWN PRODUCT QUESTION, deliberately not decided here: a genuinely $0-priced plan (free
+      // tier) also has subtotal 0 and is therefore skipped too. Whether a free-plan signup should
+      // count as a "customer" is a product call — today's answer (no, it is not a paying customer)
+      // matches what the customers metric means everywhere else.
+      out.skipReason = 'trial-start $0 invoice — nothing was owed; the trial is already recorded by trial_start and its conversion by trial_converted'
+    } else {
+      // First paid invoice of a subscription (or a fully-discounted one) — a real acquisition.
+      out.conversionType = 'subscription'
+    }
   } else if (eventType === 'customer.subscription.created') {
     out.subscriptionId = obj.id || null
     if (obj.status === 'trialing') {

@@ -13,7 +13,7 @@ DESCRIPTION >
           first_touch -> nullIf(first_touch_campaign, '')  (== GROUP_COLUMNS.campaign.first_touch)
       - metric = leads: count() over event_type='$conversion' AND the conversion is LEAD-typed:
         live eventFilter (:2400-2401) = event='$conversion' AND
-        lower(COALESCE(toString(properties.conversion_type),'')) IN (<LEAD_TYPES, 14 values from
+        lower(COALESCE(toString(properties.conversion_type),'')) IN (<LEAD_TYPES, 15 values from
         conversion-classifier.js:5>). Ported as lower(coalesce(conversion_type,'')) IN (...) — the
         typed LowCardinality(Nullable(String)) conversion_type; coalesce(...,'') handles NULL exactly
         like the live COALESCE(toString(...),''). §2.6: properties.conversion_type -> conversion_type.
@@ -53,7 +53,8 @@ SQL >
       AND event_type = '$conversion'
       AND lower(coalesce(conversion_type, '')) IN (
         'lead_created', 'qualified', 'opportunity', 'form', 'lead', 'signup', 'sign_up',
-        'trial', 'free_trial', 'meeting', 'book_demo', 'schedule_meeting', 'contact_form', 'mql'
+        'trial', 'free_trial', 'trial_start', 'meeting', 'book_demo', 'schedule_meeting',
+        'contact_form', 'mql'
       )
       AND timestamp >= {{ DateTime(date_from, required=True) }}
       AND timestamp < {{ DateTime(date_to, required=True) }}
