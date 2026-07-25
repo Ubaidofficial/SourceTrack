@@ -1,84 +1,174 @@
-# Next Session Prompt
+# Next Session — Status as of 2026-07-25, head 422a31a
 
-_Last updated: **2026-07-24** — Phase 7 refund netting **COMPLETE** + **prod Tinybird cutover VERIFIED** (deployment 20→21) + **capture chain proven LIVE on prod**. 22 PRs `#381`–`#401`, `main` @ `3aec70f`. **Start at §0.5 — it is the live handoff.** §0 (roles/MCP) is current standing context; §1 is enduring product context. Prior-session detail (Railway cron table, `ENCRYPTION_KEY` sha1s, GSC diagnosis, the "success-reported-by-something-that-never-did-the-work" pattern, lost June docs) is **not repeated here** — it lives **verbatim** in the pre-rewrite blob: `git show b63b19f` (bare blob hash — the `blob:path` form is invalid git; or `git show HEAD~1:NEXT_SESSION_PROMPT.md` after this merges). The KIs live in `KNOWN_ISSUES.md`; the chat-level detail in `conversation_search`. Nothing is lost; it is just not duplicated._
+## KI-62 (refund attribution inheritance): FULLY CLOSED
+All 3 steps done and verified in prod: stamp (prior session) → prod Tinybird
+deploy #22 → PR #403 (nightly-attribution.js inheritance logic, merged, deployed).
+No longer the top priority. Do not re-open unless a real regression surfaces.
 
-AI-agent workflow rules are governed by [docs/ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md).
-No AI-agent may commit or push before raw diff review and explicit user approval.
+## What shipped this session (9 PRs + 1 prod Tinybird deploy, all merged & deployed)
 
-**Copy everything below the line into a new chat as the first message.**
+| # | What | Why it mattered |
+|---|---|---|
+| Tinybird #22 | KI-62 Step A: original_conversion_event_id column, prod | Unblocked #403 |
+| #403 | KI-62 Step C: refund attribution inheritance | Refunds now inherit real source instead of Direct |
+| #404 | Removed 4 seeded reports using GATED_METRICS metrics | Fixed broken canned reports on signup (ecommerce, saas, leadgen) |
+| #405 | Removed 5th dead seed (date dim, PREAGG_DIMS gap) | Same class, different cause |
+| #406 | week/year granularity, 2 live readers (ai_platforms, multi-touch) | Fixed silent daily-bucket collapse — additive only |
+| #407 | granularity in getSessionReport (Tier 2) | Same bug, 4 sites not 2, all 9 models — fixed month/quarter too (deliberately not additive) |
+| #408 | shared flexibleReportCacheKey() builder | Pure dedup, closed the same cache-key hazard #407 fixed elsewhere |
+| #409 | campaigns.js model guard | Closed a LIVE fabrication-risk gap — API accepted model=linear/ai_platforms/etc and returned conversion counts mislabeled as sessions |
+| #410 | cookieless_mode routed through API, not direct Supabase | Prod RLS silently dropped the write — UI said "enabled", nothing persisted |
+| #411 | site name/domain routed through API, not direct Supabase | Same RLS gap as #410, worse (no error check at all on either branch) |
 
----
+## Pattern found TWICE this session, now fully closed for Settings.jsx — but check the rest of the dashboard
+Direct `supabase.from(...).update(...)` calls from dashboard frontend code bypass
+the Express API's auth/validation/plan-gating AND are vulnerable to a specific
+silent-failure mode: if RLS is enabled with only a SELECT policy (no UPDATE
+policy) but the `authenticated` role still holds the UPDATE grant, Postgres does
+NOT reject the write — RLS just filters the row out, PostgREST reports "0 rows"
+as success, supabase-js returns `error: null`. The UI reports success; nothing
+persists. Confirmed FUNCTIONALLY on prod (not just policy inference) via EXPLAIN
+with role impersonation: `Update on sites -> Result -> One-Time Filter: false` —
+the planner statically proves zero rows are updatable.
+Found on cookieless_mode (#410) and name/domain (#411), both on `sites`. Every
+known direct-write instance in Settings.jsx is now fixed. **Recommend: grep the
+REST of dashboard/src for any other direct `supabase.from(...).update(` calls
+(other pages, other tables) before assuming this class of bug is fully closed
+project-wide.**
 
-You are my **project orchestrator + senior martech engineer + QA specialist** for SourceTrack.
-Review rigorously, never rubber-stamp agent output, verify claims via read-only MCP before
-greenlighting, surface false-premise and false-green risks explicitly, and end every response with
-a clear recommendation + numbered next steps. Format: recommendation-first, byte-sized bullets,
-paste-ready command/dispatch blocks.
+## New, separate finding from #411 — worth knowing, not urgent
+`sites_normalized_domain_uniq` is a GLOBAL unique index (not per-tenant) on
+normalized domain. A user entering a domain another tenant already holds is
+reachable user input — previously an opaque 500, now a clean 400 ("That domain
+is already registered to another site."). This is existing, correct DB behavior,
+not a new hole — #411 only improved the error message. The deeper question (can
+someone claim a domain they don't actually own/control?) is a domain-verification
+question orthogonal to this fix, not solved here, not urgent, just worth knowing
+it exists.
+Also confirmed: `sites_free_tier_abuse_guards` trigger (BEFORE INSERT OR UPDATE)
+already covers UPDATE, reads `paas_subdomain_blocklist` — the DB is the
+authority here, NOT the client-side `PAAS_SUFFIXES` array in Settings.jsx (which
+is now a UX pre-check only; if it drifts from the blocklist table, the DB fails
+cleanly with a 400 instead of an opaque 500, thanks to #411's error mapping).
 
----
+## Item 14 (sessions/conversion_rate): DOWNGRADED FROM URGENT TO BACKLOG
+Root cause confirmed (attribution-engine.js's multi-touch/ai_platforms live
+readers mislabel conversion counts as sessions for any non-revenue/conversions
+metric) but the ONLY live exposure was api/routes/campaigns.js, already fixed by
+ #409. Confirmed via investigation, verified twice independently (once via direct
+code read, once via Antigravity after a re-run requiring visible tool-call
+evidence):
+- attribution.js and export.js both call gatedReportReason() BEFORE
+  getFlexibleReport(), and GATED_METRICS already includes 'sessions' — already
+  protected, not exposed.
+- The internal multiTouchAttributionHelper hardcodes metric:'revenue' — not
+  exposed either.
+No other route is exposed. Safe to deprioritize. The actual feature build (teach
+the live readers to count distinct visitors, then reconsider un-gating
+sessions/conversion_rate) remains real but non-urgent, multi-step.
 
-## 0. ROLES
+## `date` for pre-agg — STILL NO BACKEND, STILL THE BIGGEST OPEN ITEM
+first/last-touch × date: real gap, needs granularity+attributeBy threaded through
+getPreAggregatedAttribution (the data's already in the SELECT, just needs 2 new
+params). Multi-touch × date: STRUCTURAL — the stored touchpoint object never
+captures conversion date, only touchpoint timestamp (wrong clock, deliberately
+excluded as a dim per NON_DIM_TOUCH_KEYS). PREAGG_DIMS is a single shared
+contract pinned by multitouch-preagg-dims.test.js to BOTH reader families — must
+be split per-family before any real fix. Multi-touch fix would need a write-path
+schema change — do not attempt without a deliberate decision.
 
-| Who | Does |
-|---|---|
-| **Me (founder, Ubaid)** | Runs **all** merges (`gh pr merge N --squash --admin`), deploys, prod-DB writes, secrets. I paste GitHub/Railway output to you. |
-| **You (Claude Chat)** | Orchestrate, verify, dispatch. Write docs + dispatch prompts as deliverables. **Never write prod code directly.** |
-| **CC (Claude Code)** | ⚠️ **(corrected 2026-07-23)** Executes in **per-session isolated worktrees** (`~/Desktop/trackiq-B`, `-C`, `-C3`, `-D`, …). **Parallel CC sessions run concurrently** — coordinated by **disjoint file sets + no simultaneous staging writes**, NOT serialized in one `ccdesktop` worktree. Never self-merges. |
-| **Antigravity (Gemini)** | Browser/E2E. Never reads `.env`, never queries `auth.users`, never prints raw `site_key`. |
+## tz-aware date bucketing — DEFERRED 3 TIMES NOW (twice this session, once historically per KNOWN_ISSUES.md #12)
+getMultiTouchAttributionLive, getSessionReport, getAiPlatformAttributionLive all
+bucket dates in UTC while the surrounding pipeline is tz-aware. Fixing this would
+silently move existing month/quarter numbers for every non-UTC site. Needs its
+own blast-radius decision, not a bundled fix.
 
-**Your MCP access (corrected 2026-07-23):** read-only **Supabase** (prod `zxjjjsipafojhzkkumvh`, staging `nrsvpwzekfrdrzkoecfk`) + **Railway** + **Tinybird** + **GitHub**. ⚠️ **PostHog MCP is DEAD** — project 416017 was decommissioned/deleted 2026-07-19; do **not** treat it as an active source. Three constraints that each invalidate a class of check: **Tinybird MCP is ST_Staging ONLY** (prod events unreachable); **Railway MCP has NO env-var read tool** (`ENCRYPTION_KEY`/`SLACK_WEBHOOK_URL` checkable only by the founder in the Railway UI); **GitHub MCP returns 404 on the private repo** (PR diffs/file lists NOT MCP-verifiable — route PR checks through the founder's terminal or CC).
+## Item 2 (API-key UI): CONFIRMED ALREADY BUILT — remove from backlog
+The prior "backend exists, no frontend" framing was stale/wrong. Verified via code
+read (GET/POST/DELETE routes + full frontend wiring) AND a live browser
+click-through via Antigravity (create → list → revoke, zero console/network
+errors). Genuinely done. Do not re-dispatch.
 
----
+## Item 10 (usage caps): NOT STARTED — next real feature item
+Sites/seats/conversions advertised but not enforced. plan-features.js and
+site-limits.js exist as the likely home. Check for Settings.jsx collision with
+any future UI work before parallelizing with anything else touching that file.
 
-## 0.5 SESSION HANDOFF — 2026-07-24 (PRs `#381`–`#401`, `main` @ `3aec70f`) — the live handoff
+## Onboarding — one real bug, plus an old audited backlog never actioned
 
-> **PROD STATE (changed this session):** The prod **Tinybird cutover is DONE and VERIFIED** — deployment **20→21**, `multitouch_pageviews_live` **400→200**, **revenue byte-identical**. The capture chain is **proven LIVE on prod** (2026-07-24). Prod has **0 refunds**, so the refund money-rail is code-complete + staging-verified but **not yet exercised by a real payload**. (This supersedes every prior "PROD TINYBIRD UNTOUCHED" note.)
+**Priority pick for next session, if picking one:** the account-vs-site gate bug
+below — it's the most recent, most concretely scoped, and has a clear owner-
+flagged fix shape.
 
-### WHAT SHIPPED — 22 PRs, `#381`–`#401`
+**Onboarding gate checks the SELECTED SITE, not the ACCOUNT** (logged
+2026-07-23, still open). Confirmed directly against `onboarding.js:63-67`
+(`resolveDashboardSite()`): it prioritizes whatever site was explicitly
+requested via `site_key`/`site_id`; if that site is incomplete but the account
+has OTHER fully-onboarded sites, the user can get pushed back into onboarding
+they already finished. Deliberately deferred out of `#366` (which fixed a
+different, related bug — silent site-substitution). Per the log: "a correct
+fix is an auth-gate refactor (account-level onboarding state)... not a
+one-line change." Needs its own scheduled pass, not a quick patch — start
+with an investigation dispatch (same pattern as tonight's Item 14/date-gap
+work) to scope the actual refactor before writing code.
 
-- **Phase 7 refund netting COMPLETE** — Stripe (`#381`) + Shopify (`#384`), refund-aware reads (`#382`/`#392`), `charge.refunded` dedup (`#395`). Refund = negative-value `$conversion` with `conversion_type='refund'`; **SUMs net it (correct), COUNTs exclude it**.
-- **🔴 `#387` — the sendBeacon money-rail defect (found + fixed).** `sendBeacon` was the default transport for **every** send incl. `conversion()`/`identify()`; EasyPrivacy's blanket `$ping,third-party` **silently dropped all cross-origin beacons** — so conversions were silently dropped for **every ad-blocker user since launch**. Fix: keepalive-`fetch` over `sendBeacon`, feature-detected, beacon fallback.
-- **`#388`** GPC/DNT all-no-op `window.sourcetrack` stub (previously threw `ReferenceError` for every GPC/DNT visitor; `optIn` is a **deliberate** no-op — GPC is a legal opt-out, do not "fix" it).
-- **`#393`** SPA navigation tested. **`#394` (C4)** Setup & Health live feed + spec.
-- **`#397`** url-normalizer **drift guard** — resolved as **"guard, don't unify"**: the two normalizers (`parsePathname` case-preserved money-rail vs `normalizePath` lowercased GSC join) are **intentionally different**; the guard fails if a third appears.
-- **`#398`** Tinybird cutover runbook. **`#399`** KI-62 write-path (step 1 — see below).
-- **`#400`** Stage-1 docs archive (7 stale root docs → `docs/archive/2026-07/`). **`#401`** A.4 SEO evidence (Attributer as 7th competitor export).
+**Older, audited-but-never-built backlog** (from a prior session's onboarding
+audit — states below reflect what's ACTUALLY built, not the design spec's
+aspiration):
+- CSP-block detection: confirmed hard. Current "Browser Connection Check"
+  pings the wrong context (dashboard→API, not the visitor-site's real CSP
+  header). Needs fetch+parse of the customer domain's CSP. Scoped post-launch,
+  not started.
+- Tabbed installer breadth: only standard-script + GTM have real in-wizard
+  code. Shopify/WordPress/Framer/Webflow are doc-links only, no guided flow.
+  Partial, not built.
+- No-scrape framework detection: cheap, low-risk, never built. Detect stack
+  from the first pageview's User-Agent/generator meta (already received, zero
+  new infra), nudge the matching install guide. Founder chose "audit first,
+  decide later" — audited, decision never actually made.
+- Step-count mismatch: design spec (docs/archive/ONBOARDING_FLOW_SPEC.md)
+  specifies 5 steps (Create Account → Connect Domain → Install Script →
+  Customize → Run Verification); a prior audit found the shipped wizard is
+  6-step. Cosmetic, never reconciled.
 
-### 🔴 DO FIRST — KI-62 is half-wired (only step 1 of 3 done)
+**Doc inconsistency worth someone resolving, not urgent:**
+`docs/archive/ONBOARDING_FLOW_SPEC.md`'s own header claims "✅ Visually
+implemented... logic complete," but `KNOWN_ISSUES.md` separately lists it as
+"Implementation status unverified." The two docs disagree about the same
+thing — don't trust either claim at face value until reconciled.
 
-KI-62 (refund attribution inheritance) is a **3-step chain**. Refunds still net into **Direct** until step C lands — it **fixes nothing** until then. Not urgent (prod has 0 refunds) **but it is the money rail — land it before any real Stripe customer with refunds goes live.**
+## Other flagged, not fixed
+- KNOWN_ISSUES.md #13: 3 pipes (session_report_pageviews,
+  session_report_conversions, seo_revenue_landing_pages) have a channel
+  classifier that disagrees with the JS engine's — live misclassification,
+  already documented, not actioned.
+- handleSave's insert branch (new-site creation) is unreachable dead code
+  (function early-returns when `site` is falsy) — pre-existing, deliberately left
+  alone (#411), now pinned by a test so it can't be silently assumed fixed.
 
-1. **`#399` (DONE)** — stamps `original_conversion_event_id` on refunds + the pipe **PROJECTS** it. **In repo, NOT deployed to prod Tinybird** (prod is on deployment 21).
-2. **A (REQUIRED, FRESH HEAD) — deploy that pipe to prod.** Use `docs/tinybird_cutover_runbook.md` (merged `#398`). Founder-gated, `TB_TOKEN`-scoped, **re-point `.tinyb` to staging after** (KI-58). **CC has NO Tinybird creds — the deploy is the founder's.**
-3. **C (REQUIRED) — inheritance PR.** Nightly reads the pointer, copies the original conversion's attribution **VERBATIM** onto the refund, marks **not-found explicitly**. **BLOCKED until A deploys** (it reads the column A projects). CC's full STEP-1 investigation this session **IS the spec — carry it verbatim**:
-   - pointer stored in **`custom_properties` jsonb**, **NEVER `external_event_id`** (the partial unique index would drop the refund entirely);
-   - **subscription refunds stay `refund_unresolved` in v1** (founder-confirmed).
-
-### NEXT PRIORITIES (founder to sequence — after KI-62 A→C)
-
-- **Item 14 — sessions / conversion_rate gated on EVERY dimension.** CVR is dead everywhere. **Highest-value product hole.** Needs a pipe (§3 FEATURE_MAP).
-- **Item 2 — API-key UI.** Backend built (`api-key-scopes.js`); no UI to generate/view/revoke. **Self-serve blocker, UI-only, tractable.**
-- **Item 10 — conversion/sites/seats caps advertised but not enforced** (only pageviews metered). Truth + revenue-leak.
-- **STRATEGIC FORK (founder call):** app product-holes vs. building the **Astro marketing site**. The 870-line LOCKED `website_seo_plan.md` is **entirely unbuilt**; phptravels is a live beta target with no site to point at. **Orchestrator leans product-holes-first** (a site driving signups to dead-CVR converts poorly) — but this is a launch-sequencing call, yours to make.
-- **MCP attribution server — LOCKED to V1.1. Do NOT build pre-launch.** Backlogged.
-
-### BACKLOGGED (deliberately, not forgotten)
-
-- **Stage-2 cleanup (dead code)** — needs **knip/depcheck, NOT grep** (the grep orphan-detector failed **twice** this session, flagging live files as orphans). Known candidates: `tracker/analytics.js` (delete, post-`#388`), FunnelChart endpoint (deleted UI, live endpoint), `attribution-engine.js:2437` (dead behind a `throw`).
-- **Stage-3 dedup** — refund predicate inlined across 7 sites → an `excludeRefunds()` helper; **fold into KI-62 work** (same readers).
-- **Second stale-doc batch** — `PAID_BETA_SESSION_PLAN`, `DEV_SESSION_CHECKLIST`, + UNKNOWN-verdict `MANUAL_QA_BACKLOG` / `QA_RUNBOOK` (need a **content read**, not a move).
-
-### BETA — phptravels.com (over bookin.pk; same owner)
-
-Open with **"why did Usermaven come out?"** — they **evaluated + removed Usermaven** (commented out in `footer.php`), run **GA4/GTM/Meta** on a **deferred-interaction loader that misses short bounces**, and **deep-link 7 AI platforms they can't measure**. **Stripe-first (Phase 7 applies).**
-
-### STANDING DISCIPLINE NOTE — keep the investigate-before-build gate
-
-An agent investigation **corrected a confident orchestrator claim 5 times this session** (dead import, safe unification, registration drift, conflict file, stale counts) — each with a citation, each right. **The step-1 investigate-before-build gate is why. Keep it.** The repo-review **7/10 rating stays WITHDRAWN as inauthentic** (grep + file-sizes, no logic read) **until a session reads `attribution-engine.js` end-to-end.**
+## MCP / tooling notes (orchestrator-side, confirmed this session)
+- GitHub MCP: connected, authenticates correctly as Ubaidofficial, but genuinely
+  404s on the private SourceTrack repo — confirmed via search_repositories
+  showing only 8 public repos visible. Access/auth gap on the connector's grant,
+  not a bug — needs reconnect with explicit private-repo access granted. Every
+  PR check/diff/merge this session went through the founder's own terminal (gh
+  CLI), not this MCP.
+- Tinybird MCP: BOTH connector entries ("SourceTrack TB" and "TinyBird") are the
+  SAME underlying connection, bound to ST_Staging only. No prod Tinybird MCP
+  access exists from chat. Prod Tinybird work requires the founder's own
+  terminal + tb CLI — full runbook re-verified working this session (workspace
+  switch → --check → deploy → verify via bench query → switch back to staging).
+- Supabase MCP: full read access to PROD (zxjjjsipafojhzkkumvh) confirmed
+  working directly from chat — used this session to independently verify RLS
+  policies, triggers, and unique indexes (pg_policies, pg_class.relrowsecurity,
+  has_table_privilege, pg_trigger, pg_indexes) without needing the founder's
+  terminal. Useful pattern for future data-integrity questions.
+- Railway MCP: full read access confirmed, used after every single merge this
+  session to independently verify all 6 services reached SUCCESS post-deploy.
 
 ### ⚠️ TRAPS — Tinybird (read before ANY `tb` command; see KI-58 / KI-59). **Full procedure: `docs/tinybird_cutover_runbook.md`.** — STILL CURRENT
 
-1. **The MAIN worktree's `tinybird/.tinyb` is authenticated to PROD**, `TB_TOKEN` unset — `tb --cloud deploy` from that directory hits **production with no prompt**. **ALWAYS read the `Running against Tinybird Cloud: Workspace <X>` line** every `tb --cloud` command prints. `tb --cloud workspace ls` lists only `imubaid93_workspace` and does **NOT** show the workspace you're actually pointed at — it is **not** a reliable check.
+1. **The MAIN worktree's `tinybird/.tinyb` is authenticated to PROD**, `TB_TOKEN` unset — `tb --cloud deploy` from that directory hits **production with no prompt**. **ALWAYS read the `Running against Tinybird Cloud: Workspace <X>` line** every `tb --cloud` command prints. `tb --cloud workspace ls` lists only `imubaid93_workspace` and does **NOT** show the workspace you're actually pointed at — it is **not** a reliable check. **Use `tb workspace current` instead** — the runbook's form pipes it so the token is never printed: `tb workspace current 2>&1 | grep -iE "Workspace |^name:"`. If it names the wrong workspace, **STOP**.
 2. **Deploys need `st_staging_deploy` (`WORKSPACE:DEPLOY`).** The default token → `workspace requires scope WORKSPACE:DEPLOY`. Pass the token **inline, single-quoted**, for one command: `PD='<token>'; TB_TOKEN="$PD" tb --cloud deploy; unset PD`. **Do NOT use `pbpaste`** (it captures whatever was last copied — usually the command, not the token) and **NOT `read -rs`** (silently returned empty twice on 2026-07-24). Don't re-auth `.tinyb` to prod.
 3. **`TB_TOKEN` persists in a shell** and silently overrides `.tinyb` for every later command. **Unset it explicitly** after use.
 - **Staging dashboard = `https://sourcetrack-dashboard-staging.up.railway.app/`** — the `-production` URL is PROD. **Browser cache masks fresh deploys** — hard-reload before concluding a change didn't ship.
@@ -95,30 +185,24 @@ What actually reaches prod are the **ORG-LEVEL service datasources**, readable f
 
 **Reach for `organization.*` before concluding anything about prod.** They expose operational **metadata only**, not row-level event data.
 
----
+## Worktree convention actually used this session
+Per-task ad-hoc worktrees off ~/Desktop/trackiq (reserved founder-merges-only per
+§13), NOT a fixed set of 4. Used tonight: -seed, -seed2, -gran, -sess, -flexkey,
+-cmpguard, -cookieless, plus whatever handleSave/#411 used. All cleared after
+merge (except whichever is still active). This works fine — update CLAUDE.md's
+"4 mandatory worktrees" framing if it's meant to be a hard cap; tonight's
+practice was flexible-per-task with zero collisions once file-overlap was
+checked before dispatching in parallel.
 
-## 1. PRODUCT (enduring context)
-
-Privacy-conscious multi-touch **revenue attribution** SaaS. Tinybird (ClickHouse) is the event
-store; Supabase holds accounts + the money rail `attributed_conversions`. PostHog decommissioned
-2026-07-19 (project 416017 deleted). Repo `Ubaidofficial/SourceTrack`.
-
-**Positioning:** "Know which source actually drove the sale — not just the visit."
-**Primary GTM moat:** GSC SEO-revenue attribution — **still unvalidated end-to-end.**
-
-**Versioning:** there has never been a `v0.x` scheme. Scheme is **free beta → V1 → V1.1 → V2**.
-We are **pre-V1, in beta**. `package.json` says `1.0.0` (scaffold default, meaningless).
-
----
-
-## 2. HOW TO START
-
-1. Confirm `origin/main` head is `3aec70f` (the `#381`–`#401` push).
-2. **Decide the KI-62 step-A deploy** (founder-gated, fresh head) — it unblocks step C; nothing else in the refund rail moves until then.
-3. Take the **STRATEGIC FORK** call (product-holes vs. Astro marketing site) — it sequences everything after KI-62.
-
-**To recover full detail from the last session** (dispatch texts, SQL output, CC reports, the KI-62
-STEP-1 investigation): use `conversation_search` — the transcript file does not carry across chats.
-
-Do **not** take any claim in this handoff as verified-today — re-check anything you're about to act
-on. **Flag contradictions rather than adapting silently** (that gate corrected 5 wrong calls this session).
+## Verification discipline notes (what actually caught real problems this session)
+- Independently checking CC/Antigravity's specific line/file citations against
+  the real repo (not just trusting confident-sounding reports) caught: a missed
+  seed (ai_conversions in GATED_METRICS, SAAS's "AI-Assisted Signups"), a wrong
+  self-diagnosis (RLS failure mode — "permission denied" assumed, actually
+  "silent 0-row filter", corrected on #411 with functional EXPLAIN proof), and
+  one investigation submitted with zero visible tool-call evidence (Antigravity's
+  first Item 14 attempt — re-sent requiring "show your work," second attempt
+  properly sourced and matched independent verification).
+- CC's own self-corrections (mid-investigation, unprompted) were checked
+  independently multiple times and were consistently accurate — a good trust
+  signal, but still verified each time rather than assumed.
