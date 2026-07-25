@@ -11,24 +11,15 @@ import {
 import OnboardingCard from '../components/OnboardingCard'
 import SetupDoctorCard from '../components/SetupDoctorCard'
 import { LogoFull, LogoFullDark } from '../components/Logo'
+import {
+  STEP_TITLES, STEPPER_LABELS, DISPLAY_STEP_COUNT,
+  displayIndexForStep, internalStepForDisplay
+} from '../lib/onboardingSteps'
 
-const STEP_TITLES = {
-  1: 'Connect Domain',
-  2: 'Select Business Type',
-  3: 'Install Script',
-  4: 'Installation Instructions',
-  5: 'Customize Conversions',
-  6: 'Verify Installation'
-}
-
-const STEPPER_LABELS = [
-  'Connect Domain',
-  'Business Type',
-  'Install Method',
-  'Install Script',
-  'Customize',
-  'Run Verification'
-]
+// Step titles + stepper labels + the internal->display mapping all come from ONE module now.
+// They used to be two local arrays that named the same steps differently (STEP_TITLES[3]
+// 'Install Script' vs STEPPER_LABELS[2] 'Install Method'). See lib/onboardingSteps.js for why the
+// install merge is presentational rather than a renumber — the persisted step numbers are unchanged.
 
 const BUSINESS_TYPES = [
   { key: 'ecommerce', label: 'eCommerce', icon: ShoppingCart, desc: 'Online store selling products' },
@@ -140,14 +131,11 @@ export default function Onboarding() {
         }
       }
 
-      if (stepToSet >= 4 && site.site_id) {
-        try {
-          const data = await fetchApi(`/install/snippet?site_id=${site.site_id}`)
-          if (data?.snippet) setSnippet(data.snippet)
-        } catch (_err) {
-          const trackerUrl = (import.meta.env.VITE_TRACKER_BASE_URL || import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/, '')
-          setSnippet(`<script async src="${trackerUrl}/tracker.min.js" data-site-key="${site.site_key}"></script>`)
-        }
+      // >= 3, not >= 4: the install card now shows the snippet as soon as it opens (internal step 3),
+      // because method selection is a tab rather than a step advance. Gating at 4 would leave a user
+      // resuming at step 3 staring at "Loading script..." until they touched a tab.
+      if (stepToSet >= 3) {
+        await ensureSnippet(site.site_id, site.site_key)
       }
     } catch (_err) {
       /* ignore — user stays on step 1 if we cannot resolve their state */
@@ -228,6 +216,9 @@ export default function Onboarding() {
       })
       setBusinessType(type)
       setSelectedConversions(defaults)
+      // Step 3 IS the install card now, and it shows the snippet immediately — fetch before landing
+      // there or the user reads "Loading script..." until they touch a tab.
+      await ensureSnippet(siteId, siteKey)
       setStep(3)
     } catch (err) {
       console.error('Failed to save business type onboarding state:', err.message || err)
@@ -237,21 +228,29 @@ export default function Onboarding() {
     }
   }
 
+  // The install card renders the snippet the moment it opens, so every path that can land on it has
+  // to have fetched one. That is now THREE paths (resume-from-saved-state, business-type continue,
+  // and a tab switch), which is two too many to keep copy-pasting the fetch + offline fallback.
+  async function ensureSnippet(id, key) {
+    if (!id) return
+    try {
+      const data = await fetchApi(`/install/snippet?site_id=${id}`)
+      if (data?.snippet) setSnippet(data.snippet)
+    } catch {
+      const trackerUrl = (import.meta.env.VITE_TRACKER_BASE_URL || import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/, '')
+      setSnippet(`<script async src="${trackerUrl}/tracker.min.js" data-site-key="${key}"></script>`)
+    }
+  }
+
   async function handleInstallMethodSelect(method) {
     setError('')
     setLoading(true)
     try {
+      // Still persists the internal 3 -> 4 advance (it is a valid server transition and preserves
+      // furthest-progress), but the CARD does not change — only the selected tab does.
       await saveOnboardingState(4, { install_method: method })
       setInstallMethod(method)
-      if (siteId) {
-        try {
-          const data = await fetchApi(`/install/snippet?site_id=${siteId}`)
-          if (data?.snippet) setSnippet(data.snippet)
-        } catch {
-          const trackerUrl = (import.meta.env.VITE_TRACKER_BASE_URL || import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/, '')
-          setSnippet(`<script async src="${trackerUrl}/tracker.min.js" data-site-key="${siteKey}"></script>`)
-        }
-      }
+      await ensureSnippet(siteId, siteKey)
       setStep(4)
     } catch (err) {
       console.error('Failed to save install method onboarding state:', err.message || err)
@@ -364,53 +363,10 @@ export default function Onboarding() {
           </OnboardingCard>
         )
 
+      // Steps 3 and 4 are ONE card now (method tabs + that method's instructions + snippet).
+      // Both internal numbers render it so a user stored at either resumes in the right place —
+      // see lib/onboardingSteps.js for why this is presentational rather than a renumber.
       case 3:
-        return (
-          <OnboardingCard
-            icon={Code}
-            title="Install Tracking Script"
-            subtitle="Copy the unique SourceTrack tracking script generated for your website."
-            showBack
-            onBack={() => setStep(2)}
-          >
-            <button type="button" onClick={() => setStep(2)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-dark-text transition-colors mb-3">
-              <ArrowLeft className="w-4 h-4" /> Back
-            </button>
-            <p className="text-sm font-bold text-[#1F2323] dark:text-gray-100 mb-3">Choose Installation Method</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {INSTALL_METHODS.map((m) => {
-                const Icon = m.icon
-                const selected = installMethod === m.key
-                return (
-                  <button
-                    key={m.key}
-                    onClick={() => handleInstallMethodSelect(m.key)}
-                    className={`flex flex-col items-center justify-center gap-4 min-h-[168px] p-5 rounded-2xl border-2 text-center transition-colors ${
-                      selected
-                        ? 'border-st-lime bg-st-lime/10 dark:bg-st-lime/10'
-                        : m.advanced
-                          ? 'border-gray-200 dark:border-white/10 hover:border-st-lime/70 bg-white dark:bg-white/[0.02] opacity-90'
-                          : 'border-gray-200 dark:border-white/10 hover:border-st-lime/70 bg-white dark:bg-white/[0.02]'
-                    }`}
-                  >
-                    <span className={`h-20 w-full rounded-xl flex items-center justify-center ${selected ? 'bg-white dark:bg-white text-[#1F2323]' : 'bg-[#F1F4F4] dark:bg-white/5 text-[#1F2323] dark:text-dark-primary'}`}>
-                      <Icon className="w-10 h-10" />
-                    </span>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-center gap-2">
-                        <p className="font-extrabold text-[#1F2323] dark:text-dark-primary">{m.label}</p>
-                        {m.recommended && <span className="text-[10px] font-bold bg-lime-100 text-lime-800 px-1.5 py-0.5 rounded-full">Recommended</span>}
-                      </div>
-                      <p className="text-xs text-st-gray dark:text-gray-400 mt-1">{m.desc}</p>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-            {error && <p className="text-sm text-red-500 mt-4 text-center font-medium">{error}</p>}
-          </OnboardingCard>
-        )
-
       case 4:
         return renderInstallInstructions()
 
@@ -594,13 +550,40 @@ export default function Onboarding() {
       <OnboardingCard
         icon={isGTM ? FileCode : Code}
         title="Install Tracking Script"
-        subtitle="Copy the unique SourceTrack tracking script generated for your website."
+        subtitle="Pick how you install, then copy the script generated for your website."
         showBack
-        onBack={() => setStep(3)}
+        onBack={() => setStep(2)}
       >
-        <button type="button" onClick={() => setStep(3)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-dark-text transition-colors mb-3">
+        <button type="button" onClick={() => setStep(2)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-dark-text transition-colors mb-3">
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
+
+        {/* METHOD TABS — was a whole separate step. Selecting one swaps the instructions below
+            instead of navigating, which is the merge. */}
+        <div role="tablist" aria-label="Installation method" className="flex gap-2 mb-4">
+          {INSTALL_METHODS.map((m) => {
+            const Icon = m.icon
+            const selected = installMethod === m.key
+            return (
+              <button
+                key={m.key}
+                role="tab"
+                aria-selected={selected}
+                onClick={() => handleInstallMethodSelect(m.key)}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-extrabold transition-colors ${
+                  selected
+                    ? 'border-st-lime bg-st-lime/10 dark:bg-st-lime/10 text-[#1F2323] dark:text-dark-primary'
+                    : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.02] text-[#6B7373] dark:text-gray-400 hover:border-st-lime/70'
+                }`}
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                <span className="truncate">{m.label}</span>
+                {m.recommended && <span className="hidden sm:inline text-[10px] font-bold bg-lime-100 text-lime-800 px-1.5 py-0.5 rounded-full">Recommended</span>}
+              </button>
+            )
+          })}
+        </div>
+
         {isGTM ? (
           <>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Connect SourceTrack via Google Tag Manager</p>
@@ -671,6 +654,12 @@ export default function Onboarding() {
             setError('')
             setLoading(true)
             try {
+              // The server only accepts `targetStep <= currentStep || targetStep === currentStep + 1`
+              // (api/routes/onboarding.js). Now that method selection is a TAB rather than a step
+              // advance, a user who keeps the default 'standard' is still at internal step 3, so
+              // jumping straight to 5 would be rejected. Persist the intermediate 4 first — it is
+              // idempotent (`<= currentStep` is allowed) for anyone who did switch tabs.
+              await saveOnboardingState(4, { install_method: installMethod })
               await saveOnboardingState(5, { install_method: installMethod })
               setStep(5)
             } catch (err) {
@@ -716,8 +705,11 @@ export default function Onboarding() {
         <div className="hidden md:flex items-start justify-center gap-8 lg:gap-12">
           {STEPPER_LABELS.map((label, i) => {
             const stepNum = i + 1
-            const isCompleted = stepNum < step
-            const isCurrent = stepNum === step
+            // Compare DISPLAY positions, not internal step numbers: the install dot covers internal
+            // 3 and 4, so `stepNum === step` would leave it un-highlighted at step 4.
+            const currentDisplay = displayIndexForStep(step)
+            const isCompleted = stepNum < currentDisplay
+            const isCurrent = stepNum === currentDisplay
             const clickable = isCompleted && !isCurrent
 
             return (
@@ -725,7 +717,7 @@ export default function Onboarding() {
                 key={stepNum}
                 type="button"
                 disabled={!clickable}
-                onClick={() => setStep(stepNum)}
+                onClick={() => setStep(internalStepForDisplay(stepNum))}
                 className={`relative flex flex-col items-center gap-2 min-w-[92px] transition-colors ${
                   clickable ? 'cursor-pointer group' : 'cursor-default'
                 }`}
@@ -776,9 +768,9 @@ export default function Onboarding() {
         {/* Mobile fallback: full stepper is hidden below md, show compact step text instead */}
         <div className="md:hidden text-center mb-6">
           <span className="inline-flex items-center px-3 py-1 rounded-full bg-white dark:bg-white/5 text-xs font-semibold text-[#6B7373] dark:text-gray-400 mb-2">
-            Step {step} of 6
+            Step {displayIndexForStep(step)} of {DISPLAY_STEP_COUNT}
           </span>
-          <p className="text-lg font-extrabold text-[#1F2323] dark:text-dark-primary">{STEP_TITLES[step]}</p>
+          <p className="text-lg font-extrabold text-[#1F2323] dark:text-dark-primary">{STEP_TITLES[displayIndexForStep(step)]}</p>
         </div>
         {renderStepContent()}
       </div>
