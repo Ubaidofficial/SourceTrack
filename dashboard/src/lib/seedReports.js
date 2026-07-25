@@ -2,24 +2,30 @@ import { fetchApi } from './api'
 
 const SEED_FLAG_KEY = 'sourcetrack_seeded_v1'
 
-// NO SEED MAY USE A GATED_METRICS METRIC. A saved report is stored by /reports/saved via
-// validateReportConfig, which checks the param VOCABULARY only — not servability — so a gated
-// metric seeds happily and then 422s `gated_dead_store` the moment the report is opened. Four
-// seeds did exactly that (ai_revenue_share, ai_conversions, conversion_rate, ai_conversion_share),
-// so every new leadgen signup got 2 of 5 canned reports dead on arrival. They are REMOVED, not
-// swapped: picking a replacement metric is a product-copy decision, not an engineering
-// substitution. Before adding a seed, check its metric against GATED_METRICS in
-// dashboard/src/lib/gate-constants.js.
+// EVERY SEED MUST BE A SERVED (model × groupBy × metric) SHAPE. A saved report is stored by
+// /reports/saved via validateReportConfig, which checks the param VOCABULARY only — not
+// servability — so an unservable shape seeds happily and then 422s `gated_dead_store` the moment
+// the report is opened. Five seeds did exactly that, for TWO INDEPENDENT reasons — so checking
+// only one axis is not enough:
+//   1. GATED METRIC — ai_revenue_share, ai_conversions, conversion_rate, ai_conversion_share are
+//      in GATED_METRICS (dashboard/src/lib/gate-constants.js). Removed in #404.
+//   2. UNSERVABLE DIM for the model — 'Conversion Trend' (last_touch × date × conversions) had a
+//      perfectly fine metric, but `date` is absent from PREAGG_DIMS
+//      (api/lib/report-config-validation.js), and last_touch + a pre-agg metric routes to the
+//      Supabase pre-agg, which cannot bucket by date. There is also no date pipe and no live
+//      touch-model path, so the shape has no backend at all.
+// Both were REMOVED, not re-pointed at a working metric/dim: choosing a replacement report is a
+// product-copy decision, not an engineering substitution.
+// Before adding a seed, check the whole SHAPE against gatedReportReason() in
+// api/lib/report-config-validation.js — not just the metric against GATED_METRICS.
 const ECOMMERCE = [
   { name: 'Revenue by Source', desc: 'Which channels drive the most revenue', model: 'last_touch', groupBy: 'source', metric: 'revenue', chartType: 'bar', datePreset: 30, filters: {} },
-  { name: 'Conversion Trend', desc: 'Track conversions over the last 30 days', model: 'last_touch', groupBy: 'date', metric: 'conversions', chartType: 'line', datePreset: 30, filters: {} },
   { name: 'Top Landing Pages', desc: 'Best-performing entry pages by revenue', model: 'first_touch', groupBy: 'landing_page', metric: 'revenue', chartType: 'bar', datePreset: 30, filters: {} },
   { name: 'Campaign Revenue', desc: 'Revenue breakdown by marketing campaign', model: 'last_touch', groupBy: 'campaign', metric: 'revenue', chartType: 'bar', datePreset: 90, filters: { min_conversions: '1' } }
 ]
 
 const SAAS = [
   { name: 'Signups by Source', desc: 'Which channels bring the most signups', model: 'last_touch', groupBy: 'source', metric: 'leads', chartType: 'bar', datePreset: 30, filters: {} },
-  { name: 'Conversion Trend', desc: 'Track conversions over the last 30 days', model: 'last_touch', groupBy: 'date', metric: 'conversions', chartType: 'line', datePreset: 30, filters: {} },
   { name: 'Landing Page Performance', desc: 'Conversion rates by landing page', model: 'first_touch', groupBy: 'landing_page', metric: 'conversions', chartType: 'bar', datePreset: 30, filters: {} },
   { name: 'Campaign Performance', desc: 'Leads by marketing campaign', model: 'last_touch', groupBy: 'campaign', metric: 'leads', chartType: 'bar', datePreset: 90, filters: { min_conversions: '1' } }
 ]
