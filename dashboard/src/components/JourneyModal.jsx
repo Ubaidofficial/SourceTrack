@@ -395,7 +395,15 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                   <div className="space-y-2 overflow-y-auto flex-1">
                     {sessions.map((session, sIdx) => {
                       const isOpen = expandedSessions[sIdx]
-                      const sessionEvents = session.events || []
+                      // $heartbeat is a page-exit beacon, not something the customer did — it has
+                      // no EVENT_ICONS entry and no label case, so it would render as an unlabeled
+                      // Clock row reading "$heartbeat" (the fallbacks at the icon/label lines below).
+                      // Filtered HERE, at the render layer, and deliberately NOT in journey.pipe:
+                      // journey.js feeds ONE events array to both this timeline AND deriveSessions
+                      // (:171) + sessionAggregates (:209), so removing heartbeats upstream would
+                      // freeze Journey's session durations at 0s while every other surface reported
+                      // real dwell time. The data layer keeps the data; presentation decides what shows.
+                      const sessionEvents = (session.events || []).filter(e => e.event !== '$heartbeat')
                       const filtered = filter === 'all'
                         ? sessionEvents
                         : filter === 'conversions'
