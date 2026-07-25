@@ -255,17 +255,17 @@ router.post('/preview', async (req, res) => {
 
     // Get recent event count (last 24h)
     let recentEventCount = 0
-    try {
-      // admin_preview_recent has NO pipe — REUSE events_health_day (byte-identical 24h count()).
-      // pipe col `cnt` (scalar) → nested [[cnt]] (consumer ecRows[0][0]). HogQL tag kept unchanged.
-      const ecRows = await readTb('events_health_day', { site_id: String(site.id) }, `
+    // NO inner catch (same reason as the preview-overview kpis): "0 events in 24h" is a real,
+    // actionable signal an admin acts on, so a dead pipe must fail the request rather than mint it.
+    // admin_preview_recent has NO pipe — REUSE events_health_day (byte-identical 24h count()).
+    // pipe col `cnt` (scalar) → nested [[cnt]] (consumer ecRows[0][0]). HogQL tag kept unchanged.
+    const ecRows = await readTb('events_health_day', { site_id: String(site.id) }, `
         SELECT count()
         FROM events
         WHERE properties.site_id = '${String(site.id).replace(/'/g, "''")}'
           AND timestamp >= now() - INTERVAL 24 HOUR
-      `, 'admin_preview_recent', tb => [[tb?.[0]?.cnt ?? 0]])
-      recentEventCount = Number(ecRows?.[0]?.[0]) || 0
-    } catch { /* non-critical */ }
+    `, 'admin_preview_recent', tb => [[tb?.[0]?.cnt ?? 0]])
+    recentEventCount = Number(ecRows?.[0]?.[0]) || 0
 
     logAction('preview_dashboard', 'site', site.site_key, { site_name: site.name })
 
@@ -322,10 +322,13 @@ router.get('/preview/:siteKeyOrId', async (req, res) => {
 
     // KPI summary: revenue, conversions, sessions, leads (last 30 days)
     let kpis = { revenue: 0, conversions: 0, sessions: 0, leads: 0 }
-    try {
-      // admin_preview_kpis pipe cols [revenue, conversions, sessions, leads] → nested single row
-      // [[rev, conv, sess, ld]] (consumer const [rev,conv,sess,ld] = kpiRows[0]).
-      const kpiRows = await readTb('admin_preview_kpis', { site_id: String(site.id) }, `
+    // NO inner catch: readTb throws on a dead pipe and the route's outer catch 500s. Swallowing it
+    // here rendered a failed read as a real "$0 revenue" (§6 no-fake-zeros). Nulling the field
+    // instead would not help — useDashboardData.js coerces a missing kpis object straight back to 0,
+    // so only a failed request keeps the fake zero off the screen.
+    // admin_preview_kpis pipe cols [revenue, conversions, sessions, leads] → nested single row
+    // [[rev, conv, sess, ld]] (consumer const [rev,conv,sess,ld] = kpiRows[0]).
+    const kpiRows = await readTb('admin_preview_kpis', { site_id: String(site.id) }, `
         SELECT
           sumIf(toFloatOrZero(toString(properties.conversion_value)), event = '$conversion') AS revenue,
           countIf(event = '$conversion') AS conversions,
@@ -334,23 +337,23 @@ router.get('/preview/:siteKeyOrId', async (req, res) => {
         FROM events
         WHERE properties.site_id = '${posthogSiteId}'
           AND timestamp >= now() - INTERVAL 30 DAY
-      `, 'admin_preview_kpis', tb => [[tb?.[0]?.revenue, tb?.[0]?.conversions, tb?.[0]?.sessions, tb?.[0]?.leads]])
-      if (kpiRows && kpiRows.length > 0) {
-        const [rev, conv, sess, ld] = kpiRows[0]
-        kpis = {
-          revenue: Number(rev) || 0,
-          conversions: Number(conv) || 0,
-          sessions: Number(sess) || 0,
-          leads: Number(ld) || 0
-        }
+    `, 'admin_preview_kpis', tb => [[tb?.[0]?.revenue, tb?.[0]?.conversions, tb?.[0]?.sessions, tb?.[0]?.leads]])
+    if (kpiRows && kpiRows.length > 0) {
+      const [rev, conv, sess, ld] = kpiRows[0]
+      kpis = {
+        revenue: Number(rev) || 0,
+        conversions: Number(conv) || 0,
+        sessions: Number(sess) || 0,
+        leads: Number(ld) || 0
       }
-    } catch { /* KPI query failed, keep zeroes */ }
+    }
 
     // Top 5 sources by revenue
     let sources = []
-    try {
-      // admin_preview_sources pipe cols [source, revenue, conversions] → consumer .map([source,revenue,conversions])
-      const srcRows = await readTb('admin_preview_sources', { site_id: String(site.id) }, `
+    // NO inner catch (same reason as kpis above): an empty array is indistinguishable from
+    // "this site has no revenue sources", so a dead pipe must fail the request, not mint [].
+    // admin_preview_sources pipe cols [source, revenue, conversions] → consumer .map([source,revenue,conversions])
+    const srcRows = await readTb('admin_preview_sources', { site_id: String(site.id) }, `
         SELECT
           COALESCE(properties.utm_source, 'direct') AS source,
           sumIf(toFloatOrZero(toString(properties.conversion_value)), event = '$conversion') AS revenue,
@@ -362,13 +365,12 @@ router.get('/preview/:siteKeyOrId', async (req, res) => {
         HAVING revenue > 0
         ORDER BY revenue DESC
         LIMIT 5
-      `, 'admin_preview_sources', tb => tb.map(r => [r.source, r.revenue, r.conversions]))
-      sources = (srcRows || []).map(([source, revenue, conversions]) => ({
-        dim_value: source,
-        revenue: Number(revenue) || 0,
-        conversions: Number(conversions) || 0
-      }))
-    } catch { /* non-critical */ }
+    `, 'admin_preview_sources', tb => tb.map(r => [r.source, r.revenue, r.conversions]))
+    sources = (srcRows || []).map(([source, revenue, conversions]) => ({
+      dim_value: source,
+      revenue: Number(revenue) || 0,
+      conversions: Number(conversions) || 0
+    }))
 
     // Install status
     let install = { status: 'unknown' }

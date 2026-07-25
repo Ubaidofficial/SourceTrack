@@ -5,13 +5,14 @@
 // D1b-1 left this reader UNTESTED; this file proves it serves from its pipes before D1b-2 removes
 // the HogQL fallback.
 //
-// 🔴 ERROR-SURFACE (D1b-2 finding — admin is a DEGRADER): EVERY admin read sits inside its own
-// inner try/catch (admin.js :253/:273/:352/:376/:399/:494) that swallows the read error and keeps
-// the endpoint at 200 with degraded data (install status 'error', kpis/sources zeroed). That inner
-// catch swallows the throw EVEN under FORCE_READ — so flipping readTb to an unconditional throw does
-// NOT turn admin loud, and does NOT close its fake zero at the endpoint. Closing it needs the inner
-// catches removed (out of D1b-2 scope). These tests PIN that degrade so it's a documented fact, not
-// an assumption; the prod TINYBIRD_FORCE_READ=true fake-zero closer does not reach admin.
+// ERROR-SURFACE — PARTLY CLOSED (was: "admin is a DEGRADER"). The D1b-2 finding was that all six
+// reads sat in inner try/catches that swallowed the read error and held the endpoint at 200 with
+// degraded data, so flipping readTb to an unconditional throw did not make admin loud. The three
+// catches that faked a SUCCESS VALUE (kpis all-zero, sources [], recent_event_count 0) have since
+// been removed — those reads now propagate to each route's outer catch and 500 honestly (§6).
+// The three that set an explicit `status: 'error'` are NOT fake successes and remain by design;
+// the DEGRADE tests below still pin those. See admin-tinybird-error-surface.test.js for the
+// per-catch inventory and the guard against the fake-success catches returning.
 
 import test from 'node:test'
 import assert from 'node:assert'
@@ -136,7 +137,7 @@ test('(overview-a) DISPATCH: kpis + sources + overview pipes served, tenant-scop
   assert.strictEqual(res.body.data.kpis.revenue, 100, 'kpis served from the pipe')
 })
 
-test('(overview-DEGRADE) admin_preview_kpis null -> 200 with kpis zeroed (inner catch swallows; HogQL DELETED)', async (t) => {
+test('(overview-LOUD) admin_preview_kpis null -> 500, no fake zeros (inner catch REMOVED; HogQL DELETED)', async (t) => {
   t.after(reset)
   installSupabase()
   const hog = []
@@ -146,10 +147,12 @@ test('(overview-DEGRADE) admin_preview_kpis null -> 200 with kpis zeroed (inner 
   })
   const res = mockRes()
   await overviewHandler({ params: { siteKeyOrId: 'site-00' } }, res)
-  // FINDING: admin.js:352 ('keep zeroes') swallows the throw -> kpis stay 0 at 200. Fake zero NOT
-  // closed by the flip; the inner catch must be removed to make it honest.
-  assert.strictEqual(res.statusCode, 200, 'admin degrades (inner catch), never 500')
-  assert.strictEqual(res.body.data.kpis.revenue, 0, 'kpis degrade to 0 (flagged fake zero survivor)')
+  // CLOSED: this test used to pin the 'keep zeroes' inner catch and said outright that the catch
+  // "must be removed to make it honest". It has been. The readTb throw now reaches the route's
+  // outer catch, so a dead pipe 500s instead of minting $0 revenue (§6).
+  assert.strictEqual(res.statusCode, 500, 'a dead KPI pipe must fail loudly, not degrade to zeros')
+  assert.strictEqual(res.body.success, false)
+  assert.strictEqual(res.body.data, null, 'no fabricated kpis may accompany the error')
   assert.strictEqual(hog.length, 0, 'HogQL was NOT called — the fallback is deleted')
 })
 
