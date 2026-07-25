@@ -602,13 +602,33 @@ export async function getAttribution(siteId, model, dateFrom, dateTo) {
 // channelFromEvent is imported from ./channel-classifier.js (shared with nightly job)
 export { channelFromEvent }
 
+// THE getSessionReport cache key — ONE builder, consumed by the read path AND the evict seam.
+//
+// These were two hand-written string templates that had to be kept byte-identical (the comment here
+// used to read "Must reproduce the cacheKey below EXACTLY" — an admission, not a safeguard). Every
+// discriminator added to the report has to reach BOTH, and a builder makes that structural instead
+// of remembered. `granularity` is the case in point: it is part of the ANSWER (day vs month buckets
+// are different results), so a key without it lets a daily and a monthly report share one slot for
+// the 60s TTL and serve whichever ran first. getFlexibleReport's own key already folds granularity
+// in (its `filterKey`), so the outer layer does NOT mask this — a monthly request misses the outer
+// cache, reaches getSessionReport, and would hit the daily entry.
+//
+// Anything that changes the RESULT must be an argument here. Same-shaped hazard still lives in
+// __evictFlexibleReportCache below ("Key reconstruction MUST match below") — not touched by this PR.
+function sessionCacheKey (siteId, dateFrom, dateTo, groupBy, metric, filters, groupBy2, granularity) {
+  return cacheKey(
+    `session:${groupBy}:${metric}:${JSON.stringify(filters)}:${groupBy2 || ''}:${granularity}`,
+    siteId, dateFrom, dateTo
+  )
+}
+
 // Test-only seam: evict getSessionReport's NodeCache entry for a report so a read-cutover
 // test can force a fresh pipe dispatch — otherwise a second run reads the first run's cached
 // result within the 60s TTL and masks the dispatch decision (session-report-read-cutover.test.js;
-// mirrors events-health's __evictHealthCache). Must reproduce the cacheKey below EXACTLY.
-// Never used on a live request path.
-export function __evictSessionReportCache (siteId, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null) {
-  cache.del(cacheKey(`session:${groupBy}:${metric}:${JSON.stringify(filters)}:${groupBy2 || ''}`, siteId, dateFrom, dateTo))
+// mirrors events-health's __evictHealthCache). Shares sessionCacheKey with the read path, so the
+// two can no longer drift. Never used on a live request path.
+export function __evictSessionReportCache (siteId, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null, granularity = 'day') {
+  cache.del(sessionCacheKey(siteId, dateFrom, dateTo, groupBy, metric, filters, groupBy2, granularity))
 }
 
 // ── getSessionReport dimension contract ──────────────────────────────────────────────
@@ -659,12 +679,12 @@ function assertSessionReportDim (dim, label) {
   }
 }
 
-export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null) {
+export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null, granularity = 'day') {
   // Fail fast + honestly, BEFORE any query work: an unsupported dim used to silently
   // collapse every session into one invented 'unknown' bucket.
   assertSessionReportDim(groupBy, 'group_by')
   assertSessionReportDim(groupBy2, 'group_by2')
-  const key = cacheKey(`session:${groupBy}:${metric}:${JSON.stringify(filters)}:${groupBy2 || ''}`, siteId, dateFrom, dateTo)
+  const key = sessionCacheKey(siteId, dateFrom, dateTo, groupBy, metric, filters, groupBy2, granularity)
   const cached = cache.get(key)
   if (cached) return cached
 
@@ -726,9 +746,11 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
 
   // Tinybird cutover (allowlist-gated; null -> HogQL fallback). SAME window bounds HogQL
   // uses; format for ClickHouse DateTime params. Pipe named rows -> HogQL positional order
-  // so the mapRows below is byte-identical. #155 central-normalizes the pipe timestamp at
-  // the boundary, so the started_at.split('T') daily bucket stays correct — no raw
-  // new Date()/.split('T') is reintroduced here.
+  // so the mapRows below is byte-identical. #155 central-normalizes the pipe timestamp at the
+  // boundary to ISO-UTC with an explicit Z — that is what makes the started_at date bucket correct.
+  // The dim mapper now reads it via `new Date(sess.started_at)` + dateBucket(): safe ONLY because of
+  // that normalization (the Z makes the parse unambiguous). Do not re-derive or re-parse a pipe
+  // timestamp anywhere else here — normalize at the boundary, consume the normalized value.
   const _tbFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
   const _tbTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
   const _tbPvParams = { site_id: String(siteId), date_from_ts: _tbFrom, date_to_ts: _tbTo }
@@ -833,7 +855,15 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
       // entry_country / entry_device_type (same convention as entry_source/medium/campaign).
       case 'country': return sess.entry_country || 'unknown'
       case 'device': return sess.entry_device_type || 'unknown'
-      case 'date': return sess.started_at.split('T')[0]
+      // Was `sess.started_at.split('T')[0]` — ALWAYS daily, so a month/quarter/week/year request
+      // returned DAILY buckets labelled as the requested granularity (§6 confident-wrong-bucket).
+      // Shares dateBucket with the two live conversion readers (#406) so all three honor the same
+      // five granularities. Safe on started_at: #155 normalizes the pipe timestamp to ISO-UTC with an
+      // explicit Z, so new Date() is unambiguous and dateBucket's UTC output is byte-identical to the
+      // old .split('T')[0] at day granularity (proven in date-granularity-buckets.test.js).
+      // A session is bucketed by its START (started_at = first event), so one spanning midnight
+      // belongs to the day/week it began — unchanged by this fix.
+      case 'date': return dateBucket(new Date(sess.started_at), granularity)
       /* istanbul ignore next — assertSessionReportDim gates every other dim */
       default: throw new Error(`getSessionReport: unsupported dimension "${dim}"`)
     }
@@ -1962,7 +1992,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     case 'conversion_sessions':
       // Session metrics are derived on read from pageview events.
       // They bypass the standard attribution SQL path and use getSessionReport.
-      return getSessionReport(siteId, dateFrom, dateTo, groupBy, metric, filters, groupBy2)
+      return getSessionReport(siteId, dateFrom, dateTo, groupBy, metric, filters, groupBy2, granularity)
     default:
       throw new Error(`Unknown metric: ${metric}`)
   }
