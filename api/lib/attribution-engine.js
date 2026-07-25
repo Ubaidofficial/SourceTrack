@@ -1643,16 +1643,37 @@ export async function getMultiTouchAttributionLive({
   return results.sort((a, b) => b.revenue - a.revenue)
 }
 
-// Test/harness seam: evict the exact getFlexibleReport cache entry so the A/B parity harness
-// recomputes each leg (mirrors __evictSessionReportCache). Key reconstruction MUST match below.
-export function __evictFlexibleReportCache (siteId, model, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null, granularity = 'day', attributionWindow = null, attributeBy = 'conversion_date') {
+// THE getFlexibleReport cache key — ONE builder, consumed by the read path AND the evict seam.
+//
+// Same de-duplication sessionCacheKey got in #407, for the same reason: these were two hand-written
+// templates the comment here used to require you to keep byte-identical ("Key reconstruction MUST
+// match below") — a rule to remember rather than a structure that enforces itself. Every
+// discriminator added to the report must reach BOTH sites; a builder makes that automatic.
+// Nothing had broken yet, so this is PURE de-duplication of a shape that is already correct today —
+// the concatenation below is character-for-character what both sites already produced.
+//
+// PRESERVED EXACTLY, deliberately not "improved": the parts are joined with NO delimiter, so this
+// key is only unambiguous because groupBy2 / granularity / attributionWindow / attributeBy all come
+// from fixed, validated vocabularies (ALLOWED_GROUPS / ALLOWED_GRANULARITY / ALLOWED_WINDOWS /
+// ALLOWED_ATTRIBUTE_BY). No real collision is constructible from those sets. Adding separators would
+// be a safety improvement but it CHANGES the key shape, which is out of scope for a dedup PR — if
+// you ever widen one of those vocabularies to free-form input, add the delimiters then.
+//
+// Anything that changes the RESULT must be an argument here.
+function flexibleReportCacheKey (siteId, model, dateFrom, dateTo, groupBy, metric, filters, groupBy2, granularity, attributionWindow, attributeBy) {
   const filterKey = JSON.stringify(filters) + groupBy2 + granularity + attributionWindow + attributeBy
-  cache.del(cacheKey(`${model}:${groupBy}:${metric}:${filterKey}`, siteId, dateFrom, dateTo))
+  return cacheKey(`${model}:${groupBy}:${metric}:${filterKey}`, siteId, dateFrom, dateTo)
+}
+
+// Test/harness seam: evict the exact getFlexibleReport cache entry so the A/B parity harness
+// recomputes each leg (mirrors __evictSessionReportCache). Shares flexibleReportCacheKey with the
+// read path, so the two can no longer drift.
+export function __evictFlexibleReportCache (siteId, model, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null, granularity = 'day', attributionWindow = null, attributeBy = 'conversion_date') {
+  cache.del(flexibleReportCacheKey(siteId, model, dateFrom, dateTo, groupBy, metric, filters, groupBy2, granularity, attributionWindow, attributeBy))
 }
 
 export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null, granularity = 'day', attributionWindow = null, attributeBy = 'conversion_date') {
-  const filterKey = JSON.stringify(filters) + groupBy2 + granularity + attributionWindow + attributeBy
-  const key = cacheKey(`${model}:${groupBy}:${metric}:${filterKey}`, siteId, dateFrom, dateTo)
+  const key = flexibleReportCacheKey(siteId, model, dateFrom, dateTo, groupBy, metric, filters, groupBy2, granularity, attributionWindow, attributeBy)
   const cached = cache.get(key)
   if (cached) return cached
 
