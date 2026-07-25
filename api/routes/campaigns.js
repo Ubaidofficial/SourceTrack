@@ -8,6 +8,29 @@ import { isValidTimezone, getLocalDateString, getNow } from '../lib/utils.js'
 const ALLOWED_DIMS = new Set(['source', 'medium', 'campaign', 'ai_source'])
 const MAX_DAYS = 365
 
+// ROUTE-SCOPED model allowlist — deliberately NARROWER than ALLOWED_MODELS (all 9).
+//
+// WHY THIS ROUTE AND NOT THE SHARED SET: this route asks servedByDeployedBackend() per metric, which
+// answers "does a live backend serve this shape?" — and for metric='sessions' on the 5 non-touch
+// models it answers YES while the VALUE is fabricated. The multi-touch and ai_platforms LIVE readers
+// (attribution-engine.js — `if (metric !== 'revenue' && metric !== 'conversions') item[metric] = …
+// conversions`) emit the CONVERSION count, or a fractional sum of it, under the `sessions` key. So the
+// Visitors column would render conversions as visitors: a §6 confident-wrong number on the money-
+// adjacent rail, and one the allowlist cannot catch because a real allowlisted pipe does back the shape.
+//
+// ALLOWED_MODELS stays untouched — it is correct for the Report Builder, where gatedReportReason()
+// (not servedByDeployedBackend) denies these shapes via GATED_METRICS. The gap is specific to the ONE
+// route that both bypasses that denylist and accepts a caller-supplied model.
+//
+// Not currently reachable from the UI (Campaigns.jsx hardcodes model=last_touch and
+// campaignDimensions.js narrows the tab bar to `campaign`), so this is a hardening fix, not a live-bug
+// fix — but the API accepts ?model= from any direct caller, and API-key auth would make that a real
+// surface. Fail closed at the edge instead of relying on the frontend to keep sending the safe value.
+//
+// To widen this: teach the live readers to count DISTINCT VISITORS for `sessions` first. Adding a model
+// here without that reintroduces the fabrication.
+const ROUTE_ALLOWED_MODELS = new Set(['first_touch', 'last_touch'])
+
 function escapeCsv(val) {
   if (val === null || val === undefined) return ''
   const str = String(val)
@@ -27,8 +50,23 @@ async function getCampaignsData(req) {
 
   const model = req.query.model || 'last_touch'
   // `model` was FREE-FORM from the query and never validated — it reached getFlexibleReport raw.
+  // Checked FIRST so an unknown model still answers "Invalid model" (a client bug), and only a
+  // KNOWN-but-unsupported-here model falls to the route-scoped reason below.
   if (!ALLOWED_MODELS.has(model)) {
     const err = new Error(`Invalid model. Must be one of: ${[...ALLOWED_MODELS].join(', ')}`)
+    err.statusCode = 400
+    throw err
+  }
+  // See ROUTE_ALLOWED_MODELS above. This rejects the other SEVEN, for two different reasons:
+  //   - 5 FABRICATE this route's Visitors column (sessions = a conversion count): the 4 multi-touch
+  //     models reached 200 at dimension campaign/source/medium, ai_platforms at source/ai_source.
+  //     servedByDeployedBackend() cannot detect it — a real allowlisted pipe backs the shape, the
+  //     VALUE is what is wrong. Rejecting beats rendering an invented number (§6).
+  //   - 2 (the *_non_direct pair) had NO backend at any dimension and were already denied 422
+  //     gated_dead_store. They now answer 400 with an earlier, clearer reason. Intended, not a
+  //     regression — the request was never servable here.
+  if (!ROUTE_ALLOWED_MODELS.has(model)) {
+    const err = new Error(`The "${model}" attribution model isn't supported on this page. Must be one of: ${[...ROUTE_ALLOWED_MODELS].join(', ')}.`)
     err.statusCode = 400
     throw err
   }
