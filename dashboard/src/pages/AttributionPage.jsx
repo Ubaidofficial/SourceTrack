@@ -30,7 +30,7 @@ export default function AttributionPage() {
   const {
     site, navigate, previewMode, timeRange, setTimeRange, liveCount, freshnessLabel, handleExport,
     isLoading, isError, error, refetch,
-    hasRevenue, isGscConnected, activeResults, topPagesResults, aiSourceRows,
+    hasRevenue, isGscConnected, activeResults, topPagesResults, aiSourceRows, analyticsUnavailable,
     channelTrendResults, channelTrendData, chartOpts, convTooltipRows, recentConversions,
     totalConversions, setupIncomplete,
   } = useDashboardData()
@@ -119,7 +119,14 @@ export default function AttributionPage() {
                 First-touch attribution
               </span>
             </div>
-            {activeResults.length === 0 ? (
+            {analyticsUnavailable ? (
+              /* A failed read is NOT "no conversions" (§6). The backend flags it; render it
+                 honestly instead of an empty state the user would act on. */
+              <div className="py-8 text-center">
+                <Zap className="w-8 h-8 text-gray-200 dark:text-gray-700 mx-auto mb-2" />
+                <p className="text-sm text-st-gray dark:text-gray-400">Attribution is temporarily unavailable. This is a loading problem on our side, not a gap in your data.</p>
+              </div>
+            ) : activeResults.length === 0 ? (
               <div className="py-8 text-center">
                 <Zap className="w-8 h-8 text-gray-200 dark:text-gray-700 mx-auto mb-2" />
                 <p className="text-sm text-st-gray dark:text-gray-400">No conversions in this date range.</p>

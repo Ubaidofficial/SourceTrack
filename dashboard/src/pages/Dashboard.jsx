@@ -73,7 +73,7 @@ export default function Dashboard() {
     models, modelRevenues, revTrendData, channelTrendResults, channelTrendData,
     revTooltipRows, convTooltipRows, chartOpts, hasRevenue, isGscConnected,
     trafficKpis, trafficVisitors, trafficPageviews, trafficSources, trafficTopPages,
-    hasConversions, hasTraffic, setupIncomplete,
+    hasConversions, hasTraffic, setupIncomplete, analyticsUnavailable,
   } = useDashboardData()
 
   // Already conversions-only and newest-first from the endpoint; no client-side filter or re-sort.
@@ -180,6 +180,15 @@ export default function Dashboard() {
                   >
                     <Zap className="w-3.5 h-3.5" /> Go to Install Guide
                   </button>
+                </div>
+              ) : analyticsUnavailable ? (
+                /* ── STATE (b0): the conversion read FAILED. Not the same as "no
+                   conversions" — telling a user to configure conversions they already
+                   have is the §6 fake-empty-state violation (#278 / #413 shape). ── */
+                <div className="bg-white dark:bg-[#1A1D1D] rounded-2xl border border-gray-200 dark:border-[#2A2E2E] p-6">
+                  <p className="text-sm text-st-gray dark:text-gray-400">
+                    Conversion data is temporarily unavailable. This is a loading problem on our side — your tracking and your recorded conversions are unaffected.
+                  </p>
                 </div>
               ) : !hasConversions ? (
                 /* ── STATE (b): traffic exists, zero conversion events ─────────── */

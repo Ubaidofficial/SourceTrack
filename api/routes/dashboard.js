@@ -79,7 +79,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
 
     // 2 Supabase + 4 PostHog in parallel; bounce_rate runs after (separate await)
     const [
-      { data: acRows },
+      { data: acRows, error: acRowsError },
       { data: acRowsPrior },
       installRows,
       alertRows,
@@ -88,7 +88,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     ] = await Promise.all([
       supabase
         .from('attributed_conversions')
-        .select('first_touch_source, first_touch_channel, last_touch_channel, first_touch_campaign, conversion_value, conversion_type, attribution_status, conversion_date, status, touchpoint_count, conversion_timestamp, distinct_id, anonymous_id')
+        .select('first_touch_source, first_touch_channel, last_touch_channel, first_touch_campaign, conversion_value, conversion_type, conversion_date, status, touchpoint_count, conversion_timestamp, distinct_id, anonymous_id')
         .eq('site_id', req.site.id)
         .gte('conversion_date', currentPadded.from)
         .lte('conversion_date', currentPadded.to),
@@ -153,6 +153,15 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       `, 'dash_top_pages', tb => tb.map(r => [r.page_url, r.count]))
     ])
 
+    // A rejected conversion read must NEVER fall through as an empty result set: `acRows`
+    // is undefined both when the site genuinely has no conversions AND when PostgREST
+    // rejected the select (one phantom column rejects the WHOLE query). Treating those the
+    // same is what rendered $1,777.76 of real revenue as "No conversions in this date
+    // range" (KNOWN_ISSUES #15 / #278, recurring). Throw to the outer catch, which returns
+    // analytics_unavailable — honestly unavailable, never a fabricated zero (§6).
+    if (acRowsError) {
+      throw new Error(`attributed_conversions read failed: ${acRowsError.message || acRowsError}`)
+    }
     const rows = acRows || []
     const priorRows = acRowsPrior || []
 
