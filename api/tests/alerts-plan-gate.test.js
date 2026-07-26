@@ -17,8 +17,11 @@ test('Alerts plan gate — feature matrix', async (t) => {
     assert.strictEqual(hasFeature('trial', 'alerts'), false)
   })
 
-  await t.test('starter plan is blocked', () => {
-    assert.strictEqual(hasFeature('starter', 'alerts'), false)
+  // Repackage (plan-features.js): tiers now differentiate on volume, not
+  // features — starter matches growth on every FEATURE_MATRIX row, including
+  // alerts. Was blocked; now allowed.
+  await t.test('starter plan is allowed', () => {
+    assert.strictEqual(hasFeature('starter', 'alerts'), true)
   })
 
   await t.test('growth plan is allowed', () => {
@@ -64,10 +67,10 @@ test('Alerts plan gate — requireFeature returns correct payload', async (t) =>
     assert.strictEqual(block.upgrade.current_plan, 'trial')
   })
 
-  await t.test('starter plan returns 402 payload', () => {
+  // Repackage: starter now matches growth (allowed), so requireFeature returns null.
+  await t.test('starter plan returns null (allowed)', () => {
     const block = requireFeature('starter', 'alerts', 'Alerts')
-    assert.ok(block, 'should return a block payload for starter')
-    assert.strictEqual(block.upgrade.current_plan, 'starter')
+    assert.strictEqual(block, null)
   })
 
   await t.test('growth plan returns null (allowed)', () => {

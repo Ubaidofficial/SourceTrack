@@ -632,22 +632,23 @@ test('checkSiteCreationLimit - plan site limit enforcement helper', async (t) =>
     assert.strictEqual(result.limit, 1)
   })
 
+  // Repackage (plan-features.js Change 4): growth's sites limit is now 10 (was 3).
   await t.test('growth plan allows below limit', async () => {
     mockSitesData = [{ plan: 'growth' }]
     const result = await checkSiteCreationLimit({ company_id: 'company-123' })
     assert.strictEqual(result.allowed, true)
     assert.strictEqual(result.count, 1)
-    assert.strictEqual(result.limit, 3)
+    assert.strictEqual(result.limit, 10)
     assert.strictEqual(result.scopeType, 'company')
     assert.strictEqual(lastQueryArgs.company_id, 'company-123')
   })
 
   await t.test('growth plan blocks at limit', async () => {
-    mockSitesData = [{ plan: 'growth' }, { plan: 'free' }, { plan: 'free' }]
+    mockSitesData = [{ plan: 'growth' }, ...Array.from({ length: 9 }, () => ({ plan: 'free' }))]
     const result = await checkSiteCreationLimit({ company_id: 'company-123' })
     assert.strictEqual(result.allowed, false)
-    assert.strictEqual(result.count, 3)
-    assert.strictEqual(result.limit, 3)
+    assert.strictEqual(result.count, 10)
+    assert.strictEqual(result.limit, 10)
   })
 
   await t.test('scale/unlimited plan is not blocked', async () => {
@@ -1825,37 +1826,42 @@ test('claimPageviewUsage — pageview limit enforcement helper (140G-4)', async 
     client.rpc = originalRpc
   })
 
+  // Repackage (plan-features.js Change 3): PLAN_DEFAULT_PV_LIMIT.free is now
+  // 10_000 (was 5_000). NOTE: this constant is currently shadowed in production
+  // by sites.pv_limit's Postgres COLUMN DEFAULT of 5000 (baseline_schema.sql:900) —
+  // see the PR description — but this unit test exercises the function in
+  // isolation (no per-site override passed), so it correctly reflects the code.
   await t.test('free plan below limit: allowed true, counter increments', async () => {
     mockRpcResult = [{ allowed: true, current_count: 42 }]
     const result = await claimPageviewUsage({ id: 'site-123', plan: 'free' })
     assert.strictEqual(result.allowed, true)
     assert.strictEqual(result.count, 42)
-    assert.strictEqual(result.limit, 5000) // PLAN_DEFAULT_PV_LIMIT.free
+    assert.strictEqual(result.limit, 10000) // PLAN_DEFAULT_PV_LIMIT.free
     assert.strictEqual(lastRpcArgs.p_site_id, 'site-123')
-    assert.strictEqual(lastRpcArgs.p_limit, 5000)
+    assert.strictEqual(lastRpcArgs.p_limit, 10000)
     assert.ok(lastRpcArgs.p_month.match(/^[0-9]{4}-[0-9]{2}$/), 'month must be YYYY-MM format')
     assert.strictEqual(rpcCallCount, 1)
   })
 
   await t.test('free plan at limit: allowed false, does not increment', async () => {
-    mockRpcResult = [{ allowed: false, current_count: 5000 }]
+    mockRpcResult = [{ allowed: false, current_count: 10000 }]
     const result = await claimPageviewUsage({ id: 'site-123', plan: 'free' })
     assert.strictEqual(result.allowed, false)
-    assert.strictEqual(result.count, 5000)
-    assert.strictEqual(result.limit, 5000)
+    assert.strictEqual(result.count, 10000)
+    assert.strictEqual(result.limit, 10000)
     assert.strictEqual(rpcCallCount, 1)
   })
 
   await t.test('per-site pv_limit override is used over plan default', async () => {
     mockRpcResult = [{ allowed: true, current_count: 1 }]
-    // starter plan default is 50000, but pv_limit override is 10000
+    // starter plan default is 250000, but pv_limit override is 10000
     const result = await claimPageviewUsage({ id: 'site-123', plan: 'starter', pv_limit: 10000 })
     assert.strictEqual(result.limit, 10000)
     assert.strictEqual(lastRpcArgs.p_limit, 10000)
   })
 
   await t.test('sequential claims reach then block at limit', async () => {
-    let mockCount = 4999
+    let mockCount = 9999
     mockRpcFn = (args) => {
       if (mockCount < args.p_limit) {
         mockCount++
@@ -1864,15 +1870,15 @@ test('claimPageviewUsage — pageview limit enforcement helper (140G-4)', async 
       return { data: [{ allowed: false, current_count: mockCount }], error: null }
     }
 
-    // Call 1: allowed (4999 -> 5000)
+    // Call 1: allowed (9999 -> 10000)
     const res1 = await claimPageviewUsage({ id: 'site-123', plan: 'free' })
     assert.strictEqual(res1.allowed, true)
-    assert.strictEqual(res1.count, 5000)
+    assert.strictEqual(res1.count, 10000)
 
-    // Call 2: blocked (at 5000)
+    // Call 2: blocked (at 10000)
     const res2 = await claimPageviewUsage({ id: 'site-123', plan: 'free' })
     assert.strictEqual(res2.allowed, false)
-    assert.strictEqual(res2.count, 5000)
+    assert.strictEqual(res2.count, 10000)
     assert.strictEqual(rpcCallCount, 2)
   })
 
@@ -2854,7 +2860,8 @@ test('billingWebhookHandler — Founder checkout persists growth + retry recover
   })
 
   // Bug A + B: Stripe retries the SAME event.id; it must re-process and persist
-  // plan='growth', pv_limit=150000, stripe_customer_id, stripe_subscription_id.
+  // plan='growth', pv_limit=1000000 (PLAN_DEFAULT_PV_LIMIT.growth — repackage
+  // Change 3, was 150000), stripe_customer_id, stripe_subscription_id.
   await t.test('retry of the same event recovers and writes full billing state', async () => {
     updateError = false
     const m = mockReqRes()
@@ -2862,7 +2869,7 @@ test('billingWebhookHandler — Founder checkout persists growth + retry recover
     assert.strictEqual(m.out.statusCode, 200, 'retry should succeed, not be skipped as duplicate')
     assert.ok(lastUpdate, 'sites.update() must have been called on retry')
     assert.strictEqual(lastUpdate.plan, 'growth')
-    assert.strictEqual(lastUpdate.pv_limit, 150000)
+    assert.strictEqual(lastUpdate.pv_limit, 1000000)
     assert.strictEqual(lastUpdate.stripe_customer_id, 'cus_1')
     assert.strictEqual(lastUpdate.stripe_subscription_id, 'sub_1')
   })
