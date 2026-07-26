@@ -11,9 +11,10 @@ import { normalizeSource } from '../lib/source-normalizer.js'
 // PR2 refund-aware reads. (A) A refund (conversion_type='refund') is a NEGATIVE-value
 // row; its revenue must net (SUM keeps it) but it must NOT ADD to any conversion
 // COUNT — the original purchase is still the conversion that happened. (B) An
-// UNRESOLVED refund (attribution_status='refund_unresolved') has a phantom
-// distinct_id → NULL first_touch → 'direct'; its revenue is routed to this explicit
-// line instead of debiting 'direct' (or any acquiring source) it never earned.
+// UNRESOLVED refund (custom_properties.refund_attribution='unresolved', written by
+// nightly-attribution.js) has a phantom distinct_id → NULL first_touch → 'direct';
+// its revenue is routed to this explicit line instead of debiting 'direct' (or any
+// acquiring source) it never earned.
 const UNATTRIBUTED_REFUNDS = 'Unattributed refunds'
 
 
@@ -88,7 +89,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     ] = await Promise.all([
       supabase
         .from('attributed_conversions')
-        .select('first_touch_source, first_touch_channel, last_touch_channel, first_touch_campaign, conversion_value, conversion_type, conversion_date, status, touchpoint_count, conversion_timestamp, distinct_id, anonymous_id')
+        .select('first_touch_source, first_touch_channel, last_touch_channel, first_touch_campaign, conversion_value, conversion_type, conversion_date, status, touchpoint_count, conversion_timestamp, distinct_id, anonymous_id, custom_properties')
         .eq('site_id', req.site.id)
         .gte('conversion_date', currentPadded.from)
         .lte('conversion_date', currentPadded.to),
@@ -204,7 +205,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       // PR2 (A)/(B): a refund nets revenue but never adds to a COUNT; an unresolved
       // refund's revenue is bucketed separately (not onto 'direct'/any source).
       const isRefund = r.conversion_type === 'refund'
-      const isUnresolvedRefund = isRefund && r.attribution_status === 'refund_unresolved'
+      const isUnresolvedRefund = isRefund && r.custom_properties?.refund_attribution === 'unresolved'
 
       totalRevenue += val
       if (!isRefund) totalConversions++            // (A)

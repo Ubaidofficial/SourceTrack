@@ -6,9 +6,17 @@
 // and CVR denominators/numerators are unaffected.
 //
 // Fixtures are in-process and webhook-shaped: the RESOLVED refund shares the
-// purchase's distinct_id + real source (nightly-derived); the UNRESOLVED refund is
-// the phantom (attribution_status='refund_unresolved', NULL first_touch). We do NOT
-// use the 12,202 generate_events.js seeded refunds.
+// purchase's distinct_id + real source (nightly-derived); the UNRESOLVED refund is a
+// phantom REFUND (an orphan Stripe event with no resolvable original) marked via
+// custom_properties.refund_attribution='unresolved' + NULL first_touch — the REAL
+// marker nightly-attribution.js writes (nightly-attribution.js:1025-1041), on the
+// REAL custom_properties jsonb column (baseline_schema.sql:443). This is not to be
+// confused with `attribution_status`, a phantom COLUMN that does not exist on
+// attributed_conversions at all (see dashboard-overview-conversion-truth.test.js and
+// unresolved-refund-not-direct.test.js) — a prior version of this file's fixture used
+// that non-existent column name, which a mock happily echoes back regardless of
+// whether Postgres could ever produce it. We do NOT use the 12,202 generate_events.js
+// seeded refunds.
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -46,22 +54,36 @@ const priorIso = PRIOR.toISOString()
 const priorDay = priorIso.slice(0, 10)
 
 // purchase +100 on tiktok; RESOLVED refund -40 (same visitor v1, real source tiktok);
-// UNRESOLVED refund -30 (phantom, NULL first_touch, refund_unresolved).
+// UNRESOLVED refund -30 (phantom refund, NULL first_touch, custom_properties.refund_attribution='unresolved').
 const CURRENT_ROWS = [
-  { distinct_id: 'v1', anonymous_id: 'v1', conversion_type: 'purchase', conversion_value: 100, attribution_status: null,
+  { distinct_id: 'v1', anonymous_id: 'v1', conversion_type: 'purchase', conversion_value: 100,
     first_touch_source: 'tiktok', first_touch_channel: 'Paid Social', last_touch_channel: 'Paid Social', first_touch_campaign: 'q3', status: null, conversion_date: day, conversion_timestamp: iso },
-  { distinct_id: 'v1', anonymous_id: 'v1', conversion_type: 'refund', conversion_value: -40, attribution_status: null,
+  { distinct_id: 'v1', anonymous_id: 'v1', conversion_type: 'refund', conversion_value: -40,
     first_touch_source: 'tiktok', first_touch_channel: 'Paid Social', last_touch_channel: 'Paid Social', first_touch_campaign: 'q3', status: null, conversion_date: day, conversion_timestamp: iso },
-  { distinct_id: 'stripe_refund:pi_x', anonymous_id: null, conversion_type: 'refund', conversion_value: -30, attribution_status: 'refund_unresolved',
+  { distinct_id: 'stripe_refund:pi_x', anonymous_id: null, conversion_type: 'refund', conversion_value: -30,
+    custom_properties: { refund_attribution: 'unresolved' },
     first_touch_source: null, first_touch_channel: null, last_touch_channel: null, first_touch_campaign: null, status: null, conversion_date: day, conversion_timestamp: iso }
 ]
 
 // PRIOR period: a purchase + a refund, both ~45d back. prevConversions must be 1.
 const PRIOR_ROWS = [
-  { distinct_id: 'v2', anonymous_id: 'v2', conversion_type: 'purchase', conversion_value: 50, attribution_status: null,
+  { distinct_id: 'v2', anonymous_id: 'v2', conversion_type: 'purchase', conversion_value: 50,
     first_touch_source: 'google', first_touch_channel: 'Paid Search', last_touch_channel: 'Paid Search', first_touch_campaign: null, status: null, conversion_date: priorDay, conversion_timestamp: priorIso },
-  { distinct_id: 'v2', anonymous_id: 'v2', conversion_type: 'refund', conversion_value: -20, attribution_status: null,
+  { distinct_id: 'v2', anonymous_id: 'v2', conversion_type: 'refund', conversion_value: -20,
     first_touch_source: 'google', first_touch_channel: 'Paid Search', last_touch_channel: 'Paid Search', first_touch_campaign: null, status: null, conversion_date: priorDay, conversion_timestamp: priorIso }
+]
+
+// NEGATIVE case: a refund carrying ONLY the phantom `attribution_status` field (no
+// custom_properties at all). PostgREST can never produce this shape in prod — the
+// column doesn't exist on attributed_conversions — but a mock that echoes fixtures
+// verbatim would happily "resolve" it if dashboard.js ever regressed back to reading
+// attribution_status. Proves the fix reads the REAL marker, not the phantom one.
+const PHANTOM_MARKER_ROWS = [
+  { distinct_id: 'v3', anonymous_id: 'v3', conversion_type: 'purchase', conversion_value: 100,
+    first_touch_source: 'tiktok', first_touch_channel: 'Paid Social', last_touch_channel: 'Paid Social', first_touch_campaign: 'q3', status: null, conversion_date: day, conversion_timestamp: iso },
+  { distinct_id: 'stripe_refund:pi_y', anonymous_id: null, conversion_type: 'refund', conversion_value: -15,
+    attribution_status: 'refund_unresolved',
+    first_touch_source: null, first_touch_channel: null, last_touch_channel: null, first_touch_campaign: null, status: null, conversion_date: day, conversion_timestamp: iso }
 ]
 
 // Chainable Supabase stub. The overview handler queries attributed_conversions 3x
@@ -134,6 +156,27 @@ test('dashboard/overview: (A) refunds not counted, revenue nets; (B) unresolved 
   // (CVR) denominator + numerator unaffected: converters = {v1} only (1), sessions = 10.
   // If the phantom refund had leaked into converters, size would be 2 and the rate would differ.
   assert.equal(kpis.conversion_rate, 10, 'converters excludes refunds (1 converter / 10 sessions = 10%)')
+})
+
+// 🔴 NEGATIVE CASE — the important one. A refund carrying ONLY the phantom
+// `attribution_status` field (no custom_properties) must NOT be treated as unresolved.
+// This file's stated purpose (line 4-6 above) has been green through the entire outage:
+// its old fixture set `attribution_status: 'refund_unresolved'`, which a mock echoes back
+// regardless of whether Postgres could ever produce it — so this suite proved nothing
+// about the real bug even across #424, a PR specifically about phantom columns. If
+// dashboard.js ever regresses to reading attribution_status again, this is what catches it.
+test('dashboard/overview: a refund with ONLY the phantom attribution_status field (no custom_properties) is NOT treated as unresolved', async (t) => {
+  const restoreDb = installSupabase(PHANTOM_MARKER_ROWS)
+  const restoreTb = installTb()
+  t.after(() => { restoreDb(); restoreTb() })
+
+  const res = mockRes()
+  await overviewHandler(req(), res)
+  assert.equal(res.statusCode, 200, `body: ${JSON.stringify(res.body).slice(0, 300)}`)
+  const { sources } = res.body.data
+
+  const unattr = sources.find(s => s.dim_value === 'Unattributed refunds')
+  assert.equal(unattr, undefined, 'attribution_status is not a real column and must never route a refund to "Unattributed refunds"')
 })
 
 test('leads/: (A) totals exclude refunds from count + distinct converters; revenue still nets', async (t) => {

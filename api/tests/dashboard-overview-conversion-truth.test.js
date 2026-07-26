@@ -47,7 +47,11 @@ const REAL_ATTRIBUTED_CONVERSIONS_COLUMNS = new Set([
   'last_touch_source', 'last_touch_medium', 'last_touch_campaign', 'last_touch_channel',
   'channel', 'ai_influenced_source', 'status', 'touchpoint_count',
   'provider', 'stitching_method', 'original_conversion_event_id', 'external_event_id',
-  'created_at', 'updated_at'
+  'created_at', 'updated_at',
+  // Verified real jsonb column: baseline_schema.sql:443 + migration 20260519000005.
+  // nightly-attribution.js:1025-1041 writes refund_attribution ('unresolved'|'inherited')
+  // into this column — the real unresolved-refund marker (see unresolved-refund-not-direct.test.js).
+  'custom_properties'
 ])
 const PHANTOM = 'attribution_status'
 
