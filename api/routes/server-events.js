@@ -88,6 +88,11 @@ router.post('/event', trackGlobalIpLimit, async (req, res) => {
       req.body.conversion_value != null ||
       req.body.conversion_type != null
 
+    // Set by the pageview cap below when the site is past its plan limit but still
+    // collecting, so the success response can carry the marker. Conversions do not touch
+    // the pageview meter, so it stays false on that branch.
+    let overQuota = false
+
     if (isConversion) {
       // Fail-open on a limit-check DB error, matching every sibling: a limit-check outage
       // must not become an ingestion outage.
@@ -137,22 +142,26 @@ router.post('/event', trackGlobalIpLimit, async (req, res) => {
       // api/tests/server-events-pageview-cap.test.js — do not "fix" this in a consistency pass.
       //
       // Runs BEFORE storeIdentityLink below, so a rejected event leaves nothing behind.
-      let allowed = true
+      let hardCapped = false
       try {
         // Explicit id for the same reason the conversion gate above needs it: the `sites` select
         // returns no id, claimPageviewUsage THROWS without one, and the fail-open catch would
         // swallow that throw — yielding a gate that silently never blocks.
         const limitCheck = await claimPageviewUsage({ id: siteId, plan: site.plan, pv_limit: site.pv_limit })
-        if (!limitCheck.allowed) allowed = false
+        // Only the HARD CAP drops. Past the soft (plan) limit the event is still ingested and
+        // flagged — dropping it would destroy it permanently (§6).
+        if (limitCheck.state === 'hard_cap') hardCapped = true
+        overQuota = limitCheck.overQuota
       } catch (limitErr) {
         // Fail-open, matching every sibling and pageview-limits.js:12: a limit-check outage must
         // not become an ingestion outage.
         console.error('[server-events] Pageview limit check failed, failing open:', limitErr.message || limitErr)
       }
 
-      if (!allowed) {
+      if (hardCapped) {
         // Same first-party-API contract #419 pinned: a 402 a client can read and act on, never a
         // 200 {received:true} while dropping the event (the #413 fake-success violation).
+        // Shape unchanged — callers branch on error_code.
         return res.status(402).json({
           success: false,
           data: null,
@@ -244,7 +253,7 @@ router.post('/event', trackGlobalIpLimit, async (req, res) => {
       .update({ last_used_at: new Date().toISOString() })
       .eq('id', apiKey.id)
 
-    return res.status(200).json({ success: true, data: { received: true }, error: null })
+    return res.status(200).json({ success: true, data: { received: true, ...(overQuota ? { over_quota: true } : {}) }, error: null })
   } catch (err) {
     console.error(err)
     return res.status(500).json({ success: false, data: null, error: 'Server event failed' })

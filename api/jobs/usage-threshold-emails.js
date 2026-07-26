@@ -31,8 +31,15 @@ function buildEmailHtml({ domain, threshold, used, limit, plan }) {
   const headline = isAtCap
     ? `You've hit your monthly pageview limit`
     : `You're at ${threshold}% of your monthly pageview limit`
+  // §6: this used to say "Tracking on X has paused until your limit resets next month".
+  // That became FALSE when ingestion started collecting past the soft limit (see
+  // api/lib/pageview-limits.js): tracking does NOT pause at the plan limit any more — every
+  // event is still captured up to the hard-cap safety valve. Telling a customer their data
+  // collection stopped when it did not is exactly the fabricated-status class §6 forbids,
+  // and it is the more damaging direction of the error: they would assume a gap exists and
+  // distrust numbers that are in fact complete.
   const subhead = isAtCap
-    ? `Tracking on ${domain} has paused until your limit resets next month — or you upgrade.`
+    ? `${domain} has used ${used.toLocaleString()} of ${limit.toLocaleString()} pageviews this month. We are still collecting your traffic — no data is being dropped — but you are over your plan's allowance. Upgrade to raise it.`
     : `${domain} has used ${used.toLocaleString()} of ${limit.toLocaleString()} pageviews this month.`
   const dashboardUrl = (process.env.FRONTEND_URL || 'https://app.sourcetrack.ai').replace(/\/+$/, '')
 

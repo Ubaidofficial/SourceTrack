@@ -326,18 +326,24 @@ export async function track(req, res) {
     // to avoid burning quota for events that would have been dropped.
     // Fail-open on RPC/DB errors: a counter failure must never block tracking.
     const eventName = req.body?.event || '$pageview'
+    let overQuota = false
     if (eventName === '$pageview') {
       try {
         const pvCheck = await claimPageviewUsage(req.site)
-        if (!pvCheck.allowed) {
-          console.warn('[track] Pageview limit reached for site', req.site?.id, '— limit:', pvCheck.limit, '— skipping capture')
-          logOutcome('limit-blocked', ` reason=pageview_limit limit=${pvCheck.limit}`)
+        // Only the HARD CAP drops. Past the soft (plan) limit we keep collecting and flag
+        // it: dropping would destroy the event permanently, and a gap in an attribution
+        // stream produces confidently WRONG numbers rather than missing ones (§6).
+        if (pvCheck.state === 'hard_cap') {
+          console.warn('[track] Pageview HARD CAP reached for site', req.site?.id, '— limit:', pvCheck.limit, '— skipping capture')
+          logOutcome('limit-blocked', ` reason=pageview_hard_cap limit=${pvCheck.limit} hard_cap=${pvCheck.hardCap}`)
+          // 402 shape unchanged — clients branch on limit_reached.
           return res.status(402).json({
             success: false,
             data: { received: false, limit_reached: true },
             error: 'Monthly pageview limit reached'
           })
         }
+        overQuota = pvCheck.overQuota
       } catch (pvErr) {
         // Fail open — DB/RPC error must not block tracking. Log clearly per 140G-4 tradeoff.
         console.error('[track] Pageview limit check failed, failing open:', pvErr?.message, { site_id: req.site?.id })
@@ -523,7 +529,9 @@ export async function track(req, res) {
       }
     } catch (_) {}
 
-    res.status(200).json({ success: true, data: { received: true }, error: null })
+    // over_quota is present ONLY when the site is past its plan limit, so a client can
+    // surface it without having to poll billing. Absent on the normal path by design.
+    res.status(200).json({ success: true, data: { received: true, ...(overQuota ? { over_quota: true } : {}) }, error: null })
   } catch (err) {
     console.error('[track] ingestion error:', err?.message, { site_id: req.site?.id, event: req.body?.event })
     res.status(500).json({ success: false, data: null, error: 'Track failed' })

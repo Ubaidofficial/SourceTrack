@@ -1831,36 +1831,58 @@ test('claimPageviewUsage — pageview limit enforcement helper (140G-4)', async 
   // by sites.pv_limit's Postgres COLUMN DEFAULT of 5000 (baseline_schema.sql:900) —
   // see the PR description — but this unit test exercises the function in
   // isolation (no per-site override passed), so it correctly reflects the code.
+  // SOFT/HARD CAP: p_limit is now the HARD cap (free = soft x 3), not the plan limit —
+  // the RPC freezes at p_limit, so passing the plan limit made collecting past quota
+  // impossible. `result.limit` still reports the SOFT plan limit (what was bought).
+  // See api/tests/pageview-quota-soft-hard-cap.test.js for the state machine itself.
   await t.test('free plan below limit: allowed true, counter increments', async () => {
     mockRpcResult = [{ allowed: true, current_count: 42 }]
     const result = await claimPageviewUsage({ id: 'site-123', plan: 'free' })
     assert.strictEqual(result.allowed, true)
+    assert.strictEqual(result.state, 'ok')
     assert.strictEqual(result.count, 42)
-    assert.strictEqual(result.limit, 10000) // PLAN_DEFAULT_PV_LIMIT.free
+    assert.strictEqual(result.limit, 10000) // PLAN_DEFAULT_PV_LIMIT.free — the SOFT limit
     assert.strictEqual(lastRpcArgs.p_site_id, 'site-123')
-    assert.strictEqual(lastRpcArgs.p_limit, 10000)
+    assert.strictEqual(lastRpcArgs.p_limit, 30000, 'the HARD cap reaches the RPC (free = 10000 x 3)')
     assert.ok(lastRpcArgs.p_month.match(/^[0-9]{4}-[0-9]{2}$/), 'month must be YYYY-MM format')
     assert.strictEqual(rpcCallCount, 1)
   })
 
-  await t.test('free plan at limit: allowed false, does not increment', async () => {
-    mockRpcResult = [{ allowed: false, current_count: 10000 }]
+  // The RPC refusing now means the HARD cap, not the plan limit — that is the only case
+  // that still drops an event.
+  await t.test('free plan at HARD cap: allowed false, does not increment', async () => {
+    mockRpcResult = [{ allowed: false, current_count: 30000 }]
     const result = await claimPageviewUsage({ id: 'site-123', plan: 'free' })
     assert.strictEqual(result.allowed, false)
-    assert.strictEqual(result.count, 10000)
+    assert.strictEqual(result.state, 'hard_cap')
+    assert.strictEqual(result.count, 30000)
     assert.strictEqual(result.limit, 10000)
     assert.strictEqual(rpcCallCount, 1)
+  })
+
+  // Past the plan limit the event is still collected — the data-loss fix.
+  await t.test('free plan past the SOFT limit: still allowed, flagged over-quota', async () => {
+    mockRpcResult = [{ allowed: true, current_count: 15000 }]
+    const result = await claimPageviewUsage({ id: 'site-123', plan: 'free' })
+    assert.strictEqual(result.allowed, true, 'past quota we keep collecting, we do not drop')
+    assert.strictEqual(result.state, 'over_soft')
+    assert.strictEqual(result.overQuota, true)
+    assert.strictEqual(result.limit, 10000)
+    assert.strictEqual(result.hardCap, 30000)
   })
 
   await t.test('per-site pv_limit override is used over plan default', async () => {
     mockRpcResult = [{ allowed: true, current_count: 1 }]
     // starter plan default is 250000, but pv_limit override is 10000
     const result = await claimPageviewUsage({ id: 'site-123', plan: 'starter', pv_limit: 10000 })
-    assert.strictEqual(result.limit, 10000)
-    assert.strictEqual(lastRpcArgs.p_limit, 10000)
+    assert.strictEqual(result.limit, 10000, 'the override is the SOFT limit')
+    assert.strictEqual(lastRpcArgs.p_limit, 100000,
+      'and the hard cap is derived from it — starter is PAID, so soft x 10, not the free x 3')
   })
 
-  await t.test('sequential claims reach then block at limit', async () => {
+  // Reaching the plan limit no longer blocks; reaching the HARD cap does. The mock honours
+  // p_limit, so this walks the real freeze boundary rather than a hand-fed boolean.
+  await t.test('sequential claims cross the soft limit, then block only at the hard cap', async () => {
     let mockCount = 9999
     mockRpcFn = (args) => {
       if (mockCount < args.p_limit) {
@@ -1870,16 +1892,25 @@ test('claimPageviewUsage — pageview limit enforcement helper (140G-4)', async 
       return { data: [{ allowed: false, current_count: mockCount }], error: null }
     }
 
-    // Call 1: allowed (9999 -> 10000)
+    // Call 1: allowed (9999 -> 10000). Was the LAST allowed event; now it is the first flagged one.
     const res1 = await claimPageviewUsage({ id: 'site-123', plan: 'free' })
     assert.strictEqual(res1.allowed, true)
     assert.strictEqual(res1.count, 10000)
+    assert.strictEqual(res1.state, 'over_soft', 'at 100% of quota: flagged, NOT dropped')
 
-    // Call 2: blocked (at 10000)
+    // Call 2: previously a 402 — now still collected, because the hard cap is 30000.
     const res2 = await claimPageviewUsage({ id: 'site-123', plan: 'free' })
-    assert.strictEqual(res2.allowed, false)
-    assert.strictEqual(res2.count, 10000)
+    assert.strictEqual(res2.allowed, true, 'THE FIX: the event past quota is no longer destroyed')
+    assert.strictEqual(res2.count, 10001)
+    assert.strictEqual(res2.state, 'over_soft')
     assert.strictEqual(rpcCallCount, 2)
+
+    // Jump to the hard cap: now it blocks.
+    mockCount = 30000
+    const res3 = await claimPageviewUsage({ id: 'site-123', plan: 'free' })
+    assert.strictEqual(res3.allowed, false)
+    assert.strictEqual(res3.state, 'hard_cap')
+    assert.strictEqual(res3.count, 30000)
   })
 
   await t.test('inactive plan (pv_limit=0): blocked without RPC call', async () => {
