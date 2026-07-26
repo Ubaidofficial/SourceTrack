@@ -9,7 +9,7 @@ import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
 import { storeIdentityLink, resolveAnonymousId } from '../lib/identity-links.js'
 import { trackGlobalIpLimit } from '../middleware/rate-limit.js'
-import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
+import { dualWriteEvent, isDualWriteEnabled } from '../../tinybird/adapter/dual-write.js'
 import { resolveClientIp } from '../lib/ip-resolver.js'
 import { hasScope, SCOPE_WRITE_EVENTS } from '../lib/api-key-scopes.js'
 
@@ -229,7 +229,15 @@ router.post('/event', trackGlobalIpLimit, async (req, res) => {
     // Wave-2b cutover: Tinybird is the SOLE writer here (ph.capture removed;
     // flag-gated OFF -> no-op + no network when off).
     // No natural id on the server-events path -> deriveEventId falls to a uuid.
-    dualWriteEvent({ distinctId, event: req.body.event || '$pageview', timestamp: eventTimeStr, properties })
+    const enqueued = dualWriteEvent({ distinctId, event: req.body.event || '$pageview', timestamp: eventTimeStr, properties })
+    // Tinybird is the SOLE writer here — if dual-write is ON but the event did NOT enqueue (no
+    // transport wired, or normalize rejected it), the 200 below persists NOTHING. Make it visible.
+    // (Flag OFF is an intentional dev no-op, not logged. A normalize throw is already logged in
+    // dual-write.js; this catches the no-transport case.) Mirrors track.js:424-426. KNOWN_ISSUES #74:
+    // observability, not durability — the drop itself is the shared architecture, unchanged here.
+    if (!enqueued && isDualWriteEnabled()) {
+      console.error('[server-events] not-enqueued reason=dualwrite_returned_false — 200 returned but NOTHING persisted', { site_id: siteId })
+    }
 
     await getSupabase()
       .from('api_keys')

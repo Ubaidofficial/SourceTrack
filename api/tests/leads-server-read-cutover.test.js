@@ -1,12 +1,18 @@
-// Leads read-cutover — leads-server.js dispatch/fallback tests (D1b-2). Three reads route through
-// readTb: leads_list + leads_count (GET /) and lead_detail (GET /:leadId). D1b-1 left this reader
-// UNTESTED; this file proves it serves from its pipes before D1b-2 removes the HogQL fallback.
+// Leads read-cutover — leads-server.js dispatch/fallback tests (D1b-2). TWO reads route through
+// readTb: leads_list (GET /) and lead_detail (GET /:leadId). D1b-1 left this reader UNTESTED; this
+// file proves it serves from its pipes before D1b-2 removes the HogQL fallback.
 //
 // ERROR-SURFACE (D1b-2 finding): leads_list and lead_detail sit in the handler's main try -> a null
-// pipe surfaces as a LOUD 500. leads_count sits in an INNER try/catch (keep the page-length fallback
-// rather than 500) -> a null pipe DEGRADES to 200 with the page-length count, NOT a loud 500. That
-// inner catch swallows the throw regardless of FORCE_READ; closing that fake-count needs the inner
-// catch removed (out of D1b-2 scope) — asserted here so the behavior is pinned, not assumed.
+// pipe surfaces as a LOUD 500.
+//
+// `leads_count` IS RETIRED (#289, ed714dc) — this header used to describe it as a third readTb read
+// sitting behind an inner catch that degraded to a page-length count, and to say closing that
+// fake-count "needs the inner catch removed (out of D1b-2 scope)". That was true when written and
+// has not been since #289: the pipe is gone from leads-server.js entirely and totals now come from
+// Supabase `attributed_conversions` (loud log + page-scoped fallback, never a silent zero). The
+// stale text contradicted this file's own assertion at the `leads_count is retired` test below, so
+// a reader cross-checking it found both claims. Corrected rather than deleted, per the repo's
+// keep-the-history convention.
 
 import test from 'node:test'
 import assert from 'node:assert'
