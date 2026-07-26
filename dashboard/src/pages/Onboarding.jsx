@@ -72,6 +72,15 @@ export default function Onboarding() {
   const [verificationSuccess, setVerificationSuccess] = useState(false)
   const [copied, setCopied] = useState(false)
 
+  // Two truthful, separate signals for step 6 — never merged into one boolean. A site can
+  // legitimately show script-detected + no-event-yet (SPA, low traffic, cached page); that
+  // is an honest state, not a bug. 'unknown' means the check could not run (fetch failed/
+  // blocked/SSRF-refused) — a failed check is not evidence of absence (§6), so it must never
+  // render as "not detected".
+  const [scriptDetected, setScriptDetected] = useState('unknown') // 'checking' | 'detected' | 'not_detected' | 'unknown' (internal only — see render)
+  const [gtmPresent, setGtmPresent] = useState(false)
+  const [firstEventReceived, setFirstEventReceived] = useState(false)
+
   const handleOnboardingVerified = useCallback((diagnostics) => {
     setVerificationSuccess(true)
   }, [])
@@ -79,6 +88,39 @@ export default function Onboarding() {
   useEffect(() => {
     loadOnboardingStatus()
   }, [])
+
+  // Step 6 truthful signals. "Script detected" reuses the EXISTING /install/detect-platform
+  // read (advisory, SSRF-guarded, already fetches the live page) — no new fetch, no synthetic
+  // event. "First event received" is the existing /install/status poll, unchanged.
+  useEffect(() => {
+    if (step !== 6 || !siteKey) return
+    let cancelled = false
+
+    setScriptDetected('checking')
+    fetchApi(`/install/detect-platform?site_key=${encodeURIComponent(siteKey)}&domain=${encodeURIComponent(domain)}`)
+      .then((resp) => {
+        if (cancelled) return
+        const result = resp?.data ?? resp ?? {}
+        setScriptDetected(result.script_detected || 'unknown')
+        setGtmPresent(!!result.gtm_present)
+      })
+      .catch(() => { if (!cancelled) setScriptDetected('unknown') })
+
+    let timer
+    const pollStatus = () => {
+      fetchApi(`/install/status?site_key=${encodeURIComponent(siteKey)}`)
+        .then((resp) => {
+          if (cancelled) return
+          const result = resp?.data ?? resp ?? {}
+          setFirstEventReceived(result.status !== 'pending')
+        })
+        .catch(() => { /* transient poll failure — keep prior value, never flip to a false negative */ })
+        .finally(() => { if (!cancelled) timer = setTimeout(pollStatus, 5000) })
+    }
+    pollStatus()
+
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [step, siteKey, domain])
 
   async function loadOnboardingStatus() {
     try {
@@ -485,6 +527,33 @@ export default function Onboarding() {
               </div>
             ) : (
               <div className="space-y-4">
+                <div className="rounded-lg border border-gray-200 dark:border-[#2A2E2E] p-3 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-gray-600 dark:text-gray-400">Script detected</span>
+                    <span className={`font-semibold ${scriptDetected === 'detected' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                      {scriptDetected === 'detected' ? 'Yes' : 'Not confirmed yet'}
+                    </span>
+                  </div>
+                  {scriptDetected !== 'detected' && (
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-normal">
+                      {gtmPresent
+                        ? "We detected Google Tag Manager on your site, but can't see inside the container. Open your GTM workspace and confirm the SourceTrack tag is published."
+                        : 'This can take a few minutes, or the script may be added by JavaScript after the page loads — a common pattern we can\'t always see in the raw page.'}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-gray-600 dark:text-gray-400">First event received</span>
+                    <span className={`font-semibold ${firstEventReceived ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                      {firstEventReceived ? 'Yes' : 'Not yet'}
+                    </span>
+                  </div>
+                  {scriptDetected === 'detected' && !firstEventReceived && (
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-normal">
+                      Your script is in place but no event has arrived yet — this is normal for a single-page app, low traffic, or a cached page. It can take a few minutes.
+                    </p>
+                  )}
+                </div>
+
                 <SetupDoctorCard
                   siteKey={siteKey}
                   mode="onboarding"
@@ -514,7 +583,7 @@ export default function Onboarding() {
                       })
                       const completeRes = await fetchApi('/onboarding/complete', {
                         method: 'POST',
-                        body: JSON.stringify({ site_id: siteId })
+                        body: JSON.stringify({ site_id: siteId, skipped: true })
                       })
                       if (completeRes?.completed) {
                         seedReportsForBusiness(businessType, siteKey)
@@ -533,6 +602,12 @@ export default function Onboarding() {
                 >
                   Verify Later (Skip for now)
                 </button>
+                <a
+                  href="/setup"
+                  className="w-full block text-center text-xs font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-dark-text transition-colors py-1"
+                >
+                  Need help? Go to Setup &amp; Health
+                </a>
               </div>
             )}
           </OnboardingCard>
