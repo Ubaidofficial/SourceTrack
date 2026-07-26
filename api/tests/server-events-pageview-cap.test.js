@@ -271,8 +271,39 @@ test('🔴 a per-site pv_limit override is honored, not the plan default', async
   await postEvent(req({ event: '$pageview', anonymous_id: 'a' }), res)
 
   assert.strictEqual(res.statusCode, 200)
-  assert.strictEqual(pvCalls(calls)[0].params.p_limit, 123456,
+  // SOFT/HARD CAP: p_limit is now the HARD cap DERIVED from the override, not the override
+  // itself (growth is PAID, so soft x 10). The point of the test is unchanged — if the route
+  // dropped pv_limit, the plan default would be used and this would be 10_000_000, not
+  // 1_234_560. The derivation is what proves the override still flows through.
+  assert.strictEqual(pvCalls(calls)[0].params.p_limit, 1234560,
     'the route must SELECT pv_limit and pass it through — otherwise a purchased limit is ignored')
+})
+
+// ── SOFT/HARD CAP: past the plan limit this route keeps ingesting ─────────────────────────────
+// The `at-cap` mock above returns allowed:false regardless of p_limit, which under the new
+// semantics represents the HARD cap (the only refusal the RPC can now produce) — so every
+// 402 test above still means what it says. What was missing is the state in between: past the
+// plan limit but under the hard cap, where the event must be KEPT.
+
+test('🔴 past the SOFT limit: the pageview is INGESTED (200), not 402 — the data-loss fix', async (t) => {
+  t.after(restore)
+  const calls = install({ rpcMode: 'under-cap', plan: 'growth', pvLimit: 1000 })
+  // Faithful RPC: hard cap is 10_000 (paid 10x), and the count sits past the soft limit.
+  _client.rpc = async (fn, params) => {
+    calls.push({ fn, params })
+    if (fn !== PV_RPC) return { data: [{ allowed: true, current_count: 1 }], error: null }
+    return { data: [{ allowed: true, current_count: 4321 }], error: null }
+  }
+
+  const res = mockRes()
+  await postEvent(req({ event: '$pageview', anonymous_id: 'anon-1' }), res)
+
+  assert.strictEqual(res.statusCode, 200,
+    'a site past its plan limit but under the hard cap must keep ingesting — dropping is permanent loss')
+  assert.strictEqual(res.body.data.received, true)
+  assert.strictEqual(res.body.data.over_quota, true,
+    'and the response must say so, so a first-party client can surface it')
+  assert.strictEqual(pvCalls(calls).length, 1, 'the meter still runs and still counts the event')
 })
 
 test('a limit-check DB outage FAILS OPEN (ingestion continues)', async (t) => {

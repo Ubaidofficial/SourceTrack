@@ -72,8 +72,11 @@ router.post('/e',
     if (event === '$pageview') {
       try {
         const pvCheck = await claimPageviewUsage(site)
-        if (!pvCheck.allowed) {
-          console.warn('[proxy/e] Pageview limit reached for site', site_key, '— skipping capture')
+        // Only the HARD CAP drops. Past the soft (plan) limit we keep collecting —
+        // dropping destroys the event permanently (§6). The response was already sent
+        // above (res.json at the top of this handler), so there is no shape to change.
+        if (pvCheck.state === 'hard_cap') {
+          console.warn('[proxy/e] Pageview HARD CAP reached for site', site_key, '— skipping capture')
           return
         }
       } catch (pvErr) {
@@ -204,8 +207,10 @@ router.get('/pixel.gif',
     // Pageview quota claim — pixel always fires a $pageview, so always claim
     try {
       const pvCheck = await claimPageviewUsage(site)
-      if (!pvCheck.allowed) {
-        console.warn('[proxy/pixel] Pageview limit reached for site', site_key, '— skipping capture')
+      // Only the HARD CAP drops — same reasoning as /e above. The gif was already
+      // written (res.end at the top of this handler), so there is no shape to change.
+      if (pvCheck.state === 'hard_cap') {
+        console.warn('[proxy/pixel] Pageview HARD CAP reached for site', site_key, '— skipping capture')
         return
       }
     } catch (pvErr) {
