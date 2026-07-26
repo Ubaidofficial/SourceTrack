@@ -183,6 +183,10 @@ export function useDashboardData() {
     }
     return Object.values(map).sort((a, b) => (b.visitors - a.visitors) || (b.revenue - a.revenue))
   })()
+  // Set by /dashboard/overview's outer catch when the read genuinely failed. Previously
+  // set and read NOWHERE, so a failure rendered as zeros — the #413 shape. Surfaced here
+  // so pages can show 'temporarily unavailable' instead of a fabricated empty state (§6).
+  const analyticsUnavailable = overview?.analytics_unavailable === true
   const activeResults = overview?.sources || []
   const topPagesResults = overview?.top_pages || []
   const timeResults = overview?.revenue_trend || []
@@ -262,7 +266,11 @@ export function useDashboardData() {
   const trafficPageviews = safeNumber(trafficKpis.pageviews, 0)
   const trafficSources   = analyticsSummary?.top_sources || []
   const trafficTopPages  = analyticsSummary?.top_pages || []
-  const hasConversions = activeResults.length > 0
+  // Conversion EXISTENCE comes from the conversion COUNT, never from the attribution
+  // breakdown's length. A site can have real conversions with no attributable touches
+  // (NULL first/last touch), which left activeResults empty and told the user to go
+  // configure conversions they had already recorded.
+  const hasConversions = totalConversions > 0 || activeResults.length > 0
   const hasTraffic = previewMode
     ? hasConversions
     : (trafficPageviews > 0
@@ -288,7 +296,7 @@ export function useDashboardData() {
     // raw data
     overview, analyticsSummary, recentConversions, dashboardReports,
     // derived
-    kpis, totalRevenue, totalConversions, totalLeads, leadsTracked, totalCustomers,
+    kpis, totalRevenue, totalConversions, totalLeads, leadsTracked, totalCustomers, analyticsUnavailable,
     leadConvRate, customerConvRate, avgValue, revenueDelta, leadsDelta, customersDelta,
     aiRevResults, aiSourceRows, activeResults, topPagesResults, timeResults,
     models, modelRevenues, revTrendData, channelTrendResults, channelTrendData,
