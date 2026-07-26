@@ -35,7 +35,7 @@ function pctChange(current, previous) {
   return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`
 }
 
-async function run() {
+export async function run() {
   const supabase = getSupabase()
   const { from, to } = dateRange()
   const prev = prevDateRange()
@@ -95,19 +95,25 @@ async function run() {
         continue
       }
 
-      const { data: conversions } = await supabase
+      const { data: conversions, error: convError } = await supabase
         .from('attributed_conversions')
-        .select('channel, conversion_value, first_touch_source, ai_source')
+        .select('channel, conversion_value, first_touch_source, ai_influenced_source')
         .eq('site_id', site.id)
         .gte('conversion_date', from)
         .lte('conversion_date', to)
 
-      const { data: prevConversions } = await supabase
+      const { data: prevConversions, error: prevConvError } = await supabase
         .from('attributed_conversions')
         .select('conversion_value')
         .eq('site_id', site.id)
         .gte('conversion_date', prev.from)
         .lte('conversion_date', prev.to)
+
+      if (convError || prevConvError) {
+        console.error(`[email-reports] Skipping ${site.site_key}: conversions read failed (${(convError || prevConvError).message})`)
+        skipped++
+        continue
+      }
 
       const rows = conversions || []
       const prevRows = prevConversions || []
@@ -127,7 +133,7 @@ async function run() {
 
       const aiMap = {}
       for (const r of rows) {
-        const ai = r.ai_source || r.first_touch_source
+        const ai = r.ai_influenced_source || r.first_touch_source
         if (ai && ['ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok', 'Copilot', 'DeepSeek', 'You.com', 'Phind', 'Kagi', 'Mistral', 'Meta AI', 'Poe'].includes(ai)) {
           aiMap[ai] = (aiMap[ai] || 0) + 1
         }
@@ -258,7 +264,9 @@ async function run() {
   process.exit(0)
 }
 
-run().catch(err => {
-  console.error('[email-reports] Fatal:', err)
-  process.exit(1)
-})
+if (import.meta.url === `file://${process.argv[1]}`) {
+  run().catch(err => {
+    console.error('[email-reports] Fatal:', err)
+    process.exit(1)
+  })
+}
