@@ -94,32 +94,18 @@ router.post('/event', trackGlobalIpLimit, async (req, res) => {
     let overQuota = false
 
     if (isConversion) {
-      // Fail-open on a limit-check DB error, matching every sibling: a limit-check outage
-      // must not become an ingestion outage.
-      let allowed = true
+      // Monthly conversion METER (fail-open on DB error). Metering only — it never
+      // refuses the write. The 402 that used to live here is gone: conversions are never
+      // dropped on any tier, because a dropped conversion is a permanently wrong revenue
+      // number. (The PAGEVIEW cap below still has a real hard-cap 402 — that one drops
+      // only at the safety valve, see #429.)
       try {
         // The `sites` select above returns ONLY `plan`. claimConversionUsage throws when
-        // site.id is missing, and that throw would be swallowed by the fail-open catch —
-        // yielding a gate that silently never blocks. Pass the API key's site id explicitly.
-        const limitCheck = await claimConversionUsage({ id: siteId, plan: site.plan })
-        if (!limitCheck.allowed) allowed = false
+        // site.id is missing, and that throw would be swallowed by the fail-open catch.
+        // Pass the API key's site id explicitly so the meter counts the right site.
+        await claimConversionUsage({ id: siteId, plan: site.plan })
       } catch (limitErr) {
-        console.error('[server-events] Conversion limit check failed, failing open:', limitErr.message || limitErr)
-      }
-
-      if (!allowed) {
-        // DELIBERATE DIVERGENCE from the stripe/shopify siblings' 200 {ignored:true}
-        // (founder-decided 2026-07-25): that shape is right for a third-party webhook
-        // sender, which retries on 4xx, and wrong for a first-party API client, which can
-        // read and act on a 402. Returning 200 {received:true} while dropping the event
-        // would also be the #413 fake-success violation. Do not "fix" this to match the
-        // webhooks in a consistency pass.
-        return res.status(402).json({
-          success: false,
-          data: null,
-          error: 'Conversion limit reached for your plan',
-          error_code: 'conversion_limit_reached'
-        })
+        console.error('[server-events] Conversion meter failed, continuing (metering must never block revenue):', limitErr.message || limitErr)
       }
     } else {
       // ── PAGEVIEW CAP — the complement of the conversion test above ──────────────────────────

@@ -1,22 +1,28 @@
-// MONETIZATION RAIL — POST /api/server/event conversion-cap enforcement.
+// MONETIZATION RAIL — POST /api/server/event conversion METERING.
 //
-// THE GAP (reproduced below before it was fixed): server-events.js was the ONE ingestion
-// path with no plan-cap gate. Its only middleware is trackGlobalIpLimit, which is an IP
-// rate limit, not a plan cap, and claimConversionUsage appeared nowhere in the file. Seven
-// sibling routes gate (track, conversion, conversion-offline, proxy, webhook-incoming,
-// stripe-webhook, shopify-webhook), so a site at its monthly conversion cap could ingest
-// unlimited conversions through the documented public API and never be metered.
+// THE GAP THIS FILE ORIGINALLY CLOSED: server-events.js was the ONE ingestion path with no
+// plan-cap gate at all. Its only middleware is trackGlobalIpLimit, which is an IP rate
+// limit, not a plan cap, and claimConversionUsage appeared nowhere in the file — so a
+// conversion through the documented public API was never even counted.
+//
+// SUPERSEDED IN PART (founder decision 2026-07-26): the metering stays, the REJECTION goes.
+// Conversions are never refused on quota, on any tier, because a dropped conversion is a
+// permanently wrong revenue number. The 402 these tests used to assert is gone, and with it
+// the 2026-07-25 "402 for a first-party client vs 200 {ignored} for a webhook sender"
+// contract — that distinction only mattered while something was being dropped, and now
+// nothing is. What REMAINS load-bearing, and is still asserted below, is that every
+// conversion on this route is COUNTED, and counted against the right site.
 //
 // WHAT COUNTS AS A CONVERSION HERE IS THE PAYLOAD, NOT THE EVENT NAME. The public contract
 // (dashboard/src/pages/developers/DevelopersApi.jsx:173) documents `event` as a free-form
 // label — "Event label. Defaults to $pageview" — and its own worked example posts
-// `"event": "purchase_completed"` with `"conversion_value": 149.00`. A gate keyed on
-// `event === '$conversion'` would therefore let the DOCUMENTED EXAMPLE through unmetered.
-// That is the specific mistake these tests exist to prevent; several assert on a
-// non-canonical event name on purpose.
+// `"event": "purchase_completed"` with `"conversion_value": 149.00`. A meter keyed on
+// `event === '$conversion'` would therefore miss the DOCUMENTED EXAMPLE entirely. That is
+// the specific mistake these tests exist to prevent; several assert on a non-canonical
+// event name on purpose, and that intent is unchanged by the decision above.
 //
-// FAIL-OPEN on a limit-check DB error is deliberate and matches all seven siblings: an
-// outage must not become an ingestion outage on the money rail.
+// FAIL-OPEN on a meter DB error is deliberate and matches every sibling: an outage must not
+// become an ingestion outage on the money rail.
 
 import test from 'node:test'
 import assert from 'node:assert'
@@ -101,64 +107,64 @@ const DOCUMENTED_CONVERSION = { event: 'purchase_completed', anonymous_id: 'anon
 
 // ── the gap ───────────────────────────────────────────────────────────────────
 
-test('at cap: a documented conversion is REJECTED, not silently ingested', async (t) => {
+test('🔴 at cap: a documented conversion is METERED AND INGESTED, never rejected', async (t) => {
   t.after(restore)
   const calls = install({ rpcMode: 'at-cap' })
 
   const res = mockRes()
   await postEvent(req(DOCUMENTED_CONVERSION), res)
 
-  assert.notStrictEqual(res.statusCode, 200,
-    'a site at its monthly conversion cap must not ingest another conversion through the server API')
+  // Was: 402 + error_code 'conversion_limit_reached'. Conversions are metering-only now —
+  // refusing one destroys real revenue, and the 402/200-{ignored} contract distinction only
+  // existed while something was being dropped.
+  assert.strictEqual(res.statusCode, 200,
+    'a site at its cap must still ingest the conversion — dropping it is permanently wrong revenue')
+  assert.strictEqual(res.body.data.received, true)
+  assert.notStrictEqual(res.body.error_code, 'conversion_limit_reached')
 
-  // FOUNDER-DECIDED CONTRACT (2026-07-25) — pinned deliberately. This DIVERGES from the
-  // stripe/shopify webhook siblings' 200 {ignored:true}, and the divergence is the point:
-  //   - 200 {ignored:true} is right for a THIRD-PARTY webhook sender (Stripe/Shopify retry
-  //     on 4xx, so a 402 would loop forever) and wrong for a FIRST-PARTY API client, which
-  //     can read and act on a 402.
-  //   - a 200 saying received:true while the event is dropped is the #413 fake-success
-  //     violation in a new place.
-  // Do not "fix" this back to match the webhooks in a consistency pass.
-  assert.strictEqual(res.statusCode, 402)
-  assert.strictEqual(res.body.success, false)
-  assert.strictEqual(res.body.data, null)
-  assert.strictEqual(res.body.error, 'Conversion limit reached for your plan')
-  assert.strictEqual(res.body.error_code, 'conversion_limit_reached',
-    'the structured code is part of the contract — callers branch on it, not on the prose')
-  assert.notStrictEqual(res.body.data?.received, true, 'must never claim received:true while dropping')
-  assert.strictEqual(calls.length, 1, 'the cap must actually be consulted')
+  // STILL LOAD-BEARING: it must be counted, and counted against the right site. The route
+  // selects only `plan`, so a naive claimConversionUsage(site) would pass id=undefined,
+  // throw, and be swallowed by the fail-open catch — a meter that silently counts nothing.
+  assert.strictEqual(calls.length, 1, 'the meter must actually run')
   assert.strictEqual(calls[0].fn, 'claim_site_conversion_usage')
+  assert.strictEqual(calls[0].params.p_site_id, SITE_ID)
 })
 
-test('at cap: repeated conversions stay blocked (the unmetered-forever case)', async (t) => {
+test('🔴 at cap: repeated conversions all keep being ingested and counted', async (t) => {
   t.after(restore)
-  install({ rpcMode: 'at-cap' })
+  const calls = install({ rpcMode: 'at-cap' })
 
-  // Pre-fix, every one of these returned 200 {received:true} — unlimited paid usage.
+  // Pre-#419 every one of these was unmetered; between #419 and this change every one was
+  // DESTROYED. Now each is both counted and kept.
   for (let i = 0; i < 5; i++) {
     const res = mockRes()
     await postEvent(req({ ...DOCUMENTED_CONVERSION, anonymous_id: `anon-${i}` }), res)
-    assert.strictEqual(res.statusCode, 402, `conversion #${i + 1} must stay blocked`)
+    assert.strictEqual(res.statusCode, 200, `conversion #${i + 1} must still be ingested`)
   }
+  assert.strictEqual(calls.length, 5, 'and every one of them metered')
 })
 
 test('at cap: conversion_type alone (no value) is still metered', async (t) => {
   t.after(restore)
-  install({ rpcMode: 'at-cap' })
+  const calls = install({ rpcMode: 'at-cap' })
 
   const res = mockRes()
   await postEvent(req({ event: 'signup', anonymous_id: 'a', conversion_type: 'lead' }), res)
-  assert.strictEqual(res.statusCode, 402, 'conversion_type marks a conversion even with no monetary value')
+  assert.strictEqual(res.statusCode, 200)
+  assert.strictEqual(calls.length, 1, 'conversion_type marks a conversion even with no monetary value')
+  assert.strictEqual(calls[0].fn, 'claim_site_conversion_usage')
 })
 
 test('at cap: an explicit conversion_value of 0 is still metered', async (t) => {
   t.after(restore)
-  install({ rpcMode: 'at-cap' })
+  const calls = install({ rpcMode: 'at-cap' })
 
   // A $0 lead conversion is a conversion. Metering keyed on truthiness would miss it.
   const res = mockRes()
   await postEvent(req({ event: 'free_signup', anonymous_id: 'a', conversion_value: 0 }), res)
-  assert.strictEqual(res.statusCode, 402, 'conversion_value: 0 must not slip past the meter')
+  assert.strictEqual(res.statusCode, 200)
+  assert.strictEqual(calls.length, 1, 'conversion_value: 0 must not slip past the meter')
+  assert.strictEqual(calls[0].fn, 'claim_site_conversion_usage')
 })
 
 // ── what must NOT be gated ────────────────────────────────────────────────────
@@ -233,7 +239,7 @@ test('a limit-check DB outage FAILS OPEN (ingestion continues)', async (t) => {
 
 // ── source guard: the gate must not be keyed on the event NAME ────────────────
 
-test('the gate is not keyed on the canonical event name alone', async () => {
+test('the meter is not keyed on the canonical event name alone', async () => {
   const fs = await import('node:fs')
   const path = await import('node:path')
   const url = await import('node:url')
@@ -241,7 +247,7 @@ test('the gate is not keyed on the canonical event name alone', async () => {
   const src = fs.readFileSync(path.join(root, 'api/routes/server-events.js'), 'utf8')
 
   assert.ok(src.includes('claimConversionUsage('),
-    'server-events.js must consult the conversion cap — it was the one unmetered ingestion path')
+    'server-events.js must still METER conversions — it was the one unmetered ingestion path')
 
   // The discriminator must read the conversion PAYLOAD, not just the event name. Isolate the
   // isConversion expression itself rather than a byte window, so this cannot drift.
@@ -253,8 +259,10 @@ test('the gate is not keyed on the canonical event name alone', async () => {
   assert.ok(!/conversion_value\s*\|\|/.test(expr) && !/conversion_type\s*\|\|/.test(expr),
     'must use != null, not truthiness — a conversion_value of 0 is a real $0 conversion and must still meter')
 
-  // The founder-decided contract, pinned at the source so a consistency pass cannot quietly
-  // swap it for the webhooks' 200 {ignored:true}.
-  assert.ok(src.includes("error_code: 'conversion_limit_reached'"), 'the structured error_code is part of the contract')
-  assert.ok(/status\(402\)[\s\S]{0,200}conversion_limit_reached/.test(src), 'a capped caller must get 402, not 200')
+  // The 2026-07-25 402 contract used to be pinned here. It is deliberately GONE: conversions
+  // are never refused on quota, so there is no capped-caller response left to shape. The
+  // inverse is now asserted in api/tests/conversion-quota-never-drops.test.js, which requires
+  // 'conversion_limit_reached' to be absent from every enforcement site.
+  assert.ok(!src.includes("error_code: 'conversion_limit_reached'"),
+    'the conversion refusal is removed — a 402 here would destroy real revenue')
 })

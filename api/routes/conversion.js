@@ -372,32 +372,14 @@ export async function conversion(req, res) {
 
     }
 
-    // Enforce monthly conversion limits (fail-open on DB errors)
-    let limitCheckAllowed = true
+    // Monthly conversion METER (fail-open on DB errors). Metering only — it never
+    // refuses the write. This used to 402 at the cap and roll the durable claim back,
+    // permanently destroying a real conversion; a dropped conversion is a permanently
+    // wrong revenue number, which is worse than an over-quota one.
     try {
-      const limitCheck = await _claimConversionUsage(req.site)
-      if (!limitCheck.allowed) {
-        limitCheckAllowed = false
-      }
+      await _claimConversionUsage(req.site)
     } catch (limitErr) {
-      console.error('[conversion] Conversion limit check failed, failing open:', limitErr.message || limitErr)
-    }
-
-    if (!limitCheckAllowed) {
-      // Roll back the SAME key we durably claimed (order_event OR capi_event_id) so a
-      // limit-blocked conversion doesn't leave a claim that would drop a later retry.
-      if (durableKey && req.site?.site_key) {
-        try {
-          await _rollbackIdempotencyKeys(req.site.site_key, BROWSER_CONVERSION_PROVIDER, [durableKey])
-        } catch (rollbackErr) {
-          console.error('[conversion] Failed to rollback idempotency keys after conversion limit block:', rollbackErr.message || rollbackErr)
-        }
-      }
-      return res.status(402).json({
-        success: false,
-        data: null,
-        error: 'Conversion limit reached for your plan'
-      })
+      console.error('[conversion] Conversion meter failed, continuing (metering must never block revenue):', limitErr.message || limitErr)
     }
 
     if (externalEventId) {

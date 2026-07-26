@@ -744,28 +744,57 @@ test('claimConversionUsage - plan conversion limit enforcement helper', async (t
     PLAN_STRUCTURAL_LIMITS.scale.conversion_events = originalLimit
   })
 
+  // METERING ONLY (founder decision 2026-07-26): conversions are never refused on quota.
+  // p_limit is now the ANOMALY THRESHOLD (soft x 100), because the RPC freezes at p_limit
+  // and passing the soft limit is what stopped the counter and made a drop look necessary.
+  // `limit` still reports the SOFT plan limit. See api/tests/conversion-quota-never-drops.test.js.
   await t.test('free plan below limit allows and increments', async () => {
     mockRpcResult = [{ allowed: true, current_count: 15 }]
     const result = await claimConversionUsage({ id: 'site-123', plan: 'free' })
     assert.strictEqual(result.allowed, true)
+    assert.strictEqual(result.state, 'ok')
     assert.strictEqual(result.count, 15)
     assert.strictEqual(result.limit, 30)
     assert.strictEqual(lastRpcArgs.p_site_id, 'site-123')
-    assert.strictEqual(lastRpcArgs.p_limit, 30)
+    assert.strictEqual(lastRpcArgs.p_limit, 3000, 'the anomaly threshold reaches the RPC (free 30 x 100)')
     assert.ok(lastRpcArgs.p_month.match(/^[0-9]{4}-[0-9]{2}$/))
     assert.strictEqual(rpcCallCount, 1)
   })
 
-  await t.test('free plan at limit blocks and does not increment', async () => {
-    mockRpcResult = [{ allowed: false, current_count: 30 }]
+  // Was 'free plan at limit blocks and does not increment'. It no longer blocks — that
+  // block is the P0 this change closes (a dropped conversion is permanently wrong revenue).
+  await t.test('free plan at limit is METERED, not blocked', async () => {
+    mockRpcResult = [{ allowed: true, current_count: 30 }]
     const result = await claimConversionUsage({ id: 'site-123', plan: 'free' })
-    assert.strictEqual(result.allowed, false)
+    assert.strictEqual(result.allowed, true, 'at 100% of the allowance the conversion is still written')
+    assert.strictEqual(result.state, 'over_soft')
+    assert.strictEqual(result.overQuota, true)
     assert.strictEqual(result.count, 30)
     assert.strictEqual(result.limit, 30)
     assert.strictEqual(rpcCallCount, 1)
   })
 
-  await t.test('sequential claims reach/block at limit', async () => {
+  // The RPC's `allowed:false` now means the ANOMALY THRESHOLD (soft x 100), and even that
+  // does not refuse — it alarms at ERROR and still persists.
+  await t.test('the anomaly threshold alarms but still allows', async () => {
+    mockRpcResult = [{ allowed: false, current_count: 3000 }]
+    const origError = console.error
+    console.error = () => {}
+    let result
+    try {
+      result = await claimConversionUsage({ id: 'site-123', plan: 'free' })
+    } finally {
+      console.error = origError
+    }
+    assert.strictEqual(result.allowed, true, 'an alarm is not a drop point')
+    assert.strictEqual(result.state, 'anomaly')
+    assert.strictEqual(result.count, 3000)
+    assert.strictEqual(result.limit, 30)
+  })
+
+  // Was 'sequential claims reach/block at limit'. Now: crossing the soft limit changes the
+  // state but never the outcome. The mock honours p_limit, so this walks the real boundary.
+  await t.test('sequential claims cross the soft limit and keep being allowed', async () => {
     let mockCountState = 29
     mockRpcFn = (args) => {
       if (mockCountState < args.p_limit) {
@@ -775,15 +804,18 @@ test('claimConversionUsage - plan conversion limit enforcement helper', async (t
       return { data: [{ allowed: false, current_count: mockCountState }], error: null }
     }
 
-    // Call 1: allowed (29 -> 30)
+    // Call 1: 29 -> 30, now exactly at the allowance.
     const res1 = await claimConversionUsage({ id: 'site-123', plan: 'free' })
     assert.strictEqual(res1.allowed, true)
     assert.strictEqual(res1.count, 30)
+    assert.strictEqual(res1.state, 'over_soft', 'at 100%: flagged, not refused')
 
-    // Call 2: blocked (at 30)
+    // Call 2: previously blocked at 30. Now counted and kept — the 31st conversion is a
+    // real customer purchase and used to be destroyed here.
     const res2 = await claimConversionUsage({ id: 'site-123', plan: 'free' })
-    assert.strictEqual(res2.allowed, false)
-    assert.strictEqual(res2.count, 30)
+    assert.strictEqual(res2.allowed, true, 'THE FIX: the conversion past quota is no longer destroyed')
+    assert.strictEqual(res2.count, 31)
+    assert.strictEqual(res2.state, 'over_soft')
     assert.strictEqual(rpcCallCount, 2)
   })
 
@@ -921,7 +953,10 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
     assert.strictEqual(rpcCallCount, 1)
   })
 
-  await t.test('direct /api/conversion endpoint blocks with 402 when limit reached', async () => {
+  // Was 'blocks with 402 when limit reached'. Conversions are metering-only now, so the
+  // over-quota conversion must be INGESTED. `allowed:false` from the RPC no longer means
+  // "refuse" — it is the anomaly signal, and even that persists.
+  await t.test('direct /api/conversion endpoint INGESTS when the limit is reached', async () => {
     mockRpcResult = [{ allowed: false, current_count: 30 }]
     const req = {
       site: { id: 'site-123', plan: 'free', site_key: 'sk-123' },
@@ -937,11 +972,15 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
       }
     }
 
-    await conversion(req, res)
-    assert.strictEqual(statusVal, 402)
-    assert.strictEqual(jsonVal.success, false)
-    assert.strictEqual(jsonVal.error, 'Conversion limit reached for your plan')
-    assert.strictEqual(rpcCallCount, 1)
+    const origError = console.error
+    console.error = () => {}   // suppress the expected anomaly alarm
+    try { await conversion(req, res) } finally { console.error = origError }
+
+    assert.strictEqual(statusVal, 200, 'no 402 — a dropped conversion is permanently wrong revenue')
+    assert.strictEqual(jsonVal.success, true)
+    const _b = __getDualWriteBatcher(); if (_b) await _b.flush()
+    assert.strictEqual(dualWriteFired, true, 'and it actually reached Tinybird')
+    assert.strictEqual(rpcCallCount, 1, 'still metered')
   })
 
   await t.test('direct /api/conversion endpoint fails open and captures on RPC error', async () => {
@@ -968,7 +1007,9 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
     assert.strictEqual(rpcCallCount, 1)
   })
 
-  await t.test('offline conversion route blocks with 402 when limit reached', async () => {
+  // Was 'blocks with 402 when limit reached'. This is the CRM/offline import rail, so a
+  // refusal destroyed a closed deal the customer had already recorded elsewhere.
+  await t.test('offline conversion route INGESTS when the limit is reached', async () => {
     mockRpcResult = [{ allowed: false, current_count: 30 }]
     const req = {
       site: { id: 'site-123', plan: 'free', site_key: 'sk-123' },
@@ -984,13 +1025,18 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
       }
     }
 
-    await conversionOffline(req, res)
-    assert.strictEqual(statusVal, 402)
-    assert.strictEqual(jsonVal.success, false)
-    assert.strictEqual(jsonVal.error, 'Conversion limit reached for your plan')
+    const origError = console.error
+    console.error = () => {}
+    try { await conversionOffline(req, res) } finally { console.error = origError }
+
+    assert.strictEqual(statusVal, 200, 'no 402 — the closed deal must not be destroyed')
+    assert.strictEqual(jsonVal.success, true)
   })
 
-  await t.test('shopify webhook route returns 200 ignored when limit reached', async () => {
+  // Was 'returns 200 ignored when limit reached'. That 200-with-no-write was the same
+  // ack-without-persistence defect as the Stripe path: Shopify treats 2xx as delivered
+  // and never retries, so the order was destroyed. Now it is ingested and the 200 is honest.
+  await t.test('shopify webhook route INGESTS when the limit is reached (no ack-without-persist)', async () => {
     mockRpcResult = [{ allowed: false, current_count: 30 }]
 
     const { encryptSecret } = await import('../lib/utils.js')
@@ -1065,15 +1111,16 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
         console.error('SHOPIFY ROUTE ERROR:', nextError)
       }
       assert.strictEqual(statusVal, 200)
-      assert.strictEqual(jsonVal.success, false)
-      assert.strictEqual(jsonVal.ignored, true)
-      assert.strictEqual(jsonVal.error, 'Conversion limit reached for your plan')
+      assert.notStrictEqual(jsonVal.ignored, true, 'the order is no longer discarded at the cap')
+      assert.notStrictEqual(jsonVal.error, 'Conversion limit reached for your plan')
+      const _b = __getDualWriteBatcher(); if (_b) await _b.flush()
+      assert.strictEqual(dualWriteFired, true, 'the 200 is honest because the order was persisted')
     } finally {
       client.from = originalFrom
     }
   })
 
-  await t.test('stripe webhook route returns 200 ignored when limit reached', async () => {
+  await t.test('stripe webhook route no longer discards at the cap, and never acks an unpersisted event', async () => {
     mockRpcResult = [{ allowed: false, current_count: 30 }]
 
     const { stripeWebhookRouter } = await import('../routes/stripe-webhook.js')
@@ -1142,17 +1189,33 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
       if (nextError) {
         console.error('STRIPE ROUTE ERROR:', nextError)
       }
-      assert.strictEqual(statusVal, 200)
-      assert.strictEqual(jsonVal.success, false)
-      assert.strictEqual(jsonVal.ignored, true)
-      assert.strictEqual(jsonVal.error, 'Conversion limit reached for your plan')
+      // THE P0, inverted. This used to be 200 + {ignored:true} with the claim rolled back
+      // and nothing written — Stripe never retries a 2xx, so the purchase was destroyed
+      // while we reported success.
+      //
+      // The quota no longer short-circuits, so execution now reaches the $conversion write.
+      // This harness injects the dual-write batcher but NOT a writeConversionDirect
+      // transport, so that write genuinely fails here — and the correct outcome for an
+      // unpersisted event is a retryable 5xx, never a 2xx. That is THE ACK RULE, and it is
+      // what this assertion pins. The at-cap SUCCESS path (persisted + honest 200) needs a
+      // real transport and is covered in api/tests/conversion-quota-never-drops.test.js.
+      assert.notStrictEqual(jsonVal?.ignored, true, 'the purchase is no longer discarded at the cap')
+      assert.notStrictEqual(jsonVal?.error, 'Conversion limit reached for your plan')
+      assert.ok(statusVal >= 500,
+        'an event that could not be persisted must be a retryable 5xx so Stripe redelivers — ' +
+        `never a 2xx ack; got ${statusVal}`)
     } finally {
       client.from = originalFrom
     }
   })
 
-  await t.test('proxy route skips capture when limit reached', async () => {
+  // Was named 'proxy route skips capture when limit reached' — that name is now false, and
+  // the assertions never actually pinned the skip. Renamed and strengthened: this route was
+  // the worst-shaped of the nine (a bare `return` after the 200 had already been sent, so
+  // the discard surfaced nowhere at all). It must now capture.
+  await t.test('proxy route CAPTURES when the limit is reached (was a silent discard)', async () => {
     mockRpcResult = [{ allowed: false, current_count: 30 }]
+    dualWriteFired = false
     const req = {
       method: 'POST',
       url: '/c',
@@ -1166,12 +1229,16 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
 
     const layer = proxyRouter.stack.find(s => s.route?.path === '/c' && s.route?.methods.post)
     const handler = layer.route.stack[layer.route.stack.length - 1].handle
-    await handler(req, res)
+    const origError = console.error
+    console.error = () => {}
+    try { await handler(req, res) } finally { console.error = origError }
     assert.strictEqual(jsonVal.ok, true)
 
     // Wait a tiny bit since proxy executes in the background
     await new Promise(resolve => setTimeout(resolve, 30))
-    assert.strictEqual(rpcCallCount, 1)
+    assert.strictEqual(rpcCallCount, 1, 'still metered')
+    const _b = __getDualWriteBatcher(); if (_b) await _b.flush()
+    assert.strictEqual(dualWriteFired, true, 'and no longer silently discarded')
   })
 
   await t.test('excluded path conversion does not call RPC or consume quota', async () => {
@@ -1581,7 +1648,10 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
     }
   })
 
-  await t.test('generic incoming webhook route returns 402 when limit reached', async () => {
+  // Was 'returns 402 when limit reached'. This is the generic inbound rail (ClickFunnels,
+  // CRMs, Zapier/Make/n8n) — a 402 made the sender's retry policy decide whether a real
+  // purchase survived, and most such senders do not retry a 4xx.
+  await t.test('generic incoming webhook route INGESTS when the limit is reached', async () => {
     mockRpcResult = [{ allowed: false, current_count: 30 }]
 
     const req = {
@@ -1620,14 +1690,18 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
     if (nextError) {
       console.error('WEBHOOK INCOMING ROUTE ERROR:', nextError)
     }
-    assert.strictEqual(statusVal, 402)
-    assert.strictEqual(jsonVal.success, false)
-    assert.strictEqual(jsonVal.error, 'Conversion limit reached for your plan')
-    assert.strictEqual(rpcCallCount, 1)
+    assert.notStrictEqual(statusVal, 402, 'no 402 — the sender may never retry it')
+    assert.notStrictEqual(jsonVal.error, 'Conversion limit reached for your plan')
+    assert.strictEqual(rpcCallCount, 1, 'still metered')
   })
 
-  await t.test('direct /api/conversion over-limit idempotency and cache poison regression', async (t) => {
-    // 1. First request has order_id, is over limit (returns 402)
+  // Was 'over-limit idempotency and cache poison regression'. Its premise — a limit BLOCK
+  // that rolls the claim back, then a retry once the limit lifts — no longer exists: the
+  // conversion is never blocked, so there is no rolled-back claim to recover from and the
+  // poisoning failure mode is structurally impossible. Rewritten to pin the guarantee that
+  // replaces it, which is the one that caused the P0: at the cap the conversion is INGESTED
+  // and the idempotency claim is HELD, never released.
+  await t.test('direct /api/conversion at the cap: ingested, and the idempotency claim is NOT rolled back', async (t) => {
     mockRpcResult = [{ allowed: false, current_count: 30 }]
     mockIdempotencyResult = true
 
@@ -1686,110 +1760,30 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
       }
     }
 
-    await conversion(req, res)
-
-    assert.strictEqual(statusVal, 402)
-    assert.strictEqual(jsonVal.success, false)
-    assert.strictEqual(deleteCalled, true, 'Rollback should be called on over-limit block')
-    assert.strictEqual(eqFilters.site_key, 'sk-123')
-    assert.strictEqual(eqFilters.provider, 'browser_conversion')
-    assert.strictEqual(eqFilters.key_type, 'order_event')
-    assert.strictEqual(eqFilters.key_value, 'site-123:order-poison-123:purchase')
-
-    // 2. Second request with same order_id: now limit is lifted (allowed: true)
-    mockRpcResult = [{ allowed: true, current_count: 10 }]
-    mockIdempotencyResult = true
     dualWriteFired = false
-    statusVal = null
-    jsonVal = null
+    const origError = console.error
+    console.error = () => {}   // suppress the expected anomaly alarm
+    try { await conversion(req, res) } finally { console.error = origError }
+
+    assert.strictEqual(statusVal, 200, 'over quota is ingested, not refused')
+    assert.strictEqual(jsonVal.success, true)
+    assert.strictEqual(deleteCalled, false,
+      'the claim must be HELD — releasing it on quota is exactly what left the P0 with no record anywhere')
+    const _b = __getDualWriteBatcher(); if (_b) await _b.flush()
+    assert.strictEqual(dualWriteFired, true, 'and the conversion actually reached Tinybird')
 
     client.from = originalFrom
-
-    await conversion(req, res)
-
-    assert.strictEqual(statusVal, 200)
-    assert.strictEqual(jsonVal.success, true)
-    const _b2 = __getDualWriteBatcher(); if (_b2) await _b2.flush()
-    assert.strictEqual(dualWriteFired, true, 'Retry dual-writes to Tinybird after the limit is lifted')
   })
 
-  await t.test('rollback DB error does not swallow 402 or trigger capture', async () => {
-    // Simulate: over-limit + Supabase delete() returns { error } instead of throwing
-    mockRpcResult = [{ allowed: false, current_count: 30 }]
-    mockIdempotencyResult = true
-
-    const originalFrom = client.from
-    client.from = (table) => {
-      if (table === 'sites') {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: { id: 'site-123', plan: 'free', site_key: 'sk-123', name: 'Test Site' },
-                error: null
-              }),
-              maybeSingle: async () => ({
-                data: { id: 'site-123', plan: 'free', site_key: 'sk-123', name: 'Test Site' },
-                error: null
-              })
-            })
-          })
-        }
-      }
-      if (table === 'revenue_idempotency_keys') {
-        // Supabase delete returns { error } instead of throwing
-        return {
-          delete: () => {
-            const chain = {
-              eq: () => chain
-            }
-            // Override the last eq in the chain to return { error }
-            let eqCount = 0
-            chain.eq = (col, val) => {
-              eqCount++
-              if (eqCount === 4) {
-                // Return a thenable so await resolves to { error }
-                return {
-                  then: (resolve) => resolve({ error: { message: 'delete failed' } }),
-                  eq: () => chain
-                }
-              }
-              return chain
-            }
-            return chain
-          }
-        }
-      }
-      return makeMockChain()
-    }
-
-    const req = {
-      site: { id: 'site-123', plan: 'free', site_key: 'sk-123' },
-      body: { anonymous_id: 'anon-999', conversion_type: 'purchase', order_id: 'order-rollback-err-123' },
-      headers: { 'user-agent': 'Mozilla' }
-    }
-
-    let statusVal = null
-    let jsonVal = null
-    const res = {
-      status: (code) => {
-        statusVal = code
-        return { json: (obj) => { jsonVal = obj } }
-      }
-    }
-
-    try {
-      await conversion(req, res)
-
-      // Route must still return 402 even though the DB rollback failed
-      assert.strictEqual(statusVal, 402)
-      assert.strictEqual(jsonVal.success, false)
-      assert.strictEqual(jsonVal.error, 'Conversion limit reached for your plan')
-      // No PostHog capture should have occurred
-    } finally {
-      client.from = originalFrom
-    }
-  })
+  // REMOVED: 'rollback DB error does not swallow 402 or trigger capture'.
+  // Its entire subject was the over-limit branch — over-limit + a failing Supabase
+  // delete() must still return 402. Conversions are never refused on quota now, so that
+  // branch (and its rollback) no longer exists; the test had no code left to exercise and
+  // could only have been made to pass by re-asserting behaviour this change deliberately
+  // deleted. The underlying concern — a rollback failure must not corrupt the response —
+  // still applies on the WRITE-failure path, where rollback legitimately remains, and is
+  // covered by api/tests/stripe-conversion-durable-write.test.js plus the
+  // 'ACK RULE holds in reverse' test in api/tests/conversion-quota-never-drops.test.js.
 })
 
 test('claimPageviewUsage — pageview limit enforcement helper (140G-4)', async (t) => {

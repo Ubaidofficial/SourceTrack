@@ -86,7 +86,17 @@ export const FEATURE_MATRIX = {
 // WHAT'S ACTUALLY ENFORCED, per key — do not generate pricing copy from an
 // unenforced number:
 //   sites             ENFORCED — site-limits.js:41-48, 402 on create over limit.
-//   conversion_events  ENFORCED — conversion-limits.js:16-50, 402 at limit.
+//   conversion_events  METERED, NEVER ENFORCED — conversion-limits.js counts every
+//                       conversion but never refuses one, on any tier (founder decision
+//                       2026-07-26). It previously 402'd/dropped at the limit; on the
+//                       Stripe path that drop also rolled the idempotency key back and
+//                       returned HTTP 200, so a real customer purchase was destroyed
+//                       while we told Stripe it was delivered — and Stripe never retries
+//                       a 2xx. A quota exists for cost control and 2500 conversions/month
+//                       is not a cost; a dropped conversion is a permanently wrong revenue
+//                       number. The value below is therefore a soft target used for
+//                       metering and messaging only — DO NOT write pricing copy that says
+//                       conversions stop, pause, or are capped at it.
 //   retention_days     ENFORCED as a CEILING only — gdpr.js:584-606 (PUT
 //                       /api/gdpr/retention). Never applied per plan on its
 //                       own: sites.data_retention_days defaults NULL, which
