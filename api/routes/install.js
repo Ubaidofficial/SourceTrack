@@ -137,12 +137,12 @@ router.get('/detect-platform', validateSiteKey, requireSiteMembership, async (re
   if (!domain) {
     return res.status(200).json({
       success: true,
-      data: { platform: 'unknown', confidence: 'low', gtm_present: false, signals: [], error: true },
+      data: { platform: 'unknown', confidence: 'low', gtm_present: false, signals: [], error: true, script_detected: 'unknown' },
       error: null
     })
   }
 
-  const result = await detectPlatform(domain)
+  const result = await detectPlatform(domain, req.site?.site_key || null)
   return res.status(200).json({ success: true, data: result, error: null })
 })
 

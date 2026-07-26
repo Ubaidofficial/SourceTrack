@@ -445,7 +445,7 @@ router.post('/update', async (req, res) => {
 
 router.post('/complete', async (req, res) => {
   try {
-    const { site_id } = req.body
+    const { site_id, skipped } = req.body
     if (!site_id) {
       return res.status(400).json({ success: false, data: null, error: 'site_id is required' })
     }
@@ -498,7 +498,12 @@ router.post('/complete', async (req, res) => {
     const merged = {
       ...currentState,
       current_step: MAX_STEP,
-      verification_status: currentState.verification_status || 'pending'
+      verification_status: currentState.verification_status || 'pending',
+      // Records that this completion was NOT a genuine verification, so the funnel leak
+      // (completions that never saw a real event) is queryable instead of indistinguishable
+      // from a verified install. Whether onboarding_completed itself should still flip to
+      // true on a skip is a separate product decision — this only makes the skip visible.
+      ...(skipped ? { verification_skipped_at: new Date().toISOString() } : {})
     }
 
     const { error: updateErr } = await getSupabase()

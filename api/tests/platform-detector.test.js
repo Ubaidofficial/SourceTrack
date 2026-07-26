@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert'
 
-import { classifyHtml, detectPlatform } from '../lib/platform-detector.js'
+import { classifyHtml, detectPlatform, detectTrackerScript } from '../lib/platform-detector.js'
 
 // classifyHtml is the pure, network-free core: HTML/header haystack -> verdict.
 
@@ -65,12 +65,52 @@ test('gtm_present is independent of platform', () => {
 
 // detectPlatform must never throw and must fail closed on bad input.
 
-test('detectPlatform: rejects non-hostnames without fetching', async () => {
+test('🔴 detectPlatform: rejects non-hostnames without fetching, and never claims script status either', async () => {
   for (const bad of ['', null, 'localhost', '127.0.0.1', 'no-dot', 'has space.com', 'http://x']) {
     const r = await detectPlatform(bad)
     assert.equal(r.error, true)
     assert.equal(r.platform, 'unknown')
     assert.equal(r.confidence, 'low')
     assert.deepEqual(r.signals, [])
+    // A fetch that never ran is not evidence the script is absent (§6) — must be 'unknown', never 'not_detected'.
+    assert.equal(r.script_detected, 'unknown', `detectPlatform(${JSON.stringify(bad)}) must report script_detected:'unknown' on a failed/skipped fetch, not a boolean and not 'not_detected'`)
   }
+})
+
+// ── detectTrackerScript: pure, network-free — HTML + site_key -> 'detected' | 'not_detected' ────
+// (the 'unknown' state belongs to detectPlatform's fetch-failure path, tested above and below —
+// this function is only ever called on HTML that was actually fetched, so it never returns 'unknown')
+
+test('🔴 detectTrackerScript: matching src + data-site-key -> detected (root alias /tracker.min.js)', () => {
+  const html = '<html><head><script async src="https://app.sourcetrack.ai/tracker.min.js" data-site-key="sk_abc123"></script></head></html>'
+  assert.equal(detectTrackerScript(html, 'sk_abc123'), 'detected')
+})
+
+test('🔴 detectTrackerScript: cookieless variant is also a real tracker src (CLAUDE.md §11)', () => {
+  const html = '<script src="/tracker.cookieless.min.js" data-site-key="sk_abc123"></script>'
+  assert.equal(detectTrackerScript(html, 'sk_abc123'), 'detected')
+})
+
+test('🔴 detectTrackerScript: the /tracker/tracker.min.js path form also counts (same file, served both ways)', () => {
+  const html = '<script src="https://app.sourcetrack.ai/tracker/tracker.min.js" data-site-key="sk_abc123"></script>'
+  assert.equal(detectTrackerScript(html, 'sk_abc123'), 'detected')
+})
+
+test('🔴 detectTrackerScript: NEVER /tracker/loader.min.js — that URL was retired, must not count as detected', () => {
+  const html = '<script src="https://app.sourcetrack.ai/tracker/loader.min.js" data-site-key="sk_abc123"></script>'
+  assert.equal(detectTrackerScript(html, 'sk_abc123'), 'not_detected')
+})
+
+test('🔴 detectTrackerScript: tracker src present but WRONG site_key -> not_detected (a stale/other tenant snippet is not evidence of THIS site\'s install)', () => {
+  const html = '<script src="https://app.sourcetrack.ai/tracker.min.js" data-site-key="sk_someone_else"></script>'
+  assert.equal(detectTrackerScript(html, 'sk_abc123'), 'not_detected')
+})
+
+test('🔴 detectTrackerScript: no script tags at all -> not_detected', () => {
+  assert.equal(detectTrackerScript('<html><body>hello</body></html>', 'sk_abc123'), 'not_detected')
+})
+
+test('🔴 detectTrackerScript: an unrelated script tag (e.g. GTM) -> not_detected', () => {
+  const html = '<script async src="https://www.googletagmanager.com/gtm.js?id=GTM-X"></script>'
+  assert.equal(detectTrackerScript(html, 'sk_abc123'), 'not_detected')
 })

@@ -20,7 +20,9 @@ const ERROR_RESULT = Object.freeze({
   confidence: 'low',
   gtm_present: false,
   signals: [],
-  error: true
+  error: true,
+  // A fetch that never ran is not evidence the script is absent (§6) — never 'not_detected'.
+  script_detected: 'unknown'
 })
 
 // Platform signal table — checked IN THIS PRIORITY ORDER. The first platform
@@ -126,21 +128,49 @@ export function classifyHtml(html, headerText = '') {
   return { platform: 'custom', confidence: 'low', gtm_present, signals: [] }
 }
 
+// The shipped embed snippet is served at the root alias (/tracker.min.js,
+// /tracker.cookieless.min.js) AND at /tracker/tracker.min.js (same file, express.static) —
+// both count. /tracker/loader.min.js was retired and must never count (CLAUDE.md §11).
+const TRACKER_SRC_PATTERN = /\/tracker(?:\.cookieless)?\.min\.js(?:[?#]|$)/i
+
+function extractAttr(tag, name) {
+  const m = tag.match(new RegExp(`\\b${name}\\s*=\\s*["']([^"']*)["']`, 'i'))
+  return m ? m[1] : null
+}
+
+// Inspect ALREADY-FETCHED HTML (no network, no new fetch) for a <script> tag whose src
+// points at the tracker AND whose data-site-key matches THIS site's key. A tag pointing at
+// the tracker but carrying a different (or missing) site_key is not evidence of this site's
+// install — 'not_detected', not 'detected'. Exported for unit testing without a fetch.
+export function detectTrackerScript(html, siteKey) {
+  if (!siteKey) return 'not_detected'
+  const tags = String(html || '').match(/<script\b[^>]*>/gi) || []
+  for (const tag of tags) {
+    const src = extractAttr(tag, 'src')
+    const tagSiteKey = extractAttr(tag, 'data-site-key')
+    if (src && TRACKER_SRC_PATTERN.test(src) && tagSiteKey === siteKey) {
+      return 'detected'
+    }
+  }
+  return 'not_detected'
+}
+
 /**
  * Detect the site platform behind a customer domain. Never throws — any fetch
  * or validation failure resolves to a low-confidence "unknown" with error:true
  * so the route can return it verbatim.
  *
  * @param {string} domain - bare registered hostname (no scheme/path)
- * @returns {Promise<{platform:string,confidence:string,gtm_present:boolean,signals:string[],error?:boolean}>}
+ * @param {string|null} siteKey - this site's site_key, checked against a fetched tracker tag's data-site-key
+ * @returns {Promise<{platform:string,confidence:string,gtm_present:boolean,signals:string[],error?:boolean,script_detected:'detected'|'not_detected'|'unknown'}>}
  */
-export async function detectPlatform(domain) {
+export async function detectPlatform(domain, siteKey = null) {
   if (!isPlausibleHostname(domain)) return ERROR_RESULT
   try {
     const res = await safeGet(`https://${normalizeHost(domain)}`)
     const html = await readCappedBody(res)
     const headerText = [...res.headers.entries()].map(([k, v]) => `${k}: ${v}`).join('\n')
-    return classifyHtml(html, headerText)
+    return { ...classifyHtml(html, headerText), script_detected: detectTrackerScript(html, siteKey) }
   } catch {
     return ERROR_RESULT
   }
