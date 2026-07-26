@@ -79,14 +79,12 @@ Relevant code:
   `if (existing) {`
 
 ### 9. 🔴 HIGHEST PRIORITY: GDPR Art. 15 Subject Access Endpoint Crash
-GDPR Art. 15 subject-access (`/api/gdpr/subject`) selects non-existent columns `created_at` and `updated_at` from `lead_qualifications`, and `created_at` (real column is `captured_at`) from `subscription_identity`, causing every request for a subject with data to throw a 500 error.
+GDPR Art. 15 subject-access (`/api/gdpr/subject`) selects non-existent column `updated_at` from `lead_qualifications`, and `created_at` (real column is `captured_at`) from `subscription_identity`, causing every request for a subject with data to throw a 500 error.
 Relevant code:
-`api/routes/gdpr.js:380`
-  `.select('id, visitor_id, distinct_id, score, tier, manual_override, created_at, updated_at')`
+`api/routes/gdpr.js:379`
+  `.select('visitor_id, status, qualified, created_at, updated_at')`
 `api/routes/gdpr.js:386`
-  `.select('id, anonymous_id, customer_id, subscription_id, plan, status, created_at')`
-`api/routes/gdpr.js:401`
-  `return res.status(200).json({`
+  `.select('anonymous_id, stripe_customer_id, first_subscription_id, first_touch_source, first_touch_channel, created_at')`
 
 ### 10. GDPR Automated Retention Purge Gaps
 `site_identity_links`, `lead_qualifications`, `volunteered_identity`, and `subscription_identity` hold visitor PII with NO automated retention purge path (`retention-purge.js` covers only 5 tables).
