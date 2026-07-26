@@ -440,19 +440,17 @@ export async function track(req, res) {
         const isDup = checkIsDuplicate(req.site.id, anonId, req.body.page_url, false, 'form', 0, false)
         if (isDup) logOutcome('dedup-skipped', ' stage=form_conversion')
         if (!isDup) {
-          // Enforce monthly conversion limits (fail-open on DB errors)
-          let limitAllowed = true
+          // Monthly conversion METER (fail-open on DB errors). Metering only — it never
+          // refuses the write. Unlike the other eight sites this one gated the write with
+          // an `if (limitAllowed) { … }` wrapper rather than an early return, so the fix
+          // is to drop the wrapper; the block below is now unconditional.
           try {
-            const limitCheck = await claimConversionUsage(req.site)
-            if (!limitCheck.allowed) {
-              limitAllowed = false
-              logOutcome('limit-blocked', ' reason=conversion_limit stage=form_conversion')
-            }
+            await claimConversionUsage(req.site)
           } catch (limitErr) {
-            console.error('[track] conversion limit check failed, failing open:', limitErr.message || limitErr)
+            console.error('[track] conversion meter failed, continuing (metering must never block revenue):', limitErr.message || limitErr)
           }
 
-          if (limitAllowed) {
+          {
             // Register conversion in the shared deduplication cache
             registerConversion(req.site.id, anonId, req.body.page_url, false, 'form', 0, false)
 

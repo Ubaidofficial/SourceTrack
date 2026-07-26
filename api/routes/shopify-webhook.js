@@ -2,7 +2,7 @@ import crypto from 'crypto'
 import { Router } from 'express'
 import { getSupabase } from '../lib/supabase.js'
 import { decryptSecret } from '../lib/utils.js'
-import { claimIdempotencyKeys, logIngestionEvent, rollbackIdempotencyKeys } from '../lib/idempotency.js'
+import { claimIdempotencyKeys, logIngestionEvent } from '../lib/idempotency.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
 import { SHOPIFY_REFUND_TOPIC, extractShopifyRefundAmount, refundHasAmountSource, buildShopifyRefundIdempotencyKeys, buildShopifyRefundConversion, resolveOriginalDistinctIdByOrderId } from '../lib/shopify-refund.js'
@@ -236,36 +236,20 @@ router.post('/:site_key', async (req, res) => {
       conversionProperties.attribution_status = attributionStatus
     }
 
-    // Enforce monthly conversion limits (fail-open on DB errors)
-    let limitCheckAllowed = true
+    // Monthly conversion METER (fail-open on DB errors). Metering only — never refuses
+    // the write. This carried the identical rollback-then-ack-200 defect as the Stripe
+    // paths: an order at the cap was destroyed while Shopify was told it was delivered.
     try {
-      const limitCheck = await claimConversionUsage(site)
-      if (!limitCheck.allowed) {
-        limitCheckAllowed = false
-      }
+      await claimConversionUsage(site)
     } catch (limitErr) {
-      console.error('[shopify-webhook] Conversion limit check failed, failing open:', limitErr.message || limitErr)
-    }
-
-    if (!limitCheckAllowed) {
-      try {
-        await rollbackIdempotencyKeys(siteKey, 'shopify', keys)
-      } catch (rollbackErr) {
-        console.error('[shopify-webhook] Failed to rollback idempotency keys after conversion limit block:', rollbackErr.message || rollbackErr)
-      }
-      return res.status(200).json({
-        success: false,
-        data: null,
-        error: 'Conversion limit reached for your plan',
-        ignored: true
-      })
+      console.error('[shopify-webhook] Conversion meter failed, continuing (metering must never block revenue):', limitErr.message || limitErr)
     }
 
     // Wave-2b cutover: Tinybird is the SOLE writer for this $conversion (ph.capture
     // removed; flag-gated OFF -> no-op + no network when off).
-    // Reached ONLY after HMAC verify (:57-72), the PERSISTENT claimIdempotencyKeys
-    // duplicate-skip (:138), and the plan-limit block (:249) returned — so a
-    // duplicate the claim skips never dual-writes. No external_event_id on Shopify;
+    // Reached ONLY after HMAC verify (:57-72) and the PERSISTENT claimIdempotencyKeys
+    // duplicate-skip (:138) — so a duplicate the claim skips never dual-writes. The
+    // conversion meter above never blocks. No external_event_id on Shopify;
     // conversionProperties.order_id (= String(payload.id)) lets deriveEventId branch-5
     // resolve event_id = order_id. site_key in props is dropped by the adapter.
     dualWriteEvent({ distinctId, event: '$conversion', timestamp: occurredAt, properties: conversionProperties })

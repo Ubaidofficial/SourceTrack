@@ -81,18 +81,18 @@ async function handleSubscriptionEvent(event, site, siteKey) {
   }
 
   try {
-    // Monthly conversion-limit gate (fail-open on DB error), mirroring the
-    // checkout path. Roll the claim back if blocked so it isn't a silent drop.
-    let allowed = true
+    // Monthly conversion METER (fail-open on DB error). Metering only — it never
+    // refuses the write. This block used to roll the idempotency claim back and return
+    // HTTP 200 at the cap: Stripe reads 2xx as delivered and never retries, and the
+    // released claim meant no record survived anywhere, so a real customer purchase was
+    // destroyed while we reported success. THE ACK RULE now governs this handler — we
+    // never return 2xx for an event we did not persist — so the only 2xx below is the
+    // one after a successful write, and a genuine write failure still rolls the claim
+    // back and returns 500 for redelivery (see the catch at the end of this function).
     try {
-      const lc = await claimConversionUsage(site)
-      if (!lc.allowed) allowed = false
+      await claimConversionUsage(site)
     } catch (limitErr) {
-      console.error('[stripe-webhook] Conversion limit check failed, failing open:', limitErr.message || limitErr)
-    }
-    if (!allowed) {
-      await rollbackIdempotencyKeys(siteKey, 'stripe', keys)
-      return { status: 200, body: { success: false, data: null, error: 'Conversion limit reached for your plan', ignored: true } }
+      console.error('[stripe-webhook] Conversion meter failed, continuing (metering must never block revenue):', limitErr.message || limitErr)
     }
 
     const conversionProperties = {
@@ -576,29 +576,13 @@ router.post('/:site_key', async (req, res) => {
       conversionProperties.attribution_status = attributionStatus
     }
 
-    // Enforce monthly conversion limits (fail-open on DB errors)
-    let limitCheckAllowed = true
+    // Monthly conversion METER (fail-open on DB errors). Metering only — never refuses
+    // the write. Same fix as the subscription path above: this used to roll the claim
+    // back and ack 200 at the cap, destroying the purchase while reporting success.
     try {
-      const limitCheck = await claimConversionUsage(site)
-      if (!limitCheck.allowed) {
-        limitCheckAllowed = false
-      }
+      await claimConversionUsage(site)
     } catch (limitErr) {
-      console.error('[stripe-webhook] Conversion limit check failed, failing open:', limitErr.message || limitErr)
-    }
-
-    if (!limitCheckAllowed) {
-      try {
-        await rollbackIdempotencyKeys(siteKey, 'stripe', keys)
-      } catch (rollbackErr) {
-        console.error('[stripe-webhook] Failed to rollback idempotency keys after conversion limit block:', rollbackErr.message || rollbackErr)
-      }
-      return res.status(200).json({
-        success: false,
-        data: null,
-        error: 'Conversion limit reached for your plan',
-        ignored: true
-      })
+      console.error('[stripe-webhook] Conversion meter failed, continuing (metering must never block revenue):', limitErr.message || limitErr)
     }
 
     // Wave-1 revenue cutover: Tinybird is the SOLE writer for $conversion, and this is

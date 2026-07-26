@@ -5,7 +5,7 @@ import { resolveCapiEventId } from '../lib/capi-event-id.js'
 import { getSupabase } from '../lib/supabase.js'
 import { getFirstTouchFields, redactPiiFromObject, normalizeClickIds } from '../lib/utils.js'
 import { hasFeature } from '../lib/plan-features.js'
-import { claimIdempotencyKeys, logIngestionEvent, rollbackIdempotencyKeys } from '../lib/idempotency.js'
+import { claimIdempotencyKeys, logIngestionEvent } from '../lib/idempotency.js'
 
 import { storeIdentityLink, resolveAnonymousId } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
@@ -208,29 +208,13 @@ export async function conversionOffline(req, res) {
     // Normalize click IDs and LinkedIn aliases
     Object.assign(props, normalizeClickIds(props))
 
-    // Enforce monthly conversion limits (fail-open on DB errors)
-    let limitCheckAllowed = true
+    // Monthly conversion METER (fail-open on DB errors). Metering only — it never
+    // refuses the write. This is the CRM/offline import path, so a refusal destroyed a
+    // closed deal the customer had already recorded elsewhere.
     try {
-      const limitCheck = await claimConversionUsage(req.site)
-      if (!limitCheck.allowed) {
-        limitCheckAllowed = false
-      }
+      await claimConversionUsage(req.site)
     } catch (limitErr) {
-      console.error('[conversion-offline] Conversion limit check failed, failing open:', limitErr.message || limitErr)
-    }
-
-    if (!limitCheckAllowed) {
-      if (keys.length > 0) {
-        try {
-          await rollbackIdempotencyKeys(req.site.site_key, provider, keys)
-        } catch (rollbackErr) {
-          console.error('[conversion-offline] Failed to rollback idempotency keys after conversion limit block:', rollbackErr.message || rollbackErr)
-        }
-      }
-      return res.status(402).json({
-        success: false,
-        error: 'Conversion limit reached for your plan'
-      })
+      console.error('[conversion-offline] Conversion meter failed, continuing (metering must never block revenue):', limitErr.message || limitErr)
     }
 
     // Wave-1 revenue cutover: Tinybird is the SOLE writer for $conversion (ph.capture removed).

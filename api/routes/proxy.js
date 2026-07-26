@@ -143,15 +143,14 @@ router.post('/c',
     const sanitizedProperties = redactPiiFromObject(properties || {})
     sanitizedProperties.referrer = sanitizedReferrer
 
-    // Enforce monthly conversion limits (silently ignore if cap is reached; fail-open on DB error)
+    // Monthly conversion METER (fail-open on DB error). Metering only — it never refuses
+    // the write. This was the worst-shaped of the nine: a bare `return` that silently
+    // discarded the conversion with the 200 already sent, so nothing surfaced to the
+    // caller at all.
     try {
-      const limitCheck = await claimConversionUsage(site)
-      if (!limitCheck.allowed) {
-        console.warn(`[proxy/c] Conversion limit reached for site ${site_key}, skipping capture`)
-        return
-      }
+      await claimConversionUsage(site)
     } catch (limitErr) {
-      console.error('[proxy/c] Conversion limit check failed, failing open:', limitErr.message || limitErr)
+      console.error('[proxy/c] Conversion meter failed, continuing (metering must never block revenue):', limitErr.message || limitErr)
     }
 
     // distinctId + captureProperties hoisted to consts (behavior-identical) so the

@@ -141,18 +141,14 @@ router.post('/:api_key', async (req, res) => {
     // Log raw payload for debugging
     console.log(`[webhook-incoming] site=${site.site_key} type=${fields.conversionType} value=${fields.value} order=${fields.orderId} resolved=${resolved.anonymousId ? 'yes' : 'no'}`)
 
-    // Enforce monthly conversion limits (fail-open on DB errors)
+    // Monthly conversion METER (fail-open on DB errors). Metering only — it never
+    // refuses the write. This is the generic inbound-webhook rail (ClickFunnels, CRMs,
+    // Zapier/Make/n8n): a 402 here made the sender's retry policy decide whether a real
+    // purchase survived, and most such senders do not retry a 4xx.
     try {
-      const limitCheck = await claimConversionUsage(site)
-      if (!limitCheck.allowed) {
-        return res.status(402).json({
-          success: false,
-          data: null,
-          error: 'Conversion limit reached for your plan'
-        })
-      }
+      await claimConversionUsage(site)
     } catch (limitErr) {
-      console.error('[webhook-incoming] Conversion limit check failed, failing open:', limitErr.message || limitErr)
+      console.error('[webhook-incoming] Conversion meter failed, continuing (metering must never block revenue):', limitErr.message || limitErr)
     }
 
     // Fire conversion event to PostHog
