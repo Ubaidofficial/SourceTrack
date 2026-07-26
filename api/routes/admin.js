@@ -225,7 +225,7 @@ router.post('/preview', async (req, res) => {
       return res.status(404).json({ success: false, data: null, error: 'Site not found' })
     }
 
-    // Get install status via PostHog — filter by internal site.id
+    // Get install status via the Tinybird pipe — filter by internal site.id
     let installInfo = null
     try {
       // admin_preview_install pipe cols [event_type, timestamp] → consumer rows[0][0/1]
@@ -291,7 +291,9 @@ router.post('/preview', async (req, res) => {
 })
 
 // GET /api/admin/preview/:siteKeyOrId — aggregated dashboard data for support-mode preview
-// Uses PostHog HogQL — admin stays authenticated as super_admin, no identity switch.
+// Reads via Tinybird pipes — admin stays authenticated as super_admin, no identity switch.
+// (PostHog is fully decommissioned; api/lib/posthog.js is deleted and no-posthog-import.test.js
+// fails CI on reimport. The HogQL strings below are inert args to readTb, never executed.)
 router.get('/preview/:siteKeyOrId', async (req, res) => {
   const logAction = makeAuditLogger(req)
   try {
@@ -318,7 +320,7 @@ router.get('/preview/:siteKeyOrId', async (req, res) => {
       return res.status(404).json({ success: false, data: null, error: 'Site not found' })
     }
 
-    const posthogSiteId = String(site.id).replace(/'/g, "''")
+    const escapedSiteId = String(site.id).replace(/'/g, "''")
 
     // KPI summary: revenue, conversions, sessions, leads (last 30 days)
     let kpis = { revenue: 0, conversions: 0, sessions: 0, leads: 0 }
@@ -335,7 +337,7 @@ router.get('/preview/:siteKeyOrId', async (req, res) => {
           countIf(event = '$pageview') AS sessions,
           count(DISTINCT distinct_id) AS leads
         FROM events
-        WHERE properties.site_id = '${posthogSiteId}'
+        WHERE properties.site_id = '${escapedSiteId}'
           AND timestamp >= now() - INTERVAL 30 DAY
     `, 'admin_preview_kpis', tb => [[tb?.[0]?.revenue, tb?.[0]?.conversions, tb?.[0]?.sessions, tb?.[0]?.leads]])
     if (kpiRows && kpiRows.length > 0) {
@@ -359,7 +361,7 @@ router.get('/preview/:siteKeyOrId', async (req, res) => {
           sumIf(toFloatOrZero(toString(properties.conversion_value)), event = '$conversion') AS revenue,
           countIf(event = '$conversion') AS conversions
         FROM events
-        WHERE properties.site_id = '${posthogSiteId}'
+        WHERE properties.site_id = '${escapedSiteId}'
           AND timestamp >= now() - INTERVAL 30 DAY
         GROUP BY source
         HAVING revenue > 0
@@ -380,7 +382,7 @@ router.get('/preview/:siteKeyOrId', async (req, res) => {
       const instRows = await readTb('admin_preview_overview', { site_id: String(site.id) }, `
         SELECT event, timestamp
         FROM events
-        WHERE properties.site_id = '${posthogSiteId}'
+        WHERE properties.site_id = '${escapedSiteId}'
         ORDER BY timestamp DESC
         LIMIT 1
       `, 'admin_preview_overview', tb => tb.map(r => [r.event_type, r.timestamp]))
@@ -418,7 +420,7 @@ router.get('/preview/:siteKeyOrId', async (req, res) => {
 })
 
 // GET /api/admin/site-detail?site_key=X — detailed site inspector for Super Admin
-// Returns onboarding state, install status (via PostHog), and config summary
+// Returns onboarding state, install status (via Tinybird), and config summary
 router.get('/site-detail', async (req, res) => {
   const logAction = makeAuditLogger(req)
   try {
