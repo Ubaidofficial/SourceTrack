@@ -12,8 +12,10 @@
 // The fix routes the write through PATCH /api/integrations/settings (service
 // role, behind requireUserAuth + validateSiteKey + requireSiteMembership).
 // That bypasses RLS, which is exactly why the plan gate below must exist and
-// stay: cookieless_mode is a paid feature (free and starter are excluded), and
-// before the cutover RLS was accidentally the only thing stopping the write.
+// stay: cookieless_mode is a paid feature (free is excluded; starter and every
+// other paid tier are allowed — see plan-features.js's repackage: tiers now
+// differentiate on volume, not features), and before the cutover RLS was
+// accidentally the only thing stopping the write.
 
 import test from 'node:test'
 import assert from 'node:assert'
@@ -31,8 +33,10 @@ test('cookieless_mode feature matrix', async (t) => {
     assert.strictEqual(hasFeature('free', 'cookieless_mode'), false)
   })
 
-  await t.test('starter is blocked', () => {
-    assert.strictEqual(hasFeature('starter', 'cookieless_mode'), false)
+  // Repackage (plan-features.js): starter now matches growth on every
+  // FEATURE_MATRIX row, including cookieless_mode. Was blocked; now allowed.
+  await t.test('starter is allowed', () => {
+    assert.strictEqual(hasFeature('starter', 'cookieless_mode'), true)
   })
 
   await t.test('trial is allowed', () => {
@@ -59,12 +63,15 @@ test('cookieless_mode feature matrix', async (t) => {
     assert.strictEqual(hasFeature('agency', 'cookieless_mode'), true)
   })
 
+  // Repackage: starter is now allowed (matches growth), so 'free' is the
+  // blocked-plan example here instead — the 402-payload shape is unaffected.
   await t.test('requireFeature returns a 402 payload naming the plan', () => {
-    const block = requireFeature('starter', 'cookieless_mode', 'Cookieless tracking')
-    assert.ok(block, 'starter should be blocked')
+    const block = requireFeature('free', 'cookieless_mode', 'Cookieless tracking')
+    assert.ok(block, 'free should be blocked')
     assert.strictEqual(block.success, false)
-    assert.strictEqual(block.upgrade.current_plan, 'starter')
+    assert.strictEqual(block.upgrade.current_plan, 'free')
     assert.strictEqual(block.upgrade.required_feature, 'cookieless_mode')
+    assert.strictEqual(requireFeature('starter', 'cookieless_mode', 'Cookieless tracking'), null)
     assert.strictEqual(requireFeature('growth', 'cookieless_mode', 'Cookieless tracking'), null)
   })
 })

@@ -16,55 +16,96 @@ export function normalizePlan(plan) {
 // Default monthly analytics event limits per plan tier.
 // Per-site overrides live in sites.pv_limit (set by Stripe webhook from price).
 export const PLAN_DEFAULT_PV_LIMIT = {
-  free:     5_000,
+  free:     10_000,
   trial:    10_000,
-  starter:  50_000,
-  growth:   150_000,
-  scale:    500_000,
+  starter:  250_000,
+  growth:   1_000_000,
+  scale:    5_000_000,
   inactive: 0,
   archived: 0,
 }
 
 // Feature matrix. true = available on that plan, false = blocked.
 // Keep this list in sync with what the Landing page promises.
-const FEATURE_MATRIX = {
+//
+// REPACKAGE: paid tiers differentiate on VOLUME (see PLAN_DEFAULT_PV_LIMIT /
+// PLAN_STRUCTURAL_LIMITS), not features — starter matches growth on every row
+// here (enforced by the invariant test in plan-features.test.js). This closes
+// a downgrade-on-purchase gap: trial previously had strictly more features
+// than paid starter (revenue_attribution, api_access, cookieless_mode,
+// dashboard_widgets, manual_spend, webhook_outbound, and others below), so a
+// customer who paid for starter LOST access a trial user had. white_label is
+// false everywhere — it doesn't exist as a feature; not part of this change.
+export const FEATURE_MATRIX = {
   // ── Free is excluded from every cost-heavy feature ────────────────────────
   multi_touch_attribution: { free: false, trial: true,  starter: true,  growth: true,  scale: true },
   capi_server_side:        { free: false, trial: true,  starter: true,  growth: true,  scale: true },
   over_reporting_detection:{ free: false, trial: true,  starter: true,  growth: true,  scale: true },
-  revenue_analytics:       { free: false, trial: true,  starter: false, growth: true,  scale: true },
-  funnels_cohorts:         { free: false, trial: true,  starter: true,  growth: true,  scale: true },
+  revenue_analytics:       { free: false, trial: true,  starter: true,  growth: true,  scale: true },
+  // Funnels: api/routes/analytics.js:1032-1099 (GET /funnel) exists and is gated
+  // on this key, but it is dead — zero callers anywhere in dashboard/src (no
+  // page, no nav entry, no fetch call) and non-functional even if invoked
+  // directly (it reads .from('pageviews'), a table that is empty by design,
+  // CLAUDE.md §5). A gated endpoint that can only ever return nothing is not a
+  // feature, so it is off on every tier, not just starter.
+  funnels_cohorts:         { free: false, trial: false, starter: false, growth: false, scale: false },
   email_reports:           { free: false, trial: true,  starter: true,  growth: true,  scale: true },
   csv_export:              { free: false, trial: true,  starter: true,  growth: true,  scale: true },
-  api_access:              { free: false, trial: true,  starter: false, growth: true,  scale: true },
-  multi_user:              { free: false, trial: true,  starter: true,  growth: true,  scale: true },
-  cookieless_mode:         { free: false, trial: true,  starter: false, growth: true,  scale: true },
+  api_access:              { free: false, trial: true,  starter: true,  growth: true,  scale: true },
+  // Multi-user: same phantom-feature class as funnels_cohorts. There is no
+  // invite route, seat-management endpoint, or role-management implementation
+  // anywhere in api/routes (`grep -rln "invite" api/routes/` returns nothing),
+  // and company_members is read ONLY — every reference is an authorization
+  // check (ad-platforms.js, admin.js, gdpr.js, google-search-console.js,
+  // middleware/user-auth.js), never a write. False on every tier, not
+  // conditionally true — starter===growth still holds (false everywhere).
+  multi_user:              { free: false, trial: false, starter: false, growth: false, scale: false },
+  cookieless_mode:         { free: false, trial: true,  starter: true,  growth: true,  scale: true },
   white_label:             { free: false, trial: false, starter: false, growth: false, scale: false },
-  manual_spend:            { free: false, trial: true,  starter: false, growth: true,  scale: true },
+  manual_spend:            { free: false, trial: true,  starter: true,  growth: true,  scale: true },
   manual_revenue_status:    { free: false, trial: true,  starter: true,  growth: true,  scale: true },
   ai_analytics:            { free: false, trial: true,  starter: true,  growth: true,  scale: true },
   ai_chat:                 { free: false, trial: true,  starter: true,  growth: true,  scale: true },
   saved_reports:           { free: false, trial: true,  starter: true,  growth: true,  scale: true },
-  dashboard_widgets:       { free: false, trial: true,  starter: false, growth: true,  scale: true },
-  advanced_report_builder: { free: false, trial: false, starter: false, growth: true,  scale: true },
-  revenue_attribution:     { free: false, trial: true,  starter: false, growth: true,  scale: true },
-  campaign_drilldowns:     { free: false, trial: false, starter: false, growth: true,  scale: true },
-  ad_cost_sync:            { free: false, trial: false, starter: false, growth: true,  scale: true },
-  gsc_seo_revenue:         { free: false, trial: false, starter: false, growth: true,  scale: true },
-  cross_domain_tracking:   { free: false, trial: false, starter: false, growth: true,  scale: true },
-  alerts:                  { free: false, trial: false, starter: false, growth: true,  scale: true },
+  dashboard_widgets:       { free: false, trial: true,  starter: true,  growth: true,  scale: true },
+  advanced_report_builder: { free: false, trial: false, starter: true,  growth: true,  scale: true },
+  revenue_attribution:     { free: false, trial: true,  starter: true,  growth: true,  scale: true },
+  campaign_drilldowns:     { free: false, trial: false, starter: true,  growth: true,  scale: true },
+  ad_cost_sync:            { free: false, trial: false, starter: true,  growth: true,  scale: true },
+  gsc_seo_revenue:         { free: false, trial: false, starter: true,  growth: true,  scale: true },
+  cross_domain_tracking:   { free: false, trial: false, starter: true,  growth: true,  scale: true },
+  alerts:                  { free: false, trial: false, starter: true,  growth: true,  scale: true },
   // ── Live analytics: explicitly kept ON for free tier (no delay) ───────────
   live_analytics:          { free: true,  trial: true,  starter: true,  growth: true,  scale: true },
   last_touch_attribution:  { free: true,  trial: true,  starter: true,  growth: true,  scale: true },
-  webhook_outbound:        { free: false, trial: true,  starter: false, growth: true,  scale: true },
+  webhook_outbound:        { free: false, trial: true,  starter: true,  growth: true,  scale: true },
 }
 
 // Numeric/structural limits beyond the feature toggle matrix.
+//
+// WHAT'S ACTUALLY ENFORCED, per key — do not generate pricing copy from an
+// unenforced number:
+//   sites             ENFORCED — site-limits.js:41-48, 402 on create over limit.
+//   conversion_events  ENFORCED — conversion-limits.js:16-50, 402 at limit.
+//   retention_days     ENFORCED as a CEILING only — gdpr.js:584-606 (PUT
+//                       /api/gdpr/retention). Never applied per plan on its
+//                       own: sites.data_retention_days defaults NULL, which
+//                       means "keep forever." This governs the app-side
+//                       Postgres purge (retention-purge.js) ONLY — the
+//                       separate 400-day Tinybird ENGINE_TTL is a different
+//                       mechanism this key does not touch at all.
+//   webhooks           the quota value is kept consistent with the
+//                       webhook_outbound flag (see the invariant test), but
+//                       webhooks.js:75-96 hardcodes a max of 1 destination per
+//                       site regardless of plan (MVP restriction) — so the
+//                       per-plan number beyond 1 is not independently enforced.
+//   team_members       NOT ENFORCED — no invite route exists; multi_user is
+//                       false on every tier (see FEATURE_MATRIX above).
 export const PLAN_STRUCTURAL_LIMITS = {
-  free:     { sites: 1,        webhooks: 0, team_members: 1,  retention_days: 30,   conversion_events: 30 },
+  free:     { sites: 1,        webhooks: 0, team_members: 1,  retention_days: 365,  conversion_events: 30 },
   trial:    { sites: 1,        webhooks: 5, team_members: 1,  retention_days: 365,  conversion_events: 99 },
-  starter:  { sites: 1,        webhooks: 0, team_members: 1,  retention_days: 90,   conversion_events: 150 },
-  growth:   { sites: 3,        webhooks: 20,team_members: 3,  retention_days: 365,  conversion_events: 750 },
+  starter:  { sites: 3,        webhooks: 5, team_members: 3,  retention_days: 1095, conversion_events: 150 },
+  growth:   { sites: 10,       webhooks: 20,team_members: 10, retention_days: 1095, conversion_events: 750 },
   scale:    { sites: Infinity, webhooks: 99,team_members: 99, retention_days: 1825, conversion_events: 2500 },
   inactive: { sites: 0,        webhooks: 0, team_members: 0,  retention_days: 0,    conversion_events: 0 },
   archived: { sites: 0,        webhooks: 0, team_members: 0,  retention_days: 0,    conversion_events: 0 },
