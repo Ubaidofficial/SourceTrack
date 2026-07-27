@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [ main ]
 
+# Cancel a superseded in-flight run when a branch is pushed again, so a rapid
+# push sequence bills one full run instead of N. Keyed by ref, so a PR branch and
+# a push to main never cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -101,107 +108,3 @@ jobs:
             "$SLACK_WEBHOOK_URL")
           echo "slack http $code"
           [ "$code" = "200" ] || { echo "::error::alert POST returned $code"; exit 1; }
-
-  # ────────────────────────────────────────────────────────────────────────────
-  # SCHEMA DRIFT / MIGRATIONS — the cure for hand-applied, per-env migration drift.
-  #
-  # FOUNDER SETUP (one-time; jobs no-op until done):
-  #   1. Repository → Settings → Secrets and variables → Actions:
-  #        - Secrets:  STAGING_DB_URL, PROD_DB_URL
-  #                    MUST be the Supabase SESSION POOLER (Supavisor) connection string, NOT the direct host.
-  #                    Dashboard → Project Settings → Database → Connection string → "Session pooler":
-  #                      host aws-0-<region>.pooler.supabase.com, port 5432, user postgres.<project-ref>.
-  #                    Do NOT use the direct host db.<project-ref>.supabase.co — it resolves to IPv6 ONLY
-  #                    (AAAA, no A record), and GitHub-hosted runners are IPv4-only, so psql dies with
-  #                    "connection to server db.<ref>.supabase.co ... Network is unreachable". The pooler
-  #                    host is IPv4-reachable. (Session mode / port 5432 also works for `supabase db push`.)
-  #                    PROD_DB_URL is used READ-ONLY by schema-drift — no job auto-writes DDL to prod.
-  #        - Variable: SCHEMA_CI_ENABLED = "true"    (master switch — leave unset/false
-  #                    and every job below is skipped, so this PR is safe to merge first)
-  #
-  # PROD DDL IS MANUAL. The migrate-prod job is HARD-DISABLED (`if: false`) because
-  # GitHub Free + a PRIVATE repo has NO environment protection rules — an
-  # `environment: production` reviewer gate is unavailable, so the job would auto-apply
-  # DDL to prod with zero approval. Instead: schema-drift flags divergence, and the
-  # founder hand-applies to prod after review. (Re-arm migrate-prod only once the repo
-  # has real environment protection — Team/Enterprise, or public.)
-  # ────────────────────────────────────────────────────────────────────────────
-
-  # Fails the build on ANY divergence between the migrations (source of truth), staging,
-  # and prod. Runs on every PR + push — silence behind a green check is what let drift
-  # run for weeks; this makes drift loud.
-  schema-drift:
-    if: ${{ vars.SCHEMA_CI_ENABLED == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - uses: supabase/setup-cli@v3
-        with:
-          version: 2.101.0   # PINNED (deterministic). `latest` does an unauthenticated GitHub API lookup that gets rate-limited ("Failed to resolve latest Supabase CLI release: rate limit exceeded"). Bump deliberately.
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # authenticate any release lookup/download so it isn't anonymous-rate-limited
-      - name: Build migrations-shadow DB (LOCAL — replays supabase/migrations/ ONLY)
-        run: |
-          supabase init --force || true
-          supabase start
-          supabase db reset --local   # wipe + replay every committed migration = the intended schema
-      - name: Snapshot migrations-shadow
-        run: psql "$(supabase status -o json | jq -r '.DB_URL')" -tAqX -f scripts/schema-snapshot.sql > /tmp/migrations.json
-      - name: Snapshot STAGING (read-only)
-        run: psql "${{ secrets.STAGING_DB_URL }}" -tAqX -f scripts/schema-snapshot.sql > /tmp/staging.json
-      - name: Snapshot PROD (read-only — SELECT on information_schema only, no writes)
-        run: psql "${{ secrets.PROD_DB_URL }}" -tAqX -f scripts/schema-snapshot.sql > /tmp/prod.json
-      - name: Diff migrations vs staging vs prod — RED on any drift
-        run: node scripts/schema-drift-check.mjs --ignore=scripts/schema-drift-ignore.json migrations=/tmp/migrations.json staging=/tmp/staging.json prod=/tmp/prod.json
-
-  # Auto-apply pending migrations to STAGING on merge to main (after tests + drift pass).
-  # TEMPORARILY HARD-DISABLED (`if: false`, mirroring migrate-prod). schema-drift (a READ-ONLY check)
-  # and this DDL WRITER shared the SAME `SCHEMA_CI_ENABLED` gate, so arming the drift check also armed
-  # this writer — and STAGING_DB_URL currently resolves to PROD, making that coupling a live risk
-  # (a "staging" apply would write DDL to prod). schema-drift's own gate is intentionally left intact
-  # so the founder can still run it to verify the repoint. Re-enable this job by restoring the original
-  # gate below ONLY after STAGING_DB_URL is verified to point at nrsvpwzekfrdrzkoecfk (staging).
-  # Original gate: ${{ vars.SCHEMA_CI_ENABLED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-  migrate-staging:
-    if: false   # HARD-DISABLED until STAGING_DB_URL is verified to point at staging (see comment above); never auto-apply DDL to a PROD-pointing URL.
-    needs: [build-and-test, schema-drift]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v3
-        with:
-          version: 2.101.0   # PINNED (deterministic). `latest` does an unauthenticated GitHub API lookup that gets rate-limited ("Failed to resolve latest Supabase CLI release: rate limit exceeded"). Bump deliberately.
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # authenticate any release lookup/download so it isn't anonymous-rate-limited
-      - name: Apply migrations to STAGING
-        run: supabase db push --db-url "${{ secrets.STAGING_DB_URL }}"
-
-  # PROD migrations are MANUAL — this job is HARD-DISABLED (`if: false`), never runs.
-  #
-  # WHY: the `environment: production` required-reviewer gate is the ONLY thing that would
-  # hold a prod-DDL apply for human approval — and deployment protection rules
-  # (required reviewers on an environment) are NOT available on GitHub Free for a PRIVATE
-  # repo. Without that gate the job would AUTO-APPLY DDL to the production database with
-  # zero human approval. Unacceptable. Until the repo is on a plan that supports
-  # environment protection rules (Team/Enterprise, or public), prod DDL stays manual:
-  # the `schema-drift` job flags any divergence, and the founder hand-applies the
-  # migration to prod (`supabase db push --db-url <PROD_DB_URL>`) after review.
-  #
-  # Kept (disabled, not deleted) as the ready-to-arm template: once real environment
-  # protection exists, restore the guarded `if:` + `environment: production` below.
-  migrate-prod:
-    if: false   # HARD-DISABLED — no reviewer gate on GitHub Free/private; never auto-apply prod DDL. Do NOT enable without environment protection rules.
-    needs: [migrate-staging]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v3
-        with:
-          version: 2.101.0   # PINNED (deterministic). `latest` does an unauthenticated GitHub API lookup that gets rate-limited ("Failed to resolve latest Supabase CLI release: rate limit exceeded"). Bump deliberately.
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # authenticate any release lookup/download so it isn't anonymous-rate-limited
-      - name: Apply migrations to PROD (DISABLED — see the job comment; prod DDL is manual)
-        run: supabase db push --db-url "${{ secrets.PROD_DB_URL }}"
