@@ -1832,8 +1832,19 @@ Found by CC during #432 review. Not a crash (no phantom column). Not in scope fo
 
 `admin.js` probe array (17 entries) and `prevFeatures` array (18 entries) don't align — the probe array has no `AI Chat` entry, so alignment breaks at index 6. From there on every feature is diffed against the wrong previous entry (`offline conversions` vs `AI Chat`'s status, and so on). **11 of 17 features report a misattributed previous status.** Fix: key the lookup by name instead of index. One PR, `admin.js` only. Found during #444; out of scope for that PR.
 
-### CI collapse (qa:all) not yet wired into ci.yml (2026-07-27)
+### CI collapse (qa:all) — CLOSED, REFUTED BY MEASUREMENT (2026-07-27, #455 closed unmerged)
 
 `qa:all` exists (#449) and the blocker is fixed. Note the blocker was **not** a cross-suite isolation bug as originally framed: `node --test` gives every file its own child process, so env cannot bleed between files (verified with a two-file probe). The real cause was `import 'dotenv/config'` making the guard stop firing on any machine with a `.env`, after which the suite called `SOURCETRACK_API_URL` — default `http://localhost:3000`. Fixed by requiring `SOURCETRACK_API_URL` explicitly and using `t.skip` instead of a silent `return`.
 
-`ci.yml` still runs 4 sequential `qa:*` invocations. Next PR: switch to `npm run qa:all` (`.github/workflows/ci.yml` only). **Measure the real CI delta before repeating the ~30% figure** — locally `qa:all` is ~23s and the saving is one node bootstrap instead of four, not less work.
+**The collapse itself was then built, measured on real CI, and REFUTED. `ci.yml` deliberately still runs the 4 sequential `qa:*` invocations. Do not re-attempt it.**
+
+| | unit-test time | job total |
+|---|---|---|
+| Before — 4 steps, 5 green runs on `main` | 118, 120, 120, 121, 122s (mean ~120s) | 166–173s |
+| After — 1 × `qa:all`, run `30291793144`, green | **121s** | **174s** |
+
+121s is inside the 118–122s baseline band, so there is no saving. The ~30% figure came from a laptop (31s → 22s) and did not transfer: `node --test` already spawns a child process **per file**, so collapsing four invocations saves ~4 node/npm startups, not a fraction of 120s. The local gain was concurrency-pooling ~186 files on a many-core machine; a 2-core runner has no such headroom. (Mechanism is a hypothesis; the 121s is measured.)
+
+It also removed per-suite failure locality in the CI UI — a real cost for no gain.
+
+**The one useful residual**, filed as non-urgent backlog in `NEXT_SESSION_PROMPT.md`: unit steps are ~120s of a ~168s job and two suites dominate — **Tracker 44s, Tinybird dual-write 43s** (Identity 30s, Attribution 3s). If CI duration ever matters, that is the target — what is slow inside those two suites, not invocation count.
