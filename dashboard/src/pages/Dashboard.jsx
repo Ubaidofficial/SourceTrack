@@ -214,10 +214,21 @@ export default function Dashboard() {
                     </button>
                   </div>
 
-                  {/* Traffic KPIs (real data) + gated conversions tile */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Traffic KPIs (real data) + gated conversions tile.
+                      Bounce Rate joins the strip only when the overview actually returned one.
+                      dashboard.js sets kpis.bounce_rate to null whenever the dashboard_bounce_rate
+                      pipe read fails or returns nothing, so `!= null` is the difference between a
+                      measured rate and no data — rendering a null as "0.0%" would be a fake zero
+                      (§6). The grid widens to 4 only when the tile is present, so a hidden tile
+                      never leaves an empty cell. Value is pre-formatted rather than
+                      format="percent" because that formatter prefixes a "+" for deltas ("+91.2%").
+                      Matches the Performance Trend header's existing toFixed(1) exactly. */}
+                  <div className={`grid grid-cols-1 gap-4 ${kpis.bounce_rate != null ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
                     <MetricTile label="Visitors" value={trafficVisitors} format="number" />
                     <MetricTile label="Pageviews" value={trafficPageviews} format="number" />
+                    {kpis.bounce_rate != null && (
+                      <MetricTile label="Bounce Rate" value={`${Number(kpis.bounce_rate).toFixed(1)}%`} />
+                    )}
                     <MetricTile label="Conversions" value="—" sub="No conversion events yet" />
                   </div>
 

@@ -13,6 +13,7 @@ import { tooltipPlugin, CHART_COLORS } from '../utils/chartTooltip'
 import { SourceIcon, normalizeSource } from '../components/SourceIcon'
 import { useActiveSite } from '../hooks/useActiveSite'
 import { readStoredTimeRange, persistTimeRange } from '../hooks/useDashboardData'
+import { LIVE_FEED_POLL_MS } from '../lib/liveFeed'
 import { useCountUp } from '../utils/useCountUp'
 import QueryError from '../components/QueryError'
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Filler)
@@ -230,7 +231,10 @@ export default function Analytics() {
     queryKey: ['analytics-live', site?.site_key],
     queryFn: () => fetchApi(`/live?site_key=${site.site_key}`),
     enabled: !!site?.site_key,
-    refetchInterval: 30000
+    // Shared constant, not a second hardcoded interval. This was 30000 while the Dashboard's
+    // live count moved to LIVE_FEED_POLL_MS in #438, and the "Online now" caption below still
+    // claimed 30s — the fork IS the drift. One source of truth for both the poll and the label.
+    refetchInterval: LIVE_FEED_POLL_MS
   })
 
   const { data: sourcesData } = useQuery({
@@ -536,7 +540,9 @@ export default function Analytics() {
                 <p className="text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">Online now</p>
                 <p className="text-xl font-bold text-st-black dark:text-dark-primary tabular-nums tracking-tight">{liveCount.toLocaleString()}</p>
               </div>
-              <div className="flex items-center gap-1.5 flex-wrap mt-2"><p className="text-[10px] text-st-gray dark:text-gray-400 font-medium truncate">refreshed every 30s</p></div>
+              {/* Derived from the constant, never retyped — a hardcoded "30s" here outlived the
+                  interval it described. If the poll changes, this caption changes with it. */}
+              <div className="flex items-center gap-1.5 flex-wrap mt-2"><p className="text-[10px] text-st-gray dark:text-gray-400 font-medium truncate">refreshed every {Math.round(LIVE_FEED_POLL_MS / 1000)}s</p></div>
             </div>
           </div>
 
