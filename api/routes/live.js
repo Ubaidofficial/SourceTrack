@@ -61,11 +61,21 @@ router.get('/', async (req, res) => {
 // (applied at the mount in api/index.js), so req.site is the AUTHENTICATED tenant and the
 // pipe's required site_id is never client-supplied.
 //
-// Soft-fail policy differs from GET '/' on purpose: this is a decorative panel, not a count.
-// The backing pipe is founder-deployed, so until it lands _queryTinybirdPipe returns null and
-// this returns an empty list — the panel then renders nothing rather than an error. No fake
-// rows are ever synthesised (§6: hide, never fabricate).
+// EMPTY AND UNKNOWN ARE DIFFERENT ANSWERS, and this endpoint must never conflate them.
+// queryTinybirdPipe returns [] for a served-empty result but null when the read is dead
+// (pipe not deployed, or retries exhausted) — §5. Collapsing both to [] made the panel
+// print "No active visitors in the last 5 minutes", an assertion of ABSENCE, while the
+// live counter beside it said N people were on the site. Both read the same table over
+// the same 5-minute window, so they cannot legitimately disagree; the panel was stating
+// something the app could not know (§6: no fake zeros — hide, never fabricate).
+//
+// So a dead read reports `degraded: true` with an empty list and the panel says it cannot
+// load, while a genuinely empty window reports `degraded: false` and the panel truthfully
+// says nobody is here. Still no fabricated rows in either case.
 router.get('/visitors', async (req, res) => {
+  // Mirrors GET '/' above: under the dispatch-proof harness a dead read must 500 rather
+  // than soft-fail, so a test cannot get a false green from a degraded-but-200 answer.
+  const forceRead = process.env.TINYBIRD_FORCE_READ === 'true'
   try {
     if (!req.site?.id) {
       return res.status(400).json({
@@ -75,8 +85,18 @@ router.get('/visitors', async (req, res) => {
     const rows = await _queryTinybirdPipe('live_visitors_detail', {
       site_id: String(req.site.id)
     })
-    // Soft-fail to [] if pipe not deployed yet
-    const visitors = (rows ?? []).map(r => ({
+    // null = dead store, NOT "nobody online". Never rendered as absence.
+    if (rows === null) {
+      if (forceRead) {
+        return res.status(500).json({
+          success: false, data: null, error: 'tinybird-force-read dispatch failure'
+        })
+      }
+      return res.json({
+        success: true, data: { visitors: [], degraded: true }, error: null
+      })
+    }
+    const visitors = rows.map(r => ({
       id: r.distinct_id,
       current_page: r.current_page || '/',
       country: r.country || null,
@@ -90,10 +110,19 @@ router.get('/visitors', async (req, res) => {
       is_ai: !!r.ai_source,
       last_seen: r.last_seen
     }))
-    return res.json({ success: true, data: { visitors }, error: null })
+    return res.json({ success: true, data: { visitors, degraded: false }, error: null })
   } catch (err) {
     console.error('Live visitors detail error:', err)
-    return res.json({ success: true, data: { visitors: [] }, error: null })
+    if (forceRead) {
+      return res.status(500).json({
+        success: false, data: null, error: 'tinybird-force-read dispatch failure'
+      })
+    }
+    // An unexpected throw is also "unknown", never "nobody here" — same reasoning as the
+    // null branch. The panel stays alive but says it cannot load.
+    return res.json({
+      success: true, data: { visitors: [], degraded: true }, error: null
+    })
   }
 })
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Monitor, Smartphone, Tablet } from 'lucide-react'
 import { fetchApi } from '../lib/api'
 import { shouldPoll, LIVE_FEED_POLL_MS } from '../lib/liveFeed'
@@ -43,14 +43,26 @@ function DeviceIcon ({ type, className = 'w-3.5 h-3.5' }) {
 export default function RealtimeVisitors ({ siteKey }) {
   const [visitors, setVisitors] = useState([])
   const [loading, setLoading] = useState(true)
+  // "Can't read" is not "nobody is here". The API reports degraded when the backing pipe
+  // is undeployed or the read died, and this panel must then say so rather than claim an
+  // empty room — the live counter next to it may well be showing visitors (§6).
+  const [degraded, setDegraded] = useState(false)
+
+  // A ref, not state: `load` must not change identity on every poll, or the interval
+  // effect below would tear down and recreate the timer on each response.
+  const hadDataRef = useRef(false)
 
   const load = useCallback(async () => {
     if (!siteKey) return
     try {
       const d = await fetchApi(`/live/visitors?site_key=${encodeURIComponent(siteKey)}`)
       setVisitors(d?.visitors || [])
+      setDegraded(!!d?.degraded)
+      if (!d?.degraded) hadDataRef.current = true
     } catch (_) {
       // Transient poll error — keep the last good list rather than blanking the panel.
+      // But if we never had a good read, "unknown" is the truth, not an empty room.
+      if (!hadDataRef.current) setDegraded(true)
     } finally {
       setLoading(false)
     }
@@ -83,6 +95,11 @@ export default function RealtimeVisitors ({ siteKey }) {
             </div>
           ))}
         </div>
+      ) : degraded && rows.length === 0 ? (
+        // Checked BEFORE the empty state: an unreadable feed must not render as an empty one.
+        <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">
+          Live view unavailable right now
+        </p>
       ) : rows.length === 0 ? (
         <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">
           No active visitors in the last 5 minutes
