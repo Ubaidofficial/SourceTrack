@@ -68,6 +68,29 @@ export const CONVERSION_FILTER_COLUMN = {
   'AI Source': 'ai_influenced_source'
 }
 
+// A raw conversion_type -> a human label for the Goals list. Splits on the separators a
+// tracking call actually uses (snake_case, kebab-case, dot, space) and Title Cases each word, so
+// 'lead_created' -> 'Lead Created' and 'add-to-cart' -> 'Add To Cart'. KNOWN_GOAL_LABELS covers the
+// values a single word cannot express: 'signup' is one token but reads as "Sign Up".
+// Unknown types pass through the generic path rather than being dropped — a customer's own
+// conversion_type is theirs to name, and hiding it would be worse than an imperfect capitalisation.
+const KNOWN_GOAL_LABELS = {
+  signup: 'Sign Up', signups: 'Sign Ups', cta: 'CTA', aov: 'AOV',
+  addtocart: 'Add To Cart', checkout: 'Checkout', purchase: 'Purchase',
+  trial: 'Trial', demo: 'Demo', lead: 'Lead', subscription: 'Subscription'
+}
+export function goalLabel (type) {
+  const raw = String(type || '').trim()
+  if (!raw) return 'Unknown'
+  const known = KNOWN_GOAL_LABELS[raw.toLowerCase().replace(/[\s._-]/g, '')]
+  if (known) return known
+  return raw
+    .split(/[\s._-]+/)
+    .filter(Boolean)
+    .map(w => w[0].toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ') || 'Unknown'
+}
+
 // HogQL serialized `toDateTime('ISO')` expr -> the pipe's ClickHouse DateTime
 // literal 'YYYY-MM-DD HH:MM:SS' (UTC, second precision). Same helper as sessions.js.
 function toChDateTime (expr) {
@@ -1026,6 +1049,86 @@ router.get('/os', requireUserAuth, validateSiteKey, requireSiteMembership, async
   } catch (err) {
     console.error('[analytics/os]', err.message)
     res.status(err.statusCode || 500).json({ success: false, error: err.statusCode ? err.message : 'OS breakdown failed' })
+  }
+})
+
+// Custom goals = $conversion events bucketed by their own conversion_type. Reuses the EXISTING
+// flexible_report_conversion_type_by_site pipe (no new pipe, no new SQL): it returns
+// { dim_value, metric_value } and switches aggregate on the `metric` param, so two parallel reads
+// give the count and the money for the same buckets.
+//
+// TWO conversion_type values are excluded because neither is a goal a user set:
+//   'untyped' — the pipe's own COALESCE(NULLIF(conversion_type,''),'untyped') fallback for events
+//               that carry no type at all.
+//   'refund'  — a reversal (stripe-webhook.js:153 ingests refunds under this type). The pipe's
+//               conversions aggregate already excludes refund rows from the count
+//               (countIf(... != 'refund')), so a refund bucket surfaces as 0 completions with a
+//               revenue figure — shipping that as a "goal" would read as a broken row.
+//
+// conversion_rate and total_visitors are deliberately NULL here — see the comment on the response.
+router.get('/goals', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
+  try {
+    const siteId = String(req.site.id)
+    const days = Math.min(parseInt(req.query.days) || 30, 90)
+    const from = new Date(Date.now() - days * 86400000).toISOString()
+    const to = new Date().toISOString()
+
+    // Same half-open, +1-day-exclusive window the reports were built against, via the same two
+    // helpers buildPageviewPipeParams uses — so this read's window matches every other pipe read
+    // on the page instead of being a third date convention.
+    let range
+    try { range = serializeHogQLDateRange(from, to) } catch (_e) { range = null }
+    const dateFrom = range && toChDateTime(range.from)
+    const dateTo = range && toChDateTime(range.to)
+    if (!dateFrom || !dateTo) {
+      const err = new Error('This goals query cannot be served: invalid date range.')
+      err.statusCode = 400
+      throw err
+    }
+
+    const params = { site_id: siteId, date_from: dateFrom, date_to: dateTo }
+    const [convRows, revRows] = await Promise.all([
+      _queryTinybirdPipe('flexible_report_conversion_type_by_site', { ...params, metric: 'conversions' }),
+      _queryTinybirdPipe('flexible_report_conversion_type_by_site', { ...params, metric: 'revenue' })
+    ])
+
+    // A null read is a DEAD STORE, not "no goals". Returning [] would hide the section and read as
+    // "you have not tracked any goals" — an assertion of absence the server cannot make (§5/§6).
+    // Same rule dispatchPageviews applies above: throw loud, fix the pipe.
+    if (convRows === null || revRows === null) {
+      throw new Error('[tinybird-force-read] flexible_report_conversion_type_by_site returned null — FIX THE PIPE, do not restore the read')
+    }
+
+    const EXCLUDED = new Set(['untyped', 'refund'])
+    const byType = new Map()
+    for (const r of convRows) {
+      const type = String(r.dim_value || '')
+      if (!type || EXCLUDED.has(type.toLowerCase())) continue
+      byType.set(type, { type, label: goalLabel(type), conversions: Number(r.metric_value) || 0, revenue: 0 })
+    }
+    for (const r of revRows) {
+      const type = String(r.dim_value || '')
+      if (!type || EXCLUDED.has(type.toLowerCase())) continue
+      const existing = byType.get(type)
+      // Revenue-only buckets (a type present in the revenue read but absent from the conversions
+      // read) are NOT invented as goals — a goal with no completions is not a goal.
+      if (existing) existing.revenue = Number(r.metric_value) || 0
+    }
+
+    const goals = [...byType.values()]
+      .filter(g => g.conversions > 0)
+      .sort((a, b) => b.conversions - a.conversions)
+
+    // total_visitors is NULL on purpose, and conversion_rate with it. The denominator this page
+    // already uses for every other rate is the summary read's distinct anonymous_id count, which
+    // the Analytics page has in hand from its own /analytics/summary query. Computing a SECOND
+    // denominator here would (a) add a Tinybird round-trip the caller does not need and (b) risk
+    // the Goals rate disagreeing with every other rate on the same screen. The client divides by
+    // the count it already holds; see RATE_DENOMINATOR in Analytics.jsx.
+    res.json({ success: true, data: { goals, total_visitors: null } })
+  } catch (err) {
+    console.error('[analytics/goals]', err.message)
+    res.status(err.statusCode || 500).json({ success: false, error: err.statusCode ? err.message : 'Goals breakdown failed' })
   }
 })
 
