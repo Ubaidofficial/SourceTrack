@@ -59,16 +59,26 @@ function BrandFavicon({ domain, className = 'w-3.5 h-3.5' }) {
 // in api/routes/track.js, which stores getBrowser().name lowercased) — so
 // 'mobile safari' and 'ucbrowser' are the real values, NOT 'uc browser'.
 //
-// Pick the domain of the BROWSER, not of the company that makes it. firefox was
-// pointed at mozilla.org, whose favicon is the Mozilla foundation's green "m:3"
-// wordmark, not the Firefox flame — at the 14px this renders at, that reads as a
-// plain green dot, which is exactly how it was reported.
+// Pick the mark of the BROWSER, not of the company that makes it. firefox was pointed at
+// mozilla.org, whose favicon is the Mozilla foundation's green "m:3" wordmark, not the
+// Firefox flame — at the 14px this renders at, that reads as a plain green dot, which is
+// exactly how it was reported. chrome had the same shape of bug: google.com serves the
+// Google "G", the search mark, not the Chrome wheel.
+//
+// A value may therefore be a PATH, not just a host — s2 resolves the favicon of that page's
+// site section, so 'google.com/chrome' yields the wheel where 'google.com' yields the G.
+// encodeURIComponent escapes the slash and the service handles it (verified end to end).
+// Do not "tidy" these back to bare hosts.
+//
+// safari and silk keep a vendor mark on purpose: Apple has no Safari-specific domain and
+// Amazon none for Silk, and a recognizable vendor logo beats the neutral dot.
 const BROWSER_DOMAIN = {
-  chrome: 'google.com', 'google chrome': 'google.com', safari: 'apple.com', 'mobile safari': 'apple.com',
+  chrome: 'google.com/chrome', 'google chrome': 'google.com/chrome', safari: 'apple.com', 'mobile safari': 'apple.com',
   edge: 'microsoft.com', 'microsoft edge': 'microsoft.com', firefox: 'firefox.com', 'mozilla firefox': 'firefox.com',
   opera: 'opera.com', brave: 'brave.com', samsung: 'samsung.com', 'samsung internet': 'samsung.com', yandex: 'yandex.com',
   ucbrowser: 'ucweb.com', 'uc browser': 'ucweb.com',
   vivaldi: 'vivaldi.com', duckduckgo: 'duckduckgo.com', chromium: 'chromium.org',
+  puffin: 'puffin.com', silk: 'amazon.com', waterfox: 'waterfox.net',
 }
 const OS_DOMAIN = {
   windows: 'microsoft.com', macos: 'apple.com', 'mac os': 'apple.com', ios: 'apple.com', ipados: 'apple.com',
