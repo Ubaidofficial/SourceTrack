@@ -286,12 +286,26 @@ async function notify(dx, snap) {
     ...snap.errors.map(e => `• \`${e.name}\` ERROR: ${e.error}`),
     ...snap.warnings.map(w => `• \`${w.name}\` WARN: ${w.warning || 'warning'}`)
   ].join('\n')
-  await fetch(SLACK, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      text: `${icon} *SourceTrack Health — ${dx.severity.toUpperCase()}*\n*Summary:* ${dx.diagnosis}\n*Action:* ${dx.action || 'None'}\n${failList}`
+  // A failed ALERT must never become a failed CHECK. This fetch used to be bare, so a
+  // revoked webhook or a Slack outage threw out of notify(), rejected run(), and skipped
+  // `process.exit(snap.overall === 'critical' ? 1 : 0)` — the outer handler then exited 1
+  // and printed "Health check crashed: <slack error>". Because notify() returns early when
+  // severity is 'ok', the reachable case is a WARNING run reporting a false CRITICAL to
+  // cron, with the real verdict replaced by the transport error. Log and continue; never
+  // re-throw. The verdict is already on stdout and in the exit code before we get here.
+  try {
+    const res = await fetch(SLACK, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: `${icon} *SourceTrack Health — ${dx.severity.toUpperCase()}*\n*Summary:* ${dx.diagnosis}\n*Action:* ${dx.action || 'None'}\n${failList}`
+      })
     })
-  })
+    if (!res.ok) {
+      console.error(`[health-agent] Slack notify failed: HTTP ${res.status}`)
+    }
+  } catch (err) {
+    console.error('[health-agent] Slack notify threw:', err.message)
+  }
 }
 
 async function run() {

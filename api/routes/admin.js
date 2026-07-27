@@ -645,8 +645,8 @@ router.get('/feature-status', async (req, res) => {
         { name: 'first_touch_non_direct', status: 'live', notes: 'Added Session 54. Skips direct, falls back to first_touch', verification_method: 'code-audit' },
         { name: 'last_touch_non_direct', status: 'live', notes: 'Added Session 54. Skips direct, falls back to last_touch', verification_method: 'code-audit' },
         { name: 'LTV', status: 'live', notes: 'Cumulative historical revenue per identity, first_touch/last_touch only. Labeled as LTV Revenue v1.', verification_method: 'code-audit' },
-        { name: 'AI Analytics', status: 'live', notes: 'AI vs non-AI metrics, rule-based insights, referrer-based detection', verification_method: 'code-audit' },
-        { name: 'AI Chat', status: 'live', notes: 'LLM → HogQL query assistant. Single events table. No ad platform access.', verification_method: 'code-audit' },
+        { name: 'AI Analytics', status: 'dormant', notes: 'ai-analytics.js deleted (#315). Route does not exist.', verification_method: 'code-audit' },
+        { name: 'AI Chat', status: 'dormant', notes: 'ai-chat.js cut from Tinybird migration. Route does not exist.', verification_method: 'code-audit' },
         { name: 'offline conversions', status: 'live', notes: 'POST /api/conversion/offline with external_id support', verification_method: 'code-audit' },
         { name: 'pipeline stages', status: 'live', notes: 'lead_created/qualified/opportunity/closed_won from offline conversions', verification_method: 'code-audit' },
         { name: 'webhooks', status: 'live', notes: 'Best-effort outbound webhooks on conversion events', verification_method: 'code-audit' },
@@ -656,7 +656,7 @@ router.get('/feature-status', async (req, res) => {
         { name: 'widgetized dashboard', status: 'dormant', notes: 'Code was built in Session 2 but replaced by fixed card grid in Session 31. Add-to-Dashboard button disabled. Dashboard.jsx has zero widget rendering.', verification_method: 'code-audit' },
         { name: 'multi-dashboard', status: 'dormant', notes: 'Session 2 implementation replaced. Current Dashboard is a single Performance Overview page. No dashboard CRUD, selector, or switching.', verification_method: 'code-audit' },
         { name: 'linear attribution', status: 'live', notes: 'Pre-aggregated linear model live via getLinearAttribution. Reads linear_attribution JSONB from attributed_conversions.', verification_method: 'code-audit' },
-        { name: 'saved reports', status: 'partial', notes: 'localStorage-only. No backend persistence. No cross-device sync.', verification_method: 'code-audit' },
+        { name: 'saved reports', status: 'live', notes: 'Backend persisted since #81/#84/#85: saved_reports table with RLS, full CRUD via /api/saved-reports (mounted in api/index.js). Cross-device.', verification_method: 'code-audit' },
         { name: 'period-over-period comparison', status: 'partial', notes: 'Dashboard KPI cards have delta comparisons via overview API *_prev fields. Report Builder has no compare feature.', verification_method: 'code-audit' }
       ]
     },
