@@ -1,0 +1,7 @@
+-- THROWAWAY — CI measurement only, never to be merged or applied.
+--
+-- Exists solely to match schema-drift.yml's `paths: supabase/migrations/**`
+-- filter so the Schema Drift workflow actually runs on this PR. Deliberately
+-- contains NO DDL: `supabase db reset --local` replays every migration into the
+-- shadow DB, so anything real here would alter the very schema the job diffs.
+-- A comment-only file is valid SQL, replays as a no-op, and changes nothing.
