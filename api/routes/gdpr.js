@@ -377,14 +377,14 @@ gdprRouter.get('/subject', async (req, res) => {
     // mapping is verified, and the eraser deletes them, so access must disclose them.
     const { data: quals, error: qualErr } = await supabase
       .from('lead_qualifications')
-      .select('visitor_id, status, qualified, created_at, updated_at')
+      .select('visitor_id, status, qualified, created_at')
       .eq('site_id', site.id)
       .in('visitor_id', subjectIds)
     if (qualErr) throw qualErr
 
     const { data: subs, error: subErr } = await supabase
       .from('subscription_identity')
-      .select('anonymous_id, stripe_customer_id, first_subscription_id, first_touch_source, first_touch_channel, created_at')
+      .select('anonymous_id, stripe_customer_id, first_subscription_id, first_touch_source, first_touch_channel, captured_at')
       .eq('site_id', site.id)
       .in('anonymous_id', subjectIds)
     if (subErr) throw subErr
