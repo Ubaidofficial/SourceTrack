@@ -47,7 +47,10 @@ export async function run() {
 
   const { data: sites } = await supabase
     .from('sites')
-    .select('id, site_key, domain, name, owner_id, plan, trial_ends_at')
+    // company_id is REQUIRED by the owner lookup below. Without it here, site.company_id is
+    // undefined and the company_members filter silently matches nothing — the same shape as
+    // the bug this select is being fixed alongside.
+    .select('id, site_key, domain, name, owner_id, company_id, plan, trial_ends_at')
 
   if (!sites?.length) {
     console.log('[email-reports] No sites found')
@@ -69,11 +72,23 @@ export async function run() {
         continue
       }
 
-      const { data: owner } = await supabase
+      const { data: owner, error: memberErr } = await supabase
         .from('company_members')
         .select('user_id')
-        .eq('company_id', site.id)
+        // Was .eq('company_id', site.id) — a SITE id compared against a COMPANY id, so it could
+        // only ever match by collision. Only worth asking when the site actually belongs to a
+        // company; a null company_id has no members row to find and site.owner_id is the answer.
+        .eq('company_id', site.company_id)
         .maybeSingle()
+
+      // A failed lookup is NOT "this site has no team" — answering the two the same way is what
+      // hid this for so long. Counted as an error, not a skip, so the run summary distinguishes
+      // "nothing to send" from "we could not tell" (#448).
+      if (memberErr) {
+        console.error(`[email-reports] ${site.site_key}: company_members lookup failed (${memberErr.message})`)
+        errors++
+        continue
+      }
 
       const userId = owner?.user_id || site.owner_id
       if (!userId) {
@@ -82,13 +97,21 @@ export async function run() {
         continue
       }
 
-      const { data: userRec } = await supabase
-        .from('users')
-        .select('email')
-        .eq('id', userId)
-        .maybeSingle()
+      // Owner emails live in auth.users, which PostgREST does not expose — .from('users') hit
+      // public.users, a table that DOES NOT EXIST in this database (verified: information_schema
+      // returns only auth.users). The call errored on every site of every run, the error was
+      // discarded, userRec came back undefined, and the job logged "no owner email" and skipped.
+      // That is why every run reported Sent 0 — not a crash. Same admin-API idiom as the sibling
+      // job usage-threshold-emails.js:156 and middleware/auth.js:106.
+      const { data: authUser, error: authErr } = await supabase.auth.admin.getUserById(userId)
 
-      const ownerEmail = userRec?.email
+      if (authErr) {
+        console.error(`[email-reports] ${site.site_key}: auth lookup failed for owner (${authErr.message})`)
+        errors++
+        continue
+      }
+
+      const ownerEmail = authUser?.user?.email
       if (!ownerEmail) {
         console.log(`[email-reports] Skipping ${site.site_key}: no owner email`)
         skipped++
