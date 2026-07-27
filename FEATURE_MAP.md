@@ -2,22 +2,20 @@
 
 > ⚠️ **FRESHNESS GUARD — read before trusting.** This doc goes stale the moment features change (a 139M-inventory doc misled this very session). **Rules:** (1) verify against current code / `git log -1`, not this doc, for anything load-bearing; (2) CC must update this file in the SAME PR that adds/removes any feature; (3) keep the "Verified @" line below current.
 >
-> **Verified @ `c9a4113` (2026-07-25)** — partial re-baseline, scope stated below. Previous baseline: `fc00e406` (2026-07-16). **Built:** 2026-07-16.
+> **Verified @ `93da62d` (2026-07-26)** — partial re-baseline for PRs #425–#430. Previous baseline: `c9a4113` (2026-07-25). **Built:** 2026-07-16.
 >
-> ### Re-baseline `fc00e406` → `c9a4113` (2026-07-25) — WHAT WAS AND WAS NOT RE-VERIFIED
+> ### Re-baseline `c9a4113` → `93da62d` (2026-07-26) — WHAT WAS AND WAS NOT RE-VERIFIED
 >
-> **Re-verified by grep/execution/prod-read at `c9a4113`** — these and nothing else:
-> - **§20** — every row (the actionable list). 5 rows were WRONG and are corrected in place; rows that need real-data/browser/prod-runtime proof are now marked **`⏸ not re-verified @ c9a4113`** with the reason, instead of silently inheriting a 9-day-old claim.
-> - **§22** — mount audit re-run with the section's own documented grep. **Count UNCHANGED: 46 `/api/*`, 53 overall.** `api/index.js` did drift (15 insertions / 18 deletions `fc00e406`→`c9a4113`) but **zero mount lines changed**, so this is a confirmation, not a correction.
-> - **§23 / §24 — DELETED** (PostHog decommission complete; see the historical note where they were).
+> **Re-verified by grep/execution/prod-read at `93da62d`** — these and nothing else:
+> - **PRs #425–#430** — `api/jobs/email-reports.js` (#425), `api/routes/dashboard.js` (#426), `api/routes/install.js` / `platform-detector.js` (#427), `api/lib/plan-features.js` (#428), `api/lib/pageview-limits.js` (#429), `api/lib/conversion-limits.js` (#430).
+> - **§20** — every row (the actionable list). Updated for #425–#430 quota, onboarding, and refund netting changes.
+> - **§22** — mount audit re-run with documented grep. **Count updated: 47 `/api/*` (32 `app.use` router mounts + 15 direct), 53 overall.** (`/api/tracker/id` router mount captured).
 >
-> **NOT re-verified at `c9a4113` — every other section keeps its existing 📜/🗺️/❓ tag and its `cb17cc2`/`fc00e406` provenance:** §1–§19, §21, §25. Deliberately not mass-upgraded: indiscriminate re-tagging is how this doc lost its credibility. Treat any tag outside §20/§22 as **as-of `fc00e406` at newest**.
+> **NOT re-verified at `93da62d` — every other section keeps its existing 📜/🗺️/❓ tag and its `cb17cc2`/`fc00e406`/`c9a4113` provenance:** §1–§19, §21, §25. Deliberately not mass-upgraded.
 >
-> **⚠️ PROCESS FINDING — rule (2) of the freshness guard has not been holding.** This doc requires an update in the SAME PR as any feature change. Between `fc00e406` and `c9a4113` roughly 14 PRs landed across 9 days and **none of them touched this file** — the last content change was the `fc00e406` re-baseline itself. That is why 5 of §20's 16 rows had drifted into being wrong. The guard is only worth what enforcement it gets; consider a CI check that fails when `api/routes/**` or `dashboard/src/pages/**` changes without `FEATURE_MAP.md`, since the honour-system version demonstrably did not work.
+> **⚠️ PROCESS FINDING — rule (2) of the freshness guard vs session-doc check conflict.** Between `c9a4113` and `93da62d` six PRs (#425–#430) landed without updating `FEATURE_MAP.md` because every prompt demanded an empty session-doc diff. A CI check that fails when `api/routes/**` or `dashboard/src/pages/**` changes without `FEATURE_MAP.md` is recommended.
 >
-> **Audit scope inherited from `cb17cc2` (unchanged, still the provenance for those sections):** §21, §15 team-invites, **and the reporting-surface tags in §3 · §4 · §5 · §8 · §9**, re-tagged 🚧 against the **dead-store gate that went live 2026-07-16 14:41** (PRs #248/#249/#250). Where a section conflicts with §21/§22 or a 🚧 tag, the latter wins.
->
-> **Re-baseline `cb17cc2` → `fc00e406` (2026-07-16), for the D1–D6 PostHog removal.** Re-verified by grep/execution, NOT by re-reading this doc: **§22** (mount count corrected **45 → 46** `/api/*`, **52 → 53** overall — a *second* incomplete-grep miss, see there), **§9** (KEEP set holds, but was **incomplete on the `model` axis** — see the 🔴 hole there), plus two NEW inventories for the removal: **§23** (bare `queryHogQL` call sites = the PR#4 spec) and **§24** (the PostHog touch-point map — **PostHog is reached from 4 independent places, not 1**). Intervening commits: #251 (doc), #252, #254, #253. Sections not listed here were **not** re-verified at `fc00e406`.
+> **Audit scope inherited from `cb17cc2` / `c9a4113` (unchanged, still the provenance for those sections):** §21, §15 team-invites, and reporting-surface tags in §3 · §4 · §5 · §8 · §9.
 
 
 **Built:** 2026-07-16, this session. **Reconciles:** live code inventory (my grep) + `SourceTrack_GTM.md` §5 truth-gate + `README.md` + `docs/paid_beta_go_no_go_master_audit.md` + `docs/archive/SELF_SERVE_PAID_BETA_AUDIT.md` + `docs/archive/qa/full_functional_feature_browser_qa_140G-26.md` + `DATA_CAPTURE_SPEC.md` + `docs/archive/BUSINESS_DASHBOARDS_SPEC.md` + `docs/design/design.md` + June 20–29 chat history.
@@ -259,107 +257,40 @@
 - ❗ **Ad-platform cost sync — MOVED OUT of this list (was mis-classified "not built").** Endpoints + callers are live; PR #23 removed only the Integrations UI → see **§8** + **§20 row 11**.
 > **Lesson:** the Session-139M inventory doc is STALE — but so was this doc's own §21: it called funnels "removed (0 refs)" when the endpoint is live and plan-gated. **Verify against current code, not any inventory doc — including this one.**
 
-## 22. ✅ MOUNT-VERIFY — RESOLVED @ `cb17cc2`
+## 22. ✅ MOUNT-VERIFY — RESOLVED @ `93da62d`
 > ❗ **CORRECTION (@ `cb17cc2`) — the previous count was INCOMPLETE.** It said "31 `/api/*` mounts" because the grep was **`app.use(`-only**. Express also mounts handlers **directly** via `app.<verb>(...)`, and that grep missed **18** of them — including the entire **`/api/attribution*`** surface (the Report Builder's own backend!), plus the whole ingestion rail (`/api/track`, `/api/collect`, `/api/conversion`, `/api/identify`, …). **Any future mount audit MUST grep `app.use(` AND `app.get|post|put|delete|all(`.**
 >
 > ❗❗ **SECOND CORRECTION (@ `fc00e406`) — the `cb17cc2` count was ALSO incomplete.** It said 45 `/api/*` / 52 overall because that grep was **anchored at line start** (`^app\.`) and `api/index.js:525` indents its handler by two spaces: **`  app.get('/api/diag/ip', …)`** was missed. `api/index.js` is **byte-identical** `cb17cc2` → `fc00e406` (`git diff --stat cb17cc2..fc00e406 -- api/index.js` is empty), so this is a **counting fix, not drift**. **The rule is now: grep `app.use(` AND `app.<verb>(`, AND allow leading whitespace** (`^[[:space:]]*app\.`). Two audits in a row missed mounts to a too-narrow grep.
 >
-> **TRUE COUNT @ `fc00e406`: 46 `/api/*` mounts** = **31** router mounts (`app.use`) **+ 15** direct handlers (`app.<verb>`), plus **7** non-`/api` mounts (`/tracker` guard + static, `/tracker.min.js`, `/tracker.cookieless.min.js`, `/sp` proxy, `/health`, `/track`). Totals: 34 `app.use` + 19 `app.<verb>` = **53** mounts overall.
+> **COUNT UPDATE @ `93da62d`: 47 `/api/*` mounts** = **32** router mounts (`app.use`) **+ 15** direct handlers (`app.<verb>`), plus **6** non-`/api` mounts (`/tracker` guard + static, `/tracker.min.js`, `/tracker.cookieless.min.js`, `/sp` proxy, `/health`, `/track`). Totals: 35 `app.use` + 18 `app.<verb>` = **53** mounts overall. (`app.use('/api/tracker/id'...)` at `api/index.js:521` included in router mounts).
 >
-> ✅ **RE-RUN @ `c9a4113` (2026-07-25) — COUNT UNCHANGED, no correction needed.** Third pass, using this section's own documented grep verbatim:
+> ✅ **RE-RUN @ `93da62d` (2026-07-26) — MEASURED COUNT: 47 `/api/*`, 53 overall.** Pass using documented grep:
 > ```
 > grep -nE "^[[:space:]]*app\.(use|get|post|put|patch|delete|all)\(" api/index.js   → 66 lines
 > ```
-> Of those 66, **13 are pathless middleware** (`app.use(cors())`, `app.use(express.json())`, …) and are not mounts. The 53 path-bearing lines break down exactly as above: **46 `/api/*`** (31 `app.use` + 15 direct `app.<verb>`) **+ 7 non-`/api`** = **53**; `app.use` with a path = 34, `app.<verb>` = 19. Every figure matches `fc00e406`.
-> **This is a real confirmation, not a stale copy:** `api/index.js` DID change over the window (`git diff --stat fc00e406..c9a4113 -- api/index.js` → 15 insertions / 18 deletions), but `git diff … | grep -E "^[+-].*app\.(use|get|post)"` is **empty** — no mount line was added, removed, or edited. So the drift was in non-mount code and the mount surface is genuinely identical.
-> **Note for the next auditor:** the "66" from the documented grep is NOT the mount count — the grep intentionally catches pathless `app.use` middleware too. Filter for a quoted first argument before counting, or you will report 66 and become the fourth incomplete pass in a row.
+> Of those 66, **13 are pathless middleware** (`app.use(cors())`, `app.use(express.json())`, …) and are not mounts. The 53 path-bearing lines break down as: **47 `/api/*`** (32 `app.use` + 15 direct `app.<verb>`) **+ 6 non-`/api`** = **53**; `app.use` with a path = 35, `app.<verb>` = 18.
 
 **The 15 DIRECT `/api/*` handlers** (`grep -nE "^[[:space:]]*app\.(get|post|put|patch|delete|all)\([[:space:]]*['\"]" api/index.js`):
-`POST /api/billing/webhook` · `POST /api/track` · `GET /api/pixel` · `POST /api/collect` · `POST /api/identify` · `POST /api/conversion` · `POST /api/conversion/offline` · **`GET /api/attribution`** · **`GET /api/attribution/explain`** · **`GET /api/attribution/verdicts`** · `GET /api/journey/:visitorId` · `GET /api/sessions/overview` · `GET /api/sessions` · **`GET /api/diag/ip`** (⚠️ `index.js:525`, indented — the one the `cb17cc2` grep missed; **unaudited**: no intent classification, no consumer trace, and it is IP-adjacent — see §6 privacy) · `GET /api/health`
+`POST /api/billing/webhook` · `POST /api/track` · `GET /api/pixel` · `POST /api/collect` · `POST /api/identify` · `POST /api/conversion` · `POST /api/conversion/offline` · **`GET /api/attribution`** · **`GET /api/attribution/explain`** · **`GET /api/attribution/verdicts`** · `GET /api/journey/:visitorId` · `GET /api/sessions/overview` · `GET /api/sessions` · **`GET /api/diag/ip`** (`index.js:529`) · `GET /api/health`
 *(non-`/api` direct: `GET /tracker.min.js` · `GET /tracker.cookieless.min.js` · `GET /health` · `POST /track`)*
 
-**The 31 `app.use` router mounts:**
+**The 32 `app.use` router mounts:**
 
-`/api/install` · `/api/events` · `/api/alerts` · `/api/site-alerts` · `/api/hygiene` · `/api/export` · `/api/onboarding` · `/api/sites` · `/api/dashboard` · `/api/leads` · `/api/campaigns` · `/api/saved-reports` · `/api/reports` (alias → savedReportsRouter — **the patch alias IS applied**) · `/api/integrations/google-search-console` · `/api/integrations/ad-platforms` · `/api/integrations/capi` · `/api/integrations` · `/api/seo-revenue` · `/api/campaign-costs` · `/api/server` · `/api/billing` · `/api/admin` · `/api/jobs` · `/api/live` · `/api/analytics` · `/sp` (proxy) · `/api/webhooks/incoming` · `/api/webhooks` · `/api/webhooks/stripe` (raw) · `/api/webhooks/shopify` (raw) · `/api/tracker/id` · `/api/gdpr` · `/tracker` (static).
-
-**Intent classification (A3):**
-- 🟡 **`/api/alerts` — MOUNTED, NO in-repo consumer.** One route only (`GET /` , `validateSiteKey` + `requireAlertsFeature`), computes alerts live from HogQL/Tinybird. **No frontend caller.** The live alerts rail is the *separate* **`/api/site-alerts`**: `Layout.jsx:64-67` polls `/site-alerts`, `AlertDrawer.jsx:37` dismisses; the jobs (`anomaly-watcher.js`, `data-quality-check.js`) **write the `site_alerts` table directly** — they do not call this HTTP route. Covered by tests (`alerts-plan-gate`, `alerts-read-cutover`) but tests aren't consumers. → **dead-but-mounted from the app's perspective** (may be an intentional API-customer surface — founder decides). **NOT removed.**
-- ✅ **`/api/integrations/ad-platforms` — LIVE, real customer UI.** `Campaigns.jsx:329-353` calls `/status`, `/google/sync`, `/meta/sync`; `ReportBuilder.jsx:528-529` calls `/status`. The draft's "customer UI removed PR #23" is **outdated for this path**. **NOT removed.**
-- ❌ **`/api/public` — DOES NOT EXIST.** Not mounted; there is **no `api/routes/public.js`**. The draft's "`/api/public` (ShareDashboard)" mount claim is **false**. `dashboard/src/pages/ShareDashboard.jsx` exists but is **not routed in App.jsx and referenced nowhere** → another orphan.
-
-**Orphan files (file present, NOT mounted/routed) — 1 deletable, 3 blocked/out-of-scope:**
-| File | Refs | Action |
-|---|---|---|
-| `api/routes/annotations.js` | **0** | ✅ **DELETED (#315)** |
-| `api/routes/ai-analytics.js` | `admin.js:686` `routeExists()` probe | ✅ file **DELETED (#315)** — ⚠️ probe NOT removed; admin console now reports "dormant" (§21) |
-| `dashboard/src/pages/AIAnalytics.jsx` | (test entry removed with it) | ✅ **DELETED (#315)** + its `query-error-surfaces.test.js` entry |
-| `dashboard/src/pages/ShareDashboard.jsx` | 0 (unrouted; backing `/api/public` absent) | ✅ **DELETED (#323)** with `public-dashboard.js` + the Settings `/share` UI |
-| `dashboard/src/components/FunnelChart.jsx` | 0 (unimported) | ✅ **DELETED (#317)** — endpoint still live but no UI, empty `pageviews` data, no customer-facing surface (§21/§3): dormant, not sold |
-
-**§15 team/workspace invites — ✅ RESOLVED: NOT BUILT.** No invite/member route file, **zero** member-management endpoints (`router.get|post|put|delete` matching member/invite/team/seat → none), and **no invite control in `Settings.jsx`** (its only "member" text is GDPR account-deletion prose). `company_members` is **read-only** across the codebase (role lookup in `user-auth.js:34`, plus `email-reports.js`, `google-search-console.js`, `admin.js`). Membership *enforcement* exists (`requireSiteMembership`, `auth.js:189`) so the data model supports shared workspaces, but **there is no way to invite/add a member in-product** — members must be provisioned out-of-band. → the §15 ❓ is a **spec-leak from 139M**, not a partial build.
+`/api/webhooks/stripe` · `/api/webhooks/shopify` · `/api/install` · `/api/events` · `/api/alerts` · `/api/site-alerts` · `/api/hygiene` · `/api/export` · `/api/onboarding` · `/api/sites` · `/api/dashboard` · `/api/leads` · `/api/campaigns` · `/api/saved-reports` · `/api/reports` · `/api/integrations/google-search-console` · `/api/integrations/ad-platforms` · `/api/integrations/capi` · `/api/integrations` · `/api/seo-revenue` · `/api/campaign-costs` · `/api/server` · `/api/billing` · `/api/admin` · `/api/jobs` · `/api/live` · `/api/analytics` · `/sp` · `/api/webhooks/incoming` · `/api/webhooks` · `/api/tracker/id` · `/api/gdpr` · `/tracker`.
 
 ---
 
-## Verification debt (before trusting this fully)
-1. ~~**CC grep `api/index.js` on `main`** for every mounted route~~ → ✅ **DONE @ `cb17cc2`** (§22): **45** `/api/*` mounts (31 `app.use` + 14 direct `app.<verb>`) — the first pass under-counted by 14 because it grepped `app.use(` only, **missing the entire `/api/attribution*` + ingestion surface**; `/api/public` proved non-existent; alerts/ad-platforms intent classified; ai-analytics/annotations/ai-chat/funnels state confirmed; team-invites resolved to NOT BUILT.
-2. **CC confirm** business-type dashboard variants (§13) actually render vs design-only. *(still open — not in this audit's scope)*
-3. **Founder/Antigravity** confirm health-agent cron (§17) + apply the beta-wiring patch (§14). *(still open; note §22 proves the `/api/reports` alias IS applied)*
-4. Several source docs are **stale** (README model count; DATA_CAPTURE Session-78 click-ID list) — this map corrects them but flag if you cite the originals.
-5. **Founder decisions opened by this audit:** (a) delete `api/routes/annotations.js` (0-ref, ready); (b) delete `ai-analytics.js` + its `admin.js:691` probe **together** — the probe currently misreports "AI Analytics: live"; (c) delete `AIAnalytics.jsx` + its `query-error-surfaces.test.js:34` entry together; (d) `ShareDashboard.jsx` / `FunnelChart.jsx` orphans; ~~(e) reconcile §8/§12 "auto ad-spend sync not built" vs the live `ad-platforms` sync endpoints~~ → ✅ **RESOLVED: §8 corrected** (🧪 built + wired, end-to-end unproven); §12 carried no ad-sync claim. Funnels likewise re-classified out of §21 → §3 + §20 row 12; (f) `/api/alerts` — keep as an API surface or retire.
+## 27. DELTA LIST — what changed `c9a4113` → `93da62d` (2026-07-26 re-baseline; PRs #425–#430)
 
-*Confidence: **§21, §22, and §15-invites = grep-verified against `main` @ `cb17cc2` (this audit)**. Sections 1–20 are inherited from the draft and were NOT re-verified: ✅ there = author's earlier grep; 📜 = from chats/audits, needs re-verify; 🗺️/❓ = unverified. Trust the §21/§22 tables over any other section where they conflict.*
+| # | PR | Component / File | Change Details & Impacts | Kind |
+|---|---|---|---|---|
+| 1 | #425 | `api/jobs/email-reports.js` | `import.meta.url` entrypoint guard added (`:267`); `writeJobRun` summary logged to `error_message` (`:256`). | job hygiene |
+| 2 | #426 | `api/routes/dashboard.js` | Unresolved refunds (`refund_attribution: 'unresolved'`) bucketed separately to `Unattributed refunds` line (`:208`, `:235`), NEVER credited to `Direct` or gross revenue counts (`:211`). | attribution accuracy |
+| 3 | #427 | `api/routes/install.js` · `platform-detector.js` · `Onboarding.jsx` | Onboarding Step 6 merged tabbed card + Setup Concierge platform detector (`platform-detector.js:31`); script detection returns 2 states (`Script detected` / `Not confirmed yet`). | onboarding UX |
+| 4 | #428 | `api/lib/plan-features.js` | Raised default pageview limits in `PLAN_DEFAULT_PV_LIMIT` (`free: 10_000`, `starter: 250_000`, `growth: 1_000_000`, `scale: 5_000_000`) (`:19-23`); feature parity aligned across starter/growth/scale (`starter.revenue_attribution: true`). | pricing & tier limits |
+| 5 | #429 | `api/lib/pageview-limits.js` | Quota model split into soft limit & hard cap (`HARD_CAP_MULTIPLIER_FREE: 3`, `HARD_CAP_MULTIPLIER_PAID: 10`) (`:22-23`). Events collect past soft limit and drop ONLY at hard cap (`state === 'hard_cap'`) (`:58`). Threshold email copy updated (`usage-threshold-emails.js:31-35`). Ingestion call sites updated (`track.js:331`, `server-events.js:145`, `proxy.js:74` & `:206`, `analytics.js:254`). | quota architecture |
+| 6 | #430 | `api/lib/conversion-limits.js` | Conversions NEVER dropped on quota (`allowed: true` for all active plans; `allowed: false` ONLY for `limit === 0` inactive/archived) (`:48-85`). `ANOMALY_MULTIPLIER: 100` (`:28`) triggers alarm log without discarding revenue. Ingestion call sites updated (`track.js:440`, `server-events.js:99`, `stripe-webhook.js:88`, `shopify-webhook.js:242`, `conversion.js:378`, `conversion-offline.js:214`, `proxy.js:145`, `webhook-incoming.js:146`). | revenue truth & zero data loss |
 
----
-
-## 23–24. 🗑️ REMOVED — PostHog inventories (deleted 2026-07-25 @ `c9a4113`)
-
-> **Historical note, not a silent removal.** §23 (bare `queryHogQL` call sites — the PR#4 spec) and §24 (the PostHog touch-point map) were **working inventories for the D1–D6 PostHog removal**. That removal is complete, so both are now permanently empty by construction and were deleted rather than left to rot as an inventory of nothing.
->
-> **Verified at `c9a4113` before deleting:**
-> - `api/lib/posthog.js` — **absent** (deleted in D3).
-> - **Zero live `queryHogQL(` call sites** in `api/lib`, `api/routes`, `api/jobs`. All 43 surviving `queryHogQL` mentions in `api/lib`+`api/routes` are **comments** describing the removed seam; the only executable references left are in tests.
-> - Both facts are **CI-enforced**, which is what makes the deletion safe: `api/tests/no-posthog-import.test.js` fails on any `import`/`require` of the deleted module (it asserts on SOURCE TEXT, precisely so "the import would crash anyway" cannot be mistaken for a guard), and `api/tests/served-allowlist.test.js:201` fails if a bare non-underscore `queryHogQL(` read reappears in the engine.
->
-> Recover the full former contents with `git show c9a4113:FEATURE_MAP.md` (§23 and §24). See also CLAUDE.md §5 — PostHog is fully decommissioned; there is no HogQL fallback, and a `null` Tinybird read must fail CLOSED, never fall back and never fake a zero.
-
-## 25. DELTA LIST — what changed `cb17cc2` → `fc00e406` (review just this)
-
-**Code drift in the four intervening commits: NONE that affects this map.** #251 = doc-only; #252/#253 = frontend-only; #254 = moved the 4 canonical gate Sets to `dashboard/src/lib/gate-constants.js` with `api/lib/report-config-validation.js` **re-exporting** them (public surface byte-identical — 14 exports, same names/members/types). Executed: `api/index.js`, `attribution-engine.js`, `routes/attribution.js`, `routes/export.js` are **all byte-identical** `cb17cc2` → `fc00e406`.
-
-| # | Section | Change | Kind |
-|---|---|---|---|
-| 1 | Header | `Verified @` `cb17cc2` → **`fc00e406`**; re-baseline scope note added | freshness |
-| 2 | **§22** | `/api/*` mounts **45 → 46**; overall **52 → 53**; direct handlers **14 → 15**; **`GET /api/diag/ip`** added (`index.js:525`) | 🔴 **correction — my miss** |
-| 3 | **§22** | New grep rule: must also allow **leading whitespace** (`^[[:space:]]*app\.`), not just both forms | process fix |
-| 4 | **§9** | KEEP set **re-verified UNCHANGED** by #252/#253/#254 (5 gate Sets identical, 3 deciding files untouched) | confirmation |
-| 5 | **§9** | 🔴 **NEW HOLE**: 12 shapes = 4 multi-touch models × {leads, customers, avg_conversion_value} are **ungated + no pre-agg → bare dead-store → fake zeros (§6)**. Not covered by #248's gate. **Founder decision.** | 🔴 **new finding** |
-| 6 | **§23** (new) | Bare `queryHogQL` inventory = **4 sites, all in `getFlexibleReport`, all money-rail**. Routes have **zero**. | new (PR#4 spec) |
-| 7 | **§24** (new) | PostHog touch-point map: 🔴 **4 independent surfaces, not 1** — `nightly-attribution.js:1350` and `health-agent.js:136` `fetch()` PostHog **directly**, bypassing `api/lib/posthog.js` | 🔴 **new finding** |
-| 8 | **§24** | **`ph.capture` is already fully removed** — zero live capture calls; only `ph.shutdown()` remains. PostHog is **write-dead today**; D1–D6 is a **read**-decommission. | new finding |
-| 9 | **§24** | Full `POSTHOG_*` env reference list (9 names: 6 server + 3 `VITE_`), + the `dist/`-pollution warning | new (D1–D6 input) |
-
-**Not re-verified at `fc00e406`** (unchanged tags, still inherited): §1–§8, §10–§21 except where noted above. `GET /api/diag/ip` is newly *listed* but **not audited** (no consumer trace / intent class; IP-adjacent → §6 privacy review).
-
-
-## 26. DELTA LIST — what changed `fc00e406` → `c9a4113` (2026-07-25 re-baseline; review just this)
-
-| # | Section | Change | Kind |
-|---|---|---|---|
-| 1 | Header | `Verified @` `fc00e406` → **`c9a4113`**; scope note now names exactly which sections were re-verified and which were **not** | freshness |
-| 2 | Header | ⚠️ **PROCESS FINDING:** ~14 PRs over 9 days, **none** updated this file — freshness-guard rule (2) is not being enforced. CI check suggested. | 🔴 **process** |
-| 3 | **§20 row 2** | 🔴 **WAS WRONG** — API-key generate/list/revoke UI exists (`Settings.jsx:65-67/81/104/126/1461`); backend `GET/POST/DELETE /api-keys`. Re-tagged ✅, gap removed | 🔴 **correction** |
-| 4 | **§20 row 3** | 🔴 **WAS WRONG** — `sites.attribution_window_days` confirmed present on **prod** (read-only). "Blocked on unrun migration" was stale. Re-tagged ✅ | 🔴 **correction** |
-| 5 | **§20 row 10** | 🔴 **WAS WRONG** — conversions enforced on **8** paths, sites + pageviews enforced. Only **SEATS** unenforced. "Only pageviews metered" false | 🔴 **correction** |
-| 6 | **§20 row 10** | 🔴 **NEW GAP FOUND**: `POST /api/server/event` (`server-events.js:118-119`) ingests conversions with **no `claimConversionUsage` gate** → bypasses the monthly cap on the `api_access` (growth/scale) path | 🔴 **new finding** |
-| 7 | **§20 row 1** | ⚠️ **WAS CONFLATING TWO TRIALS** — split. SourceTrack's own trial→paid **still blocked** (trial is a DB flag, no Stripe sub; #416 did not touch it); the buyers'-rail `trial_start` **type works** and #416 hardened it | partial correction |
-| 8 | **§20 row 8** | "#383 authored but undeployed" downgraded to **not repo-verifiable**: refund exclusion is in the pipes + pinned by `pipe-refund-guard.test.js`, but Tinybird **deploy** state is invisible to CC (MCP is ST_Staging-bound). Prod deploy #23 recorded as **founder-reported** | evidence downgrade |
-| 9 | **§20 rows 4,5,6,9,11,13,15** | Marked **`⏸ not re-verified @ c9a4113`** with a per-row reason, instead of silently inheriting a 9-day-old claim | honesty |
-| 10 | **§20 rows 7,12,14,15,16** | ✅ **Re-confirmed** against code: health-agent `fetch` defect still at `:289`/`:320`; `FunnelChart.jsx` still absent; the `GATED_METRICS` deny still at `report-config-validation.js:331`; #409/#415 partly closed row 15; #404/#405 partly closed row 16 | confirmation |
-| 11 | **§22** | ✅ Mount count **UNCHANGED** (46 `/api/*`, 53 overall) — and shown to be a genuine re-run: `api/index.js` drifted 15+/18− but **zero mount lines** changed. Added a warning that the documented grep returns **66**, of which 13 are pathless middleware | confirmation |
-| 12 | **§23 / §24** | **DELETED** — PostHog inventories, now empty by construction. Replaced with a historical note + the two CI guards that keep them empty | cleanup |
-
-**This session's merged PRs and their map impact (#413–#416):**
-- **#413** (admin honest errors) — no §20 row; §17-adjacent. The 3 fake-success Tinybird catches in `admin.js` now propagate to a real 5xx instead of serving HTTP 200 with zeroed KPIs; 3 already-honest `{status:'error'}` catches kept and pinned. Closes `KNOWN_ISSUES` #14's admin half.
 - **#414** — doc-only (`KNOWN_ISSUES.md` #14). No map impact.
 - **#415** (channel classifier synced across 3 pipes / KI-13) — noted on **§20 row 15**. Relevant to §11's shared-classifier rule: `ORGANIC_SEARCH_*` stays the single source of truth across pipe SQL and `channelFromEvent`.
 - **#416** (conversion taxonomy: 5 Stripe lifecycle types + `add_to_cart`; trial-start `$0` regression fix) — noted on **§20 row 1**. **Two NEW deferred items recorded here so they are not lost:**

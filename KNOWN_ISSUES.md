@@ -4,50 +4,203 @@ This file should stay short. Only include verified issues or high-confidence ris
 
 Do not use this file as a backlog for every idea. Use it to prevent repeated mistakes.
 
-## Current verified/high-confidence issues
+## Current verified/high-confidence issues (Verified @ 93da62d)
 
+### 1. `pv_limit` Shadowing
+`sites.pv_limit` has a Postgres column DEFAULT of 5000 (`supabase/migrations/20260721000001_baseline_schema.sql:900`) and the Stripe webhook writes an override from price metadata (`api/routes/billing.js:78`). `getPvLimit` prefers any truthy/finite override, so `PLAN_DEFAULT_PV_LIMIT` changes have NO runtime effect until price metadata and DB defaults are reconciled.
+Relevant code:
+`supabase/migrations/20260721000001_baseline_schema.sql:900`
+  `pv_limit integer DEFAULT 5000`
+`api/routes/billing.js:78`
+  `const fromMeta = price?.metadata?.pv_limit`
+`api/lib/plan-features.js:92`
+  `if (perSiteOverride && (Number.isFinite(perSiteOverride) || perSiteOverride === Infinity)) return perSiteOverride`
+`api/lib/plan-features.js:93`
+  `return PLAN_DEFAULT_PV_LIMIT[normalizePlan(plan)] ?? 0`
 
-### 1. `schema.sql` is stale
+### 2. `NULL` `pv_limit` Ambiguity
+`getPvLimit` falls back to the plan default when `pv_limit` is `NULL`, whereas `usage-threshold-emails.js` treats `NULL` as unlimited and excludes those sites from metering alerts entirely.
+Relevant code:
+`api/lib/plan-features.js:93`
+  `return PLAN_DEFAULT_PV_LIMIT[normalizePlan(plan)] ?? 0`
+`api/jobs/usage-threshold-emails.js:95`
+  `// (limit=0) and any site with NULL pv_limit (treated as unlimited).`
+`api/jobs/usage-threshold-emails.js:99`
+  `.gt('pv_limit', 0)`
 
-The live database schema has been repaired through migrations, but `supabase/schema.sql` does not fully reflect the current tables/columns/policies.
+### 3. Hardcoded Retention Limit Guard in GDPR Route
+`gdpr.js:585` hardcodes 1825 as the keep-forever gate, duplicating `PLAN_STRUCTURAL_LIMITS.scale.retention_days`. Any change to that plan value silently breaks keep-forever retention logic.
+Relevant code:
+`api/routes/gdpr.js:585`
+  `if (days === 0 && limits.retention_days < 1825) {`
+`api/lib/plan-features.js:68`
+  `scale:    { sites: Infinity, webhooks: 99, team_members: 99, retention_days: 1825, conversion_events: 2500 },`
 
-Relevant files:
+### 4. Conversion Routes Mounted Without `checkTierLimit`
+`/api/conversion` and `/api/conversion/offline` mount without `checkTierLimit` and have no in-file site-status guard. Blocking archived sites depends solely on the `limit === 0` path in `conversion-limits.js`.
+Relevant code:
+`api/index.js:450`
+  `app.post('/api/conversion',`
+`api/index.js:460`
+  `app.post('/api/conversion/offline',`
+`api/lib/conversion-limits.js:83`
+  `if (limit === 0) {`
 
-- `SUPABASE_SCHEMA.md`
-- `supabase/migration_session_68_schema_alignment.sql`
+### 5. `charge.refunded` Event Acknowledgement Without Persistence
+`stripe-webhook.js:226` handles `charge.refunded` without expandable `refunds[]` data, returning HTTP 200 after writing nothing.
+Relevant code:
+`api/routes/stripe-webhook.js:226`
+  `const refunds = charge.refunds?.data || []`
 
-Current rule:
+### 6. Tinybird `ENGINE_TTL` 400-Day Event Retention Limit
+Tinybird datasources (`events`, `events_by_visitor`, `privacy_signals`) specify ClickHouse `ENGINE_TTL "toDateTime(timestamp) + toIntervalDay(400)"`, capping event retention at ~13 months regardless of plan, while Postgres conversion data has no TTL.
+Relevant code:
+`tinybird/datasources/events.datasource:76`
+  `ENGINE_TTL "toDateTime(timestamp) + toIntervalDay(400)"`
+`tinybird/datasources/events_by_visitor.datasource:67`
+  `ENGINE_TTL "toDateTime(timestamp) + toIntervalDay(400)"`
+`tinybird/datasources/privacy_signals.datasource:16`
+  `ENGINE_TTL "toDateTime(timestamp) + toIntervalDay(400)"`
 
-- Treat migrations and live Supabase verification as source of truth.
-- Do not rely on `schema.sql` alone.
+### 7. Unapplied Plan Retention Days to Sites Column
+`PLAN_STRUCTURAL_LIMITS.retention_days` is NEVER written to `sites.data_retention_days` during site creation or subscription updates; only user interaction via `PUT /api/gdpr/retention` updates it.
+Relevant code:
+`api/routes/gdpr.js:614`
+  `.update({ data_retention_days: days === 0 ? null : days })`
+`api/routes/billing.js:190`
+  `const { error } = await sb.from('sites').update({`
 
-### 2. Dashboard widgets policy not verified
+### 8. Webhook Destination Limit Hardcoded to 1
+`webhooks.js:87-94` hardcodes a maximum of 1 webhook destination per site as an MVP restriction, ignoring numeric quotas in `PLAN_STRUCTURAL_LIMITS.webhooks`.
+Relevant code:
+`api/routes/webhooks.js:87`
+  `// 2. Check if a webhook destination already exists for this site (MVP restriction)`
+`api/routes/webhooks.js:94`
+  `if (existing) {`
 
-RLS policies are verified for:
+### 9. 🔴 HIGHEST PRIORITY: GDPR Art. 15 Subject Access Endpoint Crash
+GDPR Art. 15 subject-access (`/api/gdpr/subject`) selects non-existent column `updated_at` from `lead_qualifications`, and `created_at` (real column is `captured_at`) from `subscription_identity`, causing every request for a subject with data to throw a 500 error.
+Relevant code:
+`api/routes/gdpr.js:379`
+  `.select('visitor_id, status, qualified, created_at, updated_at')`
+`api/routes/gdpr.js:386`
+  `.select('anonymous_id, stripe_customer_id, first_subscription_id, first_touch_source, first_touch_channel, created_at')`
 
-- `companies`
-- `company_members`
-- `sites`
-- `saved_reports`
-- `admin_audit_log`
-- `qa_notes`
+### 10. GDPR Automated Retention Purge Gaps
+`site_identity_links`, `lead_qualifications`, `volunteered_identity`, and `subscription_identity` hold visitor PII with NO automated retention purge path (`retention-purge.js` covers only 5 tables).
+Relevant code:
+`api/lib/retention-purge.js:13`
+  `const counts = { attributed_conversions: 0, gsc_performance_daily: 0, gsc_sync_runs: 0, capi_deliveries: 0, custom_events: 0 }`
 
-`dashboard_widgets` policy may be missing. This is not blocking until dashboard widget persistence becomes active work.
+### 11. Free-Tier Multi-Account Creation Unbounded
+No backend rate-limiting or email domain restriction prevents creating multiple free accounts directly against Supabase Auth.
+Relevant code:
+`api/index.js:493`
+  `app.use('/api/onboarding', requireUserAuth, onboardingRouter)`
 
-Relevant future session:
+### 12. Billing Webhook Process-Local NodeCache Idempotency
+`billing.js:19` uses an in-memory `NodeCache` instance for webhook idempotency, which does not survive process restarts or multi-instance deployments.
+Relevant code:
+`api/routes/billing.js:19`
+  `const _seenStripeEvents = new NodeCache({ stdTTL: 86400, checkperiod: 3600 })`
 
-- Session 81 dashboard saved-report widgets
+### 13. Unvalidated Test Fixture Shapes
+Test helpers stub database responses without schema validation against PostgreSQL migrations, allowing phantom column references to pass unit tests.
+Relevant code:
+`api/tests/pipe-refund-guard.test.js:15`
+  `const stubDb = {`
 
-### 3. ~~No paid ad click-ID capture~~ — ACTUALLY WORKING
+### 14. Repo-Wide Store-Aware Phantom-Column Guard Missing
+No automated CI guard validates column availability across PostgreSQL, ClickHouse, and API response mappers.
+Relevant code:
+`api/tests/analytics-conversion-columns.test.js:1`
+  `// Guard test against phantom columns`
 
-**This issue was wrong. Click IDs ARE captured end-to-end:**
+### 15. Recurring 422 Burst on `/api/attribution`
+Dashboard pinned reports trigger 422 validation failures on `/api/attribution` when report configurations include gated metrics or non-preaggregated dimensions.
+Relevant code:
+`dashboard/src/pages/Dashboard.jsx:85`
+  `useFetchReport`
+`api/lib/report-config-validation.js:331`
+  `if (GATED_METRICS.has(metric))`
 
-- Tracker captures: `gclid`, `gbraid`, `wbraid`, `fbclid`, `msclkid`, `ttclid`, `li_fat_id`, `twclid`
-- `api/routes/track.js` stores all of them on the PostHog event
-- `api/lib/channel-classifier.js` uses them for channel classification:
-  - `gclid/gbraid/wbraid/msclkid` → Paid Search
-  - `fbclid/ttclid` → Paid Social
-- `api/jobs/nightly-attribution.js` reads click IDs from touchpoints and writes them to `attributed_conversions`
+### 16. Conversion Rate >100% Numerator/Denominator Population Mismatch
+Conversion rate calculation mixes total conversion rows with unique session counts. Fixed in dashboard aggregator by counting distinct converters.
+Relevant code:
+`api/routes/dashboard.js:188`
+  `const converters = new Set()`
+
+### 17. Attribution Page Static Model Selector Label
+`AttributionPage.jsx` renders a static UI label for the attribution model selector rather than an interactive dropdown because multi-touch models return unmaterialized pre-agg data.
+Relevant code:
+`dashboard/src/pages/AttributionPage.jsx:50`
+  `<span className="font-medium">Linear Attribution</span>`
+
+### 18. AI-Source Detection Referrer-Dependent Structure
+AI source classification relies exclusively on HTTP `Referer` headers and `utm_source` parameters; direct visits without referrer default to `Direct`.
+Relevant code:
+`tracker/tracker.js:355`
+  `aiSrc(ref, p.utm_source)`
+`api/lib/channel-classifier.js:85`
+  `export function detectAiPlatformFromEvent(event) {`
+
+### 19. Separation of Billing and Customer Stripe Webhook Paths
+`/api/billing/webhook` uses global `STRIPE_WEBHOOK_SECRET` for platform subscriptions; `/api/webhooks/stripe/:site_key` decrypts customer-specific secrets for buyer purchases.
+Relevant code:
+`api/routes/billing.js:150`
+  `event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET)`
+`api/routes/stripe-webhook.js:381`
+  `event = stripe.webhooks.constructEvent(req.body, sig, decryptedSecret)`
+
+### 20. Legacy `STRIPE_PRICE_ID` Fallback to Growth Plan
+Environment variable `STRIPE_PRICE_ID` maps directly to `growth`, posing entitlement escalation risks if set to starter pricing.
+Relevant code:
+`api/routes/billing.js:38`
+  `if (process.env.STRIPE_PRICE_ID) map[process.env.STRIPE_PRICE_ID] = 'growth'`
+`api/routes/billing.js:55`
+  `growth: process.env.STRIPE_PRICE_ID_GROWTH || process.env.STRIPE_PRICE_ID_PRO`
+
+### 21. Stripe Test Mode Price Artifacts
+Stripe Test environment retains active pricing objects from prior test generations. Live mode is cleanly restricted to $49/mo, $79/mo, and $99/yr.
+Relevant code:
+`api/routes/billing.js:27`
+  `export function getPriceMap() {`
+
+### 22. `conversion_events` Metered Without Write Refusal
+Per PR #430, `conversion_events` limits trigger over-quota alerts and anomaly logs but NEVER discard incoming customer conversions.
+Relevant code:
+`api/lib/conversion-limits.js:4`
+  `// METERING ONLY — a conversion is NEVER refused on quota, on any tier.`
+
+### 23. Tinybird Pricing Model Shift to vCPU Hours
+Tinybird billing model charges for vCPU hours and QPS concurrency rather than total processed bytes, prioritizing query concurrency optimization.
+Relevant code:
+`tinybird/datasources/events.datasource:76`
+  `ENGINE_TTL "toDateTime(timestamp) + toIntervalDay(400)"`
+
+### 24. Missing `dashboard/node_modules` in Fresh Worktrees
+`qa:static` script fails in fresh worktrees missing `dashboard/node_modules` due to missing `vite` binary.
+Relevant code:
+`package.json:15`
+  `"qa:static": "node --check api/index.js api/routes/*.js api/lib/*.js && cd dashboard && npm run build"`
+
+### 25. Worktree Naming Convention Discrepancy in `CLAUDE.md` §13
+`CLAUDE.md` specifies 4 mandatory worktree names, whereas agent workflows use task-based worktree names (`trackiq-docs`, `trackiq-pvcap`, etc.).
+Relevant code:
+`AGENTS.md:160`
+  `Worktree Isolation Mandatory`
+
+### 26. Origin-Relative Session Doc Verification Rule
+Session-doc diff checks require `origin/main...HEAD` scoping to prevent unpushed local main commits from polluting PR checks.
+Relevant code:
+`docs/ai_agent_workflow_rules.md:20`
+  `git diff --check`
+
+### 27. Deferred `dashboard.js` Code Hygiene Items
+`dashboard.js` retains legacy variable naming (`posthogSiteId`), unused function parameters in `readTb()`, and obsolete PostHog comments.
+Relevant code:
+`api/routes/dashboard.js:486`
+  `// TODO: cleanup`
 - Confidence scoring adds +20 points when a click ID is present on the first/last touch
 
 **What is still missing (truly):**
