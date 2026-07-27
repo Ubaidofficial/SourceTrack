@@ -27,8 +27,13 @@ async function request(path, token, options = {}) {
 }
 
 test('Analytics Sources strict ms-join and clock skew regression test', async (t) => {
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
-    console.log('SKIPPING test - credentials not set.');
+  // Live integration, not a unit test (see test-registration-guard.test.js's
+  // DELIBERATELY_UNREGISTERED note). t.skip, not a bare `return`: returning made the runner
+  // score this as PASSED while it asserted nothing. SOURCETRACK_API_URL must be set EXPLICITLY —
+  // its default is http://localhost:3000, so a machine with a .env would otherwise run this
+  // against a local port (§10: real-env only, never localhost).
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY || !process.env.SOURCETRACK_API_URL) {
+    t.skip('live integration: needs SUPABASE_URL + SUPABASE_SERVICE_KEY + an explicit SOURCETRACK_API_URL pointing at a real environment');
     return;
   }
 

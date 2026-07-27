@@ -27,9 +27,34 @@ async function request(path, token, options = {}) {
   return { status: res.status, ok: res.ok, body };
 }
 
+// THIS IS NOT A UNIT TEST. It signs in to a real Supabase project with a hardcoded demo account
+// and asserts against seeded demo data over HTTP. It is the same class as the four files listed
+// in test-registration-guard.test.js's DELIBERATELY_UNREGISTERED — the difference is that this
+// one is registered (qa:attribution:unit).
+//
+// WHY IT NEEDS ALL THREE VARS, not just the two:
+// The old guard checked only SUPABASE_URL + SUPABASE_SERVICE_KEY, so on any machine with a .env
+// (loaded by `import 'dotenv/config'` above) it stopped skipping and ran against
+// SOURCETRACK_API_URL, whose default is http://localhost:3000. With no local API up, all of this
+// suite fails; that is the failure people hit when running the whole tests directory in one
+// invocation, and it is environment-dependent, NOT cross-suite contamination — `node --test`
+// gives every file its own child process, so env cannot bleed between files.
+// Requiring SOURCETRACK_API_URL to be set EXPLICITLY means this only runs when someone has
+// deliberately pointed it at a real environment, which is also what §10 asks for
+// ("real-env only, never localhost").
+//
+// AND WHY t.skip, NOT `return`:
+// The old guard printed a message and returned, so the runner scored it as PASSED while it
+// asserted nothing — the false-confidence problem test-registration-guard.test.js:35 already
+// records against this exact file. t.skip reports it as SKIPPED, so an unrun suite can never be
+// mistaken for a green one.
+const LIVE_ENV_READY = Boolean(
+  process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY && process.env.SOURCETRACK_API_URL
+);
+
 test('Timezone boundary reconciliation across Dashboard, Analytics, and Campaigns', async (t) => {
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
-    console.log('SKIPPING Timezone boundary reconciliation tests - Supabase credentials not set in environment.');
+  if (!LIVE_ENV_READY) {
+    t.skip('live integration: needs SUPABASE_URL + SUPABASE_SERVICE_KEY + an explicit SOURCETRACK_API_URL pointing at a real environment');
     return;
   }
 
