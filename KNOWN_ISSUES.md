@@ -1652,3 +1652,21 @@ The adblock-transport fix (keepalive fetch, both shipped trackers) deliberately 
 ### Stale reading-list pointers to root docs archived 2026-07-24 (follow-up sweep)
 
 `COMMANDCODE_RUNBOOK.md:15-17` (reading list) and `docs/development_workflow_master_plan.md` (×3, cites "RULES.md R9") still point at `RULES.md` / `AGENT_BRIEF.md` / `PROJECT_CONTEXT_COMPACT.md`, which moved to `docs/archive/2026-07/` in the archive PR. **Pre-existing prose debt, not a contradiction that PR creates** (neither doc is stamped "reviewed-current"), so it was left as-is. Repoint to `CLAUDE.md` / `AGENTS.md` in a future docs sweep.
+
+### 28. GDPR Art. 15 Disclosure Asymmetry — `/subject` vs account-export path
+
+Two paths in `api/routes/gdpr.js` disclose different columns for `lead_qualifications`, creating an Art. 15 gap where what is disclosed does not match what Art. 17 erasure removes (violates CLAUDE.md §6.5).
+
+**`/subject` path (fixed in #432):**
+`gdpr.js:379` — `.select('visitor_id, status, qualified, created_at')`
+Correctly discloses `created_at` (real column, confirmed live prod).
+
+**Account-export path (`buildGdprExport`):**
+`gdpr.js:~688` — `.select('status, qualified_by, qualified_at')`
+Comment directly above says: *"NOTE: schema has no created_at/updated_at; qualified_at is the real timestamp column"* — this is half-wrong. `lead_qualifications` DOES have `created_at` (confirmed live prod, zxjjjsipafojhzkkumvh). Only `updated_at` is absent. The comment is stale and the path silently omits `created_at` from the export.
+
+**Fix required (when CI quota is back):**
+1. Correct the comment at `gdpr.js:~687` — change "schema has no created_at/updated_at" to "schema has no updated_at".
+2. Update the account-export select to add `created_at`: `.select('status, qualified_by, qualified_at, created_at')` so both paths disclose the same columns for the same table.
+
+Found by CC during #432 review. Not a crash (no phantom column). Not in scope for #432.
