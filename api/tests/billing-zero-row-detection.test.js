@@ -45,10 +45,12 @@ function mockRes() {
  * @param matchCustomer rows the stripe_customer_id filter matches (default: none)
  * @param matchSubscription rows the stripe_subscription_id filter matches (default: none)
  * @param siteRow what getSiteByCustomerId's .maybeSingle() resolves to
+ * @param siteRowError PostgREST error the .maybeSingle() read resolves WITH (supabase-js
+ *                     resolves, it does not reject) — a real fault, NOT an absent site
  * @param jobRuns  out-param array collecting every job_runs insert
  * @param updates  out-param array collecting every update {patch, column, value}
  */
-function installSupabase({ matchCustomer = [], matchSubscription = [], siteRow = null, jobRuns, updates, jobRunsError = null }) {
+function installSupabase({ matchCustomer = [], matchSubscription = [], siteRow = null, siteRowError = null, jobRuns, updates, jobRunsError = null }) {
   _client.from = (table) => {
     if (table === 'job_runs') {
       // jobRunsError simulates a rejected insert. writeJobRun returns it rather than
@@ -74,7 +76,7 @@ function installSupabase({ matchCustomer = [], matchSubscription = [], siteRow =
         if (state.isUpdate) updates.push({ patch: state.patch, column, value })
         return builder
       },
-      maybeSingle: async () => ({ data: siteRow, error: null }),
+      maybeSingle: async () => ({ data: siteRowError ? null : siteRow, error: siteRowError }),
       then(resolve, reject) {
         // Zero-row is NOT an error — the whole point of KI-44.
         return Promise.resolve({ data: rowsForFilter(), error: null }).then(resolve, reject)
@@ -253,6 +255,31 @@ test('5. payment_succeeded: unresolved site is RECORDED, not silently skipped', 
   // Nothing was attempted, so there is no failed write for Stripe to retry into.
   assert.strictEqual(res.statusCode, 200, 'an unresolved site is recorded, not retried')
   assert.strictEqual(updates.length, 0, 'no update should be issued when no site resolves')
+})
+
+// ── 5a. the SAME lookup, but the read FAILED ─────────────────────────────────
+// The pair 5 / 5a is the whole point: identical inputs to the caller, opposite answers.
+// A site that is absent is permanently absent — record it, answer 200, let Stripe stop.
+// A read that FAILED is unknown — answer 500 so Stripe retries on its normal schedule.
+// supabase-js RESOLVES with { data: null, error } on a PostgREST 5xx / dropped connection /
+// RLS denial, so before this guard the two were indistinguishable and a transient blip
+// permanently swallowed a renewal: 200, no retry, paying site left plan:'inactive'.
+test('5a. payment_succeeded: a FAILED site read is 500 (retryable), never a forged "no site"', async (t) => {
+  const jobRuns = [], updates = []
+  installSupabase({
+    matchCustomer: [], matchSubscription: [], jobRuns, updates,
+    siteRowError: { message: 'connection reset (simulated)', code: 'PGRST000' }
+  })
+  t.after(restoreSupabase)
+
+  const res = mockRes()
+  await billingWebhookHandler(req(PAY_SUCCEEDED('cus_blip', 'sub_blip')), res)
+
+  assert.strictEqual(res.statusCode, 500,
+    'a failed read must return 500 so Stripe retries — 200 here loses the renewal forever')
+  assert.strictEqual(jobRuns.length, 0,
+    'a transient fault is NOT an unresolved site and must not be recorded as one')
+  assert.strictEqual(updates.length, 0, 'nothing may be written off a read we could not trust')
 })
 
 test('5b. payment_succeeded: an ACTIVE site is left alone and writes no record', async (t) => {

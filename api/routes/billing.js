@@ -95,12 +95,21 @@ async function getSiteByKey(siteKey) {
   return data
 }
 
+// A null return means "this customer genuinely has no site" and NOTHING ELSE. The caller
+// (invoice.payment_succeeded) treats null as permanently unresolvable: it records the event
+// and answers 200 so Stripe stops retrying. That is right for an absent site and catastrophic
+// for a transient fault — supabase-js RESOLVES with { data: null, error } on a PostgREST 5xx,
+// a dropped connection, or an RLS denial, so discarding `error` turned every such blip into a
+// forged "no such customer": the renewal was answered 200, never retried, and the paying site
+// stayed plan:'inactive' with only an UNRESOLVED job_runs row that reads like a dead customer.
+// Rethrowing routes a real fault to the handler's catch -> 500 -> Stripe's normal retry.
 async function getSiteByCustomerId(customerId) {
-  const { data } = await getSupabase()
+  const { data, error } = await getSupabase()
     .from('sites')
     .select('id, plan')
     .eq('stripe_customer_id', customerId)
     .maybeSingle()
+  if (error) throw error
   return data
 }
 
