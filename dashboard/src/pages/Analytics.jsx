@@ -54,10 +54,20 @@ function BrandFavicon({ domain, className = 'w-3.5 h-3.5' }) {
   return <img src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`} alt="" className={`${className} rounded-sm`} onError={() => setFailed(true)} />
 }
 // Map a raw browser/OS name to the brand's domain (whose favicon we resolve).
+// Keys are the lowercased browser name as ua-parser-js reports it (see enrich()
+// in api/routes/track.js, which stores getBrowser().name lowercased) — so
+// 'mobile safari' and 'ucbrowser' are the real values, NOT 'uc browser'.
+//
+// Pick the domain of the BROWSER, not of the company that makes it. firefox was
+// pointed at mozilla.org, whose favicon is the Mozilla foundation's green "m:3"
+// wordmark, not the Firefox flame — at the 14px this renders at, that reads as a
+// plain green dot, which is exactly how it was reported.
 const BROWSER_DOMAIN = {
   chrome: 'google.com', 'google chrome': 'google.com', safari: 'apple.com', 'mobile safari': 'apple.com',
-  edge: 'microsoft.com', 'microsoft edge': 'microsoft.com', firefox: 'mozilla.org', 'mozilla firefox': 'mozilla.org',
+  edge: 'microsoft.com', 'microsoft edge': 'microsoft.com', firefox: 'firefox.com', 'mozilla firefox': 'firefox.com',
   opera: 'opera.com', brave: 'brave.com', samsung: 'samsung.com', 'samsung internet': 'samsung.com', yandex: 'yandex.com',
+  ucbrowser: 'ucweb.com', 'uc browser': 'ucweb.com',
+  vivaldi: 'vivaldi.com', duckduckgo: 'duckduckgo.com', chromium: 'chromium.org',
 }
 const OS_DOMAIN = {
   windows: 'microsoft.com', macos: 'apple.com', 'mac os': 'apple.com', ios: 'apple.com', ipados: 'apple.com',
