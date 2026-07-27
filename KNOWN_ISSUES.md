@@ -1823,3 +1823,17 @@ Comment directly above says: *"NOTE: schema has no created_at/updated_at; qualif
 2. Update the account-export select to add `created_at`: `.select('status, qualified_by, qualified_at, created_at')` so both paths disclose the same columns for the same table.
 
 Found by CC during #432 review. Not a crash (no phantom column). Not in scope for #432.
+
+### Goals section has no unit test (2026-07-27, issue #447)
+
+`/api/analytics/goals` uses the `_queryTinybirdPipe` seam and is testable via the `live-visitors-degraded.test.js` pattern (no network, no DB). Test should cover: `'refund'` + `'untyped'` exclusion, zero-conversion / revenue-only buckets dropped, the null-read throw (which surfaces as `QueryError` in the UI rather than "No goals tracked yet"), `total_visitors: null` pinned so nobody adds a second denominator, and `goalLabel` cases. Any new test file must also be registered in `qa:identity:unit` — `test-registration-guard` fails on an unregistered file. Backlogged as issue #447.
+
+### Admin drift comparison is index-keyed not name-keyed (2026-07-27)
+
+`admin.js` probe array (17 entries) and `prevFeatures` array (18 entries) don't align — the probe array has no `AI Chat` entry, so alignment breaks at index 6. From there on every feature is diffed against the wrong previous entry (`offline conversions` vs `AI Chat`'s status, and so on). **11 of 17 features report a misattributed previous status.** Fix: key the lookup by name instead of index. One PR, `admin.js` only. Found during #444; out of scope for that PR.
+
+### CI collapse (qa:all) not yet wired into ci.yml (2026-07-27)
+
+`qa:all` exists (#449) and the blocker is fixed. Note the blocker was **not** a cross-suite isolation bug as originally framed: `node --test` gives every file its own child process, so env cannot bleed between files (verified with a two-file probe). The real cause was `import 'dotenv/config'` making the guard stop firing on any machine with a `.env`, after which the suite called `SOURCETRACK_API_URL` — default `http://localhost:3000`. Fixed by requiring `SOURCETRACK_API_URL` explicitly and using `t.skip` instead of a silent `return`.
+
+`ci.yml` still runs 4 sequential `qa:*` invocations. Next PR: switch to `npm run qa:all` (`.github/workflows/ci.yml` only). **Measure the real CI delta before repeating the ~30% figure** — locally `qa:all` is ~23s and the saving is one node bootstrap instead of four, not less work.
