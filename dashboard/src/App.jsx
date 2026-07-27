@@ -95,7 +95,11 @@ const queryClient = new QueryClient({
 
 // ─── onboarding gate state shape ────────────────────────────────────────────
 // loading:   true while /onboarding/me is in-flight
-// completed: known-true only when API confirms onboarding_completed
+// completed: known-true only when API confirms onboarding_completed (the ACTIVE site)
+// hasCompletedSite: known-true only when API confirms the ACCOUNT has at least one
+//            completed site. This, NOT `completed`, decides the force-redirect —
+//            an unfinished ACTIVE site must not push a user who has somewhere
+//            finished to land back into the wizard.
 // hasSite:   known-true only when API confirms has_site
 // errorKind: null (no error) | 'auth' (401/403 — session invalid)
 //            | 'transient' (network/5xx — retry-able)
@@ -110,7 +114,7 @@ function ProtectedRoute({ children }) {
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
 
-  const INITIAL_ONBOARDING = { loading: true, completed: false, hasSite: false, errorKind: null }
+  const INITIAL_ONBOARDING = { loading: true, completed: false, hasCompletedSite: false, hasSite: false, errorKind: null }
   const [onboarding, setOnboarding] = useState(INITIAL_ONBOARDING)
 
   // Track how many auto-retries have fired for the current user session so we
@@ -127,13 +131,13 @@ function ProtectedRoute({ children }) {
     if (!aliveRef.current) return
 
     if (!user) {
-      if (aliveRef.current) setOnboarding({ loading: false, completed: false, hasSite: false, errorKind: null })
+      if (aliveRef.current) setOnboarding({ loading: false, completed: false, hasCompletedSite: false, hasSite: false, errorKind: null })
       return
     }
 
     // Super admins bypass the onboarding gate — they may not own a site directly.
     if (getAuthAppRole(user) === 'super_admin') {
-      if (aliveRef.current) setOnboarding({ loading: false, completed: true, hasSite: true, errorKind: null })
+      if (aliveRef.current) setOnboarding({ loading: false, completed: true, hasCompletedSite: true, hasSite: true, errorKind: null })
       return
     }
 
@@ -146,6 +150,7 @@ function ProtectedRoute({ children }) {
       setOnboarding({
         loading: false,
         completed: !!data?.onboarding_completed,
+        hasCompletedSite: !!data?.has_completed_site,
         hasSite: !!data?.has_site,
         errorKind: null
       })
@@ -158,7 +163,7 @@ function ProtectedRoute({ children }) {
       const isAuthError = status === 401 || status === 403
       const errorKind = isAuthError ? 'auth' : 'transient'
 
-      setOnboarding({ loading: false, completed: false, hasSite: false, errorKind })
+      setOnboarding({ loading: false, completed: false, hasCompletedSite: false, hasSite: false, errorKind })
 
       // For transient errors, schedule one automatic retry after ~1 s.
       // Auth errors are not retried automatically (the session is invalid).
@@ -175,7 +180,7 @@ function ProtectedRoute({ children }) {
           if (!aliveRef.current) return
           if (gateRunRef.current !== scheduledGeneration) return
           // Reset to loading, then re-run.
-          setOnboarding({ loading: true, completed: false, hasSite: false, errorKind: null })
+          setOnboarding({ loading: true, completed: false, hasCompletedSite: false, hasSite: false, errorKind: null })
           checkOnboarding()
         }, 1000)
       }
@@ -239,7 +244,7 @@ function ProtectedRoute({ children }) {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <button
               onClick={() => {
-                setOnboarding({ loading: true, completed: false, hasSite: false, errorKind: null })
+                setOnboarding({ loading: true, completed: false, hasCompletedSite: false, hasSite: false, errorKind: null })
                 checkOnboarding()
               }}
               className="px-5 py-2.5 rounded-xl bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] text-sm font-bold hover:opacity-90"
@@ -276,8 +281,24 @@ function ProtectedRoute({ children }) {
       !!onboardingParams.get('site_id') ||
       !!onboardingParams.get('site_key'))
 
-  // Force incomplete users to /onboarding; completed users away from it.
-  if (pathname !== '/onboarding' && !onboarding.completed) {
+  // Force users with NOWHERE FINISHED TO LAND onto /onboarding; completed users away from it.
+  //
+  // This keys off hasCompletedSite (ACCOUNT-level) and NOT completed (the ACTIVE site).
+  // Those are different questions, and conflating them is what made an unfinished active
+  // site hijack the whole session: selecting a half-set-up site bounced the user into the
+  // wizard even though they had other, finished sites. The incomplete-active-site case is
+  // Layout's "Resume setup" affordance (Layout.jsx:188) — an offer, not a forced march.
+  // Genuine first run (no sites, or no finished site) still hard-redirects, unchanged.
+  //
+  // NO LOOP IS POSSIBLE, and the reason is worth stating because the last bug here was a
+  // redirect loop (140Z-G3-C / ff23e44, where an ERRORED /me was read as "incomplete" and
+  // redirected — Phase 3 above now short-circuits every unknown answer before this line).
+  // Leaving /dashboard needs !hasCompletedSite; leaving /onboarding needs completed. If the
+  // active site is completed then the account has a completed site, so `completed` implies
+  // `hasCompletedSite` — the two conditions can never both hold, because both are read from
+  // the SAME /me response. That is also why has_completed_site is computed server-side
+  // rather than from a separately-loading /sites call.
+  if (pathname !== '/onboarding' && !onboarding.hasCompletedSite) {
     return <Navigate to="/onboarding" replace />
   }
   if (pathname === '/onboarding' && onboarding.completed && !explicitOnboardingIntent) {

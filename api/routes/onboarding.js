@@ -58,15 +58,25 @@ function resolveDashboardSite(user, req, sites) {
   const selectedKey = req.query?.site_key || req.headers?.['x-site-key'] || req.headers?.['x-active-site-key']
   const selectedId = req.query?.site_id || req.headers?.['x-site-id']
 
+  // AN EXPLICIT SELECTION IS AUTHORITATIVE, whatever its completion state.
+  // These two guards used to also require `matched.onboarding_completed`. Because the
+  // dashboard sends the site switcher's persisted key on every protected-route evaluation
+  // (App.jsx), selecting a site you had not finished setting up failed the guard, fell
+  // through, and returned a DIFFERENT site — the user got another site's dashboard with
+  // nothing in the payload saying so. Returning the requested site is the whole point of
+  // requesting it; whether the app then routes you to finish setup is the gate's decision
+  // (App.jsx), made from has_completed_site below, not something to smuggle in by
+  // substituting a different site here.
   if (selectedKey) {
     const matched = sites.find(s => s.site_key === selectedKey)
-    if (matched && matched.onboarding_completed) return matched
+    if (matched) return matched
   }
   if (selectedId) {
     const matched = sites.find(s => String(s.id) === String(selectedId))
-    if (matched && matched.onboarding_completed) return matched
+    if (matched) return matched
   }
 
+  // NO explicit selection — unchanged: prefer a completed site, else any site.
   const completed = sites.find(s => s.onboarding_completed)
   if (completed) return completed
 
@@ -150,10 +160,19 @@ router.get('/me', async (req, res) => {
       ? resolveOnboardingSite(req.user, req, sites)
       : resolveDashboardSite(req.user, req, sites)
 
+    // ACCOUNT-level fact, distinct from the per-site `onboarding_completed` below. The gate
+    // in App.jsx must not force a user into onboarding just because the site they happen to
+    // have ACTIVE is unfinished — only when the account has nowhere finished to land. Computed
+    // from the `sites` array already fetched above: no extra query, and — the part that
+    // matters — no second async source in the gate. 140Z-G3-C (ff23e44) was caused by the gate
+    // treating an UNKNOWN answer as "incomplete" and redirecting; deriving this client-side
+    // from a separately-loading /sites call would have recreated exactly that shape.
+    const hasCompletedSite = sites.some(s => s.onboarding_completed)
+
     if (!site) {
       return res.status(200).json({
         success: true,
-        data: { has_site: false, onboarding_completed: false, site: null },
+        data: { has_site: false, onboarding_completed: false, has_completed_site: false, site: null },
         error: null
       })
     }
@@ -167,6 +186,7 @@ router.get('/me', async (req, res) => {
         domain: site.domain,
         business_type: site.business_type || site.onboarding_state?.business_type || null,
         onboarding_completed: !!site.onboarding_completed,
+        has_completed_site: hasCompletedSite,
         onboarding_state: site.onboarding_state || {},
         current_step: site.onboarding_state?.current_step || 1
       },
