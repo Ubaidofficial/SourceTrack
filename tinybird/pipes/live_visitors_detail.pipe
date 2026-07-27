@@ -1,0 +1,27 @@
+DESCRIPTION >
+    Per-visitor live feed, trailing 5 minutes. One row per
+    distinct_id, latest page/source/country/device. Tenant-scoped;
+    prunes via (site_id, timestamp). Uses argMax to pick the most
+    recent value per field for each visitor.
+
+NODE live_visitors_detail_node
+SQL >
+    %
+    SELECT
+        distinct_id,
+        argMax(page_url, timestamp)    AS current_page,
+        argMax(country, timestamp)     AS country,
+        argMax(device_type, timestamp) AS device_type,
+        argMax(utm_source, timestamp)  AS utm_source,
+        argMax(ai_source, timestamp)   AS ai_source,
+        argMax(referrer, timestamp)    AS referrer,
+        max(timestamp)                 AS last_seen
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND timestamp >= now() - INTERVAL 5 MINUTE
+    GROUP BY distinct_id
+    ORDER BY last_seen DESC
+    LIMIT 20
+
+TYPE endpoint
