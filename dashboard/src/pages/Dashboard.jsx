@@ -80,6 +80,25 @@ export default function Dashboard() {
   // Already conversions-only and newest-first from the endpoint; no client-side filter or re-sort.
   const conversionRows = (recentConversions || []).slice(0, 5)
 
+  // Revenue per visitor. /dashboard/overview does NOT return revenue_per_visitor (only
+  // /analytics/summary does, analytics.js:406), so it is derived here from two fields the
+  // payload already carries — no second server-side definition of the same number.
+  //
+  // The denominator is kpis.sessions, which is MISNAMED: dashboard.js:362 computes it as
+  // count() over a `GROUP BY distinct_id` subquery, i.e. DISTINCT VISITORS, not sessions
+  // (its own comment at :360 says "total_unique_visitors" and :186 confirms distinct_id is
+  // the canonical visitor identity). So this is genuinely revenue per unique visitor and
+  // matches what analytics.js:406 divides by. Do not "fix" it to a session count.
+  //
+  // §6: shown only on real revenue with a real denominator. sessions is 0 when the backing
+  // Tinybird read fails (dashboard.js:377 leaves it 0), and 0 visitors with revenue would
+  // divide to Infinity — either way there is no honest number, so the tile is hidden rather
+  // than rendered as $0.00.
+  const rpvVisitors = safeNumber(kpis.sessions, 0)
+  const revenuePerVisitor = hasConversions && totalRevenue > 0 && rpvVisitors > 0
+    ? totalRevenue / rpvVisitors
+    : null
+
   // Bar scales for the DataRow panels. Same rows and same values as before — a bar length is
   // relative to the largest row on screen, so the max is computed over exactly what is rendered.
   // Floor of 1 keeps a division by zero out of the width calc (DataRow already guards, this
@@ -289,11 +308,17 @@ export default function Dashboard() {
                 </>
               ) : (
                 <>
-                  {/* KPI Strip: strictly max 3 primary KPIs (design.md §8.2 / §10.3 — "Overview
-                      shows max 3 KPIs"). Rendered as ONE divided strip rather than three separate
-                      shadowed boxes, which is the treatment the Analytics page already uses and
-                      the main reason the two pages read as different products. Same tiles, same
-                      data, same §6 empty-state behavior — only the chrome changed. */}
+                  {/* KPI Strip. Rendered as ONE divided strip rather than separate shadowed boxes,
+                      which is the treatment the Analytics page already uses and the main reason the
+                      two pages read as different products. Same tiles, same data, same §6
+                      empty-state behavior — only the chrome changed.
+
+                      DESIGN-SPEC DEVIATION, deliberate and founder-directed: design.md §8.2 says
+                      "Overview shows max 3 KPIs" and "Secondary KPIs appear in deeper tabs or
+                      Report Builder". The revenue branch below now renders a FOURTH tile,
+                      Rev / Visitor. Flagged on the PR rather than silently reconciled (CLAUDE.md
+                      §12). It only appears when there is real revenue AND a real visitor
+                      denominator, so the non-revenue branch and every empty state still show 3. */}
                   <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-gray-100 dark:divide-dark-border overflow-hidden shadow-sm">
                 {hasRevenue ? (
                   <>
@@ -321,6 +346,18 @@ export default function Dashboard() {
                       trend={customersDelta?.pct}
                       sub={customerConvRate > 0 ? `${customerConvRate.toFixed(1)}% conversion rate` : null}
                     />
+                    {/* Fourth tile — see the design-spec note on the strip above. Null when there
+                        is no honest number, and MetricTile renders nothing meaningful for null,
+                        so the strip falls back to the 3 the spec describes. */}
+                    {revenuePerVisitor != null && (
+                      <MetricTile
+                        flush
+                        label="Rev / Visitor"
+                        value={revenuePerVisitor}
+                        format="currency"
+                        sub="Revenue per unique visitor"
+                      />
+                    )}
                   </>
                 ) : (
                   <>
