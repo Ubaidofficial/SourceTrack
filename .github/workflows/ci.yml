@@ -64,17 +64,8 @@ jobs:
       - name: Static launch QA
         run: npm run qa:static
 
-      - name: Identity and billing unit tests
-        run: npm run qa:identity:unit
-
-      - name: Tracker unit tests
-        run: npm run qa:tracker:unit
-
-      - name: Attribution unit tests
-        run: npm run qa:attribution:unit
-
-      - name: Tinybird dual-write unit tests
-        run: npm run qa:tinybird:unit
+      - name: Unit tests (qa:all)
+        run: npm run qa:all
 
       - name: Lint dashboard (no-undef gate)
         # REQUIRED (no continue-on-error): `no-undef` is error-level, so a variable/component
