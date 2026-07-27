@@ -3,9 +3,10 @@ import { getJourney, fetchApi } from '../lib/api'
 import {
   Clock, Globe, MousePointerClick, User, Bot, MapPin,
   Download, X, ChevronDown, ChevronRight, Zap, ArrowRight,
-  Timer, LogIn, LogOut, AlertCircle
+  Timer, LogIn, LogOut, AlertCircle, Check
 } from 'lucide-react'
 import { safeNumber } from '../utils/numbers'
+import { SourceIcon } from './SourceIcon'
 
 const EVENT_ICONS = {
   '$pageview':   Globe,
@@ -257,13 +258,25 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
               <div className="lg:col-span-2 bg-st-lime/10 dark:bg-st-lime/5 p-6 space-y-5 border-r border-gray-100 dark:border-dark-border overflow-y-auto">
                 <div>
                   <p className="text-[10px] text-st-gray dark:text-gray-400 uppercase tracking-wide">Profile</p>
-                  <h3 className="mt-1 text-lg font-bold text-st-black dark:text-dark-primary font-mono break-all">{shortId}</h3>
-                  {summary.userId && (
-                    <p className="mt-1 text-xs text-st-gray dark:text-gray-400 break-all">
-                      User ID: <span className="font-mono">{shortIdentifier(summary.userId)}</span>
-                    </p>
-                  )}
+                  <div className="mt-1 flex items-center gap-2.5">
+                    <VisitorAvatar shortId={shortId} status={statusValue} />
+                    <div className="min-w-0">
+                      <h3 className="text-lg font-bold text-st-black dark:text-dark-primary font-mono break-all leading-tight">{shortId}</h3>
+                      {summary.userId && (
+                        <p className="mt-0.5 text-xs text-st-gray dark:text-gray-400 break-all">
+                          User ID: <span className="font-mono">{shortIdentifier(summary.userId)}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
+
+                {/* Attribution trail (design §8.6 / §14.1 item 4): [Source] -> [Landing page] ->
+                    [Event] -> [Revenue/Lead], thin connectors. Same values already shown as text
+                    rows in Journey Summary below — this is the scannable form of them, not a
+                    second data source. Every slot is truth-gated: a slot with no real value is
+                    omitted rather than rendered as a dash or a zero (§6). */}
+                <AttributionTrail summary={summary} />
 
                 {/* Journey Overview Card */}
                 <div className="bg-purple-50 border border-purple-200 dark:bg-purple-950/20 dark:border-purple-900/30 rounded-xl p-4 space-y-2">
@@ -633,6 +646,96 @@ function SummaryField({ label, value, title }) {
     <div className="flex items-center justify-between">
       <p className="text-xs text-st-gray dark:text-gray-400">{label}</p>
       <p className="text-xs font-medium text-st-black dark:text-dark-primary truncate max-w-[120px]" title={title || undefined}>{value}</p>
+    </div>
+  )
+}
+
+// Qualification statuses that earn the check overlay (design §8.4 qualification badges).
+// 'unqualified' — and any unrecognised value — deliberately gets nothing: an absent badge
+// must mean "not qualified", so it can never be confused with a default.
+const QUALIFIED_STATUSES = new Set(['qualified', 'mql', 'sql'])
+
+// Avatar for an ANONYMOUS visitor: a mono glyph off the short id, never a name or a photo —
+// there is no person-level identity to render here and inventing one would breach the
+// cookieless/no-de-anonymisation rule (§6). The check is an overlay on the avatar, matching
+// the reference, and is driven by the status already held in component state — no new read.
+function VisitorAvatar({ shortId, status }) {
+  const glyph = String(shortId || '?').replace(/[^a-zA-Z0-9]/g, '').slice(0, 2).toUpperCase() || '?'
+  const qualified = QUALIFIED_STATUSES.has(String(status || '').toLowerCase())
+  return (
+    <div className="relative flex-shrink-0">
+      <div className="w-10 h-10 rounded-full bg-st-lime/25 dark:bg-st-lime/15 border border-st-lime/40 flex items-center justify-center">
+        <span className="text-xs font-bold font-mono text-st-black dark:text-dark-primary tracking-tight">{glyph}</span>
+      </div>
+      {qualified && (
+        <span
+          title={`Qualification: ${String(status).toUpperCase()}`}
+          className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-st-green flex items-center justify-center ring-2 ring-white dark:ring-dark-card"
+        >
+          <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+        </span>
+      )}
+    </div>
+  )
+}
+
+// One chip in the attribution trail. `icon` is optional so the source slot can carry a brand
+// mark while the rest stay text-only — the reference row is icon-led at the source end.
+function TrailChip({ icon, label, title, tone = 'default' }) {
+  const tones = {
+    default: 'bg-white dark:bg-dark-card text-st-black dark:text-dark-primary border-gray-200 dark:border-dark-border',
+    revenue: 'bg-st-lime/25 dark:bg-st-lime/15 text-st-black dark:text-st-lime border-st-lime/40'
+  }
+  return (
+    <span
+      title={title || label}
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-medium max-w-[92px] ${tones[tone] || tones.default}`}
+    >
+      {icon}
+      <span className="truncate">{label}</span>
+    </span>
+  )
+}
+
+// [Source chip] -> [Landing page] -> [Event] -> [Revenue/Lead] (design §8.6). Thin connectors,
+// compact arrows. Reads ONLY fields computeSummary already produces.
+//
+// WRAPS rather than scrolls, matching the Page Path block below it. A single scrollable line
+// looked tighter until it was rendered: in this narrow left column the row overflows and the
+// chip that gets cut off is the LAST one — the revenue/outcome chip the trail exists to lead
+// to. Wrapping costs a line and keeps the payoff on screen.
+function AttributionTrail({ summary }) {
+  const landing = summary.pathPreview?.[0] || null
+  const event = summary.currentEventType && summary.currentEventType !== '—' ? summary.currentEventType : null
+  // Revenue only when real (§6 — never a fabricated $0). Falls back to the Lead badge when the
+  // visitor converted without a value, and to nothing at all when they never converted.
+  const outcome = summary.conversionValue > 0
+    ? { label: `$${safeNumber(summary.conversionValue, 0).toFixed(0)}`, tone: 'revenue' }
+    : summary.totalConversions > 0
+      ? { label: 'Lead', tone: 'revenue' }
+      : null
+
+  const chips = [
+    { key: 'source', label: summary.firstTouch || 'Direct', title: `First touch: ${summary.firstTouch || 'Direct'}`, icon: <SourceIcon source={summary.firstTouch || 'Direct'} className="w-3 h-3 flex-shrink-0" /> },
+    landing && { key: 'landing', label: landing, title: `Landing page: ${landing}` },
+    event && { key: 'event', label: event, title: `Event: ${event}` },
+    outcome && { key: 'outcome', label: outcome.label, tone: outcome.tone, title: outcome.tone === 'revenue' && outcome.label !== 'Lead' ? 'Attributed revenue' : 'Converted' }
+  ].filter(Boolean)
+
+  // A lone source chip is not a trail — that is just the First Touch row restated.
+  if (chips.length < 2) return null
+
+  return (
+    <div className="bg-white dark:bg-dark-card rounded-xl p-3 shadow-sm">
+      <p className="text-[10px] text-st-gray dark:text-gray-400 uppercase tracking-wide mb-2">Attribution trail</p>
+      <div className="flex flex-wrap items-center gap-1">
+        {chips.map((c, i) => (
+          <span key={c.key} className="flex items-center gap-1">
+            <TrailChip icon={c.icon} label={c.label} title={c.title} tone={c.tone} />
+            {i < chips.length - 1 && <ArrowRight className="w-2.5 h-2.5 text-gray-300 dark:text-gray-600 flex-shrink-0" />}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }
