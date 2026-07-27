@@ -1848,3 +1848,26 @@ Found by CC during #432 review. Not a crash (no phantom column). Not in scope fo
 It also removed per-suite failure locality in the CI UI — a real cost for no gain.
 
 **The one useful residual**, filed as non-urgent backlog in `NEXT_SESSION_PROMPT.md`: unit steps are ~120s of a ~168s job and two suites dominate — **Tracker 44s, Tinybird dual-write 43s** (Identity 30s, Attribution 3s). If CI duration ever matters, that is the target — what is slow inside those two suites, not invocation count.
+
+### ⚠️ `fbc` fallback stamps the wrong timestamp — degrades Meta CAPI match quality, no fix currently reachable (2026-07-27)
+
+`api/lib/conversion-sync.js` `sendMetaCAPI()`: when no real `fbc` cookie is present, `fbc` is derived from `fbclid` using `Date.now()` (send-time) instead of the actual click timestamp, which Meta's own `fbc` spec requires (`fb.<subdomain_index>.<CLICK_time_ms>.<fbclid>`). Every event that falls back to this path — no real `fbc` cookie, only a raw `fbclid` — silently ships a wrong timestamp with no error thrown anywhere.
+
+Real, structural gap: **no click timestamp exists anywhere in the current pipeline.**
+
+- `tracker/tracker.js:265` `params()` reads click IDs from `location.search` but never persists them client-side or timestamps the read. localStorage holds only `st_aid`/`st_ft_*`, sessionStorage only `st_sid` — no click ID, no per-click timestamp.
+- `first_touch_timestamp` (`st_ft_ts`) reaches `evt` but is **write-once** (`storeFirstTouch`, `if (ls('st_ft_src')) return`, never overwritten) — it is the visitor's first-ever touch, not the click that produced this `fbclid`. An organic day-1 visit + a day-10 ad click would stamp `fbc` 9 days early. **Worse than `Date.now()`**, not better.
+- `evt.timestamp` / `occurred_at` / `server_timestamp` all collapse to conversion time on the browser path — same class of error as the current bug, not a fix.
+- `fbclid` is never persisted in Supabase (`grep -rn fbclid supabase/migrations/` → zero hits).
+- Tinybird `events.datasource` has both `fbclid` and `timestamp` typed, and the carrying pageview lands within seconds of the click — the only genuinely good proxy that exists today. Not implemented: it would add a synchronous cross-store read inside the CAPI fan-out, conflicts with the fan-out's designed never-block-a-conversion behavior under the null-read-fails-closed rule (§5), and cannot help `api/routes/conversion-offline.js` at all (merchant-uploaded `fbclid` with no matching pageview).
+
+**What a real fix needs** (not attempted, scoped as its own initiative):
+
+1. `tracker.js` captures `st_click_ts` last-write-wins per click — the opposite of `storeFirstTouch`'s write-once.
+2. `utmFields()` forwards it as `click_timestamp`.
+3. `normalizeClickIds()` (`api/lib/utils.js:745`) / `api/routes/conversion.js:239` carry it through sanitized.
+4. `events.datasource` gets a `click_timestamp` column (founder-gated pipe deploy).
+5. `tracker.cookieless.js` has zero localStorage — needs a deliberate decision (alternate mechanism, or an accepted gap).
+6. `conversion-offline.js` merchant uploads would need to supply it manually; no server-side derivation is possible.
+
+Until (1)–(3) exist, `Date.now()` is the only value `sendMetaCAPI` can honestly write — every reachable substitute is wrong in a harder-to-reason-about way. **Leave as-is; do not "fix" with `first_touch_timestamp` or conversion time.**
