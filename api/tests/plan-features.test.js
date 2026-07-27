@@ -24,16 +24,20 @@ test('🔴 INVARIANT: starter equals growth for every FEATURE_MATRIX row', () =>
   }
 })
 
-// funnels_cohorts is false on EVERY tier. api/routes/analytics.js:1032-1099
-// (GET /funnel) exists and is gated on this key, but it is dead: zero callers
-// anywhere in dashboard/src (no page, no nav entry, no fetch call — verified),
-// and non-functional even if invoked directly (it reads .from('pageviews'), a
-// table that is empty by design per CLAUDE.md §5). A gated endpoint that can
-// only ever return nothing is not a feature.
-test('🔴 funnels_cohorts is false on every tier — the route exists but is dead (unreachable + reads an empty-by-design table)', () => {
-  for (const plan of ['free', 'trial', 'starter', 'growth', 'scale']) {
-    assert.strictEqual(hasFeature(plan, 'funnels_cohorts'), false, `${plan}: funnels_cohorts must be false`)
+// funnels_cohorts was false on EVERY tier because GET /funnel was dead twice over: it read
+// .from('pageviews') (empty by design, CLAUDE.md §5) and had zero callers in dashboard/src.
+// BOTH are now fixed — #456 repointed the read to the Tinybird `summary` pipe, and the
+// Funnels section on the Analytics page (with FunnelChart.jsx, restored) is the caller — so
+// the gate opens on every paid tier. free stays false: it is excluded from every cost-heavy
+// feature and a funnel run is a 50k-row pipe read.
+//
+// If this ever goes back to false, the reason must be a PRODUCT decision, not "the endpoint
+// is dead" — that justification no longer applies.
+test('🔴 funnels_cohorts: paid tiers on, free off — the route now reads Tinybird and has a UI caller', () => {
+  for (const plan of ['trial', 'starter', 'growth', 'scale']) {
+    assert.strictEqual(hasFeature(plan, 'funnels_cohorts'), true, `${plan}: funnels_cohorts must be true`)
   }
+  assert.strictEqual(hasFeature('free', 'funnels_cohorts'), false, 'free: funnels_cohorts must stay false')
 })
 
 // multi_user is false on EVERY tier. Same phantom-feature class as

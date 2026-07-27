@@ -35,10 +35,11 @@ function mockRes () {
   return res
 }
 
-// funnels_cohorts is false on EVERY tier (plan-features.js:51), so the handler's own
-// requireFeature() 402s before any of this code runs. The gate is lifted for the duration of
-// each test and restored after — the math below is what the endpoint WOULD return, and what
-// it will return the moment the gate is turned on. See the note in the PR body.
+// KEPT after the gate opened, on purpose. funnels_cohorts is now true on every paid tier, so
+// runFunnel's `plan: 'growth'` would pass the gate unaided — but lifting it anyway keeps the
+// MATH tests independent of the entitlement matrix, so a future packaging change cannot turn
+// them red for a reason that has nothing to do with funnel arithmetic. Gate behaviour itself
+// is asserted separately, against the real matrix, in the gate test above.
 function liftGate () {
   const prev = { ...FEATURE_MATRIX.funnels_cohorts }
   Object.keys(FEATURE_MATRIX.funnels_cohorts).forEach(k => { FEATURE_MATRIX.funnels_cohorts[k] = true })
@@ -53,7 +54,7 @@ const ROW = (anonymous_id, url, timestamp, over = {}) => ({
   anonymous_id, timestamp, ...over
 })
 
-// The gate makes the handler unreachable, so every math test drives it with the gate lifted.
+// Every math test drives the handler with the gate lifted — see liftGate() above for why.
 async function runFunnel (rows, steps) {
   __setAnalyticsReadDeps({ queryTinybird: async () => rows })
   const restore = liftGate()
@@ -71,12 +72,29 @@ const T = (min) => new Date(Date.UTC(2026, 6, 10, 10, min, 0)).toISOString()
 
 // ── the gate, stated as a fact rather than assumed ───────────────────────────
 
-test('funnels_cohorts is OFF on every tier — the route 402s before any read', async () => {
-  const res = mockRes()
-  await funnelHandler({ site: { id: 'site-1', plan: 'growth' }, query: { steps: '/a,/b' } }, res)
-  assert.strictEqual(res.statusCode, 402,
-    'repointing the data source does not by itself make this endpoint reachable')
-  assert.strictEqual(res.body.upgrade.required_feature, 'funnels_cohorts')
+// The gate is now OPEN on paid tiers and still shut on free. It was false everywhere while
+// the endpoint was dead twice over (empty `pageviews` read + no UI caller); the repoint fixed
+// the first and the Analytics Funnels section fixed the second, so the entitlement opened.
+test('funnels_cohorts gate: every PAID tier passes, free still 402s before any read', async () => {
+  // free is blocked before any read — no stub needed, it never gets that far.
+  const freeRes = mockRes()
+  await funnelHandler({ site: { id: 'site-1', plan: 'free' }, query: { steps: '/a,/b' } }, freeRes)
+  assert.strictEqual(freeRes.statusCode, 402, 'free must stay gated out — a funnel run is a 50k-row read')
+  assert.strictEqual(freeRes.body.upgrade.required_feature, 'funnels_cohorts')
+
+  // Paid tiers reach the handler. Served-empty (not null) so the read succeeds and the
+  // assertion is about the GATE, not about what the pipe returned.
+  __setAnalyticsReadDeps({ queryTinybird: async () => [] })
+  try {
+    for (const plan of ['trial', 'starter', 'growth', 'scale']) {
+      const res = mockRes()
+      await funnelHandler({ site: { id: 'site-1', plan }, query: { steps: '/a,/b' } }, res)
+      assert.notStrictEqual(res.statusCode, 402, `${plan}: funnels must not be gated out`)
+      assert.strictEqual(res.statusCode, 200, `${plan}: handler should serve once past the gate`)
+    }
+  } finally {
+    __resetAnalyticsReadDeps()
+  }
 })
 
 // ── shape + math ─────────────────────────────────────────────────────────────

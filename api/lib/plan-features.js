@@ -42,13 +42,20 @@ export const FEATURE_MATRIX = {
   capi_server_side:        { free: false, trial: true,  starter: true,  growth: true,  scale: true },
   over_reporting_detection:{ free: false, trial: true,  starter: true,  growth: true,  scale: true },
   revenue_analytics:       { free: false, trial: true,  starter: true,  growth: true,  scale: true },
-  // Funnels: api/routes/analytics.js:1032-1099 (GET /funnel) exists and is gated
-  // on this key, but it is dead — zero callers anywhere in dashboard/src (no
-  // page, no nav entry, no fetch call) and non-functional even if invoked
-  // directly (it reads .from('pageviews'), a table that is empty by design,
-  // CLAUDE.md §5). A gated endpoint that can only ever return nothing is not a
-  // feature, so it is off on every tier, not just starter.
-  funnels_cohorts:         { free: false, trial: false, starter: false, growth: false, scale: false },
+  // Funnels: BOTH reasons this was false on every tier are now gone, so the gate opens.
+  //   1. It read `.from('pageviews')`, empty by design (CLAUDE.md §5) — repointed to the
+  //      Tinybird `summary` pipe in #456, so it returns real data.
+  //   2. It had zero callers in dashboard/src — the Funnels section on the Analytics page
+  //      is that caller, and FunnelChart.jsx (deleted as unimported dead code in #317) is
+  //      restored alongside it.
+  // starter MATCHES growth, as every paid row must. The brief said "growth + trial + any
+  // tier above growth", which would have left starter FALSE while trial was TRUE — exactly
+  // the downgrade-on-purchase gap (#428) that the 🔴 starter===growth invariant in
+  // plan-features.test.js exists to prevent, and it fails that test. A trial user
+  // converting to the cheapest paid tier must not LOSE funnels, so starter is true too.
+  // free stays false: it is excluded from every cost-heavy feature, and a funnel run is a
+  // 50k-row pipe read.
+  funnels_cohorts:         { free: false, trial: true,  starter: true,  growth: true,  scale: true },
   email_reports:           { free: false, trial: true,  starter: true,  growth: true,  scale: true },
   csv_export:              { free: false, trial: true,  starter: true,  growth: true,  scale: true },
   api_access:              { free: false, trial: true,  starter: true,  growth: true,  scale: true },
