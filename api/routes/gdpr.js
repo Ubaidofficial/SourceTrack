@@ -482,15 +482,11 @@ gdprRouter.delete('/account', async (req, res) => {
       if (sites?.length) {
         const siteIds = sites.map(s => s.id)
 
-        // 2. Delete attributed_conversions for all sites
-        await supabase
-          .from('attributed_conversions')
-          .delete()
-          .in('site_id', siteIds)
-
-        // 2b. Erase each site's EVENT data from Tinybird (the sole event store) BEFORE
-        // deleting the sites — after the delete we've lost site.id. Result is never
-        // swallowed: one erasure_log row per site + the outcome feeds the response.
+        // 2. Erase each site's EVENT data from Tinybird (the sole event store) FIRST — before
+        // ANY Supabase delete. Two reasons it has to be first: after the sites row is gone we
+        // no longer have site.id to build the erase condition, and — the point of this ordering —
+        // a Tinybird erasure that did not complete must be able to abort the whole request while
+        // everything is still intact. Result is never swallowed: one erasure_log row per site.
         const { host, adminToken, readToken } = tinybirdEnv()
         for (const s of sites) {
           const erase = await _eraseSite({ host, adminToken, readToken, siteId: s.id, confirm: true })
@@ -498,7 +494,38 @@ gdprRouter.delete('/account', async (req, res) => {
           await logErasure(supabase, { subjectId: `account:${userId}`, siteId: s.id, result: erase })
         }
 
-        // 3. Delete sites. This CASCADE-deletes all site-scoped GSC data via the
+        // 2b. THE GATE. Nothing is deleted anywhere unless EVERY site's event data is confirmed
+        // erased. The previous behaviour deleted the Supabase records regardless and answered
+        // `partial: true` — which left the account unrecoverable while its events lived on in
+        // Tinybird, and, worse, destroyed the site rows that are the only way to identify those
+        // events for a retry. An erasure that cannot be completed must leave the account exactly
+        // as it was, so the user can try again and the operator can fix the cause.
+        //
+        // Statuses that block: 'failed', 'skipped_not_configured', 'skipped_no_admin_token'
+        // (tinybird/adapter/erase.js). Only 'executed' proceeds.
+        //
+        // 503, not 4xx: nothing about the caller's request is wrong — a dependency did not
+        // complete. Retryable, and it must never read as success (§6).
+        const blocked = accountErase.filter(e => e.status !== 'executed')
+        if (blocked.length > 0) {
+          console.error(`[GDPR] account delete BLOCKED for ${userId}: ${blocked.length}/${accountErase.length} site erasure(s) not executed —`, blocked)
+          return res.status(503).json({
+            success: false,
+            error: 'Erasure incomplete',
+            message: 'Your event data could not be fully erased from our analytics store, so nothing has been deleted. Your account is unchanged. Please retry — if this keeps happening, contact support.',
+            deleted: false,
+            tinybird: accountErase
+          })
+        }
+
+        // 3. Delete attributed_conversions for all sites. Reached only once every site's event
+        // erasure is confirmed executed.
+        await supabase
+          .from('attributed_conversions')
+          .delete()
+          .in('site_id', siteIds)
+
+        // 4. Delete sites. This CASCADE-deletes all site-scoped GSC data via the
         // FK `... REFERENCES sites(site_key) ON DELETE CASCADE` on each table:
         //   - gsc_connections      (incl. encrypted_refresh_token + google_account_email)
         //   - gsc_performance_daily
@@ -533,22 +560,13 @@ gdprRouter.delete('/account', async (req, res) => {
     const { error: authErr } = await supabase.auth.admin.deleteUser(userId)
     if (authErr) throw authErr
 
-    // Honest response: only claim full erasure if EVERY site's event data was actually
-    // erased from Tinybird (or there were no sites to erase). Any non-'executed' site →
-    // partial success naming what was and was not erased (logged for retry).
-    const allEventDataErased = accountErase.every(e => e.status === 'executed')
-    if (allEventDataErased) {
-      return res.json({
-        success: true,
-        message: 'Your account and all associated data have been permanently deleted.',
-        tinybird: accountErase
-      })
-    }
-    return res.status(200).json({
-      success: false,
-      partial: true,
-      message: 'Your account records were deleted, but event data in Tinybird was NOT fully erased for one or more sites. This has been recorded for retry.',
-      erased: { supabase: true, tinybird_events: false },
+    // Reaching here means either every site's event data was confirmed erased, or there were
+    // no sites to erase — the gate above returns 503 in every other case. The old
+    // `partial: true` branch that used to live here is GONE, not merely unreachable: a
+    // response claiming the account was deleted while its events survived was the defect.
+    return res.json({
+      success: true,
+      message: 'Your account and all associated data have been permanently deleted.',
       tinybird: accountErase
     })
   } catch (err) {
