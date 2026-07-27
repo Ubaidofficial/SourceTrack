@@ -188,7 +188,10 @@ export default function Analytics() {
   const { data: summary, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['analytics-summary', site?.site_key, days, 'daily', filters],
     queryFn: () => fetchApi(`/analytics/summary?site_key=${site.site_key}&days=${days}&granularity=daily${filterQuery}`),
-    enabled: !!site?.site_key
+    enabled: !!site?.site_key,
+    // Explicit, not inherited: this feeds the main chart and must not silently
+    // revert to refetch-on-every-focus if App.jsx's defaultOptions change.
+    staleTime: 60_000
   })
 
   const priorFrom = new Date(Date.now() - days * 2 * 86400000).toISOString().slice(0, 10)
@@ -196,7 +199,10 @@ export default function Analytics() {
   const { data: priorSummary } = useQuery({
     queryKey: ['prior-analytics-summary', site?.site_key, days, filters],
     queryFn: () => fetchApi(`/analytics/summary?site_key=${site.site_key}&from=${priorFrom}&to=${priorTo}${filterQuery}`),
-    enabled: !!site?.site_key
+    enabled: !!site?.site_key,
+    // Explicit for the same reason as the query above — this is the
+    // prior-period comparison the chart's deltas are computed against.
+    staleTime: 60_000
   })
 
   const { data: liveData, refetch: refetchLive } = useQuery({

@@ -74,7 +74,24 @@ import Security from './pages/Security'
 import Demo from './pages/Demo'
 import UtmBuilderTool from './pages/tools/UtmBuilder'
 
-const queryClient = new QueryClient()
+// React Query's default staleTime is 0, so every tab switch and every
+// navigation refetched all data even when it had just loaded. 60s of freshness
+// tolerance is what makes repeated use feel instant.
+//
+// Safe against serving the wrong data because every queryKey in the dashboard
+// encodes its own inputs (site_key + range + filters, or JSON.stringify(cfg)) —
+// audited before setting this. Live surfaces are unaffected: refetchInterval
+// fires independently of staleTime in v5, so the 30s live-visitor and
+// integration polls keep their cadence, and invalidateQueries still forces an
+// immediate refetch after a mutation regardless of this value.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      retry: 1,
+    }
+  }
+})
 
 // ─── onboarding gate state shape ────────────────────────────────────────────
 // loading:   true while /onboarding/me is in-flight
