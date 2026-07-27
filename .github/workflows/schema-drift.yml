@@ -68,7 +68,7 @@ jobs:
       - name: Build migrations-shadow DB (LOCAL — replays supabase/migrations/ ONLY)
         run: |
           supabase init --force || true
-          supabase start
+          supabase start -x studio,realtime,imgproxy,edge-runtime,vector
           supabase db reset --local   # wipe + replay every committed migration = the intended schema
       - name: Snapshot migrations-shadow
         run: psql "$(supabase status -o json | jq -r '.DB_URL')" -tAqX -f scripts/schema-snapshot.sql > /tmp/migrations.json
