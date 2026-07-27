@@ -232,6 +232,15 @@ export default function Dashboard() {
                     <MetricTile label="Conversions" value="—" sub="No conversion events yet" />
                   </div>
 
+                  {/* Realtime Visitors — directly under the KPI strip, above Top Sources: the
+                      live feed is the most time-sensitive thing on the page, so it leads.
+                      Only while someone is actually on the site — an empty panel is clutter,
+                      so liveCount === 0 hides it entirely (§6: hide, never render a fake
+                      zero row). Gate and props unchanged; this block only moved. */}
+                  {!previewMode && site && liveCount > 0 && (
+                    <RealtimeVisitors siteKey={site.site_key} />
+                  )}
+
                   {/* Command Center Nav */}
                   <div className="flex flex-wrap gap-2">
                     <button onClick={() => navigate('/analytics')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Analytics <ArrowRight className="w-3 h-3" /></button>
@@ -268,13 +277,6 @@ export default function Dashboard() {
                       )}
                     </DashboardCard>
                   </div>
-
-                  {/* Realtime Visitors — only while someone is actually on the site. An empty
-                      panel is clutter, so liveCount === 0 hides it entirely (§6: hide, never
-                      render a fake zero row). */}
-                  {!previewMode && site && liveCount > 0 && (
-                    <RealtimeVisitors siteKey={site.site_key} />
-                  )}
 
                   {/* Truth-gate: revenue / attribution withheld until conversions exist */}
                   <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl px-4 py-4 flex items-start gap-3 shadow-sm">
@@ -349,6 +351,12 @@ export default function Dashboard() {
                   </>
                 )}
               </div>
+
+              {/* Realtime Visitors — see the note on the cold-start branch above. Same gate,
+                  same position: directly under the KPI strip so the live feed leads. */}
+              {!previewMode && site && liveCount > 0 && (
+                <RealtimeVisitors siteKey={site.site_key} />
+              )}
 
               {/* Command Center Nav */}
               <div className="flex flex-wrap gap-2">
@@ -438,11 +446,6 @@ export default function Dashboard() {
                   )}
                 </DashboardCard>
               </div>
-
-              {/* Realtime Visitors — see the note on the cold-start branch above. Same gate. */}
-              {!previewMode && site && liveCount > 0 && (
-                <RealtimeVisitors siteKey={site.site_key} />
-              )}
 
               {/* AI Source Performance (Only if real AI traffic or conversions exist) */}
               {aiSourceRows.length > 0 && (
