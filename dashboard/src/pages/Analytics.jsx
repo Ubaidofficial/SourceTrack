@@ -18,6 +18,8 @@ import { readStoredTimeRange, persistTimeRange } from '../hooks/useDashboardData
 import { LIVE_FEED_POLL_MS } from '../lib/liveFeed'
 import { useCountUp } from '../utils/useCountUp'
 import QueryError from '../components/QueryError'
+import FunnelChart from '../components/FunnelChart'
+import { hasFeature } from '../lib/planFeatures'
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Filler)
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -363,6 +365,35 @@ export default function Analytics() {
   // total_visitors: null so it does not need a second Tinybird read for a denominator the page
   // already holds, and so the Goals rate can never disagree with the rates beside it.
   // Null (not 0) when there are no visitors: a rate with no denominator is unknown, not zero (§6).
+  // ─── Funnels ────────────────────────────────────────────────────────────────
+  // Two pieces of state on purpose: `funnelInput` is what the user is typing, `funnelSteps`
+  // is what has been SUBMITTED. Querying on every keystroke would fire a 50k-row pipe read
+  // per character. The query is `enabled` only once at least 2 steps exist, because the
+  // route 400s below that — asking and being told off is not a useful round-trip.
+  const [funnelInput, setFunnelInput] = useState('')
+  const [funnelSteps, setFunnelSteps] = useState('')
+  const funnelStepList = funnelSteps.split(',').map(s => s.trim()).filter(Boolean)
+  const funnelReady = funnelStepList.length >= 2
+  // Client-side gate mirrors the server's requireFeature('funnels_cohorts'). The SERVER
+  // is the real gate (402); this only avoids rendering a control that could never succeed.
+  const canSeeFunnels = hasFeature(site?.plan, 'funnels_cohorts')
+
+  const {
+    data: funnelData,
+    isLoading: funnelLoading,
+    isError: funnelIsError
+  } = useQuery({
+    queryKey: ['analytics-funnel', site?.site_key, days, funnelSteps],
+    queryFn: () => fetchApi(
+      `/analytics/funnel?site_key=${encodeURIComponent(site.site_key)}&days=${days}&steps=${encodeURIComponent(funnelSteps)}`
+    ),
+    enabled: !!site?.site_key && funnelReady && canSeeFunnels,
+    staleTime: 60_000,
+    retry: false
+  })
+  // The route returns { success, data: [...] }; fetchApi unwraps to the `data` array.
+  const funnelRows = Array.isArray(funnelData) ? funnelData : []
+
   const goalRows = goalsData?.goals || []
   const goalRate = (conversions) => (uniqVis > 0 ? (safeNumber(conversions, 0) / uniqVis) * 100 : null)
 
@@ -736,6 +767,67 @@ export default function Analytics() {
               </div>
             )}
           />
+
+          {/* ─── Funnels ───────────────────────────────────────────────────────
+              A SECTION on this page, not a new page and not a sidebar entry. The card
+              shell matches ListSection's (same border/radius/shadow/header) so it reads as
+              a sibling of Sources/Pages/Devices/Goals rather than a bolted-on panel.
+              Entitlement note: this whole block only renders for plans where
+              funnels_cohorts is true; the server is the real gate (402), this just avoids
+              showing a control that would always 402. */}
+          {canSeeFunnels && (
+          <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border">
+              <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">Funnels</h3>
+              <p className="text-[11px] text-st-gray dark:text-gray-400 mt-0.5">
+                Comma-separated path keywords, in order — each step matches any URL containing it
+              </p>
+            </div>
+            <div className="px-4 py-3">
+              {/* Submit-on-form, not on change: each run is a 50k-row pipe read, so it fires
+                  when the user says so. Enter submits because the input is inside a form. */}
+              <form
+                onSubmit={(e) => { e.preventDefault(); setFunnelSteps(funnelInput) }}
+                className="flex items-center gap-2 mb-3"
+              >
+                <input
+                  type="text"
+                  value={funnelInput}
+                  onChange={(e) => setFunnelInput(e.target.value)}
+                  placeholder="/pricing, /signup, /welcome"
+                  aria-label="Funnel steps, comma separated"
+                  className="flex-1 min-w-0 px-3 py-1.5 text-xs rounded-lg bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border-strong text-st-black dark:text-dark-primary placeholder:text-st-gray focus:outline-none focus:ring-1 focus:ring-st-lime"
+                />
+                <button
+                  type="submit"
+                  disabled={funnelInput.split(',').map(s => s.trim()).filter(Boolean).length < 2}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-st-lime text-st-black disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                >
+                  Run
+                </button>
+              </form>
+
+              {/* Four states, never conflated: not-yet-asked, failed, loading, result.
+                  A FAILED read must not fall through to FunnelChart's "no data" copy — that
+                  would assert an absence we cannot verify (§6). */}
+              {!funnelReady ? (
+                <p className="text-xs text-st-gray dark:text-gray-400 py-6 text-center">
+                  Enter at least 2 steps to run a funnel.
+                </p>
+              ) : funnelIsError ? (
+                <p className="text-xs text-st-gray dark:text-gray-400 py-6 text-center">
+                  Funnel unavailable right now.
+                </p>
+              ) : (
+                <FunnelChart
+                  steps={funnelRows}
+                  loading={funnelLoading}
+                  hasSteps={funnelRows.length > 0}
+                />
+              )}
+            </div>
+          </div>
+          )}
 
           {/* ─── Conversions notice ───────────────────────────────────────── */}
           {convCount === 0 && (
