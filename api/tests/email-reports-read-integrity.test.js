@@ -24,6 +24,13 @@ process.env.SUPABASE_SERVICE_KEY = 'mock-service-role-key-value'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const migDir = join(__dirname, '../../supabase/migrations')
 const emailReportsSrc = readFileSync(join(__dirname, '../jobs/email-reports.js'), 'utf8')
+// Comment-stripped view, for the static guards below. The fix's own comments quote the OLD
+// buggy calls verbatim to explain them, so a raw-source regex matches the prose and reports a
+// bug that is not in the code. Guards must assert on what RUNS, not on what is described.
+const emailReportsCode = emailReportsSrc
+  .split('\n')
+  .filter(l => !l.trim().startsWith('//'))
+  .join('\n')
 
 // Build the REAL attributed_conversions column set from the migrations (CREATE TABLE + ADD COLUMNs).
 // Same approach as analytics-conversion-columns.test.js's realAttributedConversionsColumns().
@@ -68,7 +75,7 @@ test('🔴 every column in every attributed_conversions SELECT in email-reports.
 
 // ── Behavioural: a conversions-read error must skip the site, never send a fabricated report ──
 
-function buildStub ({ sites, member, user, conversionsError }) {
+function buildStub ({ sites, member, user, conversionsError, memberError, authError }) {
   const thenable = (result) => {
     const b = {}
     for (const m of ['select', 'eq', 'gte', 'lte']) b[m] = () => b
@@ -82,10 +89,14 @@ function buildStub ({ sites, member, user, conversionsError }) {
     return b
   }
   return {
+    // auth.users is reachable only through the admin API, never through .from().
+    auth: { admin: { getUserById: async () => (authError ? { data: null, error: { message: 'mock auth failure' } } : { data: { user }, error: null }) } },
     from (table) {
       if (table === 'sites') return thenable({ data: sites, error: null })
-      if (table === 'company_members') return maybeSingleChain({ data: member, error: null })
-      if (table === 'users') return maybeSingleChain({ data: user, error: null })
+      if (table === 'company_members') return maybeSingleChain(memberError ? { data: null, error: { message: 'mock member failure' } } : { data: member, error: null })
+      // NO 'users' branch on purpose. Owner emails come from auth.users via the admin API
+      // (auth.admin.getUserById below); public.users does not exist in this database. If the
+      // job ever goes back to .from('users'), the `unexpected table` throw below fires.
       if (table === 'attributed_conversions') {
         return thenable(conversionsError ? { data: null, error: { message: 'mock read failure' } } : { data: [], error: null })
       }
@@ -100,7 +111,7 @@ test('🔴 behavioural: attributed_conversions read error must NOT send a report
   const { run } = await import('../jobs/email-reports.js')
 
   __setSupabaseClient(buildStub({
-    sites: [{ id: 'site-1', site_key: 'sk_test', domain: 'example.com', name: 'Test Site', owner_id: 'owner-1', plan: 'growth', trial_ends_at: null }],
+    sites: [{ id: 'site-1', site_key: 'sk_test', domain: 'example.com', name: 'Test Site', owner_id: 'owner-1', company_id: 'co-1', plan: 'growth', trial_ends_at: null }],
     member: { user_id: 'owner-1' },
     user: { email: 'owner@example.com' },
     conversionsError: true
@@ -124,4 +135,68 @@ test('🔴 behavioural: attributed_conversions read error must NOT send a report
   }
 
   assert.equal(sendAttempted, false, 'a conversions read error must skip the site, not send a report built on a swallowed error')
+})
+
+// ── Owner resolution: auth.users via the admin API, and company_id keyed off the COMPANY ──
+//
+// The job read `.from('users')` — public.users, which DOES NOT EXIST in this database (only
+// auth.users does). No error binding, so every site of every run resolved to "no owner email"
+// and skipped: that is why job_runs recorded Sent 0 forever. It never crashed.
+
+async function runJob (stubOpts) {
+  const { __setSupabaseClient, __resetSupabaseClient } = await import('../lib/supabase.js')
+  const { run } = await import('../jobs/email-reports.js')
+  __setSupabaseClient(buildStub(stubOpts))
+  const originalFetch = globalThis.fetch
+  const originalExit = process.exit
+  let sendAttempted = false
+  globalThis.fetch = async (url) => {
+    if (typeof url === 'string' && url.includes('resend.com')) sendAttempted = true
+    return { ok: true, text: async () => '', json: async () => ({}) }
+  }
+  process.exit = () => {}
+  try { await run() } finally {
+    globalThis.fetch = originalFetch
+    process.exit = originalExit
+    __resetSupabaseClient()
+  }
+  return sendAttempted
+}
+
+const HEALTHY = {
+  sites: [{ id: 'site-1', site_key: 'sk_test', domain: 'example.com', name: 'Test Site', owner_id: 'owner-1', company_id: 'co-1', plan: 'growth', trial_ends_at: null }],
+  member: { user_id: 'owner-1' },
+  user: { email: 'owner@example.com' }
+}
+
+test('🔴 the fix: a resolvable owner now actually reaches the send (was Sent 0 forever)', async () => {
+  const sendAttempted = await runJob({ ...HEALTHY })
+  assert.equal(sendAttempted, true,
+    'owner email must resolve via auth.admin.getUserById — with .from(\'users\') this never got past "no owner email"')
+})
+
+test('🔴 an auth lookup FAILURE is surfaced, not reported as "no owner email"', async () => {
+  const sendAttempted = await runJob({ ...HEALTHY, authError: true })
+  assert.equal(sendAttempted, false, 'a failed auth read must never send')
+})
+
+test('🔴 a company_members lookup FAILURE is surfaced, not treated as "no team"', async () => {
+  const sendAttempted = await runJob({ ...HEALTHY, memberError: true })
+  assert.equal(sendAttempted, false, 'a failed members read must never send')
+})
+
+test('🔴 ANTI-REGRESSION: email-reports.js must never query public.users again', () => {
+  assert.ok(!/\.from\(['"]users['"]\)/.test(emailReportsCode),
+    "email-reports.js queries .from('users') — public.users does not exist; owner emails come from auth.admin.getUserById")
+  assert.ok(/auth\.admin\.getUserById/.test(emailReportsCode),
+    'email-reports.js must resolve the owner email through the auth admin API')
+})
+
+test('🔴 ANTI-REGRESSION: company_members is keyed on site.company_id, never site.id', () => {
+  assert.ok(!/\.eq\('company_id',\s*site\.id\)/.test(emailReportsCode),
+    "company_members.company_id was compared against a SITE id — it must be site.company_id")
+  assert.ok(/\.eq\('company_id',\s*site\.company_id\)/.test(emailReportsCode),
+    'the members lookup must filter on site.company_id')
+  assert.ok(/\.select\('id, site_key, domain, name, owner_id, company_id/.test(emailReportsCode),
+    'company_id must be SELECTed on sites, or site.company_id is undefined and the filter matches nothing')
 })
