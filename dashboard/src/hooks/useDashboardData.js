@@ -6,6 +6,7 @@ import { format, subDays } from 'date-fns'
 import { useAuth } from '../contexts/AuthContext'
 import { useSite } from '../contexts/SiteContext'
 import { hasFeature } from '../lib/planFeatures'
+import { LIVE_FEED_POLL_MS } from '../lib/liveFeed'
 import { safeNumber } from '../utils/numbers'
 import { limeAreaGradient } from '../utils/limeAreaGradient'
 import { tooltipPlugin, CHART_COLORS } from '../utils/chartTooltip'
@@ -123,7 +124,7 @@ export function useDashboardData() {
       return fetchApi(`/live?site_key=${encodeURIComponent(site.site_key)}`)
     },
     enabled: !!site?.site_key && !previewMode,
-    refetchInterval: 30000,
+    refetchInterval: LIVE_FEED_POLL_MS,
   })
   const liveCount = liveData?.live_visitors ?? 0
 

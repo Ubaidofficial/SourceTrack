@@ -57,4 +57,44 @@ router.get('/', async (req, res) => {
   }
 })
 
+// Per-visitor live feed backing the Realtime Visitors panel. Same auth chain as GET '/'
+// (applied at the mount in api/index.js), so req.site is the AUTHENTICATED tenant and the
+// pipe's required site_id is never client-supplied.
+//
+// Soft-fail policy differs from GET '/' on purpose: this is a decorative panel, not a count.
+// The backing pipe is founder-deployed, so until it lands _queryTinybirdPipe returns null and
+// this returns an empty list — the panel then renders nothing rather than an error. No fake
+// rows are ever synthesised (§6: hide, never fabricate).
+router.get('/visitors', async (req, res) => {
+  try {
+    if (!req.site?.id) {
+      return res.status(400).json({
+        success: false, data: null, error: 'Site context missing'
+      })
+    }
+    const rows = await _queryTinybirdPipe('live_visitors_detail', {
+      site_id: String(req.site.id)
+    })
+    // Soft-fail to [] if pipe not deployed yet
+    const visitors = (rows ?? []).map(r => ({
+      id: r.distinct_id,
+      current_page: r.current_page || '/',
+      country: r.country || null,
+      device_type: r.device_type || 'desktop',
+      source: r.utm_source || r.ai_source ||
+              (r.referrer
+                ? (() => { try { return new URL(r.referrer)
+                    .hostname.replace('www.', '') } catch { return null } })()
+                : null) ||
+              'Direct',
+      is_ai: !!r.ai_source,
+      last_seen: r.last_seen
+    }))
+    return res.json({ success: true, data: { visitors }, error: null })
+  } catch (err) {
+    console.error('Live visitors detail error:', err)
+    return res.json({ success: true, data: { visitors: [] }, error: null })
+  }
+})
+
 export default router

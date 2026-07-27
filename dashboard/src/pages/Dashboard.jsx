@@ -30,6 +30,7 @@ import JourneyModal from '../components/JourneyModal'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
 import { SourceChip, SourceIcon, normalizeSource } from '../components/SourceIcon'
 import DataRow from '../components/DataRow'
+import RealtimeVisitors from '../components/RealtimeVisitors'
 import { safeNumber } from '../utils/numbers'
 import { useDashboardData, MODELS, TIME_RANGES } from '../hooks/useDashboardData'
 
@@ -257,6 +258,13 @@ export default function Dashboard() {
                     </DashboardCard>
                   </div>
 
+                  {/* Realtime Visitors — only while someone is actually on the site. An empty
+                      panel is clutter, so liveCount === 0 hides it entirely (§6: hide, never
+                      render a fake zero row). */}
+                  {!previewMode && site && liveCount > 0 && (
+                    <RealtimeVisitors siteKey={site.site_key} />
+                  )}
+
                   {/* Truth-gate: revenue / attribution withheld until conversions exist */}
                   <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl px-4 py-4 flex items-start gap-3 shadow-sm">
                     <span className="w-1.5 h-1.5 mt-1.5 rounded-full bg-st-gray dark:bg-gray-400 flex-shrink-0" />
@@ -419,6 +427,11 @@ export default function Dashboard() {
                   )}
                 </DashboardCard>
               </div>
+
+              {/* Realtime Visitors — see the note on the cold-start branch above. Same gate. */}
+              {!previewMode && site && liveCount > 0 && (
+                <RealtimeVisitors siteKey={site.site_key} />
+              )}
 
               {/* AI Source Performance (Only if real AI traffic or conversions exist) */}
               {aiSourceRows.length > 0 && (
