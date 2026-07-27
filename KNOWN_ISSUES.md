@@ -1666,9 +1666,52 @@ The Dashboard's Recent Conversions card renders "No conversions in the recent wi
 
 `analytics.js:774` (`/analytics/recent-conversions`) computes its window in raw UTC, while `/dashboard/overview` is timezone-aware. For a non-UTC site the two can disagree by up to a day at the range boundary — a conversion can appear in one surface and not the other on the edge day. Already flagged in #368 as the accepted limitation of that PR (the 30-minutes-vs-30-days gulf was the fix; exact tz-boundary parity was explicitly not claimed). Demo site is UTC so it is invisible there. **Fix:** make the recent-conversions window tz-aware like overview. Log-only.
 
-### onboarding gate checks the SELECTED SITE, not the ACCOUNT (2026-07-23, latent, deliberately not fixed in #366)
+### ~~onboarding gate checks the SELECTED SITE, not the ACCOUNT~~ — RESOLVED 2026-07-28
 
-`onboarding.js:63-67` gates on "is the **selected site** onboarded" rather than "has the **account** onboarded". Latent today, but it bites a user whose first/selected site is un-onboarded while they already have other onboarded sites — they get pushed back into onboarding they have already completed. A correct fix is an auth-gate refactor (account-level onboarding state), which was deliberately out of scope for #366 (that PR fixed silent site-substitution, a different bug). **Log-only** until an onboarding/auth-gate pass is scheduled — not a one-line change.
+Filed 2026-07-23 as latent. **Two defects were tangled here, and they were coupled — which is
+why neither could be closed alone.** Both are now fixed.
+
+**Half 1 — silent site SUBSTITUTION (was REAL, and was still live when this was resolved).**
+`resolveDashboardSite` only honoured an explicit `site_key`/`site_id` match when the matched
+site was already `onboarding_completed`. Selecting an unfinished site failed that guard, fell
+through, and returned a **different** site — different `site_id`, `site_key`, `domain` — with
+nothing in the payload saying a substitution had occurred. Mainline, not an edge case:
+`App.jsx` sends the site switcher's persisted key on every protected-route evaluation, so this
+fired whenever a user picked a site they had not finished setting up. Note the original entry
+credited #366 with fixing site-substitution; that was **inaccurate** — the substitution was
+still present and is fixed only now. Reproduced first, then fixed
+(`api/tests/resolve-dashboard-site-selection.test.js`).
+
+**Half 2 — account-vs-site conflation (was REAL, but its stated SYMPTOM was not).**
+This entry predicted users "pushed back into onboarding they have already completed". That was
+**never observable**, and a 2026-07-26 pass correctly found it not reproducible — because
+Half 1 was **masking** it: the substitution returned a completed site, so the gate stayed
+satisfied. The conflation was real all the same, in `App.jsx`'s Phase-4 rule
+(`!onboarding.completed`, the ACTIVE site) rather than in `onboarding.js:63-67`.
+
+**The coupling, which is the part worth remembering:** fixing Half 1 alone would have
+**activated** Half 2 — the resolver would start answering truthfully, the gate would see
+`completed: false`, and the user WOULD have been force-marched into the wizard, exactly as
+predicted here. The "not reproducible" verdict was right about the observed symptom and wrong
+to be read as "no bug"; the "latent" framing was right about the defect and wrong about which
+file held it.
+
+**Fix:** the explicit-selection guards drop the completion requirement (an explicit selection
+is authoritative), `GET /onboarding/me` returns a new ACCOUNT-level `has_completed_site`
+computed from the sites array it already fetches, and `App.jsx`'s force-redirect keys off that
+instead of the active site. Genuine first run (no finished site anywhere) still hard-redirects.
+An unfinished ACTIVE site is now handled by `Layout.jsx`'s existing "Resume setup" affordance —
+an offer rather than a forced march, which is what it was built for.
+
+`has_completed_site` is computed SERVER-side deliberately: deriving it in the gate from a
+separately-loading `/sites` call would have added a second async source whose loading/error
+state could be read as "no completed sites" → redirect, recreating the 140Z-G3-C
+(`ff23e44`) redirect-loop shape. Loop-freedom is now structural and asserted: leaving
+`/dashboard` needs `!has_completed_site`, leaving `/onboarding` needs `onboarding_completed`,
+and a completed ACTIVE site implies a completed site exists — so both rules can never fire from
+the same response. Pinned across every account shape in
+`api/tests/onboarding-gate-matrix.test.js`, which also pins the App.jsx rule text so the matrix
+cannot drift into testing a copy.
 
 ### 🔴 REFUNDS — LAUNCH GATE for ecom, not a feature request (2026-07-23, correctness defect)
 
