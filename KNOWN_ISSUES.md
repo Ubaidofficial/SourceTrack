@@ -1882,3 +1882,24 @@ Real, structural gap: **no click timestamp exists anywhere in the current pipeli
 6. `conversion-offline.js` merchant uploads would need to supply it manually; no server-side derivation is possible.
 
 Until (1)–(3) exist, `Date.now()` is the only value `sendMetaCAPI` can honestly write — every reachable substitute is wrong in a harder-to-reason-about way. **Leave as-is; do not "fix" with `first_touch_timestamp` or conversion time.**
+
+### ⚠️ GDPR account deletion now blocks on Tinybird erasure — correct fix, no alerting yet (2026-07-27)
+
+`DELETE /api/gdpr/account` (fixed 2026-07-27) no longer deletes
+`sites`/`company_members`/`companies`/the auth user unless every site's
+Tinybird event-data erasure returns `status: 'executed'` — replacing a bug
+where the account was deleted regardless of whether event data was actually
+erased, sometimes with a false "partial success" claim. The Supabase delete
+order was also fixed: `attributed_conversions` was previously deleted
+*before* the Tinybird erasure loop even ran, so a blocked request would
+already have destroyed real conversion data. Both are now sequenced:
+erase loop → log → gate → deletes, all-or-nothing.
+
+This trades one Art. 17 risk for a different one: during a sustained
+Tinybird outage, no account deletion can complete for its duration, and
+GDPR erasure carries a one-month statutory deadline. Today the only signal
+a request was blocked is a `console.error` — no alert, no dashboard
+visibility. Not urgent to fix now: `erasure_log` has zero rows ever
+written (confirmed via direct query), meaning this path has never been
+exercised by a real request. Needs alerting on repeated/sustained block
+before real customer volume makes the gap load-bearing.
