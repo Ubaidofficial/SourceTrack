@@ -7,6 +7,7 @@ import { getSupabase } from '../lib/supabase.js'
 import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { serializeHogQLDateRange } from '../lib/hogql-date.js'
 import { sourceFromEvent, topSourcesByVisitor } from '../lib/channel-classifier.js'
+import { deriveSessions } from '../lib/sessionization.js'
 import { redactPiiFromUrl, redactPiiFromObject, isGoogleSource, isValidTimezone, getLocalDateString, getLocalMonthString, getLocalWeekString, getPaddedUtcDateRange, getNow, bucketUniqueVisitors, countDistinctConverters, cappedRate } from '../lib/utils.js'
 import { requireFeature, isSiteStatusBlocked } from '../lib/plan-features.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
@@ -1147,24 +1148,63 @@ router.get('/funnel', requireUserAuth, validateSiteKey, requireSiteMembership, a
       return res.status(400).json({ success: false, error: 'At least 2 comma-separated step keywords required' })
     }
 
-    const supabase = getSupabase()
+    // ONE unfiltered pageview read for the whole range, then every step is evaluated in
+    // memory. The old handler issued 1 + ceil(prev/300) Supabase round-trips per step
+    // against `pageviews` — a table that is EMPTY BY DESIGN (CLAUDE.md §5: analytics reads
+    // come from Tinybird), so this endpoint returned an all-zero funnel for every site.
+    const to = new Date().toISOString()
+    const rows = await dispatchPageviews(siteId, from, to, { filters: [], limit: 50000, queryName: 'summary' })
+
+    // Group by visitor, chronological. `anonymous_id` is the summary pipe's alias for the
+    // typed distinct_id column; `url` is its alias for page_url.
+    const byVisitor = new Map()
+    for (const r of rows) {
+      if (!r.anonymous_id || !r.timestamp) continue
+      if (!byVisitor.has(r.anonymous_id)) byVisitor.set(r.anonymous_id, [])
+      byVisitor.get(r.anonymous_id).push({
+        timestamp: r.timestamp,
+        event: '$pageview',            // the pipe filters event_type = '$pageview'
+        page_url: r.url || '',         // deriveSessions reads page_url for entry/exit
+        utm_source: r.utm_source || null,
+        utm_medium: r.utm_medium || null,
+        utm_campaign: r.utm_campaign || null
+      })
+    }
+
+    // Session boundaries come from deriveSessions ONLY (30-min inactivity + acquisition-context
+    // split) — the same helper /sessions uses. Membership is recovered by consuming exactly
+    // session.event_count events in order rather than by re-testing the gap rule: sessions are
+    // emitted in order over this same sorted array, so the walk is exact, and it stays correct
+    // when two events share a timestamp across a split (a timestamp-window match would not).
+    const sessionUrls = []
+    for (const events of byVisitor.values()) {
+      events.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+      let cursor = 0
+      for (const sess of deriveSessions(events)) {
+        const urls = []
+        for (let k = 0; k < sess.event_count && cursor < events.length; k++, cursor++) {
+          urls.push(events[cursor].page_url)
+        }
+        sessionUrls.push(urls)
+      }
+    }
+
+    // Identical step math to the Supabase version, with the derived session replacing
+    // pageviews.session_id as the identity: step 0 is every session containing a matching
+    // URL; each later step narrows that set to the sessions that ALSO contain a match.
+    // Membership is order-independent, exactly as the `.in(session_id, batch)` query was.
+    // `.like()` (not `.ilike()`) was case-SENSITIVE, so String.includes preserves it.
     const result = []
     let prevIds = null
 
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i]
-      const likePattern = `%${step}%`
 
       if (i === 0) {
-        const { data: rows } = await supabase
-          .from('pageviews')
-          .select('session_id')
-          .eq('site_id', siteId)
-          .like('url', likePattern)
-          .gte('timestamp', from)
-          .not('session_id', 'is', null)
-
-        prevIds = [...new Set((rows || []).map(r => r.session_id))]
+        prevIds = []
+        for (let s = 0; s < sessionUrls.length; s++) {
+          if (sessionUrls[s].some(u => u.includes(step))) prevIds.push(s)
+        }
         result.push({ step, visitors: prevIds.length, dropoff_rate: 0 })
       } else {
         if (prevIds.length === 0) {
@@ -1172,22 +1212,7 @@ router.get('/funnel', requireUserAuth, validateSiteKey, requireSiteMembership, a
           prevIds = []
           continue
         }
-        const nextIds = []
-        const batchSize = 300
-        for (let j = 0; j < prevIds.length; j += batchSize) {
-          const batch = prevIds.slice(j, j + batchSize)
-          const { data: rows } = await supabase
-            .from('pageviews')
-            .select('session_id')
-            .eq('site_id', siteId)
-            .like('url', likePattern)
-            .in('session_id', batch)
-            .gte('timestamp', from)
-          for (const r of (rows || [])) {
-            if (r.session_id) nextIds.push(r.session_id)
-          }
-        }
-        const uniqueNext = [...new Set(nextIds)]
+        const uniqueNext = prevIds.filter(s => sessionUrls[s].some(u => u.includes(step)))
         const dropoff = prevIds.length > 0
           ? parseFloat(((1 - uniqueNext.length / prevIds.length) * 100).toFixed(1))
           : 100
