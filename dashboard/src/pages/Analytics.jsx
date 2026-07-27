@@ -12,6 +12,7 @@ import DataRow from '../components/DataRow'
 import { tooltipPlugin, CHART_COLORS } from '../utils/chartTooltip'
 import { SourceIcon, normalizeSource } from '../components/SourceIcon'
 import { useActiveSite } from '../hooks/useActiveSite'
+import { readStoredTimeRange, persistTimeRange } from '../hooks/useDashboardData'
 import { useCountUp } from '../utils/useCountUp'
 import QueryError from '../components/QueryError'
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Filler)
@@ -170,11 +171,21 @@ function SourceTabList({ rows, tab, toggleFilter, isActive, faviconEl }) {
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
+// Hoisted out of the JSX below so the range picker and the persisted-value
+// validation read the SAME list — otherwise adding a range here would silently
+// fail to restore after a refresh. Note this surface offers 90d and the
+// Dashboard/Attribution picker (TIME_RANGES) does not; see readStoredTimeRange.
+const ANALYTICS_TIME_RANGES = [{ l: '24h', d: 1 }, { l: '7d', d: 7 }, { l: '30d', d: 30 }, { l: '90d', d: 90 }]
+
 export default function Analytics() {
   const { site, activeSite } = useActiveSite('cookieless_mode')
   const { theme } = useTheme()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [days, setDays] = useState(30)
+  const [days, setDaysState] = useState(() => readStoredTimeRange(ANALYTICS_TIME_RANGES.map(t => t.d)))
+  const setDays = (d) => {
+    setDaysState(d)
+    persistTimeRange(d)
+  }
   const [filters, setFilters] = useState([])
   const [sourceTab, setSourceTab] = useState(
     ['referrer', 'channel', 'ai_source'].includes(searchParams.get('tab')) ? searchParams.get('tab') : 'referrer'
@@ -411,7 +422,7 @@ export default function Analytics() {
             </button>
           </div>
           <div className="flex items-center gap-1 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg p-1 shadow-sm">
-            {[{ l: '24h', d: 1 }, { l: '7d', d: 7 }, { l: '30d', d: 30 }, { l: '90d', d: 90 }].map(t => (
+            {ANALYTICS_TIME_RANGES.map(t => (
               <button key={t.d} onClick={() => setDays(t.d)}
                 className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${days === t.d ? 'bg-st-lime text-st-black font-semibold' : 'text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text'}`}>
                 {t.l}
