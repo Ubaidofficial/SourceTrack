@@ -17,7 +17,12 @@
 // must never be auto-suggested, because we cannot tell.
 export const INSTALL_GUIDES = [
   { label: 'WordPress', desc: 'Plugin / theme header', to: '/docs/platforms/wordpress', platformKey: 'wordpress' },
-  { label: 'Shopify', desc: 'Theme + checkout', to: '/docs/platforms/shopify', platformKey: 'shopify' },
+  // `guidedMethod` marks a platform that has a real in-wizard walkthrough. The card then opens
+  // that install-method tab instead of navigating to /docs — two paths to the same job is worse
+  // than one. `to` is retained as the canonical doc URL (and every card keeps a working link,
+  // which install-nudge-gating asserts); the wizard simply prefers the guided flow when it
+  // exists. Shopify is the only one so far — the other four are still doc-links.
+  { label: 'Shopify', desc: 'Guided setup — no docs needed', to: '/docs/platforms/shopify', platformKey: 'shopify', guidedMethod: 'shopify' },
   { label: 'Webflow', desc: 'Site-wide custom code', to: '/docs/platforms/webflow', platformKey: 'webflow' },
   { label: 'Framer', desc: 'Site settings → custom code', to: '/docs/platforms/framer', platformKey: null },
   { label: 'Google Tag Manager', desc: 'Custom HTML tag', to: '/docs/platforms/google-tag-manager', platformKey: null }

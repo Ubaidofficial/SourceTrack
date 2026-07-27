@@ -5,7 +5,7 @@ import { fetchApi } from '../lib/api'
 import { seedReportsForBusiness } from '../lib/seedReports'
 import { useAuth } from '../contexts/AuthContext'
 import {
-  Globe, ShoppingCart, CreditCard, Layers,
+  Globe, ShoppingCart, CreditCard, Layers, ShoppingBag,
   Code, FileCode, Check, X, ArrowRight, ArrowLeft, Copy, RefreshCw, Play
 } from 'lucide-react'
 import OnboardingCard from '../components/OnboardingCard'
@@ -30,7 +30,18 @@ const BUSINESS_TYPES = [
 
 const INSTALL_METHODS = [
   { key: 'standard', label: 'SourceTrack Pixel', icon: Code, desc: 'Add one script to your website — recommended for most users', recommended: true },
-  { key: 'gtm', label: 'Google Tag Manager', icon: FileCode, desc: 'Install via GTM — for teams already using Tag Manager', advanced: true }
+  { key: 'gtm', label: 'Google Tag Manager', icon: FileCode, desc: 'Install via GTM — for teams already using Tag Manager', advanced: true },
+  { key: 'shopify', label: 'Shopify', icon: ShoppingBag, desc: 'Guided walkthrough of the Shopify theme editor' }
+]
+
+// Shopify theme-editor walkthrough. Kept as data rather than inline JSX so the ordered list and
+// the test that pins the navigation path read from one source.
+const SHOPIFY_STEPS = [
+  'In your Shopify admin, go to Online Store → Themes.',
+  'On your current theme, click the ⋯ (Actions) menu → Edit code.',
+  'In the Layout folder, open theme.liquid.',
+  'Paste the script below immediately before the closing </head> tag.',
+  'Click Save. Shopify publishes the change to your live theme straight away.'
 ]
 
 const CONVERSIONS = [
@@ -83,6 +94,12 @@ export default function Onboarding() {
   // Advisory install-guide nudge. Null means "say nothing" and is the default in every failure
   // path — a missed nudge is invisible, a wrong one sends someone to the wrong guide.
   const [suggestedGuide, setSuggestedGuide] = useState(null)
+  // The RAW detected platform, kept alongside suggestedGuide rather than derived from it.
+  // suggestedGuideFor() is deliberately conservative (null below medium confidence, null for
+  // platforms with no guide), which is right for "which card do we highlight" but wrong for
+  // "why can't we see your script yet" — a low-confidence Shopify signal is still worth naming
+  // in that copy. Same call, same response, no extra fetch.
+  const [detectedPlatform, setDetectedPlatform] = useState(null)
   const [firstEventReceived, setFirstEventReceived] = useState(false)
 
   const handleOnboardingVerified = useCallback((diagnostics) => {
@@ -116,11 +133,18 @@ export default function Onboarding() {
         // suggestedGuideFor returns null for every uncertain case, so a bad or absent
         // detection simply leaves the guide list exactly as it renders today.
         setSuggestedGuide(suggestedGuideFor(result))
+        // HIGH confidence only. classifyHtml scores a single token match as 'medium', and the
+        // Shopify token list includes the bare word 'Shopify' — so any page that merely MENTIONS
+        // Shopify is classified shopify/medium. Reproduced live against github.com on 2026-07-28
+        // (platform=shopify, confidence=medium, signals=["Shopify"]). 'high' requires >=2 tokens,
+        // which in practice means cdn.shopify.com was present — a real storefront asset, not prose.
+        setDetectedPlatform(result.confidence === 'high' ? (result.platform || null) : null)
       })
       .catch(() => {
         if (cancelled) return
         if (step === 6) setScriptDetected('unknown')
         setSuggestedGuide(null) // detection failed -> no nudge, never a guess
+        setDetectedPlatform(null) // same rule: a failed check names no platform
       })
 
     // The first-event poll stays STEP 6 ONLY — unchanged behaviour. Widening the effect to the
@@ -557,7 +581,9 @@ export default function Onboarding() {
                     <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-normal">
                       {gtmPresent
                         ? "We detected Google Tag Manager on your site, but can't see inside the container. Open your GTM workspace and confirm the SourceTrack tag is published."
-                        : 'This can take a few minutes, or the script may be added by JavaScript after the page loads — a common pattern we can\'t always see in the raw page.'}
+                        : (installMethod === 'shopify' || detectedPlatform === 'shopify')
+                          ? 'We can see your Shopify storefront but not the script yet. Re-open Online Store → Themes → Edit code → Layout → theme.liquid and confirm the tag sits before </head> and was saved. Shopify also caches storefront pages, so a confirmed edit can take a few minutes to show up here.'
+                          : 'This can take a few minutes, or the script may be added by JavaScript after the page loads — a common pattern we can\'t always see in the raw page.'}
                     </p>
                   )}
                   <div className="flex items-center justify-between">
@@ -639,10 +665,11 @@ export default function Onboarding() {
 
   function renderInstallInstructions() {
     const isGTM = installMethod === 'gtm'
+    const isShopify = installMethod === 'shopify'
 
     return (
       <OnboardingCard
-        icon={isGTM ? FileCode : Code}
+        icon={isGTM ? FileCode : isShopify ? ShoppingBag : Code}
         title="Install Tracking Script"
         subtitle="Pick how you install, then copy the script generated for your website."
         showBack
@@ -678,7 +705,29 @@ export default function Onboarding() {
           })}
         </div>
 
-        {isGTM ? (
+        {isShopify ? (
+          <>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Install on Shopify</p>
+            <p className="text-xs text-st-gray dark:text-gray-400 mb-4">
+              Add the script to your theme layout so it loads on every storefront page.
+            </p>
+            <ol className="list-decimal list-inside text-sm text-gray-700 dark:text-gray-200 space-y-2 mb-4">
+              {SHOPIFY_STEPS.map((s) => <li key={s}>{s}</li>)}
+            </ol>
+            {/* §6: state the real coverage boundary up front rather than letting a merchant
+                discover it from a gap in their data. theme.liquid renders the storefront only —
+                Shopify admin is a separate app we never see, and checkout is Shopify-hosted and
+                not themeable outside Plus. */}
+            <div className="rounded-xl border border-[#DDE4E4] dark:border-white/10 bg-[#F1F4F4] dark:bg-white/[0.03] px-3 py-2.5 mb-4">
+              <p className="text-[11px] font-bold text-[#1F2323] dark:text-dark-primary mb-1">What this tracks</p>
+              <p className="text-[11px] text-[#6B7373] dark:text-gray-400 leading-normal">
+                All storefront pages — home, product, collection, and cart. It does <strong>not</strong> track
+                inside the Shopify admin, and Shopify hosts checkout on its own domain, so purchases are
+                captured by the Shopify webhook rather than this script.
+              </p>
+            </div>
+          </>
+        ) : isGTM ? (
           <>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Connect SourceTrack via Google Tag Manager</p>
             <p className="text-xs text-st-gray dark:text-gray-400 mb-4">
@@ -731,29 +780,40 @@ export default function Onboarding() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {INSTALL_GUIDES.map(p => {
               const isSuggested = suggestedGuide?.label === p.label
-              return (
-              <a
-                key={p.label}
-                href={p.to}
-                className={`relative flex items-center justify-between gap-2 rounded-xl border px-3 py-2 transition-colors ${
-                  isSuggested
-                    ? 'border-blue-400 dark:border-blue-400/60 bg-blue-50/60 dark:bg-blue-400/10'
-                    : 'border-[#DDE4E4] dark:border-white/10 bg-white dark:bg-white/5 hover:border-blue-400 dark:hover:border-blue-400/60 hover:bg-blue-50/40 dark:hover:bg-white/10'
-                }`}
-              >
-                <span className="min-w-0">
-                  <span className="block text-xs font-bold text-[#1F2323] dark:text-dark-primary truncate">
-                    {p.label}
-                    {isSuggested && (
-                      <span className="ml-1.5 align-middle text-[9px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
-                        Suggested
-                      </span>
-                    )}
+              const cardClass = `relative flex items-center justify-between gap-2 rounded-xl border px-3 py-2 transition-colors ${
+                isSuggested
+                  ? 'border-blue-400 dark:border-blue-400/60 bg-blue-50/60 dark:bg-blue-400/10'
+                  : 'border-[#DDE4E4] dark:border-white/10 bg-white dark:bg-white/5 hover:border-blue-400 dark:hover:border-blue-400/60 hover:bg-blue-50/40 dark:hover:bg-white/10'
+              }`
+              // Identical content either way — only the ELEMENT differs, so a guided card and a
+              // doc-link card are visually the same and the "Suggested" badge works on both.
+              const inner = (
+                <>
+                  <span className="min-w-0">
+                    <span className="block text-xs font-bold text-[#1F2323] dark:text-dark-primary truncate">
+                      {p.label}
+                      {isSuggested && (
+                        <span className="ml-1.5 align-middle text-[9px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
+                          Suggested
+                        </span>
+                      )}
+                    </span>
+                    <span className="block text-[10px] text-[#6B7373] dark:text-gray-400 truncate">{p.desc}</span>
                   </span>
-                  <span className="block text-[10px] text-[#6B7373] dark:text-gray-400 truncate">{p.desc}</span>
-                </span>
-                <ArrowRight className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-              </a>
+                  <ArrowRight className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                </>
+              )
+              return p.guidedMethod ? (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => handleInstallMethodSelect(p.guidedMethod)}
+                  className={`${cardClass} text-left w-full`}
+                >
+                  {inner}
+                </button>
+              ) : (
+                <a key={p.label} href={p.to} className={cardClass}>{inner}</a>
               )
             })}
           </div>
