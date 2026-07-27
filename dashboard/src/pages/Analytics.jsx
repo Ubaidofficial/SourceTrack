@@ -5,7 +5,9 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 import { Chart } from 'react-chartjs-2'
 import { fetchApi } from '../lib/api'
 import { useTheme } from '../contexts/ThemeContext'
-import { Eye, RefreshCw, Copy, Check, BarChart3, Globe, Monitor } from 'lucide-react'
+// Target is the goals empty-state icon. None of the already-imported icons is a target/crosshair,
+// and this is a named import from a dependency the file already pulls in — not a new dependency.
+import { Eye, RefreshCw, Copy, Check, BarChart3, Globe, Monitor, Target } from 'lucide-react'
 import { safeNumber, fmtMoney } from '../utils/numbers'
 import { flagEmoji, countryName } from '../utils/country'
 import DataRow from '../components/DataRow'
@@ -91,14 +93,25 @@ function osDomain(name = '') { return OS_DOMAIN[String(name).toLowerCase().trim(
 // Top Sources / AI Source Performance panels render through the same row, not a second copy.
 
 // ─── Section card (optional internal tabs) ─────────────────────────────────────
-function ListSection({ title, rows, getLabel, getCount, getIcon, onRowClick, isRowActive, emptyText = 'No data yet', tabs, activeTab, onTabChange }) {
+// `subtitle`, `loading`, `emptyState`, `getRevenue` and `getRate` are all OPTIONAL and additive —
+// every pre-existing call site omits them and renders byte-identically. Added so the Goals card can
+// reuse this exact card/row treatment instead of hand-rolling a second one (the drift that made the
+// Dashboard and Analytics read as different products in the first place).
+function ListSection({ title, subtitle, rows, getLabel, getCount, getIcon, onRowClick, isRowActive, emptyText = 'No data yet', emptyState, loading = false, getRevenue, getRate, tabs, activeTab, onTabChange }) {
   const [showAll, setShowAll] = useState(false)
   const visible = showAll ? rows : rows.slice(0, 8)
   const max = useMemo(() => Math.max(1, ...rows.map(r => safeNumber(getCount(r), 0))), [rows, getCount])
+  const maxRevenue = useMemo(
+    () => (getRevenue ? Math.max(0, ...rows.map(r => safeNumber(getRevenue(r), 0))) : 0),
+    [rows, getRevenue]
+  )
   return (
     <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 motion-reduce:transition-none flex flex-col h-full">
       <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between flex-wrap gap-2">
-        <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">{title}</h3>
+        <div>
+          <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">{title}</h3>
+          {subtitle && <p className="text-[11px] text-st-gray dark:text-gray-400 mt-0.5">{subtitle}</p>}
+        </div>
         {tabs && (
           <div className="flex gap-1">
             {tabs.map(tab => (
@@ -113,8 +126,22 @@ function ListSection({ title, rows, getLabel, getCount, getIcon, onRowClick, isR
         )}
       </div>
       <div className="flex-1">
-        {rows.length === 0 ? (
-          <p className="text-xs text-st-gray dark:text-gray-400 py-10 text-center">{emptyText}</p>
+        {loading ? (
+          <div>
+            {[0, 1, 2].map(i => (
+              <div key={i} className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 dark:border-dark-border last:border-0">
+                <div className="flex-1 min-w-0">
+                  <div className="h-3 w-32 rounded bg-gray-100 dark:bg-dark-hover animate-pulse motion-reduce:animate-none" />
+                  <div className="h-[2px] w-20 rounded bg-gray-100 dark:bg-dark-hover mt-[3px]" />
+                </div>
+                <div className="flex-shrink-0 w-20 flex justify-end">
+                  <div className="h-3 w-10 rounded bg-gray-100 dark:bg-dark-hover animate-pulse motion-reduce:animate-none" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : rows.length === 0 ? (
+          emptyState || <p className="text-xs text-st-gray dark:text-gray-400 py-10 text-center">{emptyText}</p>
         ) : (
           visible.map((r, i) => (
             <DataRow
@@ -125,6 +152,9 @@ function ListSection({ title, rows, getLabel, getCount, getIcon, onRowClick, isR
               icon={getIcon ? getIcon(r) : null}
               onClick={onRowClick ? () => onRowClick(r) : null}
               active={isRowActive ? isRowActive(r) : false}
+              revenue={getRevenue ? getRevenue(r) : undefined}
+              maxRevenue={maxRevenue}
+              rate={getRate ? getRate(r) : undefined}
             />
           ))
         )}
@@ -281,6 +311,15 @@ export default function Analytics() {
     retry: false
   })
 
+  // Custom goals ($conversion bucketed by conversion_type). Explicit staleTime for the same reason
+  // the two summary queries carry one: it must not silently revert if App.jsx's defaults change.
+  const { data: goalsData, isLoading: goalsLoading } = useQuery({
+    queryKey: ['analytics-goals', site?.site_key, days],
+    queryFn: () => fetchApi(`/analytics/goals?site_key=${encodeURIComponent(site.site_key)}&days=${days}`),
+    enabled: !!site?.site_key,
+    staleTime: 60_000
+  })
+
   // ─── Shape data (data layer unchanged; entryExitData intentionally unused —
   //     Entry/Exit panels removed, query kept byte-identical per the brief) ──────
   const d            = summary || {}
@@ -309,6 +348,14 @@ export default function Analytics() {
   const uniqVis = safeNumber(kpis.unique_visitors, 0)
   const formattedRevenue = fmtMoney(totalRevenue)
   const formattedRevenuePerVisitor = fmtMoney(kpis.revenue_per_visitor != null ? kpis.revenue_per_visitor : (uniqVis > 0 ? totalRevenue / uniqVis : 0))
+
+  // RATE_DENOMINATOR — goal conversion rate is computed HERE, not server-side, against the SAME
+  // uniqVis this page uses for every other rate. /analytics/goals deliberately returns
+  // total_visitors: null so it does not need a second Tinybird read for a denominator the page
+  // already holds, and so the Goals rate can never disagree with the rates beside it.
+  // Null (not 0) when there are no visitors: a rate with no denominator is unknown, not zero (§6).
+  const goalRows = goalsData?.goals || []
+  const goalRate = (conversions) => (uniqVis > 0 ? (safeNumber(conversions, 0) / uniqVis) * 100 : null)
 
   // Animated KPI counters (hooks — unconditional, before any early return).
   const animUniqueVisitors = useCountUp(kpis.unique_visitors ?? null)
@@ -635,6 +682,50 @@ export default function Analytics() {
               onTabChange={setDeviceTab}
             />
           </div>
+
+          {/* ─── Goals (custom conversion_type events) ─────────────────────────
+              Standalone full-width card, not a 4th cell in the grid above and not a Devices
+              sub-tab. Rows are passive in V1 — no toggleFilter, because 'Goal' is not one of
+              the 9 pipe-backed drill-down filter types (PIPE_FILTER_PARAM), so a click would
+              produce a filter the read cannot honour.
+              Rendered whenever the query has resolved, INCLUDING the zero case: the empty state
+              is the only place that tells a customer how to send their first goal, so gating the
+              whole card on goals.length > 0 would make that instruction unreachable. See the PR. */}
+          {!goalsLoading && goalRows.length === 0 ? (
+            <ListSection
+              title="Goals"
+              subtitle="Conversion events tracked on your site"
+              rows={[]}
+              getLabel={() => ''}
+              getCount={() => 0}
+              emptyState={(
+                <div className="py-10 text-center px-4">
+                  <Target className="w-5 h-5 mx-auto text-st-gray dark:text-gray-400" aria-hidden="true" />
+                  <p className="text-sm font-medium text-st-black dark:text-dark-primary mt-2">No goals tracked yet</p>
+                  <p className="text-xs text-st-gray dark:text-gray-400 mt-1">
+                    Call <code className="font-mono text-[11px]">sourcetrack.conversion(&#123; type: 'signup' &#125;)</code> to track your first goal.
+                  </p>
+                  {/* Plain anchor with this file's own link treatment (see the Attribution /
+                      leads links) — Analytics.jsx has no useNavigate, and adding one for a single
+                      CTA would be a second navigation idiom in the same file. */}
+                  <a href="/setup" className="inline-block mt-3 text-xs font-semibold text-st-black dark:text-dark-primary hover:underline">
+                    Set up conversions →
+                  </a>
+                </div>
+              )}
+            />
+          ) : (
+            <ListSection
+              title="Goals"
+              subtitle="Conversion events tracked on your site"
+              rows={goalRows}
+              loading={goalsLoading}
+              getLabel={r => r.label || r.type}
+              getCount={r => r.conversions}
+              getRevenue={r => r.revenue}
+              getRate={r => goalRate(r.conversions)}
+            />
+          )}
 
           {/* ─── Conversions notice ───────────────────────────────────────── */}
           {convCount === 0 && (

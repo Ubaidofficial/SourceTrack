@@ -6,7 +6,11 @@ import { safeNumber, fmtMoney } from '../utils/numbers'
 // the second consumer, not the owner. The Dashboard's Top Sources / AI Source Performance panels
 // render through this same component instead of a plain table, which is what made the two pages
 // read as different products. One implementation, so they cannot drift.
-export default function DataRow({ label, count, max, icon, onClick, active, revenue, maxRevenue }) {
+// `rate` is an OPTIONAL third figure (a percentage, already computed) shown next to revenue in the
+// muted line. Additive: every existing call site omits it, so nothing about their rendering changes.
+// Added here rather than duplicating the row markup for the Goals list, per this file's own rule —
+// one implementation, so the two pages cannot drift.
+export default function DataRow({ label, count, max, icon, onClick, active, revenue, maxRevenue, rate }) {
   const n = safeNumber(count, 0)
   const pct = max > 0 ? (n / max) * 100 : 0
   const rev = safeNumber(revenue, 0)
@@ -28,7 +32,13 @@ export default function DataRow({ label, count, max, icon, onClick, active, reve
       </div>
       <div className="flex-shrink-0 text-right w-20">
         <span className="text-sm font-medium text-st-black dark:text-dark-primary tabular-nums block">{n.toLocaleString()}</span>
-        {rev > 0 && <span className="text-[10px] text-st-gray dark:text-gray-400 tabular-nums">{fmtMoney(rev)}</span>}
+        {(rev > 0 || rate != null) && (
+          <span className="text-[10px] text-st-gray dark:text-gray-400 tabular-nums">
+            {rev > 0 ? fmtMoney(rev) : null}
+            {rev > 0 && rate != null ? ' · ' : null}
+            {rate != null ? `${safeNumber(rate, 0).toFixed(1)}%` : null}
+          </span>
+        )}
       </div>
     </div>
   )
