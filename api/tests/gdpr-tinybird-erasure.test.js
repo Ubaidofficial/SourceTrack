@@ -270,7 +270,9 @@ function installSupabase (cfg) {
     delete: () => delChain(table),
     insert: (row) => { if (table === 'erasure_log') erasureInserts.push(row); return Promise.resolve({ error: null }) }
   })
-  _client.auth = { admin: { deleteUser: async () => ({ error: null }) } }
+  // Recorded into the SAME seq as the table deletes, so a test can assert the auth user was
+  // not deleted with exactly the same mechanism it uses for the tables.
+  _client.auth = { admin: { deleteUser: async () => { seq.push('delete:auth_user'); return { error: null } } } }
   return { seq, erasureInserts }
 }
 function restoreSupabase () { _client.from = _realFrom; _client.auth = _realAuth }
@@ -371,16 +373,72 @@ test('(f) /account erases each site via Tinybird BEFORE the sites delete, once p
   assert.deepEqual(erasureInserts.map(r => r.site_id).sort(), ['site-a', 'site-b'])
   assert.ok(erasureInserts.every(r => r.subject_id === 'account:u1'))
   assert.equal(res.body.success, true, 'all executed -> full-deletion claim is honest')
+  // Full success must actually delete EVERYTHING — the gate must not have blocked a clean run.
+  for (const step of ['delete:attributed_conversions', 'delete:sites', 'delete:auth_user']) {
+    assert.ok(seq.includes(step), `a fully-erased account must reach ${step}`)
+  }
+  assert.equal(res.statusCode, 200)
 })
 
-test('🔴 (f2) /account with a non-executed site -> response does NOT claim full erasure (load-bearing)', async (t) => {
+// ── THE GATE ─────────────────────────────────────────────────────────────────
+// One site failing to erase must abort the WHOLE account deletion — no sites, no company,
+// no auth user. The old behaviour deleted all of it and answered `partial: true`, which left
+// the account unrecoverable while its events lived on in Tinybird AND destroyed the site rows
+// that are the only handle for a retry. These are load-bearing: they fail the moment any
+// Supabase delete is allowed to run ahead of a confirmed erasure.
+
+const BLOCKING_STATUSES = ['failed', 'skipped_no_admin_token', 'skipped_not_configured']
+
+for (const status of BLOCKING_STATUSES) {
+  test(`🔴 (f2) /account: one site '${status}' blocks EVERY delete for the account`, async (t) => {
+    t.after(() => { restoreSupabase(); __resetGdprEraseDeps() })
+    const { seq, erasureInserts } = installSupabase({ memberRow: null, sites: [{ id: 'site-a' }, { id: 'site-b' }] })
+    installEraser(seq, ['executed', status]) // site-a fine, site-b not
+    const res = mockRes()
+    await accountHandler({ user: { id: 'u1' } }, res)
+
+    // Nothing deleted, anywhere — including the site that DID erase cleanly.
+    const deletes = seq.filter(s => s.startsWith('delete:'))
+    assert.deepEqual(deletes, [], `no delete may run when a site is '${status}' (saw: ${deletes.join(', ')})`)
+
+    // ...and the response says so, without claiming success or partial success.
+    assert.equal(res.statusCode, 503, 'a dependency that did not complete is 503, not a 2xx')
+    assert.equal(res.body.success, false)
+    assert.equal(res.body.deleted, false, 'must state plainly that nothing was deleted')
+    assert.notEqual(res.body.partial, true, 'the partial-success claim is gone — it was the defect')
+    assert.doesNotMatch(res.body.message, /permanently deleted/i)
+    assert.match(res.body.message, /unchanged/i, 'the user must be told their account still exists')
+
+    // The durable record of the attempt survives the block — per site, both of them.
+    assert.equal(erasureInserts.length, 2, 'erasure_log is written per site even when the request is blocked')
+    assert.deepEqual(erasureInserts.map(r => r.site_id).sort(), ['site-a', 'site-b'])
+    assert.ok(erasureInserts.every(r => r.subject_id === 'account:u1'))
+  })
+}
+
+test('🔴 (f3) /account: EVERY site failing blocks too — and still logs both attempts', async (t) => {
   t.after(() => { restoreSupabase(); __resetGdprEraseDeps() })
-  const { seq } = installSupabase({ memberRow: null, sites: [{ id: 'site-a' }, { id: 'site-b' }] })
-  installEraser(seq, ['executed', 'failed'])
+  const { seq, erasureInserts } = installSupabase({ memberRow: null, sites: [{ id: 'site-a' }, { id: 'site-b' }] })
+  installEraser(seq, ['failed', 'failed'])
   const res = mockRes()
   await accountHandler({ user: { id: 'u1' } }, res)
-  assert.equal(res.body.success, false, 'must not claim full deletion when a site event-erase failed')
-  assert.doesNotMatch(res.body.message, /permanently deleted/i)
+  assert.deepEqual(seq.filter(s => s.startsWith('delete:')), [])
+  assert.equal(res.statusCode, 503)
+  assert.equal(erasureInserts.length, 2)
+})
+
+test('🔴 (f4) /account with NO sites: nothing to erase is not a failure — deletion proceeds', async (t) => {
+  t.after(() => { restoreSupabase(); __resetGdprEraseDeps() })
+  // accountErase is empty, and [].every(...) is true. Pinned because an over-eager gate
+  // (e.g. requiring accountErase.length > 0) would make a site-less account undeletable —
+  // an Art. 17 failure in the opposite direction.
+  const { seq } = installSupabase({ memberRow: null, sites: [] })
+  installEraser(seq, 'executed')
+  const res = mockRes()
+  await accountHandler({ user: { id: 'u1' } }, res)
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.body.success, true)
+  assert.ok(seq.includes('delete:auth_user'), 'a user with no sites must still be deletable')
 })
 
 test('🔴 (i) getSiteForUser DB error -> route returns 500, NOT 403 (load-bearing: fails if the error is swallowed)', async (t) => {
