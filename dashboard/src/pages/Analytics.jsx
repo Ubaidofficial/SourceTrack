@@ -66,6 +66,7 @@ const BROWSER_DOMAIN = {
   edge: 'microsoft.com', 'microsoft edge': 'microsoft.com', firefox: 'firefox.com', 'mozilla firefox': 'firefox.com',
   opera: 'opera.com', brave: 'brave.com', samsung: 'samsung.com', 'samsung internet': 'samsung.com', yandex: 'yandex.com',
   ucbrowser: 'ucweb.com', 'uc browser': 'ucweb.com',
+  vivaldi: 'vivaldi.com', duckduckgo: 'duckduckgo.com', chromium: 'chromium.org',
 }
 const OS_DOMAIN = {
   windows: 'microsoft.com', macos: 'apple.com', 'mac os': 'apple.com', ios: 'apple.com', ipados: 'apple.com',
