@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSite } from '../contexts/SiteContext'
 import { supabase } from '../lib/supabase'
@@ -17,11 +18,34 @@ const API_TOKEN_SCOPES = [
   { value: 'read:analytics', description: 'Reserved for the upcoming read API. Grants no access today.' }
 ]
 
+// The 4 Settings tabs. `general` is the default and is represented by the ABSENCE of
+// ?tab= — so /settings stays the canonical URL rather than redirecting to ?tab=general.
+const SETTINGS_TABS = [
+  { id: 'general',     label: 'General' },
+  { id: 'tracking',    label: 'Tracking' },
+  { id: 'attribution', label: 'Attribution & Privacy' },
+  { id: 'advanced',    label: 'Advanced' }
+]
+
 export default function Settings() {
   const { user } = useAuth()
   const { activeSite } = useSite()
   const isPreview = activeSite?.support_preview || false
   const displaySiteKey = isPreview ? 'HIDDEN_IN_PREVIEW' : (activeSite?.site_key || 'YOUR_SITE_KEY')
+
+  // Tab state is DERIVED from the URL rather than mirrored into useState. That is what makes
+  // the sync genuine: a shared /settings?tab=advanced link, the browser back button, and a
+  // click on the tab bar all go through the same source of truth and cannot drift apart.
+  // An unknown or absent ?tab= falls back to General instead of rendering an empty page.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const activeTab = SETTINGS_TABS.some((t) => t.id === tabParam) ? tabParam : 'general'
+  const setActiveTab = (id) => {
+    const next = new URLSearchParams(searchParams)
+    if (id === 'general') next.delete('tab')
+    else next.set('tab', id)
+    setSearchParams(next)
+  }
 
   const [site, setSite]                 = useState(null)
   const [name, setName]                 = useState('')
@@ -135,6 +159,18 @@ export default function Settings() {
   }
 
   useEffect(() => { loadSite() }, [user, activeSite])
+
+  // Deep links like /settings?tab=advanced#api-tokens (Integrations.jsx) must still land on
+  // the section. The browser's own hash scroll runs before React mounts the tab body, so the
+  // target does not exist yet and nothing happens — this re-runs the scroll once the active
+  // tab has rendered. getElementById, not querySelector: an arbitrary hash is not guaranteed
+  // to be a valid CSS selector and querySelector throws on a malformed one.
+  useEffect(() => {
+    const id = window.location.hash.slice(1)
+    if (!id) return
+    const el = document.getElementById(id)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [activeTab])
 
   // Background poller: while the proxy domain is pending (post-CNAME / SSL
   // provisioning), silently re-call the verify endpoint every 2 minutes so
@@ -591,6 +627,34 @@ export default function Settings() {
         </div>
       )}
 
+      {/* Tab bar. The 13 setting sections below are grouped into 4 tabs; this is a
+          pure regrouping — no section's contents, data, or handlers changed. */}
+      <div role="tablist" aria-label="Settings sections" className="flex flex-wrap gap-1.5">
+        {SETTINGS_TABS.map((t) => {
+          const isActive = activeTab === t.id
+          return (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setActiveTab(t.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                isActive
+                  ? 'bg-st-lime/10 dark:bg-dark-hover border-st-lime/20 dark:border-dark-border text-st-black dark:text-dark-primary'
+                  : 'hover:bg-gray-50 dark:hover:bg-dark-hover/40 border-transparent text-st-gray dark:text-gray-400'
+              }`}
+            >
+              {t.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Each tab body is a FRAGMENT, not a wrapper <div>: a fragment emits no DOM node,
+          so these sections stay direct children of the `space-y-8` container above and
+          keep their existing spacing. It also lets every section keep its original
+          indentation, so the diff is the scaffolding only and not an 800-line reindent. */}
+      {activeTab === 'general' && (<>
       {/* ── Plan & Billing ─────────────────────────────────────────────── */}
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6">
         <div className="flex items-center justify-between">
@@ -655,60 +719,87 @@ export default function Settings() {
         </form>
       </section>
 
-      {/* ── Cookieless Tracking ───────────────────────────────────────── */}
+      {/* ── Reporting & Tracking (Timezone & Path Exclusions) ────────── */}
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-st-gray dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Cookieless Tracking</h3>
+          <Globe className="w-4 h-4 text-st-gray dark:text-gray-400" />
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Reporting &amp; Tracking</h3>
         </div>
         <p className="text-xs text-st-gray dark:text-gray-400">
-          When enabled, the tracker uses a server-derived daily-rotating hash instead of localStorage or cookies.
-          No personal data is stored in the browser — no cookies, no fingerprinting. Designed to reduce tracking risk and operate without a consent banner.
+          Configure default reporting timezone boundaries and exclude specific client paths from tracking.
         </p>
-        {cookielessMode && (
-          <div className="rounded-lg border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/20 p-3 space-y-1.5">
-            <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">Attribution trade-offs in cookieless mode</p>
-            <ul className="text-[11px] text-amber-700 dark:text-amber-300/90 space-y-1 font-sans leading-relaxed">
-              <li>• Cookieless mode is more privacy-friendly but less persistent. Visitor IDs are derived server-side and rotate roughly once a day.</li>
-              <li>• If the visitor ID request to <code className="font-mono">/api/tracker/id</code> is blocked by an ad-blocker or fails on the network, SourceTrack falls back to a session-only id and writes a one-line <code className="font-mono">console.warn</code> in the browser DevTools.</li>
-              <li>• When that fallback fires, the visitor will not be connected across sessions and any later conversion may be recorded as <em>direct</em>. Attribution may become same-session only or weaker depending on browser/network behavior.</li>
-              <li>• First-touch source is held in memory for the active session only — it is not preserved across page reloads.</li>
-            </ul>
-            <p className="text-[11px] text-amber-700 dark:text-amber-300/90 leading-relaxed pt-1">
-              If you need full multi-session attribution, switch off cookieless mode and use the standard tracker, which stores a stable id in <code className="font-mono">localStorage</code>.
+
+        <form onSubmit={e => { e.preventDefault(); handleSettingsSave(); }} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Reporting Timezone</label>
+            <p className="text-[11px] text-st-gray dark:text-gray-400">
+              Set the default reporting timezone for your workspace. Supported reports (such as dashboard overview graphs) will group daily totals using this timezone. Custom reports and event logs remain UTC.
             </p>
-          </div>
-        )}
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600 dark:text-gray-400">
-            {cookielessMode ? 'Cookieless mode — no browser storage, privacy-friendly' : 'Standard mode — visitor IDs stored in localStorage'}
-          </span>
-          {!isPreview ? (
-            <button
-              onClick={handleCookielessToggle}
-              disabled={cookielessLoading}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
-                cookielessMode ? 'bg-st-black dark:bg-white' : 'bg-gray-200 dark:bg-gray-800'
-              }`}
+            <select
+              value={timezone}
+              onChange={e => setTimezone(e.target.value)}
+              disabled={isPreview}
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
             >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-st-black shadow transition-transform ${
-                cookielessMode ? 'translate-x-6' : 'translate-x-1'
-              }`} />
-            </button>
-          ) : (
-            <span className="text-xs text-st-gray italic">Hidden in Support Preview</span>
-          )}
-        </div>
-        {cookielessMode && (
-          <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-1">
-            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Use this snippet instead:</p>
-            <code className="block text-xs text-gray-600 dark:text-gray-400 break-all">
-              {`<script async src="${typeof window !== 'undefined' ? window.location.origin : ''}/tracker.cookieless.min.js" data-site-key="${displaySiteKey}"></script>`}
-            </code>
+              <option value="UTC">UTC (Coordinated Universal Time)</option>
+              <option value="America/New_York">America/New_York (EST/EDT)</option>
+              <option value="America/Chicago">America/Chicago (CST/CDT)</option>
+              <option value="America/Denver">America/Denver (MST/MDT)</option>
+              <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</option>
+              <option value="Europe/London">Europe/London (GMT/BST)</option>
+              <option value="Europe/Paris">Europe/Paris (CET/CEST)</option>
+              <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+              <option value="Australia/Sydney">Australia/Sydney (AEST/AEDT)</option>
+              <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+            </select>
           </div>
-        )}
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Excluded Paths</label>
+            <p className="text-[11px] text-st-gray dark:text-gray-400">
+              Comma-separated list of paths to exclude from tracking (e.g. <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-[10px]">/admin/*, /staging, /secret</code>). Trailing wildcard <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-[10px]">*</code> matches prefixes.
+            </p>
+            <input
+              type="text"
+              value={excludedPaths}
+              onChange={e => setExcludedPaths(e.target.value)}
+              disabled={isPreview}
+              placeholder="/admin/*, /staging/*"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+            />
+          </div>
+
+          {isPreview ? (
+            <div className="text-xs text-st-gray italic">Setting changes are hidden in Support Preview</div>
+          ) : (
+            <button
+              type="submit"
+              disabled={settingsSaving}
+              className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {settingsSaving ? 'Saving…' : 'Save Site Settings'}
+            </button>
+          )}
+        </form>
       </section>
 
+      {/* ── Support & Feedback ────────────────────────────────────────── */}
+      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-3">
+        <div className="flex items-center gap-2">
+          <HelpCircle className="w-4 h-4 text-st-gray dark:text-gray-400" />
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Support & Feedback</h3>
+        </div>
+        <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
+          Need help setting up your tracking script, configuring integrations, or have questions? Email us at{' '}
+          <a href="mailto:support@sourcetrack.ai" className="text-blue-600 dark:text-blue-400 hover:underline font-semibold">
+            support@sourcetrack.ai
+          </a>
+          . Please include your domain name and site key for faster troubleshooting. We’ll review your message and reply as soon as possible.
+        </p>
+      </section>
+      </>)}
+
+      {activeTab === 'tracking' && (<>
       {/* ── Custom Tracking Domain ───────────────────────────────────── */}
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center justify-between">
@@ -881,109 +972,58 @@ export default function Settings() {
         </div>
       </section>
 
-      {/* ── Attribution Window ────────────────────────────────────────── */}
+      {/* ── Cookieless Tracking ───────────────────────────────────────── */}
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-st-gray dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Attribution Window</h3>
+          <ShieldCheck className="w-4 h-4 text-st-gray dark:text-gray-400" />
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Cookieless Tracking</h3>
         </div>
         <p className="text-xs text-st-gray dark:text-gray-400">
-          The maximum number of days between a visitor's first touch and a conversion for it to be attributed.
-          Conversions outside this window are still recorded but won't be linked to earlier touchpoints.
+          When enabled, the tracker uses a server-derived daily-rotating hash instead of localStorage or cookies.
+          No personal data is stored in the browser — no cookies, no fingerprinting. Designed to reduce tracking risk and operate without a consent banner.
         </p>
-        <div className="flex items-center gap-3">
-          <select
-            value={attrWindow}
-            onChange={e => setAttrWindow(Number(e.target.value))}
-            disabled={isPreview}
-            className="px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
-          >
-            <option value={1}>1 day</option>
-            <option value={7}>7 days</option>
-            <option value={14}>14 days</option>
-            <option value={30}>30 days (recommended)</option>
-            <option value={60}>60 days</option>
-            <option value={90}>90 days</option>
-          </select>
-          {isPreview ? (
-            <span className="text-xs text-st-gray italic self-center">Hidden in Support Preview</span>
-          ) : (
+        {cookielessMode && (
+          <div className="rounded-lg border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/20 p-3 space-y-1.5">
+            <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">Attribution trade-offs in cookieless mode</p>
+            <ul className="text-[11px] text-amber-700 dark:text-amber-300/90 space-y-1 font-sans leading-relaxed">
+              <li>• Cookieless mode is more privacy-friendly but less persistent. Visitor IDs are derived server-side and rotate roughly once a day.</li>
+              <li>• If the visitor ID request to <code className="font-mono">/api/tracker/id</code> is blocked by an ad-blocker or fails on the network, SourceTrack falls back to a session-only id and writes a one-line <code className="font-mono">console.warn</code> in the browser DevTools.</li>
+              <li>• When that fallback fires, the visitor will not be connected across sessions and any later conversion may be recorded as <em>direct</em>. Attribution may become same-session only or weaker depending on browser/network behavior.</li>
+              <li>• First-touch source is held in memory for the active session only — it is not preserved across page reloads.</li>
+            </ul>
+            <p className="text-[11px] text-amber-700 dark:text-amber-300/90 leading-relaxed pt-1">
+              If you need full multi-session attribution, switch off cookieless mode and use the standard tracker, which stores a stable id in <code className="font-mono">localStorage</code>.
+            </p>
+          </div>
+        )}
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-600 dark:text-gray-400">
+            {cookielessMode ? 'Cookieless mode — no browser storage, privacy-friendly' : 'Standard mode — visitor IDs stored in localStorage'}
+          </span>
+          {!isPreview ? (
             <button
-              onClick={handleAttrWindowSave}
-              disabled={attrWindowSaving}
-              className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              onClick={handleCookielessToggle}
+              disabled={cookielessLoading}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
+                cookielessMode ? 'bg-st-black dark:bg-white' : 'bg-gray-200 dark:bg-gray-800'
+              }`}
             >
-              {attrWindowSaving ? 'Saving…' : 'Save'}
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-st-black shadow transition-transform ${
+                cookielessMode ? 'translate-x-6' : 'translate-x-1'
+              }`} />
             </button>
+          ) : (
+            <span className="text-xs text-st-gray italic">Hidden in Support Preview</span>
           )}
         </div>
-        <p className="text-xs text-st-gray dark:text-gray-400">
-          This window applies to all attribution reports unless overridden per-query in the Report Builder.
-        </p>
-      </section>
-
-      {/* ── Reporting & Tracking (Timezone & Path Exclusions) ────────── */}
-      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
-        <div className="flex items-center gap-2">
-          <Globe className="w-4 h-4 text-st-gray dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Reporting &amp; Tracking</h3>
-        </div>
-        <p className="text-xs text-st-gray dark:text-gray-400">
-          Configure default reporting timezone boundaries and exclude specific client paths from tracking.
-        </p>
-
-        <form onSubmit={e => { e.preventDefault(); handleSettingsSave(); }} className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Reporting Timezone</label>
-            <p className="text-[11px] text-st-gray dark:text-gray-400">
-              Set the default reporting timezone for your workspace. Supported reports (such as dashboard overview graphs) will group daily totals using this timezone. Custom reports and event logs remain UTC.
-            </p>
-            <select
-              value={timezone}
-              onChange={e => setTimezone(e.target.value)}
-              disabled={isPreview}
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
-            >
-              <option value="UTC">UTC (Coordinated Universal Time)</option>
-              <option value="America/New_York">America/New_York (EST/EDT)</option>
-              <option value="America/Chicago">America/Chicago (CST/CDT)</option>
-              <option value="America/Denver">America/Denver (MST/MDT)</option>
-              <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</option>
-              <option value="Europe/London">Europe/London (GMT/BST)</option>
-              <option value="Europe/Paris">Europe/Paris (CET/CEST)</option>
-              <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
-              <option value="Australia/Sydney">Australia/Sydney (AEST/AEDT)</option>
-              <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
-            </select>
+        {cookielessMode && (
+          <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-1">
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Use this snippet instead:</p>
+            <code className="block text-xs text-gray-600 dark:text-gray-400 break-all">
+              {`<script async src="${typeof window !== 'undefined' ? window.location.origin : ''}/tracker.cookieless.min.js" data-site-key="${displaySiteKey}"></script>`}
+            </code>
           </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Excluded Paths</label>
-            <p className="text-[11px] text-st-gray dark:text-gray-400">
-              Comma-separated list of paths to exclude from tracking (e.g. <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-[10px]">/admin/*, /staging, /secret</code>). Trailing wildcard <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-[10px]">*</code> matches prefixes.
-            </p>
-            <input
-              type="text"
-              value={excludedPaths}
-              onChange={e => setExcludedPaths(e.target.value)}
-              disabled={isPreview}
-              placeholder="/admin/*, /staging/*"
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
-            />
-          </div>
-
-          {isPreview ? (
-            <div className="text-xs text-st-gray italic">Setting changes are hidden in Support Preview</div>
-          ) : (
-            <button
-              type="submit"
-              disabled={settingsSaving}
-              className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {settingsSaving ? 'Saving…' : 'Save Site Settings'}
-            </button>
-          )}
-        </form>
+        )}
       </section>
 
       {/* ── Custom URL Parameters ─────────────────────────────────────── */}
@@ -1099,6 +1139,49 @@ export default function Settings() {
           )}
         </form>
       </section>
+      </>)}
+
+      {activeTab === 'attribution' && (<>
+      {/* ── Attribution Window ────────────────────────────────────────── */}
+      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4 text-st-gray dark:text-gray-400" />
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Attribution Window</h3>
+        </div>
+        <p className="text-xs text-st-gray dark:text-gray-400">
+          The maximum number of days between a visitor's first touch and a conversion for it to be attributed.
+          Conversions outside this window are still recorded but won't be linked to earlier touchpoints.
+        </p>
+        <div className="flex items-center gap-3">
+          <select
+            value={attrWindow}
+            onChange={e => setAttrWindow(Number(e.target.value))}
+            disabled={isPreview}
+            className="px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+          >
+            <option value={1}>1 day</option>
+            <option value={7}>7 days</option>
+            <option value={14}>14 days</option>
+            <option value={30}>30 days (recommended)</option>
+            <option value={60}>60 days</option>
+            <option value={90}>90 days</option>
+          </select>
+          {isPreview ? (
+            <span className="text-xs text-st-gray italic self-center">Hidden in Support Preview</span>
+          ) : (
+            <button
+              onClick={handleAttrWindowSave}
+              disabled={attrWindowSaving}
+              className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {attrWindowSaving ? 'Saving…' : 'Save'}
+            </button>
+          )}
+        </div>
+        <p className="text-xs text-st-gray dark:text-gray-400">
+          This window applies to all attribution reports unless overridden per-query in the Report Builder.
+        </p>
+      </section>
 
       {/* ── Privacy & Data Retention ──────────────────────────────────── */}
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-6">
@@ -1175,7 +1258,9 @@ export default function Settings() {
           </div>
         )}
       </section>
+      </>)}
 
+      {activeTab === 'advanced' && (<>
       {/* ── Server API Tokens ─────────────────────────────────────────── */}
       {!isPreview && (
       <section id="api-tokens" className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4 scroll-mt-20">
@@ -1323,19 +1408,14 @@ export default function Settings() {
       </section>
       )}
 
-      {/* ── Support & Feedback ────────────────────────────────────────── */}
-      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-3">
+      {/* ── UTM Builder ────────────────────────────────────────────────── */}
+      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
-          <HelpCircle className="w-4 h-4 text-st-gray dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Support & Feedback</h3>
+          <Link className="w-4 h-4 text-st-gray dark:text-gray-400" />
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">UTM Builder</h3>
         </div>
-        <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
-          Need help setting up your tracking script, configuring integrations, or have questions? Email us at{' '}
-          <a href="mailto:support@sourcetrack.ai" className="text-blue-600 dark:text-blue-400 hover:underline font-semibold">
-            support@sourcetrack.ai
-          </a>
-          . Please include your domain name and site key for faster troubleshooting. We’ll review your message and reply as soon as possible.
-        </p>
+        <p className="text-xs text-st-gray dark:text-gray-400">Generate tagged URLs for accurate campaign tracking. All parameters are lowercased automatically.</p>
+        <UTMBuilder />
       </section>
 
       {/* ── Danger Zone (Account Deletion) ────────────────────────────── */}
@@ -1377,16 +1457,8 @@ export default function Settings() {
         </div>
       </section>
       )}
+      </>)}
 
-      {/* ── UTM Builder ────────────────────────────────────────────────── */}
-      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
-        <div className="flex items-center gap-2">
-          <Link className="w-4 h-4 text-st-gray dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">UTM Builder</h3>
-        </div>
-        <p className="text-xs text-st-gray dark:text-gray-400">Generate tagged URLs for accurate campaign tracking. All parameters are lowercased automatically.</p>
-        <UTMBuilder />
-      </section>
 
       {/* ── Create Token Modal ────────────────────────────────────────── */}
       {newTokenModalOpen && (

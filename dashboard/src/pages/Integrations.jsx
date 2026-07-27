@@ -1835,7 +1835,7 @@ export default function Integrations() {
                         </ul>
                         <div className="pt-1 flex flex-wrap gap-3">
                           {!isPreview && (
-                            <Link to="/settings#api-tokens" className="text-[11px] font-semibold text-blue-700 dark:text-blue-300 hover:underline inline-flex items-center gap-0.5">
+                            <Link to="/settings?tab=advanced#api-tokens" className="text-[11px] font-semibold text-blue-700 dark:text-blue-300 hover:underline inline-flex items-center gap-0.5">
                               Manage Server API Tokens →
                             </Link>
                           )}
