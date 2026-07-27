@@ -11,6 +11,7 @@ import {
 import OnboardingCard from '../components/OnboardingCard'
 import SetupDoctorCard from '../components/SetupDoctorCard'
 import { LogoFull, LogoFullDark } from '../components/Logo'
+import { INSTALL_GUIDES, suggestedGuideFor } from '../lib/installNudge'
 import {
   STEP_TITLES, STEPPER_LABELS, DISPLAY_STEP_COUNT,
   displayIndexForStep, internalStepForDisplay
@@ -79,6 +80,9 @@ export default function Onboarding() {
   // render as "not detected".
   const [scriptDetected, setScriptDetected] = useState('unknown') // 'checking' | 'detected' | 'not_detected' | 'unknown' (internal only — see render)
   const [gtmPresent, setGtmPresent] = useState(false)
+  // Advisory install-guide nudge. Null means "say nothing" and is the default in every failure
+  // path — a missed nudge is invisible, a wrong one sends someone to the wrong guide.
+  const [suggestedGuide, setSuggestedGuide] = useState(null)
   const [firstEventReceived, setFirstEventReceived] = useState(false)
 
   const handleOnboardingVerified = useCallback((diagnostics) => {
@@ -92,20 +96,35 @@ export default function Onboarding() {
   // Step 6 truthful signals. "Script detected" reuses the EXISTING /install/detect-platform
   // read (advisory, SSRF-guarded, already fetches the live page) — no new fetch, no synthetic
   // event. "First event received" is the existing /install/status poll, unchanged.
+  // Runs on the INSTALL steps (3/4) as well as step 6. Same single call, same payload — the
+  // install steps need `platform` for the guide nudge, step 6 needs script_detected/gtm_present.
+  // The response already carried `platform`; it was simply discarded.
   useEffect(() => {
-    if (step !== 6 || !siteKey) return
+    const onInstallStep = step === 3 || step === 4
+    if ((!onInstallStep && step !== 6) || !siteKey) return
     let cancelled = false
 
-    setScriptDetected('checking')
+    if (step === 6) setScriptDetected('checking')
     fetchApi(`/install/detect-platform?site_key=${encodeURIComponent(siteKey)}&domain=${encodeURIComponent(domain)}`)
       .then((resp) => {
         if (cancelled) return
         const result = resp?.data ?? resp ?? {}
-        setScriptDetected(result.script_detected || 'unknown')
-        setGtmPresent(!!result.gtm_present)
+        if (step === 6) {
+          setScriptDetected(result.script_detected || 'unknown')
+          setGtmPresent(!!result.gtm_present)
+        }
+        // suggestedGuideFor returns null for every uncertain case, so a bad or absent
+        // detection simply leaves the guide list exactly as it renders today.
+        setSuggestedGuide(suggestedGuideFor(result))
       })
-      .catch(() => { if (!cancelled) setScriptDetected('unknown') })
+      .catch(() => {
+        if (cancelled) return
+        if (step === 6) setScriptDetected('unknown')
+        setSuggestedGuide(null) // detection failed -> no nudge, never a guess
+      })
 
+    // The first-event poll stays STEP 6 ONLY — unchanged behaviour. Widening the effect to the
+    // install steps must not start a 5s poll loop two steps earlier than it used to.
     let timer
     const pollStatus = () => {
       fetchApi(`/install/status?site_key=${encodeURIComponent(siteKey)}`)
@@ -117,7 +136,7 @@ export default function Onboarding() {
         .catch(() => { /* transient poll failure — keep prior value, never flip to a false negative */ })
         .finally(() => { if (!cancelled) timer = setTimeout(pollStatus, 5000) })
     }
-    pollStatus()
+    if (step === 6) pollStatus()
 
     return () => { cancelled = true; clearTimeout(timer) }
   }, [step, siteKey, domain])
@@ -700,27 +719,43 @@ export default function Onboarding() {
 
         {/* Platform install guides — prominent cards linking to existing /docs/platforms/* */}
         <div className="mt-4">
-          <p className="text-xs font-semibold text-[#6B7373] dark:text-gray-400 mb-2">Using a website builder or CMS? Open the step-by-step guide:</p>
+          <p className="text-xs font-semibold text-[#6B7373] dark:text-gray-400 mb-2">
+            {suggestedGuide
+              ? <>Looks like your site runs on <strong>{suggestedGuide.label}</strong> — that guide is marked below. Not right? Any of these work:</>
+              : <>Using a website builder or CMS? Open the step-by-step guide:</>}
+          </p>
+          {/* Every card stays present, in the same order, and remains a plain link. The nudge is
+              a badge and a border — nothing is selected, nothing is hidden, nothing is disabled.
+              suggestedGuide is null whenever detection failed, was inconclusive, or named a
+              platform we have no guide for, and then this renders exactly as it did before. */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {[
-              { label: 'WordPress', desc: 'Plugin / theme header', to: '/docs/platforms/wordpress' },
-              { label: 'Shopify', desc: 'Theme + checkout', to: '/docs/platforms/shopify' },
-              { label: 'Webflow', desc: 'Site-wide custom code', to: '/docs/platforms/webflow' },
-              { label: 'Framer', desc: 'Site settings → custom code', to: '/docs/platforms/framer' },
-              { label: 'Google Tag Manager', desc: 'Custom HTML tag', to: '/docs/platforms/google-tag-manager' },
-            ].map(p => (
+            {INSTALL_GUIDES.map(p => {
+              const isSuggested = suggestedGuide?.label === p.label
+              return (
               <a
                 key={p.label}
                 href={p.to}
-                className="flex items-center justify-between gap-2 rounded-xl border border-[#DDE4E4] dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 hover:border-blue-400 dark:hover:border-blue-400/60 hover:bg-blue-50/40 dark:hover:bg-white/10 transition-colors"
+                className={`relative flex items-center justify-between gap-2 rounded-xl border px-3 py-2 transition-colors ${
+                  isSuggested
+                    ? 'border-blue-400 dark:border-blue-400/60 bg-blue-50/60 dark:bg-blue-400/10'
+                    : 'border-[#DDE4E4] dark:border-white/10 bg-white dark:bg-white/5 hover:border-blue-400 dark:hover:border-blue-400/60 hover:bg-blue-50/40 dark:hover:bg-white/10'
+                }`}
               >
                 <span className="min-w-0">
-                  <span className="block text-xs font-bold text-[#1F2323] dark:text-dark-primary truncate">{p.label}</span>
+                  <span className="block text-xs font-bold text-[#1F2323] dark:text-dark-primary truncate">
+                    {p.label}
+                    {isSuggested && (
+                      <span className="ml-1.5 align-middle text-[9px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
+                        Suggested
+                      </span>
+                    )}
+                  </span>
                   <span className="block text-[10px] text-[#6B7373] dark:text-gray-400 truncate">{p.desc}</span>
                 </span>
                 <ArrowRight className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
               </a>
-            ))}
+              )
+            })}
           </div>
         </div>
 
