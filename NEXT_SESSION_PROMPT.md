@@ -59,15 +59,36 @@ studio,realtime,imgproxy,edge-runtime,vector. Measured on real
 GitHub runners: 139s → 90s (−49s), 4 billed min → 3 billed min
 per schema-drift run. Validated both arms pass.
 
-### CI further optimization — BACKLOG (do not skip)
-Two items measured but not yet shipped:
-A. Collapse 4 qa:* into single node --test invocation via qa:all.
-   Saves ~30% CI time. The isolation bug (timezone-reconciliation
-   test loading dotenv and making live calls) is now FIXED (#449).
-   Next step: update ci.yml to use qa:all instead of 4 sequential
-   invocations. Measure actual CI time change before claiming 30%.
-   One PR: .github/workflows/ci.yml only.
-B. supabase start -x is ALREADY SHIPPED (#452). Done.
+### CI collapse — INVESTIGATED, MEASURED, REFUTED (#455, closed unmerged)
+The "collapse 4 qa:* invocations into one qa:all, saves ~30% CI
+time" idea was built and measured on real CI. It saves nothing.
+DO NOT re-attempt it.
+
+  Before (4 steps, 5 green runs on main):
+    unit-test steps  118, 120, 120, 121, 122s  -> mean ~120s
+    job total        166-173s
+  After (1 x qa:all, run 30291793144, green):
+    unit-test step   121s
+    job total        174s
+
+121s sits INSIDE the 118-122s baseline band. Not a saving; the job
+total landed at the top of its band. The ~30% figure came from a
+laptop (31s -> 22s) and did not survive a GitHub runner.
+
+Why it was never going to work: `node --test` already spawns a
+child process PER FILE, so collapsing four invocations saves only
+~4 node/npm startups — a second or two, not a fraction of 120s.
+The local gain came from pooling ~186 files into one concurrency
+pool on a many-core machine; a 2-core runner has no such headroom.
+(Mechanism is a hypothesis; the 121s is measured.)
+
+It also had a real cost: one step instead of four removes per-suite
+failure locality in the CI UI.
+
+qa:all itself STAYS in package.json (#449) — it is a useful local
+one-shot, just not a CI win.
+
+### CI cost reduction — supabase start -x (SHIPPED #452). Done.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ## PRIORITIZED BACKLOG FOR NEXT SESSION
@@ -75,29 +96,25 @@ B. supabase start -x is ALREADY SHIPPED (#452). Done.
 
 ### P0 — Must do before launch
 
-1. **Collapse qa:* into qa:all in ci.yml**
-   - ci.yml currently runs 4 sequential node --test invocations
-   - qa:all exists (#449), isolation bug fixed (#449)
-   - Change ci.yml to: npm run qa:all
-   - Measure actual CI time on a real green run before claiming
-     the 30% saving
-   - One PR: .github/workflows/ci.yml only
+> The former P0 #1 ("Collapse qa:* into qa:all in ci.yml") is GONE from this
+> list on purpose — it was done, measured, and refuted. See "CI collapse —
+> investigated and refuted" under Key findings. Do not re-open it as a P0.
 
-2. **Conversion Funnels backend fix**
+1. **Conversion Funnels backend fix**
    - api/routes/analytics.js:1032 has a funnels endpoint that
      reads from the `pageviews` Supabase table (0 rows in prod)
    - Must be repointed to Tinybird events table before UI is built
    - Own session — do not combine with UI work
    - Verify returns real data on techrupt.pk before building UI
 
-3. **tracker/analytics.js dead code decision**
+2. **tracker/analytics.js dead code decision**
    - Unbuilt file, no .min.js artifact, no verified consumer
    - KNOWN_ISSUES: determine if any live site loads it
    - If none: DELETE it and confirm legacy /api/analytics/collect
      route's remaining consumers before touching that
    - If consumer found: fix via keepalive transport
 
-4. **Tinybird migration — overarching priority (paused)**
+3. **Tinybird migration — overarching priority (paused)**
    - 49+ uncommitted .pipe files still in working tree on
      migration branch (claude/tinybird-phase1-events-schema)
    - XFF cherry-pick working-directory state unresolved
@@ -107,30 +124,30 @@ B. supabase start -x is ALREADY SHIPPED (#452). Done.
 
 ### P1 — Next milestone
 
-5. **Saved Segments**
+4. **Saved Segments**
    - localStorage persistence, same pattern as #435 (time range)
    - No backend needed for V1
 
-6. **Scroll tracking**
+5. **Scroll tracking**
    - Tracker has no scroll event
    - DataFast uses data attributes pattern
    - Needs tracker.js change — own session
 
-7. **Goals test coverage (issue #447)**
+6. **Goals test coverage (issue #447)**
    - No unit test for /api/analytics/goals route
    - Uses _queryTinybirdPipe seam, testable like
      live-visitors-degraded.test.js
    - Should cover: refund exclusion, null-read throw,
      client-side rate calculation
 
-8. **Admin drift comparison index bug**
+7. **Admin drift comparison index bug**
    - admin.js arrays don't align (17 probe entries, 18
      prevFeatures)
    - 11/17 features report wrong previous status
    - Fix: key by name not index
    - One PR, admin.js only
 
-9. **Supabase direct-write grep**
+8. **Supabase direct-write grep**
    - KNOWN from prior session: grep dashboard/src for any
      remaining direct supabase.from(...).update( calls on
      pages OTHER than Settings.jsx
@@ -139,19 +156,34 @@ B. supabase start -x is ALREADY SHIPPED (#452). Done.
 
 ### P2 — Pre-cutover / Tinybird migration
 
-10. **Tinybird token rotation** (4 tokens exposed in chat)
+9. **Tinybird token rotation** (4 tokens exposed in chat)
     - st_endpoint_read
     - dual_write_append
     - Tinybird workspace admin token
     - Tinybird MCP connector token
 
-11. **flexible_report:2457 parity diff** (BLOCKED — founder
+10. **flexible_report:2457 parity diff** (BLOCKED — founder
     investigation)
 
-12. **Merged-identity coverage** (visitor_id ≠ distinct_id,
+11. **Merged-identity coverage** (visitor_id ≠ distinct_id,
     no fixture)
 
-13. **Phase 9 harness** — 5 models still need completion
+12. **Phase 9 harness** — 5 models still need completion
+
+13. **IF CI time ever becomes a real priority: profile inside the
+    two slow suites** (backlog, NOT urgent — nothing depends on it)
+    - The only useful thing to come out of the refuted #455: the
+      unit steps are ~120s of a ~168s job, and two suites dominate:
+        Tracker              44s
+        Tinybird dual-write  43s
+        Identity             30s
+        Attribution           3s
+    - So the target is what is SLOW INSIDE Tracker and Tinybird —
+      not how many times node --test is invoked. That question is
+      settled and measured (see Key findings); do not re-litigate
+      invocation count.
+    - Measure before and after on real CI, same as #455. A laptop
+      number is not evidence.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ## Carry-forward from previous sessions (still open)
