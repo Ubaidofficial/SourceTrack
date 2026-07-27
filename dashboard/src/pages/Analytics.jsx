@@ -313,7 +313,16 @@ export default function Analytics() {
 
   // Custom goals ($conversion bucketed by conversion_type). Explicit staleTime for the same reason
   // the two summary queries carry one: it must not silently revert if App.jsx's defaults change.
-  const { data: goalsData, isLoading: goalsLoading } = useQuery({
+  const {
+    data: goalsData,
+    isLoading: goalsLoading,
+    // Surfaced so a FAILED read renders QueryError instead of the "no goals yet" empty state —
+    // the route throws on a null (dead-store) pipe read, so without these the failure path would
+    // have asserted an absence we cannot verify.
+    isError: goalsIsError,
+    error: goalsError,
+    refetch: refetchGoals
+  } = useQuery({
     queryKey: ['analytics-goals', site?.site_key, days],
     queryFn: () => fetchApi(`/analytics/goals?site_key=${encodeURIComponent(site.site_key)}&days=${days}`),
     enabled: !!site?.site_key,
@@ -690,42 +699,43 @@ export default function Analytics() {
               produce a filter the read cannot honour.
               Rendered whenever the query has resolved, INCLUDING the zero case: the empty state
               is the only place that tells a customer how to send their first goal, so gating the
-              whole card on goals.length > 0 would make that instruction unreachable. See the PR. */}
-          {!goalsLoading && goalRows.length === 0 ? (
-            <ListSection
-              title="Goals"
-              subtitle="Conversion events tracked on your site"
-              rows={[]}
-              getLabel={() => ''}
-              getCount={() => 0}
-              emptyState={(
-                <div className="py-10 text-center px-4">
-                  <Target className="w-5 h-5 mx-auto text-st-gray dark:text-gray-400" aria-hidden="true" />
-                  <p className="text-sm font-medium text-st-black dark:text-dark-primary mt-2">No goals tracked yet</p>
-                  <p className="text-xs text-st-gray dark:text-gray-400 mt-1">
-                    Call <code className="font-mono text-[11px]">sourcetrack.conversion(&#123; type: 'signup' &#125;)</code> to track your first goal.
-                  </p>
-                  {/* Plain anchor with this file's own link treatment (see the Attribution /
-                      leads links) — Analytics.jsx has no useNavigate, and adding one for a single
-                      CTA would be a second navigation idiom in the same file. */}
-                  <a href="/setup" className="inline-block mt-3 text-xs font-semibold text-st-black dark:text-dark-primary hover:underline">
-                    Set up conversions →
-                  </a>
-                </div>
-              )}
-            />
-          ) : (
-            <ListSection
-              title="Goals"
-              subtitle="Conversion events tracked on your site"
-              rows={goalRows}
-              loading={goalsLoading}
-              getLabel={r => r.label || r.type}
-              getCount={r => r.conversions}
-              getRevenue={r => r.revenue}
-              getRate={r => goalRate(r.conversions)}
-            />
-          )}
+              whole card on goals.length > 0 would make that instruction unreachable.
+
+              THREE OUTCOMES, never conflated. Loading -> skeleton rows. A FAILED read -> QueryError,
+              NOT the empty state: the route throws when the pipe returns null (dead store), so
+              without this branch the guaranteed result of that failure was the card confidently
+              telling a customer "No goals tracked yet" when we simply could not read. Absence we
+              cannot verify is not absence (§6) — same rule as the Realtime panel's degraded state.
+              A genuine zero -> the onboarding prompt, which IS a known zero and safe to assert. */}
+          <ListSection
+            title="Goals"
+            subtitle="Conversion events tracked on your site"
+            rows={goalsIsError ? [] : goalRows}
+            loading={goalsLoading}
+            getLabel={r => r.label || r.type}
+            getCount={r => r.conversions}
+            getRevenue={r => r.revenue}
+            getRate={r => goalRate(r.conversions)}
+            emptyState={goalsIsError ? (
+              <div className="px-4 py-6">
+                <QueryError isError={goalsIsError} error={goalsError} onRetry={refetchGoals} />
+              </div>
+            ) : (
+              <div className="py-10 text-center px-4">
+                <Target className="w-5 h-5 mx-auto text-st-gray dark:text-gray-400" aria-hidden="true" />
+                <p className="text-sm font-medium text-st-black dark:text-dark-primary mt-2">No goals tracked yet</p>
+                <p className="text-xs text-st-gray dark:text-gray-400 mt-1">
+                  Call <code className="font-mono text-[11px]">sourcetrack.conversion(&#123; type: 'signup' &#125;)</code> to track your first goal.
+                </p>
+                {/* Plain anchor with this file's own link treatment (see the Attribution /
+                    leads links) — Analytics.jsx has no useNavigate, and adding one for a single
+                    CTA would be a second navigation idiom in the same file. */}
+                <a href="/setup" className="inline-block mt-3 text-xs font-semibold text-st-black dark:text-dark-primary hover:underline">
+                  Set up conversions →
+                </a>
+              </div>
+            )}
+          />
 
           {/* ─── Conversions notice ───────────────────────────────────────── */}
           {convCount === 0 && (
