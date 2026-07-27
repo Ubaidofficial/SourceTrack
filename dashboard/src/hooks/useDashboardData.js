@@ -35,6 +35,40 @@ export const TIME_RANGES = [
   { label: '30 days', days: 30 }
 ]
 
+// Selected time range survives a refresh. ONE key, shared with Analytics, so a
+// range picked on either surface carries over to the other.
+//
+// Each caller passes the ranges IT can actually render, because the two surfaces
+// don't offer the same set: TIME_RANGES above is 1/7/30, while Analytics also
+// offers 90. Validating against a hardcoded [1,7,30,90] here would let a stored
+// 90 through to FilterBar, whose `isActive = activeDate === d.key` would then
+// match no button — the picker would show nothing selected while the header read
+// "Last 90 days". A control that doesn't say what it's showing is worse than
+// losing the selection, so an unrenderable stored value falls back to 30.
+export const TIME_RANGE_STORAGE_KEY = 'st_time_range'
+
+export function readStoredTimeRange(allowedDays) {
+  try {
+    const parsed = Number(localStorage.getItem(TIME_RANGE_STORAGE_KEY))
+    return allowedDays.includes(parsed) ? parsed : 30
+  } catch {
+    // localStorage throws, not just returns null, in Safari private mode and
+    // when storage is full. This runs in a useState initializer, so an
+    // uncaught throw white-screens the whole page instead of losing a preference.
+    return 30
+  }
+}
+
+// Persisted from the setter rather than a useEffect on the value: an effect also
+// fires on mount, so landing on Dashboard with a stored 90 would immediately
+// overwrite it with the clamped 30 and destroy a preference Analytics can still
+// render. Only a real user selection writes.
+export function persistTimeRange(days) {
+  try {
+    localStorage.setItem(TIME_RANGE_STORAGE_KEY, String(days))
+  } catch { /* preference is best-effort; never break the page over it */ }
+}
+
 function formatDeltaVal(current, previous) {
   if (!previous || previous === 0) return null
   const pct = ((current - previous) / previous) * 100
@@ -62,7 +96,12 @@ export function useDashboardData() {
   const { activeSite, loading: siteLoading } = useSite()
   const navigate = useNavigate()
   const [site, setSite] = useState(null)
-  const [timeRange, setTimeRange] = useState(30)
+  // Validated against TIME_RANGES — the only ranges this surface's picker renders.
+  const [timeRange, setTimeRangeState] = useState(() => readStoredTimeRange(TIME_RANGES.map(tr => tr.days)))
+  const setTimeRange = (days) => {
+    setTimeRangeState(days)
+    persistTimeRange(days)
+  }
   const [previewMode, setPreviewMode] = useState(false)
   const [previewSiteName, setPreviewSiteName] = useState('')
   const [previewSiteDomain, setPreviewSiteDomain] = useState('')
