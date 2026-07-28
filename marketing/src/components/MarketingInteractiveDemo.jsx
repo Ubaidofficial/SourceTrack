@@ -52,7 +52,6 @@ export default function MarketingInteractiveDemo() {
       {/* Browser frame container */}
       <div className="relative rounded-[24px] sm:rounded-[36px] bg-[#0D1010] p-[10px] sm:p-[14px] shadow-[0_34px_110px_rgba(31,35,35,.34)] border border-white/20">
         <div className="overflow-hidden rounded-[18px] sm:rounded-[26px] bg-[#111414] border border-[#2A2F2F]">
-          
           {/* Top Browser Bar */}
           <div className="h-[52px] sm:h-[60px] grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-4 px-3 sm:px-[18px] bg-[#161A1A] border-b border-white/10 text-[12px] font-bold text-[#F5F8F8]">
             {/* Mac style dots */}
@@ -199,7 +198,6 @@ export default function MarketingInteractiveDemo() {
 
           {/* Lower Analytics Grid */}
           <div className="px-3 sm:px-5 pb-5 grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr_1fr] gap-4">
-            
             {/* Table A: Primary Sources & AI */}
             <div className="bg-[#161A1A] border border-[#2E3434] rounded-xl p-4 sm:p-5 flex flex-col justify-between min-h-[300px]">
               <div>
@@ -346,7 +344,7 @@ export default function MarketingInteractiveDemo() {
                 <h4 className="text-white text-xs font-black border-b border-[#2A2F2F] pb-2 mb-3">
                   Attribution Journey — <span className="text-[#C8F000]">{journey.sourceName}</span>
                 </h4>
-                
+
                 <p className="text-[#7D8090] text-[10px] leading-relaxed uppercase tracking-wider font-extrabold">
                   Journey Timeline
                 </p>
@@ -419,9 +417,7 @@ export default function MarketingInteractiveDemo() {
                 <span className="px-1.5 py-0.5 bg-[#252B2B] text-[#C8F000] text-[9px] rounded font-black font-mono">STITCHED</span>
               </div>
             </div>
-
           </div>
-
         </div>
       </div>
 
