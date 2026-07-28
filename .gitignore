@@ -35,5 +35,31 @@ scratch/
 # Tinybird CLI local auth state — contains live workspace tokens. NEVER commit.
 .tinyb
 **/.tinyb
+
 supabase/.branches/
 supabase/.temp/
+
+# Raw secret/vulnerability scan output. NEVER commit — a gitleaks report embeds the MATCHED
+# SECRET VALUE inline for every finding, so committing one publishes exactly what the scan
+# was run to find, and pushing it means those credentials must be treated as compromised
+# regardless of any later deletion.
+#
+# Prompted by gitleaks-report.json + gitleaks-report-redacted.json appearing untracked in the
+# working tree. Verified at the time this was added: no scan report has EVER been committed on
+# any branch (`git log --all --diff-filter=A`), so this is preventive, not remedial — there is
+# no history to purge.
+#
+# gitleaks is run AD HOC (it is not in CI or package.json), which is precisely why its output
+# lands loose in the repo root where a stray `git add -A` would take it. The other tools below
+# are not wired here either; they are listed because a secret/dependency sweep is the kind of
+# thing that gets run by hand next to gitleaks, and the cost of covering them is nil.
+#
+# Deliberately NOT a blanket `*-report.json`: that would silently swallow a legitimate future
+# artifact. Name the tools; add one when a new tool is actually used.
+gitleaks-report*.json
+gitleaks-report*.sarif
+semgrep-report*.json
+semgrep.sarif
+trivy-report*.json
+snyk-report*.json
+npm-audit*.json
