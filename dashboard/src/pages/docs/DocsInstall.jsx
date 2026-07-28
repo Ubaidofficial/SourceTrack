@@ -10,7 +10,7 @@ export default function DocsInstall() {
       <Helmet>
         <title>Installing the Tracking Script | SourceTrack Docs</title>
         <meta name="description" content="Step-by-step instructions for placing the SourceTrack pixel on your site, verifying it loaded, and what data is captured." />
-        <link rel="canonical" href="https://sourcetrack.ai/docs/install" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/docs/install" />
       </Helmet>
 
       <div className="space-y-6">

@@ -8,10 +8,10 @@ multi-touch attribution, AI-referral detection, a Google Search Console SEO sign
 and cookieless, first-party tracking. No CRM required.
 
 ## Key pages
-- Pricing: https://sourcetrack.ai/pricing
-- Product overview: https://sourcetrack.ai/product
-- Use cases: https://sourcetrack.ai/use-cases/saas, /use-cases/shopify, /use-cases/lead-generation
-- Docs: https://sourcetrack.ai/docs
+- Pricing: https://www.sourcetrack.ai/pricing
+- Product overview: https://www.sourcetrack.ai/product
+- Use cases: https://www.sourcetrack.ai/use-cases/saas, /use-cases/shopify, /use-cases/lead-generation
+- Docs: https://www.sourcetrack.ai/docs
 
 ## API surface
 - Attribution Explain API reference:

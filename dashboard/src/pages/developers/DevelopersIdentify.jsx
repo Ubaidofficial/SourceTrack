@@ -48,7 +48,7 @@ export default function DevelopersIdentify() {
       <Helmet>
         <title>User Stitching (Identify) SDK Reference | SourceTrack Docs</title>
         <meta name="description" content="Technical details for the user identification method. Stitch anonymous pre-signup visitor paths with post-signup conversions." />
-        <link rel="canonical" href="https://sourcetrack.ai/developers/identify" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/developers/identify" />
       </Helmet>
 
       <div className="space-y-6">

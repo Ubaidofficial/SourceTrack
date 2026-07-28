@@ -4,7 +4,7 @@ const DATA = {
   slug: 'use-cases/ecommerce',
   title: 'E-commerce Order Attribution Software | SourceTrack',
   description: 'Stop over-crediting paid ads. SourceTrack gives Shopify and WooCommerce stores full multi-touch attribution — including ChatGPT and AI traffic GA4 marks as direct. Conversion-based pricing from $19/mo.',
-  canonical: 'https://sourcetrack.ai/use-cases/ecommerce',
+  canonical: 'https://www.sourcetrack.ai/use-cases/ecommerce',
   ogTitle: 'eCommerce Attribution — Track Every Sale Back to Its Source | SourceTrack',
   ogDescription: 'Multi-touch attribution for Shopify and WooCommerce. See which channels drive buyers — including AI referrals GA4 misses. Designed for privacy-conscious conversion tracking.',
 

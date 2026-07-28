@@ -48,7 +48,7 @@ export default function DevelopersConversions() {
       <Helmet>
         <title>Browser Conversions SDK Reference | SourceTrack Docs</title>
         <meta name="description" content="Integrate client-side conversions on checkout thank-you pages, form actions, and scheduler embeds using the JavaScript SDK." />
-        <link rel="canonical" href="https://sourcetrack.ai/developers/conversions" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/developers/conversions" />
       </Helmet>
 
       <div className="space-y-6">

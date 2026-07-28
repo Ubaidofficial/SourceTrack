@@ -4,7 +4,7 @@ const DATA = {
   slug: 'use-cases/agencies',
   title: 'Multi-Site Agency Attribution Reporting | SourceTrack',
   description: "Stop building attribution reports in spreadsheets. SourceTrack gives agencies multi-client attribution dashboards, unbranded CSV exports, and a clean server-side conversion pipeline.",
-  canonical: 'https://sourcetrack.ai/use-cases/agencies',
+  canonical: 'https://www.sourcetrack.ai/use-cases/agencies',
   ogTitle: 'Agency Attribution — Multi-Client Attribution & Unbranded Reporting | SourceTrack',
   ogDescription: "Attribution reporting your clients will actually believe. Multi-site dashboards, unbranded exports, and client-level attribution — without the spreadsheet grind.",
 

@@ -10,7 +10,7 @@ export default function DocsGoogleAds() {
       <Helmet>
         <title>Google Ads Setup Guide | SourceTrack Docs</title>
         <meta name="description" content="Learn how to configure Google Ads ValueTrack tracking template and parameters for accurate multi-touch attribution and cost sync." />
-        <link rel="canonical" href="https://sourcetrack.ai/docs/platforms/google-ads" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/docs/platforms/google-ads" />
       </Helmet>
 
       <div className="space-y-6">

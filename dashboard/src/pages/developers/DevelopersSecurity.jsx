@@ -8,7 +8,7 @@ export default function DevelopersSecurity() {
       <Helmet>
         <title>Technical Security & Privacy Specs | SourceTrack Docs</title>
         <meta name="description" content="Detailed technical security standards for SourceTrack: data collection bounds, site key authorization scopes, and API integration security." />
-        <link rel="canonical" href="https://sourcetrack.ai/developers/security" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/developers/security" />
       </Helmet>
 
       <div className="space-y-8">

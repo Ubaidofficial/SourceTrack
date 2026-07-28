@@ -40,7 +40,7 @@ export default function DevelopersTracker() {
       <Helmet>
         <title>Tracker SDK Reference | SourceTrack Docs</title>
         <meta name="description" content="Technical details for the SourceTrack frontend tracking script, localStorage parameters, cookies usage, and cookieless modes." />
-        <link rel="canonical" href="https://sourcetrack.ai/developers/tracker" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/developers/tracker" />
       </Helmet>
 
       <div className="space-y-6">

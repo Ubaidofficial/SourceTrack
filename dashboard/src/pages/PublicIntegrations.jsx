@@ -6,7 +6,7 @@ import SectionKicker from '../components/SectionKicker'
 const SEO = {
   title: 'Marketing & Revenue Integrations Directory | SourceTrack',
   description: 'Browse installation guides and webhook integration recipes for Stripe, Shopify, Webflow, WordPress, Google Tag Manager, and custom API setups.',
-  canonical: 'https://sourcetrack.ai/integrations',
+  canonical: 'https://www.sourcetrack.ai/integrations',
   ogTitle: 'Marketing & Revenue Integrations Directory | SourceTrack',
 }
 

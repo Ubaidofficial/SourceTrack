@@ -6,7 +6,7 @@ import SectionKicker from '../components/SectionKicker'
 const SEO = {
   title: 'AI Referral Tracking — Track ChatGPT, Claude, Gemini & Perplexity Traffic | SourceTrack',
   description: 'Track traffic, leads, and revenue from ChatGPT, Claude, Gemini, Perplexity, and 15 AI platforms. Stop losing AI referrals to direct traffic in your analytics and attribution reports.',
-  canonical: 'https://sourcetrack.ai/ai-referral-tracking',
+  canonical: 'https://www.sourcetrack.ai/ai-referral-tracking',
   ogTitle: 'AI Referral Tracking — SourceTrack',
 }
 

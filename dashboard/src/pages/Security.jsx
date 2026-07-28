@@ -5,7 +5,7 @@ import SectionKicker from '../components/SectionKicker'
 const SEO = {
   title: 'Data Privacy & Tracking Security Standards | SourceTrack',
   description: 'Factual technical documentation regarding SourceTrack data collection boundaries, public site key security, manual API integration rules, and data minimization guidelines.',
-  canonical: 'https://sourcetrack.ai/security',
+  canonical: 'https://www.sourcetrack.ai/security',
   ogTitle: 'Data Privacy & Tracking Security Standards | SourceTrack',
 }
 

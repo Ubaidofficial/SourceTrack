@@ -10,7 +10,7 @@ export default function DocsQuickstart() {
       <Helmet>
         <title>Quickstart Guide — 5-Minute Setup | SourceTrack Docs</title>
         <meta name="description" content="Set up SourceTrack in 5 minutes. Learn how to install the script, verify pageviews, and test conversions." />
-        <link rel="canonical" href="https://sourcetrack.ai/docs/quickstart" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/docs/quickstart" />
       </Helmet>
 
       <div className="space-y-6">

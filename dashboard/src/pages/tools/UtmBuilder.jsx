@@ -6,7 +6,7 @@ import SectionKicker from '../../components/SectionKicker'
 const SEO = {
   title: 'Free UTM Builder — campaign URL link generator | SourceTrack',
   description: 'Build clean, consistent UTM-tagged campaign URLs in seconds. Free, no sign-up — everything runs in your browser. Source, medium, campaign, content and term, lowercased automatically.',
-  canonical: 'https://sourcetrack.ai/tools/utm-builder',
+  canonical: 'https://www.sourcetrack.ai/tools/utm-builder',
   ogTitle: 'Free UTM Builder — campaign URL link generator',
   ogDescription: 'Generate tagged campaign URLs in seconds. Free, no sign-up, runs entirely in your browser. Parameters are lowercased automatically so your attribution stays consistent.',
   jsonLd: [
@@ -16,7 +16,7 @@ const SEO = {
       name: 'SourceTrack UTM Builder',
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Web',
-      url: 'https://sourcetrack.ai/tools/utm-builder',
+      url: 'https://www.sourcetrack.ai/tools/utm-builder',
       description: 'Free UTM campaign URL builder. Add utm_source, utm_medium, utm_campaign, utm_content and utm_term to any destination URL. Runs entirely in the browser.',
       offers: {
         '@type': 'Offer',

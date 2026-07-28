@@ -34,7 +34,7 @@ export default function DocsHome() {
       <Helmet>
         <title>SourceTrack Integration Documentation & API Docs</title>
         <meta name="description" content="Technical guides for installing the tracker, tracking custom conversions, stitching user IDs, and API references." />
-        <link rel="canonical" href="https://sourcetrack.ai/docs" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/docs" />
       </Helmet>
 
       <div className="space-y-8">

@@ -21,13 +21,13 @@ export default function MarketingPage({ seo, hero, heroChildren, children, final
         <meta property="og:description" content={seo.ogDescription || seo.description} />
         {seo.canonical && <meta property="og:url" content={seo.canonical} />}
         <meta property="og:type" content="website" />
-        <meta property="og:image" content="https://sourcetrack.ai/og-image.png" />
+        <meta property="og:image" content="https://www.sourcetrack.ai/og-image.png" />
         <meta property="og:site_name" content="SourceTrack" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:site" content="@sourcetrackio" />
         <meta name="twitter:title" content={seo.ogTitle || seo.title} />
         <meta name="twitter:description" content={seo.ogDescription || seo.description} />
-        <meta name="twitter:image" content="https://sourcetrack.ai/og-image.png" />
+        <meta name="twitter:image" content="https://www.sourcetrack.ai/og-image.png" />
         {jsonLdItems.map((schema, i) => (
           <script key={i} type="application/ld+json">{JSON.stringify(schema)}</script>
         ))}

@@ -48,7 +48,7 @@ export default function DocsTroubleshooting() {
       <Helmet>
         <title>Troubleshooting Ingestion & Setup Issues | SourceTrack Docs</title>
         <meta name="description" content="Symptom, cause, and fix checklist for resolving missing pageviews, unstitched conversions, and duplicate revenue counts." />
-        <link rel="canonical" href="https://sourcetrack.ai/docs/troubleshooting" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/docs/troubleshooting" />
       </Helmet>
 
       <div className="space-y-6">

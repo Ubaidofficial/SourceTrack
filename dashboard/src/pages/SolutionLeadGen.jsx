@@ -4,7 +4,7 @@ const DATA = {
   slug: 'use-cases/lead-generation',
   title: 'B2B Lead Generation Attribution | SourceTrack',
   description: 'Stop reporting on leads that never close. SourceTrack shows which channels produce sales-qualified leads and closed revenue — not just form submissions. Multi-touch attribution with offline integration support. From $49/mo.',
-  canonical: 'https://sourcetrack.ai/use-cases/lead-generation',
+  canonical: 'https://www.sourcetrack.ai/use-cases/lead-generation',
   ogTitle: 'Lead Gen Attribution — Track Which Channels Drive Leads That Actually Close | SourceTrack',
   ogDescription: 'Multi-touch attribution for lead generation. See which channels produce SQLs and closed revenue — not just raw lead volume. Supports custom offline conversion ingestion.',
 

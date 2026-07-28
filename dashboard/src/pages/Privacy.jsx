@@ -3,7 +3,7 @@ import MarketingPage from '../components/MarketingPage'
 const SEO = {
   title: 'Privacy Policy Overview — SourceTrack',
   description: 'Privacy overview and tracking data handling policies for the SourceTrack attribution analytics platform.',
-  canonical: 'https://sourcetrack.ai/privacy',
+  canonical: 'https://www.sourcetrack.ai/privacy',
   ogTitle: 'Privacy Policy Overview',
 }
 
