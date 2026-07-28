@@ -7,7 +7,7 @@ import { getSupabase } from '../lib/supabase.js'
 import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { serializeHogQLDateRange } from '../lib/hogql-date.js'
 import { sourceFromEvent, topSourcesByVisitor } from '../lib/channel-classifier.js'
-import { deriveSessions } from '../lib/sessionization.js'
+import { deriveSessions, deriveFunnelSessions } from '../lib/sessionization.js'
 import { redactPiiFromUrl, redactPiiFromObject, isGoogleSource, isValidTimezone, getLocalDateString, getLocalMonthString, getLocalWeekString, getPaddedUtcDateRange, getNow, bucketUniqueVisitors, countDistinctConverters, cappedRate } from '../lib/utils.js'
 import { requireFeature, isSiteStatusBlocked } from '../lib/plan-features.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
@@ -1171,16 +1171,14 @@ router.get('/funnel', requireUserAuth, validateSiteKey, requireSiteMembership, a
       })
     }
 
-    // Session boundaries come from deriveSessions ONLY (30-min inactivity + acquisition-context
-    // split) — the same helper /sessions uses. Membership is recovered by consuming exactly
-    // session.event_count events in order rather than by re-testing the gap rule: sessions are
-    // emitted in order over this same sorted array, so the walk is exact, and it stays correct
-    // when two events share a timestamp across a split (a timestamp-window match would not).
+    // Session boundaries for funnels come from deriveFunnelSessions ONLY (30-min inactivity gap ONLY,
+    // ignoring mid-visit acquisition-context changes). Membership is recovered by consuming exactly
+    // session.event_count events in order rather than by re-testing the gap rule.
     const sessionUrls = []
     for (const events of byVisitor.values()) {
       events.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
       let cursor = 0
-      for (const sess of deriveSessions(events)) {
+      for (const sess of deriveFunnelSessions(events)) {
         const urls = []
         for (let k = 0; k < sess.event_count && cursor < events.length; k++, cursor++) {
           urls.push(events[cursor].page_url)

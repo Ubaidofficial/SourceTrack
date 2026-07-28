@@ -83,6 +83,60 @@ export function deriveSessions(events) {
   return sessions
 }
 
+/**
+ * Derive funnel-specific sessions from a chronologically sorted array of events for a single visitor.
+ * Unlike deriveSessions(), deriveFunnelSessions() splits ONLY on a 30-minute inactivity timeout,
+ * ignoring acquisition-context (UTM / click ID) changes mid-visit.
+ *
+ * This restores standard web analytics funnel behavior (GA4 / Plausible / Mixpanel / PostHog)
+ * where a visitor navigating across campaign links within 30 minutes remains in a single continuous
+ * browsing session for funnel step containment.
+ *
+ * @param {Array} events — array of event objects sorted by timestamp ASC.
+ * @returns {Array} session objects
+ */
+export function deriveFunnelSessions(events) {
+  if (!events || events.length === 0) return []
+
+  const sessions = []
+  let currentSession = null
+
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i]
+    const ts = new Date(ev.timestamp).getTime()
+
+    if (!currentSession) {
+      currentSession = startSession(ev, ts, i)
+      continue
+    }
+
+    const prevTs = new Date(events[i - 1].timestamp).getTime()
+    const gapMinutes = (ts - prevTs) / (1000 * 60)
+
+    if (gapMinutes > SESSION_TIMEOUT_MINUTES) {
+      finalizeSession(currentSession, events, i - 1)
+      sessions.push(currentSession)
+      currentSession = startSession(ev, ts, i)
+    } else {
+      currentSession.event_count += 1
+      currentSession.pageview_count += ev.event === '$pageview' ? 1 : 0
+      if (ev.event === '$conversion') {
+        currentSession.contains_conversion = true
+        currentSession.conversion_value += Number(ev.conversion_value || 0)
+      }
+      currentSession.exit_page = ev.page_url || ev.properties?.page_url || null
+    }
+  }
+
+  if (currentSession) {
+    finalizeSession(currentSession, events, events.length - 1)
+    sessions.push(currentSession)
+  }
+
+  return sessions
+}
+
+
 function startSession(firstEvent, ts, index) {
   const props = firstEvent.properties || {}
   return {

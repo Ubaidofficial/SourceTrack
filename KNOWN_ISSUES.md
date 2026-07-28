@@ -1946,3 +1946,9 @@ visibility. Not urgent to fix now: `erasure_log` has zero rows ever
 written (confirmed via direct query), meaning this path has never been
 exercised by a real request. Needs alerting on repeated/sustained block
 before real customer volume makes the gap load-bearing.
+
+### ⚠️ Funnel Session Splitting Regression from PR #456 Fixed (2026-07-28)
+
+**Issue**: PR #456 repointed `/analytics/funnel` to query pageviews via `dispatchPageviews` and grouped events using `deriveSessions(events)`. Because `deriveSessions()` was built for attribution multi-touch modeling (where any mid-visit UTM or click-ID change forces a session split), any visitor who clicked a campaign link or retargeting ad mid-journey was split into separate sessions. This caused false 0% funnel completion rates for realistic customer journeys.
+
+**Fix**: Created `deriveFunnelSessions(events)` in `api/lib/sessionization.js` and updated `/analytics/funnel` in `api/routes/analytics.js` to use it. `deriveFunnelSessions()` sessionizes strictly on a **30-minute inactivity timeout** (`(ts - prevTs) > 30 mins`), ignoring mid-visit acquisition-parameter changes. This restores standard web analytics funnel behavior (matching GA4, Plausible, Mixpanel, and PostHog). `deriveSessions()` itself remains 100% untouched for attribution and `/sessions` reporting.
