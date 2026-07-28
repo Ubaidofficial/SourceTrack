@@ -1,0 +1,15 @@
+---
+import Base from "@/layouts/Base.astro";
+---
+
+<Base title="JS Tracker API — SourceTrack Developers" description="Client-side JavaScript API reference for window.sourcetrack.">
+  <section className="py-16 bg-[#0E1111] text-white">
+    <div className="max-w-[800px] mx-auto px-4 space-y-6">
+      <a href="/developers" className="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Developers</a>
+      <h1 className="text-4xl font-black text-white">JS Tracker API Reference</h1>
+      <div className="bg-[#161719] p-6 rounded-2xl border border-[#2A2C30]">
+        <pre className="bg-[#0F1012] p-4 rounded-xl text-xs text-gray-300 overflow-x-auto"><code>{`window.sourcetrack('track', 'purchase', { value: 99.00, currency: 'USD' });`}</code></pre>
+      </div>
+    </div>
+  </section>
+</Base>

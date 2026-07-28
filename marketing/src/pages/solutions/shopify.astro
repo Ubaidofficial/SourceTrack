@@ -1,0 +1,38 @@
+---
+import Base from "@/layouts/Base.astro";
+import CallToAction from "@/partials/CallToAction.astro";
+
+const callToAction = {
+  frontmatter: {
+    title: "Connect your Shopify store in 5 minutes.",
+    subtitle: "Copy our theme liquid snippet or setup cart attributes for instant order attribution.",
+    button: {
+      enable: true,
+      label: "Start free trial",
+      link: "https://app.sourcetrack.ai/signup"
+    }
+  }
+};
+---
+
+<Base
+  title="Shopify Attribution Recipe — SourceTrack"
+  description="Step-by-step setup guide and liquid code for tracking Shopify store purchases and cart attributes."
+>
+  <section className="py-16 bg-[#0E1111] text-white">
+    <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+      <span className="inline-block px-3 py-1 text-xs font-black uppercase tracking-widest text-[#0F1012] bg-[#C8F000] rounded-full">
+        Shopify Integration
+      </span>
+      <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight">
+        Shopify Store Tracking Recipe & <br />
+        <span className="text-[#C8F000]">Webhook Integration Guide</span>
+      </h1>
+      <p className="max-w-2xl mx-auto text-gray-400 text-base sm:text-lg leading-relaxed">
+        Paste our liquid snippet into your theme.liquid and save st_aid cart attributes to stitch Shopify orders back to marketing channels.
+      </p>
+    </div>
+  </section>
+
+  <CallToAction data={callToAction} />
+</Base>

@@ -1,0 +1,41 @@
+---
+import Base from "@/layouts/Base.astro";
+import MarketingInteractiveDemo from "@/components/MarketingInteractiveDemo";
+import CallToAction from "@/partials/CallToAction.astro";
+
+const callToAction = {
+  frontmatter: {
+    title: "Ready to track real revenue sources?",
+    subtitle: "Install the 5-minute tracking snippet and see your first attributed journey today.",
+    button: {
+      enable: true,
+      label: "Start free trial",
+      link: "https://app.sourcetrack.ai/signup"
+    }
+  }
+};
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.sourcetrack.ai" },
+    { "@type": "ListItem", "position": 2, "name": "Interactive Demo", "item": "https://www.sourcetrack.ai/demo" }
+  ]
+};
+---
+
+<Base
+  title="Interactive Product Demo — SourceTrack"
+  description="Explore sample analytics, multi-touch source attribution, AI referral tracking, and stitched visitor journeys in this live interactive demo."
+  canonical="https://www.sourcetrack.ai/demo"
+  structuredData={[breadcrumbSchema]}
+>
+  <section className="py-16 bg-[#0E1111] text-white">
+    <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8">
+      <MarketingInteractiveDemo client:visible />
+    </div>
+  </section>
+
+  <CallToAction data={callToAction} />
+</Base>

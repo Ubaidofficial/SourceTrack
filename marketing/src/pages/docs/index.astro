@@ -1,0 +1,64 @@
+---
+import Base from "@/layouts/Base.astro";
+---
+
+<Base
+  title="SourceTrack Documentation & Integration Guides"
+  description="Step-by-step installation guides, platform walkthroughs, and setup recipes for SourceTrack."
+>
+  <section className="py-16 bg-[#0E1111] text-white">
+    <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+      <span className="inline-block px-3 py-1 text-xs font-black uppercase tracking-widest text-[#0F1012] bg-[#C8F000] rounded-full">
+        Documentation Home
+      </span>
+      <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight">
+        SourceTrack Docs & <br />
+        <span className="text-[#C8F000]">Platform Guides</span>
+      </h1>
+      <p className="max-w-2xl mx-auto text-gray-400 text-base sm:text-lg leading-relaxed">
+        Everything you need to set up tracking, connect payment gateways, and start inspecting customer journeys in minutes.
+      </p>
+    </div>
+  </section>
+
+  <section className="py-16 bg-[#161719] text-white">
+    <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+      <a href="/docs/quickstart" className="bg-[#1C1D20] p-6 rounded-2xl border border-[#2A2C30] hover:border-[#C8F000] transition-colors block">
+        <h3 className="text-lg font-bold text-[#C8F000]">⚡ Quickstart Guide</h3>
+        <p className="text-sm text-gray-400 mt-2">Get up and running in under 5 minutes with our single script snippet.</p>
+      </a>
+      <a href="/docs/install" className="bg-[#1C1D20] p-6 rounded-2xl border border-[#2A2C30] hover:border-[#C8F000] transition-colors block">
+        <h3 className="text-lg font-bold text-[#C8F000]">📄 HTML & Pixel Setup</h3>
+        <p className="text-sm text-gray-400 mt-2">Standard pixel installation guide for custom web applications.</p>
+      </a>
+      <a href="/docs/shopify" className="bg-[#1C1D20] p-6 rounded-2xl border border-[#2A2C30] hover:border-[#C8F000] transition-colors block">
+        <h3 className="text-lg font-bold text-[#C8F000]">🛒 Shopify Integration</h3>
+        <p className="text-sm text-gray-400 mt-2">Theme liquid snippet and cart attribute setup for order attribution.</p>
+      </a>
+      <a href="/docs/wordpress" className="bg-[#1C1D20] p-6 rounded-2xl border border-[#2A2C30] hover:border-[#C8F000] transition-colors block">
+        <h3 className="text-lg font-bold text-[#C8F000]">🌐 WordPress Setup</h3>
+        <p className="text-sm text-gray-400 mt-2">Add SourceTrack to your WordPress header or Theme File Editor.</p>
+      </a>
+      <a href="/docs/webflow" className="bg-[#1C1D20] p-6 rounded-2xl border border-[#2A2C30] hover:border-[#C8F000] transition-colors block">
+        <h3 className="text-lg font-bold text-[#C8F000]">🎨 Webflow Guide</h3>
+        <p className="text-sm text-gray-400 mt-2">Custom head code snippet setup for Webflow sites.</p>
+      </a>
+      <a href="/docs/gtm" className="bg-[#1C1D20] p-6 rounded-2xl border border-[#2A2C30] hover:border-[#C8F000] transition-colors block">
+        <h3 className="text-lg font-bold text-[#C8F000]">🏷️ Google Tag Manager</h3>
+        <p className="text-sm text-gray-400 mt-2">Custom HTML tag deployment using GTM container triggers.</p>
+      </a>
+      <a href="/docs/framer" className="bg-[#1C1D20] p-6 rounded-2xl border border-[#2A2C30] hover:border-[#C8F000] transition-colors block">
+        <h3 className="text-lg font-bold text-[#C8F000]">✨ Framer Integration</h3>
+        <p className="text-sm text-gray-400 mt-2">Custom code section setup for Framer landing pages.</p>
+      </a>
+      <a href="/docs/stripe" className="bg-[#1C1D20] p-6 rounded-2xl border border-[#2A2C30] hover:border-[#C8F000] transition-colors block">
+        <h3 className="text-lg font-bold text-[#C8F000]">💳 Stripe Webhooks</h3>
+        <p className="text-sm text-gray-400 mt-2">Connect Stripe payment events and charge webhooks for recurring revenue attribution.</p>
+      </a>
+      <a href="/docs/troubleshooting" className="bg-[#1C1D20] p-6 rounded-2xl border border-[#2A2C30] hover:border-[#C8F000] transition-colors block">
+        <h3 className="text-lg font-bold text-[#C8F000]">🔧 Troubleshooting</h3>
+        <p className="text-sm text-gray-400 mt-2">Diagnostic tools, tracking doctor checks, and common installation fixes.</p>
+      </a>
+    </div>
+  </section>
+</Base>

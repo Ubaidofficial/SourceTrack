@@ -1,0 +1,38 @@
+---
+import Base from "@/layouts/Base.astro";
+import CallToAction from "@/partials/CallToAction.astro";
+
+const callToAction = {
+  frontmatter: {
+    title: "Manage attribution across all client portfolios.",
+    subtitle: "Switch between client sites in seconds with multi-site portfolio scans.",
+    button: {
+      enable: true,
+      label: "Start free trial",
+      link: "https://app.sourcetrack.ai/signup"
+    }
+  }
+};
+---
+
+<Base
+  title="SourceTrack for Agencies — Multi-Client Portfolio Attribution"
+  description="Report accurate multi-touch attribution, AI traffic growth, and organic revenue across all your client accounts."
+>
+  <section className="py-16 bg-[#0E1111] text-white">
+    <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+      <span className="inline-block px-3 py-1 text-xs font-black uppercase tracking-widest text-[#0F1012] bg-[#C8F000] rounded-full">
+        Agency Solutions
+      </span>
+      <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight">
+        Prove ROI to Your Clients With <br />
+        <span className="text-[#C8F000]">Truthful Multi-Touch Attribution.</span>
+      </h1>
+      <p className="max-w-2xl mx-auto text-gray-400 text-base sm:text-lg leading-relaxed">
+        Clean client reports showing AI referrals, paid ad clicks, and organic search queries linked directly to conversion value.
+      </p>
+    </div>
+  </section>
+
+  <CallToAction data={callToAction} />
+</Base>

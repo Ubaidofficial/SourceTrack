@@ -1,0 +1,81 @@
+---
+import Base from "@/layouts/Base.astro";
+import Hero from "@/components/Hero.astro";
+import Statistics from "@/components/Statistics";
+import CallToAction from "@/partials/CallToAction.astro";
+import EssentialFeatures from "@/partials/EssentialFeatures.astro";
+import FAQ from "@/partials/FAQ";
+import Integration from "@/partials/Integration";
+import KeyFeatures from "@/partials/KeyFeatures.astro";
+import Pricing from "@/partials/Pricing";
+import Testimonials from "@/partials/Testimonials";
+import TrustedClients from "@/partials/TrustedClients";
+import WhyChooseUs from "@/partials/WhyChooseUs.astro";
+import { getListPage } from "@/lib/contentParser";
+
+const homepage = await getListPage("homepage/-index.md");
+const trusted_clients = await getListPage("sections/trusted-clients.md");
+const key_features = await getListPage("sections/key-features.md");
+const essential_features = await getListPage("sections/essential-features.md");
+const whyChooseUs = await getListPage("sections/why-choose-us.md");
+const integration = await getListPage("sections/integration.md");
+const pricing = await getListPage("sections/pricing.md");
+const testimonial = await getListPage("sections/testimonial.md");
+const faq = await getListPage("sections/faq.md");
+const callToAction = await getListPage("sections/call-to-action.md");
+const statistics = await getListPage("sections/statistics.md");
+const { banner } = homepage.frontmatter;
+
+const softwareSchema = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "SourceTrack",
+  "operatingSystem": "All",
+  "applicationCategory": "BusinessApplication",
+  "offers": {
+    "@type": "AggregateOffer",
+    "priceCurrency": "USD",
+    "lowPrice": "49",
+    "highPrice": "79",
+    "offerCount": "3"
+  },
+  "description": "Multi-touch marketing attribution, AI search referral detection, and Search Console revenue signals."
+};
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How does SourceTrack detect ChatGPT and AI referrals?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "SourceTrack uses cookieless browser referral inspection heuristics to identify sessions originating from AI search engines and assistants like ChatGPT, Claude, Perplexity, and Gemini that traditional tools classify as direct traffic."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does SourceTrack use third-party cookies?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. SourceTrack relies entirely on a first-party, cookieless identity boundary. We do not use third-party tracking cookies or invasive device fingerprinting."
+      }
+    }
+  ]
+};
+---
+
+<Base structuredData={[softwareSchema, faqSchema]}>
+  <Hero data={banner} />
+  <TrustedClients data={trusted_clients} client:visible />
+  <KeyFeatures data={key_features} />
+  <Statistics data={statistics} client:visible />
+  <EssentialFeatures data={essential_features} />
+  <WhyChooseUs data={whyChooseUs} />
+  <Integration data={integration} client:visible />
+  <Pricing data={pricing} client:visible />
+  <Testimonials data={testimonial} client:visible />
+  <FAQ data={faq} client:visible />
+  <CallToAction data={callToAction} />
+</Base>

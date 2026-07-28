@@ -1,0 +1,46 @@
+---
+import Base from "@/layouts/Base.astro";
+import CallToAction from "@/partials/CallToAction.astro";
+import MarketingBeforeAfter from "@/components/MarketingBeforeAfter";
+
+const callToAction = {
+  frontmatter: {
+    title: "Start attributing real Shopify sales today.",
+    subtitle: "Stitch ad clicks, AI search comparisons, and Shopify orders in 5 minutes.",
+    button: {
+      enable: true,
+      label: "Start free trial",
+      link: "https://app.sourcetrack.ai/signup"
+    }
+  }
+};
+---
+
+<Base
+  title="SourceTrack for eCommerce & DTC — Shopify Order Attribution"
+  description="Connect Google Ads, Meta Ads, and AI search to actual Shopify order revenue with cookieless cart attribute stitching."
+>
+  <section className="py-16 bg-[#0E1111] text-white">
+    <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+      <span className="inline-block px-3 py-1 text-xs font-black uppercase tracking-widest text-[#0F1012] bg-[#C8F000] rounded-full">
+        eCommerce & DTC Solutions
+      </span>
+      <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight">
+        Connect Ad Clicks and AI Research <br />
+        <span className="text-[#C8F000]">To Real Shopify Orders.</span>
+      </h1>
+      <p className="max-w-2xl mx-auto text-gray-400 text-base sm:text-lg leading-relaxed">
+        Stop losing attribution to iOS privacy restrictions and missing UTMs. Use cart attribute stitching to link store purchases to actual buyer sessions.
+      </p>
+    </div>
+  </section>
+
+  {/* Embedded Before / After Component */}
+  <section className="py-16 bg-[#0F1012] text-white border-t border-b border-[#2A2C30]">
+    <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8">
+      <MarketingBeforeAfter mode="ecommerce" showToggle={false} client:visible />
+    </div>
+  </section>
+
+  <CallToAction data={callToAction} />
+</Base>
