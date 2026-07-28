@@ -830,3 +830,82 @@ export const demoData = {
     }
   }
 };
+
+export const comparisonDemoData = {
+  default: {
+    title: "Without SourceTrack vs. With SourceTrack",
+    subtitle: "Turn dark traffic and (direct / none) gaps into multi-touch, AI-attributed customer journeys.",
+    before: {
+      badge: "Without SourceTrack",
+      source: "(direct) / (none)",
+      channel: "Dark Traffic / Unattributed",
+      landingPage: "/checkout",
+      campaign: "—",
+      utmSource: "—",
+      utmMedium: "—",
+      utmCampaign: "—",
+      touchpoints: [],
+      emptyMessage: "No journey touchpoints captured. Referrer header missing or stripped.",
+      attributionStatus: "Untagged / Unattributed",
+      customerRevenue: "$149.00",
+      customerMeta: "Conversion logged without source or journey context"
+    },
+    after: {
+      badge: "With SourceTrack",
+      source: "ChatGPT (AI Search)",
+      channel: "AI Referrer",
+      landingPage: "/pricing?utm_source=chatgpt&utm_medium=referral&utm_campaign=ai_search_recommendation",
+      campaign: "ai_search_recommendation",
+      utmSource: "chatgpt",
+      utmMedium: "referral",
+      utmCampaign: "ai_search_recommendation",
+      touchpoints: [
+        { name: "ChatGPT Prompt", time: "14:15", icon: "💬", detail: "Prompt: 'best attribution tool for SaaS'" },
+        { name: "Blog Landing", time: "14:16", icon: "📄", detail: "/blog/attribution-guide" },
+        { name: "Pricing View", time: "14:20", icon: "💰", detail: "/pricing" },
+        { name: "Checkout Complete", time: "14:22", icon: "⚡", detail: "Stripe Purchase ($149.00)" }
+      ],
+      attributionStatus: "Multi-touch Stitched · AI Revenue",
+      customerRevenue: "$149.00",
+      customerMeta: "Stitched journey from ChatGPT referral to $149/mo Starter Plan"
+    }
+  },
+  ecommerce: {
+    title: "eCommerce Attribution Comparison",
+    subtitle: "Stitch ad clicks and AI research to actual Shopify order revenue.",
+    before: {
+      badge: "Without SourceTrack",
+      source: "(direct)",
+      channel: "Direct / Unknown",
+      landingPage: "/cart",
+      campaign: "—",
+      utmSource: "—",
+      utmMedium: "—",
+      utmCampaign: "—",
+      touchpoints: [],
+      emptyMessage: "No ad parameters or sessions captured before order creation.",
+      attributionStatus: "Unattributed Order",
+      customerRevenue: "$280.00",
+      customerMeta: "Shopify Order #8421 credited to Direct"
+    },
+    after: {
+      badge: "With SourceTrack",
+      source: "Google Ads + Claude AI",
+      channel: "Paid Search -> AI Referrer",
+      landingPage: "/products/smart-watch?gclid=ad_8912",
+      campaign: "summer_sale_search",
+      utmSource: "google",
+      utmMedium: "cpc",
+      utmCampaign: "summer_sale_search",
+      touchpoints: [
+        { name: "Google Ad Click", time: "08:45", icon: "🎯", detail: "gclid=ad_8912 (Google Ads)" },
+        { name: "Claude AI Comparison", time: "09:02", icon: "🤖", detail: "Prompt: 'SmartWatch specs review'" },
+        { name: "Cart Attribute", time: "09:08", icon: "🛍️", detail: "Cart st_aid attribute saved" },
+        { name: "Shopify Webhook", time: "09:10", icon: "💳", detail: "Order #8421 ($280.00)" }
+      ],
+      attributionStatus: "First-Touch Paid / Last-Touch AI Stitched",
+      customerRevenue: "$280.00",
+      customerMeta: "Cart attribute st_aid stitched order #8421 to Google Ad + AI session"
+    }
+  }
+}

@@ -10,6 +10,7 @@ import AiSourcesFixture from '../components/AiSourcesFixture'
 import GscQueryFixture from '../components/GscQueryFixture'
 import JourneyFixture from '../components/JourneyFixture'
 import ReportBuilderMock from '../components/ReportBuilderMock'
+import MarketingBeforeAfter from '../components/MarketingBeforeAfter'
 import Reveal from '../components/Reveal'
 
 const SEO = {
@@ -116,6 +117,13 @@ export default function Landing() {
               lead and sale, readable in five seconds, set up in five minutes.
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* Before / After Attribution Comparison */}
+      <section className="py-[96px] bg-[#0E1111] text-white border-b border-white/10">
+        <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8">
+          <MarketingBeforeAfter mode="default" showToggle={true} />
         </div>
       </section>
 
