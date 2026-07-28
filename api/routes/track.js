@@ -10,7 +10,7 @@ import { claimConversionUsage } from '../lib/conversion-limits.js'
 
 
 import { getSupabase } from '../lib/supabase.js'
-import { isIngestionBotUserAgent, logWouldDropBot } from '../lib/bot-filter.js'
+import { isIngestionBotUserAgent, logWouldDropBot, coarseUaHash } from '../lib/bot-filter.js'
 
 async function updateTelemetryMetadata(site, body) {
   try {
@@ -159,6 +159,18 @@ export async function track(req, res) {
     // above may still trip the EXPANDED heuristic (ua_extra / header_shape).
     // Measure what we WOULD catch — do NOT drop. Logs a coarse UA hash only.
     logWouldDropBot('track', req)
+
+    // LOG-ONLY automation-score observation. PURELY ADDITIVE: nothing reads this value to
+    // filter, drop, classify, or meter. It is logged AFTER the UA drop above on purpose, so the
+    // sample is "requests that survived the existing filter" — the only population where a new
+    // signal could tell us anything. Deciding what any score MEANS comes after there is real
+    // observed data, not before; there is deliberately no threshold anywhere in this codebase.
+    // Logs site_id (internal id), NEVER site_key (§6.5), and a coarse UA hash, never a raw UA
+    // (§6 treats raw UA as fingerprinting-adjacent).
+    const autoScore = Number(req.body?.auto_score)
+    if (Number.isFinite(autoScore)) {
+      console.log(`[bot-filter][automation-score] site_id=${req.site?.id} score=${autoScore} ua_hash=${coarseUaHash(ua)}`)
+    }
 
     // Check path exclusions
     if (req.body?.page_url && isPathExcluded(req.body.page_url, req.site?.excluded_paths)) {
