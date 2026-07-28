@@ -166,16 +166,29 @@ test('a <30min gap keeps one session, so the same two pageviews DO complete', as
   assert.strictEqual(res.body.data[1].dropoff_rate, 0)
 })
 
-test('an acquisition-context change splits the session even inside 30 minutes', async () => {
-  // deriveSessions also splits on a new utm_source/medium/campaign. Session 1 has /pricing,
-  // session 2 has /checkout, so neither contains both.
+test('differing UTMs inside 30 minutes DO NOT split funnel sessions (Option B 30-min inactivity rule)', async () => {
+  // deriveFunnelSessions ignores acquisition-context changes, so a visitor clicking a different UTM
+  // mid-visit within 30 minutes remains in a single continuous browsing session and completes the funnel.
   const res = await runFunnel([
     ROW('v1', 'https://x/pricing', T(0), { utm_source: 'google', utm_medium: 'cpc' }),
     ROW('v1', 'https://x/checkout', T(10), { utm_source: 'facebook', utm_medium: 'cpc' })
   ], '/pricing,/checkout')
   assert.deepStrictEqual(res.body.data, [
     { step: '/pricing', visitors: 1, dropoff_rate: 0 },
-    { step: '/checkout', visitors: 0, dropoff_rate: 100 }
+    { step: '/checkout', visitors: 1, dropoff_rate: 0 }
+  ])
+})
+
+test('differing click IDs or missing click-ID properties inside 30 minutes DO NOT split funnel sessions', async () => {
+  // Confirms the parameter gap (click IDs missing in summary pipe vs deriveSessions) is moot:
+  // deriveFunnelSessions sessionizes on 30-min inactivity gap only.
+  const res = await runFunnel([
+    ROW('v1', 'https://x/pricing', T(0), { gclid: 'click_abc123' }),
+    ROW('v1', 'https://x/checkout', T(15), { fbclid: 'click_xyz789' })
+  ], '/pricing,/checkout')
+  assert.deepStrictEqual(res.body.data, [
+    { step: '/pricing', visitors: 1, dropoff_rate: 0 },
+    { step: '/checkout', visitors: 1, dropoff_rate: 0 }
   ])
 })
 
