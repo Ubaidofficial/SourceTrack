@@ -14,16 +14,16 @@ export async function getListPage(filePath: string) {
   const parts = filePath.split("/");
   const collection = parts[0] as any;
   let slug = parts.slice(1).join("/").replace(".md", "").replace(".mdx", "");
-  
+
   // Convert _index to -index for Astro naming convention
   slug = slug.replace("_index", "-index");
-  
+
   try {
     const entry = await getEntry(collection, slug);
     if (!entry) {
       return { frontmatter: {}, content: "" };
     }
-    
+
     return {
       frontmatter: entry.data as any,
       content: entry.body || "",
@@ -39,7 +39,7 @@ export async function getListPage(filePath: string) {
 export async function getSinglePage(folder: string) {
   try {
     const allEntries = await getCollection(folder as any);
-    
+
     // Filter out index pages and drafts
     const singlePages = allEntries
       .filter((entry: any) => !entry.id.startsWith("-"))
@@ -49,12 +49,12 @@ export async function getSinglePage(folder: string) {
         slug: entry.data?.url || entry.id.replace(/\.(md|mdx)$/, ""),
         content: entry.body || "",
       }));
-    
+
     // Filter by date
     const filterByDate = singlePages.filter(
       (page: any) => new Date(page.frontmatter.date || new Date()) <= new Date(),
     );
-    
+
     return filterByDate;
   } catch {
     return [];
