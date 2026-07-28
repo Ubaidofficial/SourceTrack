@@ -36,6 +36,10 @@
       "url": "/pricing"
     },
     {
+      "name": "Demo",
+      "url": "/demo"
+    },
+    {
       "name": "Integrations",
       "url": "/integrations"
     },
