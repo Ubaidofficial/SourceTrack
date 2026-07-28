@@ -1,0 +1,33 @@
+---
+import Base from "@/layouts/Base.astro";
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.sourcetrack.ai" },
+    { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://www.sourcetrack.ai/docs" },
+    { "@type": "ListItem", "position": 3, "name": "Quickstart Guide", "item": "https://www.sourcetrack.ai/docs/quickstart" }
+  ]
+};
+---
+
+<Base
+  title="Quickstart Guide — SourceTrack Docs"
+  description="Get up and running with SourceTrack tracking snippet in under 5 minutes."
+  structuredData={[breadcrumbSchema]}
+>
+  <section className="py-16 bg-[#0E1111] text-white">
+    <div className="max-w-[800px] mx-auto px-4 space-y-6">
+      <a href="/docs" className="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Docs</a>
+      <h1 className="text-4xl font-black text-white">Quickstart Installation Guide</h1>
+      <p className="text-gray-400 text-lg">Install the SourceTrack snippet before the closing &lt;/head&gt; tag on your website.</p>
+      <div className="bg-[#161719] p-6 rounded-2xl border border-[#2A2C30] space-y-4">
+        <h3 className="font-bold text-[#C8F000]">1. Copy Tracking Snippet</h3>
+        <pre className="bg-[#0F1012] p-4 rounded-xl text-xs text-gray-300 overflow-x-auto"><code>{`<script src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY" async></script>`}</code></pre>
+        <h3 className="font-bold text-[#C8F000]">2. Verify Installation</h3>
+        <p className="text-sm text-gray-400">Open your website, perform a test visit, and check your SourceTrack dashboard live event stream.</p>
+      </div>
+    </div>
+  </section>
+</Base>

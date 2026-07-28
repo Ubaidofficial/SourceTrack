@@ -1,0 +1,16 @@
+# SourceTrack
+
+> SourceTrack is a privacy-first marketing attribution and lightweight web analytics platform for founders, marketers, and SaaS teams.
+
+## Core Features
+- AI Referral Tracking: Detects visits originating from ChatGPT, Claude, Gemini, Perplexity, and Copilot.
+- Multi-Touch Attribution: Supports first-touch, last-touch, linear, and time-decay attribution models.
+- Visitor Journey Inspector: View the complete pre-conversion touchpoint timeline for any lead or customer.
+- Search Console Integration: Matches GSC organic queries and landing pages to revenue.
+- Cookieless Identity Moat: 100% first-party, cookieless, zero cross-site tracking or fingerprinting.
+
+## Links
+- Website: https://www.sourcetrack.ai
+- Documentation: https://www.sourcetrack.ai/docs
+- Developer API: https://www.sourcetrack.ai/developers
+- Pricing: https://www.sourcetrack.ai/pricing

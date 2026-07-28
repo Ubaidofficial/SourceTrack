@@ -1,0 +1,125 @@
+{
+  "main": [
+    {
+      "name": "Home",
+      "url": "/"
+    },
+    {
+      "name": "Solutions",
+      "url": "/solutions/saas",
+      "hasChildren": true,
+      "children": [
+        {
+          "name": "SaaS & B2B",
+          "url": "/solutions/saas"
+        },
+        {
+          "name": "eCommerce & DTC",
+          "url": "/solutions/ecommerce"
+        },
+        {
+          "name": "Lead Generation",
+          "url": "/solutions/lead-gen"
+        },
+        {
+          "name": "Agencies & Portfolio",
+          "url": "/solutions/agency"
+        },
+        {
+          "name": "Shopify Stores",
+          "url": "/solutions/shopify"
+        }
+      ]
+    },
+    {
+      "name": "Pricing",
+      "url": "/pricing"
+    },
+    {
+      "name": "Integrations",
+      "url": "/integrations"
+    },
+    {
+      "name": "Docs",
+      "url": "/docs"
+    },
+    {
+      "name": "Developers",
+      "url": "/developers"
+    },
+    {
+      "name": "Blog",
+      "url": "/blog"
+    },
+    {
+      "name": "Changelog",
+      "url": "/changelog"
+    }
+  ],
+  "footer_company": [
+    {
+      "name": "Home",
+      "url": "/"
+    },
+    {
+      "name": "Pricing",
+      "url": "/pricing"
+    },
+    {
+      "name": "SaaS Solution",
+      "url": "/solutions/saas"
+    },
+    {
+      "name": "eCommerce Solution",
+      "url": "/solutions/ecommerce"
+    },
+    {
+      "name": "Integrations",
+      "url": "/integrations"
+    }
+  ],
+  "footer_resource": [
+    {
+      "name": "Blog",
+      "url": "/blog"
+    },
+    {
+      "name": "Changelog",
+      "url": "/changelog"
+    },
+    {
+      "name": "Docs & Guides",
+      "url": "/docs"
+    },
+    {
+      "name": "Developer API",
+      "url": "/developers"
+    },
+    {
+      "name": "Troubleshooting",
+      "url": "/docs/troubleshooting"
+    }
+  ],
+  "footer_legal": [
+    {
+      "name": "Privacy Policy",
+      "url": "/privacy"
+    },
+    {
+      "name": "Terms of Service",
+      "url": "/terms"
+    },
+    {
+      "name": "Data Processing (DPA)",
+      "url": "/dpa"
+    },
+    {
+      "name": "Subprocessors",
+      "url": "/subprocessors"
+    },
+    {
+      "name": "Security Policy",
+      "url": "/security"
+    }
+  ]
+}

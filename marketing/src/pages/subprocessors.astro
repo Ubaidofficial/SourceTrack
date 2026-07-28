@@ -1,0 +1,30 @@
+---
+import Base from "@/layouts/Base.astro";
+---
+
+<Base title="Subprocessors & Infrastructure Partners — SourceTrack" description="List of third-party infrastructure subprocessors used by SourceTrack.">
+  <section className="py-16 bg-[#0E1111] text-white">
+    <div className="max-w-[800px] mx-auto px-4 space-y-6">
+      <h1 className="text-4xl font-black text-white">Subprocessor Inventory</h1>
+      <p className="text-gray-400 text-lg">SourceTrack uses the following sub-processors for hosting, database persistence, and analytics ingestion:</p>
+      <div className="bg-[#161719] p-6 rounded-2xl border border-[#2A2C30] space-y-4">
+        <div className="flex justify-between items-center border-b border-[#2A2C30] pb-3">
+          <span className="font-bold text-[#C8F000]">Supabase Inc.</span>
+          <span className="text-xs text-gray-400">PostgreSQL OLTP & Authentication (USA / EU)</span>
+        </div>
+        <div className="flex justify-between items-center border-b border-[#2A2C30] pb-3">
+          <span className="font-bold text-[#C8F000]">Tinybird Inc.</span>
+          <span className="text-xs text-gray-400">ClickHouse OLAP Ingestion & Analytics Pipes</span>
+        </div>
+        <div className="flex justify-between items-center border-b border-[#2A2C30] pb-3">
+          <span className="font-bold text-[#C8F000]">Railway Corp.</span>
+          <span className="text-xs text-gray-400">API Server & Application Hosting</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="font-bold text-[#C8F000]">Stripe Inc.</span>
+          <span className="text-xs text-gray-400">Payment Processing & Subscription Billing</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>
