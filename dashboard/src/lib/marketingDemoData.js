@@ -908,5 +908,4 @@ export const comparisonDemoData = {
       customerMeta: "Cart attribute st_aid stitched order #8421 to Google Ad + AI session"
     }
   }
-};
-
+}
