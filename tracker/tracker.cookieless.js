@@ -132,6 +132,62 @@
   }
 
   // ─── Shared UTM + click-id field builder ───────────────────────────────────
+  // ─── Automation score (LOG-ONLY instrumentation) ───────────────────────────
+  // Nothing filters, drops, or classifies on this value — server-side it is logged and
+  // nothing more. It exists so there is real observed data before any decision is made.
+  //
+  // SCOPE IS DELIBERATELY NARROW. §6 "no fingerprinting" is non-negotiable, and the site
+  // states "no fingerprinting" on four pages — including the CCPA Do-Not-Sell page and
+  // Pricing, where it is tied to "you often won't need a cookie banner". Every signal here is
+  // zero- or near-zero-entropy and cannot help identify a person or device:
+  //   navigator.webdriver  a W3C boolean whose purpose IS advertising automation control
+  //   _asG globals         presence booleans for automation tooling; absent on real browsers
+  //   window.chrome        bare presence, consulted ONLY when the UA already claims Chrome,
+  //                        so it reveals nothing the UA did not already tell the server
+  //
+  // NEVER ADD, without a separate decision alongside those four pages: WebGL renderer,
+  // navigator.plugins, screen/viewport, canvas, fonts, audio, hardwareConcurrency,
+  // deviceMemory, timezone. Those are fingerprinting vectors. Reading none of them is the
+  // point of this function, not an oversight.
+  //
+  // DUPLICATED VERBATIM in tracker.js and tracker.cookieless.js — the builds are executed as
+  // CLASSIC SCRIPTS by the test harness (vm.runInContext), so an import here would break the
+  // whole tracker suite. api/tests/automation-score.test.js extracts this block from BOTH
+  // files, asserts they are byte-identical, and runs the behaviour tests against the
+  // extracted source — so the copies cannot drift and the tests exercise shipped code.
+  var _asG = ['__playwright','__puppeteer_evaluation_script__','_phantom','callPhantom','__nightmare','_Selenium_IDE_Recorder','__selenium_unwrapped','__selenium_evaluate','__webdriver_unwrapped','__webdriver_evaluate','__webdriver_script_fn','__driver_unwrapped','__driver_evaluate','__fxdriver_unwrapped','__fxdriver_evaluate','domAutomation','domAutomationController','cdc_adoQpoasnfa76pfcZLmcfl_Array']
+  // PROVISIONAL weights. No threshold exists anywhere; deciding what a score MEANS needs real
+  // data first, which is what this collects. Do not read these as a validated model.
+  var _asW_DRIVER = 60, _asW_GLOBAL = 40, _asW_CHROME = 10
+  function _asHas(o, k) {
+    try {
+      if (!o) return false
+      if (Object.prototype.hasOwnProperty.call(o, k)) return true
+      return typeof o[k] !== 'undefined'
+    } catch (_e) { return false }
+  }
+  function getAutomationScore(win) {
+    try {
+      var w = win || (typeof window !== 'undefined' ? window : null)
+      if (!w) return 0
+      var score = 0, nav = w.navigator || {}, doc = w.document || {}
+      // 1. Standardised automation flag. STRICT true only — false/undefined are not signals.
+      if (nav.webdriver === true) score += _asW_DRIVER
+      // 2. Tooling globals, on window OR document (chromedriver's cdc_ marker lands on
+      //    document in some versions). Scores ONCE: six markers must not outrank one.
+      for (var i = 0; i < _asG.length; i++) {
+        if (_asHas(w, _asG[i]) || _asHas(doc, _asG[i])) { score += _asW_GLOBAL; break }
+      }
+      // 3. window.chrome missing while the UA claims Chrome. GATED ON THE UA ON PURPOSE:
+      //    ungated, every Firefox and Safari visitor would score non-zero forever.
+      var ua = String(nav.userAgent || '')
+      if (/Chrome\/\d/.test(ua) && !/Edg\/|OPR\/|SamsungBrowser\//.test(ua) && !w.chrome) score += _asW_CHROME
+      if (score < 0) score = 0
+      if (score > 100) score = 100
+      return score
+    } catch (_e) { return 0 }   // instrumentation must never break a customer's page
+  }
+
   function utmFields(p) {
     return {
       utm_source: p.utm_source, utm_medium: p.utm_medium, utm_campaign: p.utm_campaign,
@@ -268,7 +324,9 @@
       utmFields(p),
       { ref_param: p.ref, source_param: p.source, via_param: p.via },
       deriveFirstTouch(p, ref),
-      { ai_source: aiSrc(ref, p.utm_source) }
+      { ai_source: aiSrc(ref, p.utm_source) },
+      // LOG-ONLY instrumentation — see getAutomationScore above. Nothing filters on it.
+      { auto_score: getAutomationScore(window) }
     )
     AID ? send('/api/track', data) : _q.push({ ep: '/api/track', data: data })
   }
