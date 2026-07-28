@@ -33,7 +33,8 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        site_key: { type: 'string', description: 'Optional site_key to verify' }
+        site_key: { type: 'string', description: 'Optional site_key to verify' },
+        auth_token: { type: 'string', description: 'Optional Supabase Bearer auth token for authenticated site status check' }
       },
       required: []
     }
@@ -89,6 +90,7 @@ export function processRpcMessage(msg, config = {}) {
         } else if (name === 'verify_installation') {
           resData = await handleVerifyInstallation({
             siteKey: args?.site_key,
+            authToken: args?.auth_token,
             apiBaseUrl
           })
         } else {
