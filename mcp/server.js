@@ -29,11 +29,12 @@ const TOOLS = [
   },
   {
     name: 'verify_installation',
-    description: 'Verify if the tracking script has successfully sent events and is active on a site',
+    description: 'Verify if tracking script events are active on a site. Note: Live backend status API requires an authenticated user session Bearer token (auth_token or SOURCETRACK_AUTH_TOKEN env var)',
     inputSchema: {
       type: 'object',
       properties: {
-        site_key: { type: 'string', description: 'Optional site_key to verify' }
+        site_key: { type: 'string', description: 'Target site_key to verify' },
+        auth_token: { type: 'string', description: 'Supabase Bearer JWT auth token (required by backend /api/install/status)' }
       },
       required: []
     }
@@ -89,6 +90,7 @@ export function processRpcMessage(msg, config = {}) {
         } else if (name === 'verify_installation') {
           resData = await handleVerifyInstallation({
             siteKey: args?.site_key,
+            authToken: args?.auth_token,
             apiBaseUrl
           })
         } else {

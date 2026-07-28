@@ -65,7 +65,7 @@ export async function handleGetInstallSnippet({ platform, siteKey, siteId, apiBa
   }
 }
 
-export async function handleVerifyInstallation({ siteKey, apiBaseUrl }) {
+export async function handleVerifyInstallation({ siteKey, authToken, apiBaseUrl }) {
   const effectiveSiteKey = siteKey || process.env.SOURCETRACK_SITE_KEY
   if (!effectiveSiteKey) {
     return {
@@ -79,10 +79,14 @@ export async function handleVerifyInstallation({ siteKey, apiBaseUrl }) {
   const baseUrl = apiBaseUrl || process.env.SOURCETRACK_API_URL || 'https://api.srctk.com'
   const url = `${baseUrl.replace(/\/+$/, '')}/api/install/status`
 
+  const headers = { 'x-site-key': effectiveSiteKey }
+  const effectiveToken = authToken || process.env.SOURCETRACK_AUTH_TOKEN
+  if (effectiveToken) {
+    headers['Authorization'] = `Bearer ${effectiveToken}`
+  }
+
   try {
-    const res = await fetch(url, {
-      headers: { 'x-site-key': effectiveSiteKey }
-    })
+    const res = await fetch(url, { headers })
     if (res.ok) {
       const json = await res.json()
       return json.data || json
