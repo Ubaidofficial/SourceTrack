@@ -1,0 +1,73 @@
+{
+  "_comment": [
+    "PUBLIC ROADMAP CONTENT. Every entry here is a §6 truthfulness claim, not a status label —",
+    "a customer reads 'Shipped' as 'I can use this today'. Verify before moving anything.",
+    "",
+    "The bar used for this file, applied to every entry on 2026-07-30:",
+    "  shipped  = merged AND every dependency it needs at runtime is live. For anything that",
+    "             reads Tinybird that means the pipe is DEPLOYED (founder-gated, so merged does",
+    "             not imply deployed). For anything reading a new Supabase column it means the",
+    "             migration is APPLIED (also founder-gated).",
+    "  building = code exists but a customer cannot get a correct result from it yet.",
+    "  soon     = committed and scoped, not started. Deliberately empty rather than padded.",
+    "",
+    "Two entries were demoted from 'shipped' to 'building' by that bar — see `verified_note`",
+    "on each. Do not promote them back without re-checking the named condition."
+  ],
+  "verified_on": "2026-07-30",
+  "columns": [
+    {
+      "key": "shipped",
+      "title": "Shipped",
+      "description": "Live for customers today.",
+      "items": [
+        {
+          "title": "GA4 + TikTok CAPI",
+          "description": "Server-side conversion forwarding to Google Analytics 4 Measurement Protocol and the TikTok Events API, alongside the existing Meta, Google Ads, Microsoft and LinkedIn senders.",
+          "verified_note": "Both senders are in the dispatchCapi fan-out, and the ga4_/tiktok_ columns they read are applied on prod."
+        },
+        {
+          "title": "Leads by source and campaign",
+          "description": "Lead volume aggregated by acquisition source and campaign, not just a lead-by-lead list.",
+          "verified_note": "leads_count, leads_list and flexible_report_campaign_leads_by_site are all deployed."
+        },
+        {
+          "title": "Funnels",
+          "description": "Multi-step path funnels with per-step drop-off. When a date range is too large to read completely, the funnel now says so instead of quietly reporting on a partial dataset.",
+          "verified_note": "Depends on the summary pipe, which is deployed. Truncation honesty merged."
+        },
+        {
+          "title": "Conversion delivery log",
+          "description": "Per-platform delivery history for server-side conversions — what was sent, what the platform answered, and what failed.",
+          "verified_note": "Reads Supabase, no pipe dependency. Rendered on Setup & Health."
+        }
+      ]
+    },
+    {
+      "key": "building",
+      "title": "Building",
+      "description": "Written and merged, not yet giving customers a correct answer.",
+      "items": [
+        {
+          "title": "AI visibility",
+          "description": "Which AI crawlers and assistants fetch your pages — GPTBot, ClaudeBot, PerplexityBot and others — with honest per-hit verification rather than trusting a user agent that anyone can spoof.",
+          "note": "Detection and reporting are merged. The data store behind the report is not live yet, so it would show an empty state today.",
+          "verified_note": "Verified 2026-07-30: the crawler_hits datasource and both crawler_* pipes are absent from the workspace (3 datasources, 435 endpoints, zero crawler_*). Move to shipped only once those are deployed AND a real hit has landed."
+        },
+        {
+          "title": "MCP diagnostic tools",
+          "description": "Ask Claude, Cursor or ChatGPT about your SourceTrack setup — workspace context, site health, data quality, data flow and event verification — over the Model Context Protocol, read-only.",
+          "note": "Merged and tested, but no one has run it against a live key yet. It stays here until a real end-to-end call has succeeded.",
+          "verified_note": "First enforcement of the read:analytics scope, and api_keys is 0 rows in prod — so the auth path has never been exercised by a real key. Move to shipped after one successful real-key call."
+        }
+      ]
+    },
+    {
+      "key": "soon",
+      "title": "Coming soon",
+      "description": "Committed and scoped, not started.",
+      "empty_state": "Nothing queued publicly right now. We list work here once it is scoped and committed — not to fill a column.",
+      "items": []
+    }
+  ]
+}
