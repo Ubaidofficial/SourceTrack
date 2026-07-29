@@ -60,6 +60,7 @@ import { requireUserAuth } from './middleware/user-auth.js'
 import { billingWebhookHandler, billingRouter } from './routes/billing.js'
 import jobStatusRouter from './routes/job-status.js'
 import { serverEventsRouter } from './routes/server-events.js'
+import { serverCrawlerHitsRouter } from './routes/server-crawler-hits.js'
 import { sessionsOverview, visitorSessions } from './routes/sessions.js'
 import liveRouter from './routes/live.js'
 import analyticsRouter from './routes/analytics.js'
@@ -508,6 +509,9 @@ app.use('/api/seo-revenue', requireUserAuth, validateSiteKey, requireSiteMembers
 app.use('/api/ai-visibility', requireUserAuth, validateSiteKey, requireSiteMembership, aiVisibilityRouter)
 app.use('/api/campaign-costs', requireUserAuth, validateSiteKey, requireSiteMembership, campaignCostsRouter)
 app.use('/api/server', serverEventsRouter)
+// Same /api/server prefix, separate router: crawler hits are NOT events. Different
+// scope (write:crawler_hits), different datasource (crawler_hits), and no meter.
+app.use('/api/server', serverCrawlerHitsRouter)
 app.use('/api/billing', billingRouter)
 app.use('/api/admin', requireUserAuth, adminRouter)
 app.use('/api/jobs', requireUserAuth, jobStatusRouter)

@@ -9,9 +9,14 @@
 //   import { createCrawlerMiddleware } from './express-crawler-middleware.js'
 //
 //   app.use(createCrawlerMiddleware({
-//     apiKey:   process.env.SOURCETRACK_API_KEY,   // needs the write:events scope
+//     apiKey:   process.env.SOURCETRACK_API_KEY,   // needs the write:crawler_hits scope
 //     endpoint: 'https://api.srctk.com/api/server/crawler-hit'
 //   }))
+//
+// The key needs `write:crawler_hits` and nothing else — a write:events key gets a 403
+// here, on purpose. This credential is deployed across a customer's edge, so it is
+// scoped to the one table it writes and cannot touch the revenue/attribution rail.
+// See api/lib/api-key-scopes.js.
 //
 // Ships as a PAIR with api/lib/ai-crawler-detect.js — the detection registry is
 // imported, never copied, so a customer install cannot drift from the registry
@@ -93,7 +98,7 @@ export function buildPayload({ hit, path, statusCode, collectionSource }) {
 
 /**
  * @param {object}  options
- * @param {string}  options.apiKey    SourceTrack API key (write:events scope).
+ * @param {string}  options.apiKey    SourceTrack API key (write:crawler_hits scope).
  * @param {string}  options.endpoint  Absolute URL of the crawler-hit ingest route.
  * @param {Map<string,string[]>} [options.ranges]
  *        token -> CIDR[]. When absent, stage-2 IP verification cannot run and
@@ -101,7 +106,9 @@ export function buildPayload({ hit, path, statusCode, collectionSource }) {
  *        optimistic one. See the PR body on distributing ranges to customer
  *        installs.
  * @param {Function} [options.fetchImpl]        injectable for tests.
- * @param {string}   [options.collectionSource] crawler_hits.collection_source.
+ * @param {string}   [options.collectionSource] crawler_hits.collection_source. One of
+ *        edge_middleware | cdn_log | origin_log | server_api — the ingest route rejects
+ *        anything else rather than storing an unknown provenance.
  * @param {Function} [options.onError]          observability hook; never rethrown.
  */
 export function createCrawlerMiddleware(options = {}) {
@@ -110,7 +117,11 @@ export function createCrawlerMiddleware(options = {}) {
     endpoint,
     ranges = null,
     fetchImpl = (...args) => fetch(...args),
-    collectionSource = 'server_api',
+    // CHANGED from 'server_api' now that POST /api/server/crawler-hit exists. Every
+    // collection_source arrives over the server API, so 'server_api' would no longer
+    // distinguish anything — which is the one job this column has. Inline request-path
+    // middleware is 'edge_middleware'; a log shipper would pass 'origin_log' / 'cdn_log'.
+    collectionSource = 'edge_middleware',
     onError = null
   } = options
 
