@@ -7,6 +7,8 @@ import {
 } from 'lucide-react'
 import { safeNumber } from '../utils/numbers'
 import { SourceIcon } from './SourceIcon'
+import { visitorAlias } from '../lib/visitorAlias'
+import { buildActivityGrid, intensity, JOURNEY_EVENT_CAP, GRID_WEEKS } from '../lib/activityGrid'
 
 const EVENT_ICONS = {
   '$pageview':   Globe,
@@ -182,6 +184,15 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
   }
 
   const shortId = shortIdentifier(summary.profileId || visitorId)
+  // Friendly, deterministic pseudonym so this journey can be referred to in words. Derived
+  // from the opaque id ONLY, and always rendered alongside that id — never instead of it, so
+  // it can't be read as the visitor's actual name (see lib/visitorAlias.js).
+  const alias = visitorAlias(summary.profileId || visitorId)
+
+  // Activity grid + the honest window behind it. The journey read is ASC LIMIT 500, so a
+  // visitor over the cap is missing their MOST RECENT events, not their oldest.
+  const activity = buildActivityGrid(allEvents)
+  const historyTruncated = activity.truncated
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex justify-end" onClick={onClose}>
@@ -192,8 +203,15 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
         {/* ── Header ── */}
         <div className="px-6 py-4 border-b border-gray-100 dark:border-dark-border flex items-center justify-between flex-shrink-0 bg-gray-50/50 dark:bg-dark-bg/50">
           <div>
-            <h2 className="text-base font-bold text-st-black dark:text-dark-primary">Visitor Journey</h2>
-            <p className="text-xs text-st-gray dark:text-gray-400 font-mono mt-0.5">{shortId}</p>
+            <h2 className="text-base font-bold text-st-black dark:text-dark-primary">
+              {alias || 'Visitor Journey'}
+            </h2>
+            {/* The raw id stays on screen next to the alias — the alias is a generated
+                reference for an anonymous visitor, not a name, and hiding the id behind it
+                would let it read as one. */}
+            <p className="text-xs text-st-gray dark:text-gray-400 font-mono mt-0.5" title="Anonymous visitor ID">
+              {shortId}
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -261,7 +279,16 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                   <div className="mt-1 flex items-center gap-2.5">
                     <VisitorAvatar shortId={shortId} status={statusValue} />
                     <div className="min-w-0">
-                      <h3 className="text-lg font-bold text-st-black dark:text-dark-primary font-mono break-all leading-tight">{shortId}</h3>
+                      {alias ? (
+                        <>
+                          <h3 className="text-lg font-bold text-st-black dark:text-dark-primary leading-tight truncate" title="Generated reference for this anonymous visitor — not a real name">
+                            {alias}
+                          </h3>
+                          <p className="text-[11px] text-st-gray dark:text-gray-400 font-mono break-all leading-tight">{shortId}</p>
+                        </>
+                      ) : (
+                        <h3 className="text-lg font-bold text-st-black dark:text-dark-primary font-mono break-all leading-tight">{shortId}</h3>
+                      )}
                       {summary.userId && (
                         <p className="mt-0.5 text-xs text-st-gray dark:text-gray-400 break-all">
                           User ID: <span className="font-mono">{shortIdentifier(summary.userId)}</span>
@@ -299,6 +326,11 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                   <JourneyStat label="Revenue" value={summary.conversionValue > 0 ? `$${safeNumber(summary.conversionValue, 0).toFixed(0)}` : '—'} />
                   <JourneyStat label="Duration" value={summary.journeyDuration} />
                 </div>
+
+                {/* Visit frequency over ~6 months. Hidden entirely when there is nothing
+                    measured to show — an all-empty grid is not a calm empty state, it is a
+                    wall of squares asserting six months of inactivity (§6). */}
+                {activity.activeDays > 0 && <ActivityGrid activity={activity} />}
 
                 {/* Activity and attribution */}
                 <div className="bg-white dark:bg-dark-card rounded-xl p-4 shadow-sm space-y-2">
@@ -406,6 +438,35 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                   <p className="text-sm text-st-gray dark:text-gray-400 py-8 text-center">No events match this filter.</p>
                 ) : (
                   <div className="space-y-2 overflow-y-auto flex-1">
+                    {/* START-OF-HISTORY marker. Sessions render oldest-first, so the top of this
+                        list IS the beginning of what we hold.
+
+                        Why the claim is safe: the journey read is `ORDER BY timestamp ASC
+                        LIMIT 500`, so the response always contains a visitor's OLDEST events —
+                        truncation clips the RECENT end, never this one. The nightly retention
+                        purge deletes Supabase rows and free-tier `pageviews`, neither of which
+                        is the Tinybird events store this reads, so nothing earlier has been
+                        quietly aged out either. If a TTL is ever added to that store, this
+                        message is the first thing that becomes a lie.
+
+                        Only under filter 'all': with a filter applied the first visible card is
+                        just the earliest MATCH, not the start of anything. */}
+                    {filter === 'all' && (
+                      <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-st-lime/10 dark:bg-st-lime/5 border border-st-lime/30">
+                        <span className="w-6 h-6 rounded-full bg-st-lime/40 flex items-center justify-center flex-shrink-0">
+                          <MapPin className="w-3 h-3 text-st-black" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-st-black dark:text-dark-primary">This is where their journey begins</p>
+                          {sessions[0]?.started_at && (
+                            <p className="text-[10px] text-st-gray dark:text-gray-400 mt-0.5">
+                              First seen {formatDateTime(sessions[0].started_at)}
+                              {summary.firstTouch ? ` · arrived via ${summary.firstTouch}` : ''}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     {sessions.map((session, sIdx) => {
                       const isOpen = expandedSessions[sIdx]
                       // $heartbeat is a page-exit beacon, not something the customer did — it has
@@ -629,6 +690,18 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                         </div>
                       )
                     })}
+                    {/* The other end. Without this the last card reads as "and that's the
+                        latest", which for a capped visitor is false — the events we are missing
+                        are precisely the most recent ones. */}
+                    {filter === 'all' && historyTruncated && (
+                      <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-dashed border-gray-300 dark:border-white/15">
+                        <AlertCircle className="w-3.5 h-3.5 text-st-gray dark:text-gray-400 flex-shrink-0 mt-0.5" />
+                        <p className="text-[10px] text-st-gray dark:text-gray-400 leading-normal">
+                          This visitor has more than {JOURNEY_EVENT_CAP} events. The timeline shows their
+                          earliest {JOURNEY_EVENT_CAP} — more recent activity exists but isn&apos;t loaded here.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -736,6 +809,81 @@ function AttributionTrail({ summary }) {
           </span>
         ))}
       </div>
+    </div>
+  )
+}
+
+// Intensity classes written as LITERAL strings — Tailwind's content scanner cannot see a class
+// built by interpolation, so a computed `bg-st-lime/${n}` would ship unstyled.
+const CELL_TONE = [
+  'bg-gray-100 dark:bg-white/[0.06]',   // 0 — measured, no activity
+  'bg-st-lime/30',
+  'bg-st-lime/50',
+  'bg-st-lime/75',
+  'bg-st-lime'
+]
+// UNKNOWN is deliberately not a lighter shade of the same ramp — it must not read as "less
+// activity". A hatched/outlined cell reads as "no data", which is what it is.
+const CELL_UNKNOWN = 'bg-transparent border border-dashed border-gray-300 dark:border-white/20'
+
+// GitHub-style contribution grid for one visitor. Every cell is one of three things and they
+// are visually distinct: measured activity, measured absence, and unknown (outside the window
+// the journey read actually returned). See lib/activityGrid.js for why that third state has to
+// exist at all.
+function ActivityGrid({ activity }) {
+  const { columns, truncated, activeDays, maxCount, knownThrough } = activity
+  return (
+    <div className="bg-white dark:bg-dark-card rounded-xl p-4 shadow-sm">
+      <div className="flex items-baseline justify-between gap-2 mb-2">
+        <p className="text-xs font-semibold text-st-black dark:text-dark-primary">Activity</p>
+        <p className="text-[10px] text-st-gray dark:text-gray-400">
+          {activeDays} active {activeDays === 1 ? 'day' : 'days'}
+        </p>
+      </div>
+
+      <div className="flex gap-[2px] overflow-x-auto pb-1">
+        {columns.map((col, ci) => (
+          <div key={ci} className="flex flex-col gap-[2px]">
+            {col.map((cell) => {
+              if (cell.future) {
+                // Not yet happened. Occupies the slot so the grid keeps its shape, draws nothing.
+                return <div key={cell.date} className="w-[9px] h-[9px] rounded-[2px]" />
+              }
+              const known = cell.known
+              const tone = known ? CELL_TONE[intensity(cell.count, maxCount)] : CELL_UNKNOWN
+              const title = known
+                ? `${cell.date} — ${cell.count} ${cell.count === 1 ? 'event' : 'events'}`
+                : `${cell.date} — not loaded (beyond the ${JOURNEY_EVENT_CAP}-event window)`
+              return (
+                <div
+                  key={cell.date}
+                  title={title}
+                  className={`w-[9px] h-[9px] rounded-[2px] ${tone}`}
+                />
+              )
+            })}
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between gap-2 mt-2">
+        <p className="text-[10px] text-st-gray dark:text-gray-400">~{Math.round(GRID_WEEKS / 4.345)} months</p>
+        <div className="flex items-center gap-1">
+          <span className="text-[9px] text-st-gray dark:text-gray-400">Less</span>
+          {CELL_TONE.map((t, i) => <span key={i} className={`w-[9px] h-[9px] rounded-[2px] ${t}`} />)}
+          <span className="text-[9px] text-st-gray dark:text-gray-400">More</span>
+        </div>
+      </div>
+
+      {/* Truncation is stated, not implied. Without this the dashed cells read as a rendering
+          quirk rather than "we did not load this". */}
+      {truncated && (
+        <p className="text-[10px] text-st-gray dark:text-gray-400 mt-2 leading-normal border-t border-gray-100 dark:border-dark-border pt-2">
+          <span className="inline-block w-[9px] h-[9px] rounded-[2px] align-middle mr-1 border border-dashed border-gray-300 dark:border-white/20" />
+          This visitor has more than {JOURNEY_EVENT_CAP} events. Activity is measured through{' '}
+          <span className="font-medium">{knownThrough}</span>; later days aren&apos;t loaded and are shown as unknown, not as zero.
+        </p>
+      )}
     </div>
   )
 }

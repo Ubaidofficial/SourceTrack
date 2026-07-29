@@ -33,6 +33,9 @@ import DataRow from '../components/DataRow'
 import RealtimeVisitors from '../components/RealtimeVisitors'
 import { safeNumber } from '../utils/numbers'
 import { useDashboardData, MODELS, TIME_RANGES } from '../hooks/useDashboardData'
+import { selectOverviewKpis } from '../lib/overviewKpis'
+import { buildTrendMarkers } from '../lib/trendMarkers'
+import { CHART_COLORS } from '../utils/chartTooltip'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
@@ -98,6 +101,73 @@ export default function Dashboard() {
   const revenuePerVisitor = hasConversions && totalRevenue > 0 && rpvVisitors > 0
     ? totalRevenue / rpvVisitors
     : null
+
+  // Overview KPI tiles, chosen by business type and gated on real data availability.
+  // See dashboard/src/lib/overviewKpis.js for the per-slot rules and the design-spec
+  // deviation note — the selection logic lives there so api/tests can pin it.
+  const overviewTiles = selectOverviewKpis({
+    businessType: overview?.business_type || site?.business_type,
+    kpis, totalRevenue, totalConversions, totalLeads, leadsTracked, totalCustomers,
+    revenueDelta, leadsDelta, customersDelta, avgValue,
+    leadConvRate, customerConvRate, revenuePerVisitor,
+    activeResults, aiSourceRows
+  })
+
+  // Real event markers plotted ON the trend line at the day each conversion happened, instead
+  // of only in the Recent Conversions table below. lib/trendMarkers.js documents why the marker
+  // set is derived from the COMPLETE trend buckets rather than from recentConversions (capped
+  // at 20 server-side, so it would leave real events unmarked).
+  const trendBase = hasRevenue ? revTrendData : channelTrendData
+  const trendBaseRows = hasRevenue ? revTooltipRows : convTooltipRows
+  const trendMarkers = buildTrendMarkers({
+    labels: trendBase.labels,
+    values: trendBase.datasets[0]?.data || [],
+    buckets: channelTrendResults,
+    conversions: recentConversions || [],
+    timezone: site?.timezone || 'UTC'
+  })
+  // Overlay dataset: same label positions, y pinned to the line so a marker sits ON it. Points
+  // with no event are null (a gap, drawn as nothing) rather than 0 — a 0 would stack markers
+  // along the axis on every quiet day (§6).
+  const trendData = trendMarkers.total > 0
+    ? {
+        ...trendBase,
+        datasets: [
+          ...trendBase.datasets,
+          {
+            label: 'Conversion events',
+            data: trendMarkers.data,
+            showLine: false,
+            spanGaps: false,
+            backgroundColor: CHART_COLORS.lime,
+            borderColor: 'rgba(17,24,39,1)',
+            borderWidth: 1.5,
+            pointRadius: trendMarkers.radii,
+            pointHoverRadius: trendMarkers.radii.map(r => (r > 0 ? r + 2 : 0)),
+            pointStyle: 'circle'
+          }
+        ]
+      }
+    : trendBase
+  // Tooltip gains the marker detail for days that have one; every other day is unchanged.
+  const trendTooltipRows = (i) => {
+    const rows = trendBaseRows(i) || []
+    const m = trendMarkers.meta[i]
+    if (!m) return rows
+    const detail = m.items.map((c) => ({
+      label: c.conversion_type || 'Conversion',
+      value: safeNumber(c.conversion_value, 0) > 0
+        ? `$${safeNumber(c.conversion_value, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+        : (c.first_touch_source || 'Direct')
+    }))
+    return [
+      ...rows,
+      { label: m.count === 1 ? '1 conversion' : `${m.count} conversions`, value: '', accent: true },
+      ...detail,
+      // Says so rather than implying the three rows above are the whole day.
+      ...(m.detailPartial ? [{ label: `Showing ${m.items.length} of ${m.count}`, value: '' }] : [])
+    ]
+  }
 
   // Bar scales for the DataRow panels. Same rows and same values as before — a bar length is
   // relative to the largest row on screen, so the max is computed over exactly what is rendered.
@@ -312,82 +382,36 @@ export default function Dashboard() {
                 <>
                   {/* KPI Strip. Rendered as ONE divided strip rather than separate shadowed boxes,
                       which is the treatment the Analytics page already uses and the main reason the
-                      two pages read as different products. Same tiles, same data, same §6
-                      empty-state behavior — only the chrome changed.
+                      two pages read as different products.
 
-                      DESIGN-SPEC DEVIATION, deliberate and founder-directed: design.md §8.2 says
-                      "Overview shows max 3 KPIs" and "Secondary KPIs appear in deeper tabs or
-                      Report Builder". The revenue branch below now renders a FOURTH tile,
-                      Rev / Visitor. Flagged on the PR rather than silently reconciled (CLAUDE.md
-                      §12). It only appears when there is real revenue AND a real visitor
-                      denominator, so the non-revenue branch and every empty state still show 3. */}
-                  <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-gray-100 dark:divide-dark-border overflow-hidden shadow-sm">
-                {hasRevenue ? (
-                  <>
-                    <MetricTile
-                      flush
-                      label="Revenue"
-                      value={totalRevenue}
-                      format="currency"
-                      trend={revenueDelta?.pct}
-                      sub={avgValue > 0 ? `Avg value: $${avgValue.toFixed(2)}` : null}
-                    />
-                    <MetricTile
-                      flush
-                      label="Leads"
-                      value={leadsTracked ? totalLeads : null}
-                      isEmpty={!leadsTracked}
-                      emptyReason="No lead events tracked for this site"
-                      trend={leadsTracked ? leadsDelta?.pct : null}
-                      sub={leadsTracked && leadConvRate > 0 ? `${leadConvRate.toFixed(1)}% conversion rate` : null}
-                    />
-                    <MetricTile
-                      flush
-                      label="Customers"
-                      value={totalCustomers}
-                      trend={customersDelta?.pct}
-                      sub={customerConvRate > 0 ? `${customerConvRate.toFixed(1)}% conversion rate` : null}
-                    />
-                    {/* Fourth tile — see the design-spec note on the strip above. Null when there
-                        is no honest number, and MetricTile renders nothing meaningful for null,
-                        so the strip falls back to the 3 the spec describes. */}
-                    {revenuePerVisitor != null && (
-                      <MetricTile
-                        flush
-                        label="Rev / Visitor"
-                        value={revenuePerVisitor}
-                        format="currency"
-                        sub="Revenue per unique visitor"
-                      />
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <MetricTile
-                      flush
-                      label="Total Leads"
-                      value={leadsTracked ? totalLeads : null}
-                      isEmpty={!leadsTracked}
-                      emptyReason="No lead events tracked for this site"
-                      trend={leadsTracked ? leadsDelta?.pct : null}
-                    />
-                    <MetricTile
-                      flush
-                      label="Customers"
-                      value={totalCustomers}
-                      trend={customersDelta?.pct}
-                    />
-                    <MetricTile
-                      flush
-                      label="Lead Conversion Rate"
-                      value={leadsTracked && totalLeads > 0 ? leadConvRate : null}
-                      format="percent"
-                      isEmpty={!leadsTracked || totalLeads === 0}
-                      emptyReason={leadsTracked ? 'Not yet tracked' : 'No lead events tracked for this site'}
-                    />
-                  </>
-                )}
-              </div>
+                      DESIGN-SPEC DEVIATION, deliberate and founder-directed: design.md §10.2 says
+                      "KPI Bar - full width, max 3 values" and §10.3 closes with "Overview shows
+                      only top 3 KPI slots by default". This strip now renders EVERY §10.3 slot
+                      that has real data behind it — treating the 3 as a floor worth exceeding
+                      where the data supports it, never as a target to pad up to. Flagged on the
+                      PR rather than silently reconciled (CLAUDE.md §12). Supersedes the earlier
+                      single-tile (Rev / Visitor) deviation noted here.
+
+                      Which slots survive is decided in lib/overviewKpis.js, not here — the
+                      selection is pure and pinned by api/tests/dashboard-overview-kpi-tiles.test.js.
+                      Every tile in this array already proved it has a real value, so none of them
+                      needs an isEmpty/emptyReason path: a slot with no data is ABSENT, not
+                      rendered as a dash (§6). The strip itself is hidden when nothing qualifies. */}
+                  {overviewTiles.length > 0 && (
+                    <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl flex flex-col md:flex-row flex-wrap divide-y md:divide-y-0 md:divide-x divide-gray-100 dark:divide-dark-border overflow-hidden shadow-sm">
+                      {overviewTiles.map((t) => (
+                        <MetricTile
+                          key={t.key}
+                          flush
+                          label={t.label}
+                          value={t.value}
+                          format={t.format}
+                          trend={t.trend ?? null}
+                          sub={t.sub ?? null}
+                        />
+                      ))}
+                    </div>
+                  )}
 
               {/* Realtime Visitors — see the note on the cold-start branch above. Same gate,
                   same position: directly under the KPI strip so the live feed leads. */}
@@ -423,8 +447,14 @@ export default function Dashboard() {
                 )}
               >
                 <div className="h-64">
-                  <Line data={hasRevenue ? revTrendData : channelTrendData} options={chartOpts(hasRevenue ? '$' : '', hasRevenue ? revTooltipRows : convTooltipRows)} />
+                  <Line data={trendData} options={chartOpts(hasRevenue ? '$' : '', trendTooltipRows)} />
                 </div>
+                {trendMarkers.total > 0 && (
+                  <p className="mt-2 text-[10px] text-st-gray dark:text-gray-400 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-st-lime border border-st-black/70 dark:border-white/70 flex-shrink-0" />
+                    Markers show days with conversions — hover for detail.
+                  </p>
+                )}
               </DashboardCard>
 
               {/* Top Sources & Recent Conversions */}
