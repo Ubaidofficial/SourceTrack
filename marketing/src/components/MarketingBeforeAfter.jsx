@@ -1,11 +1,17 @@
 import React, { useState } from 'react'
 import { comparisonDemoData } from '../lib/marketingDemoData'
 
+// title / subtitle / customData are OPTIONAL — each falls back to the active data set
+// just below. They were destructured bare, so tsc inferred them as required and flagged
+// all three call sites (/compare/ga4, /solutions/saas, /solutions/ecommerce), none of
+// which pass them. The explicit `= undefined` changes nothing at runtime — a missing key
+// already destructures to undefined — it just states the contract the code already has,
+// matching mode / showToggle / className, which were declared optional all along.
 export default function MarketingBeforeAfter({
   mode = 'default',
-  title,
-  subtitle,
-  customData,
+  title = undefined,
+  subtitle = undefined,
+  customData = undefined,
   showToggle = true,
   className = ''
 }) {
@@ -20,11 +26,21 @@ export default function MarketingBeforeAfter({
   return (
     <div className={`w-full ${className}`}>
       {/* Header section */}
+      {/* `text-st-black` was a DEAD class here, the same species of bug as the inert
+          className attributes: st-* are dashboard-only tokens and are not defined in the
+          marketing Tailwind theme, so the utility produced no colour at all. It went
+          unnoticed because every one of this component's three call sites sat in a
+          section whose dark background was itself inert — on the light page that showed
+          instead, the badge fell through to near-black and looked deliberate. With those
+          sections now actually dark, the badge inherited `text-white` onto its own light
+          pill (1.16:1) and the heading fell to the base h1-h6 `text-text` rule (1.07:1).
+          Both replaced with explicit colours. All three call sites are dark sections, so
+          light-on-dark is the whole contract, not a guess. */}
       <div className="text-center max-w-[760px] mx-auto mb-10 sm:mb-14">
-        <span className="inline-block px-3 py-1 text-xs font-black uppercase tracking-widest text-st-black bg-[#E8F0F0] rounded-full mb-3 border border-[#E5E7EB]">
+        <span className="inline-block px-3 py-1 text-xs font-black uppercase tracking-widest text-[#0F1012] bg-[#E8F0F0] rounded-full mb-3 border border-[#E5E7EB]">
           Attribution comparison
         </span>
-        <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-st-black tracking-[-0.05em] leading-[1.05]">
+        <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-[-0.05em] leading-[1.05]">
           {displayTitle}
         </h2>
         <p className="mt-3 text-sm sm:text-base text-[#586464] font-medium leading-relaxed">
