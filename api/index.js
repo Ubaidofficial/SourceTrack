@@ -547,6 +547,82 @@ if (process.env.ST_IP_DIAGNOSTIC_SECRET) {
   })
 }
 
+// Escapes attacker-controlled header values before they are interpolated into the
+// diagnostic HTML below. Referer and User-Agent are fully caller-controlled, so raw
+// interpolation would be reflected XSS.
+function escapeHtml(value) {
+  if (value === null || value === undefined) return ''
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+// Temporary AI-referrer benchmark route. Echoes the caller's OWN Referer/User-Agent
+// back to them, so a real click from an AI app (ChatGPT iOS, Perplexity, …) can be
+// inspected. It returns no tenant, site_key, or server-side data — only the request
+// headers the caller already sent.
+//
+// Unlike /api/diag/ip this takes no per-request secret, deliberately: the link is
+// clicked from inside a third-party app that cannot attach a header, and a secret in
+// the query string would land in access logs, browser history, and the onward Referer.
+// The env flag IS the gate — leave ST_AI_DIAGNOSTIC_ENABLED unset except during a run,
+// and unset it again afterwards (same lifecycle as ST_IP_DIAGNOSTIC_SECRET above).
+if (process.env.ST_AI_DIAGNOSTIC_ENABLED === 'true') {
+  app.get('/api/diag/ai-test/:label', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow')
+
+    const referrer = req.headers.referer || req.headers.referrer || null
+    const userAgent = req.headers['user-agent'] || null
+    const timestamp = new Date().toISOString()
+    const label = req.params.label
+
+    logInfo('ai_test_click', { label, timestamp, referrer, userAgent })
+
+    if (req.query.format === 'json') {
+      return res.json({
+        success: true,
+        data: { label, timestamp, referrer, user_agent: userAgent },
+        error: null
+      })
+    }
+
+    const safeLabel = escapeHtml(label)
+    const safeReferrer = referrer ? escapeHtml(referrer) : null
+    const safeUserAgent = userAgent ? escapeHtml(userAgent) : null
+
+    return res.status(200).send(`<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>AI Click Test: ${safeLabel}</title>
+  </head>
+  <body style="font-family: system-ui, -apple-system, sans-serif; padding: 2rem; background: #0f172a; color: #f8fafc; max-width: 600px; margin: 0 auto; line-height: 1.5;">
+    <h2 style="color: #38bdf8;">SourceTrack AI Click Harness</h2>
+    <div style="background: #1e293b; padding: 1.25rem; border-radius: 0.5rem; border: 1px solid #334155;">
+      <p style="margin-top: 0;"><strong>Test Label:</strong> <span style="color: #f1f5f9;">${safeLabel}</span></p>
+      <p><strong>Timestamp:</strong> ${timestamp}</p>
+      <p><strong>Referrer Header Captured:</strong><br>
+        <code style="display: inline-block; margin-top: 4px; padding: 6px 10px; border-radius: 4px; background: #0f172a; color: ${safeReferrer ? '#4ade80' : '#f87171'}; font-weight: bold;">
+          ${safeReferrer || 'NONE (stripped / empty)'}
+        </code>
+      </p>
+      <p style="margin-bottom: 0;"><strong>User-Agent Captured:</strong><br>
+        <code style="display: block; margin-top: 4px; padding: 6px 10px; border-radius: 4px; background: #0f172a; color: #cbd5e1; font-size: 12px; word-break: break-all;">
+          ${safeUserAgent || 'NONE'}
+        </code>
+      </p>
+    </div>
+  </body>
+</html>`)
+  })
+}
+
 // 7. Health check
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() })
