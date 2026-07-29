@@ -1,0 +1,59 @@
+# SourceTrack — AI / crawler visibility (bot fetches of customer pages).
+#
+# DELIBERATELY SEPARATE FROM `events`. A crawler fetch is not a visit: writing
+# these rows into `events` would put them inside every visitor, session, top-page
+# and attribution aggregate that reads that table. Keeping bots OUT of `events`
+# is the entire reason api/lib/bot-filter.js drops JS-rendering search bots at
+# ingestion (incident 2026-07-14); this datasource must not reintroduce the
+# pollution through the back door. Nothing here joins to `events`.
+#
+# Not a revenue rail: no conversion_value, no currency, no attribution columns.
+# A crawler hit can never become revenue and must never be summed as such (§6).
+#
+# PRIVACY (§6, §6.5): no raw IP column, by design. The request IP is an INPUT to
+# verification (api/lib/ai-crawler-detect.js) and is discarded at ingest — only
+# the resulting verdict is stored. No visitor_id / distinct_id / anonymous_id:
+# a bot is not a person, so nothing here is subject-linkable, which is also why
+# this table is intentionally OUTSIDE the three GDPR paths (no PII column exists
+# to erase). site_id keeps it tenant-scoped; site_key is never stored (§6.5).
+#
+# MergeTree, append-only, same as `events`.
+
+TOKEN "dual_write_append" APPEND
+
+SCHEMA >
+    `site_id` String `json:$.site_id`,
+    `timestamp` DateTime64(3, 'UTC') `json:$.timestamp` CODEC(DoubleDelta, ZSTD(1)),
+
+    # Identity of the crawler, straight from the ai-crawler-detect registry.
+    `bot_name` LowCardinality(String) `json:$.bot_name`,
+    `operator` LowCardinality(String) `json:$.operator`,
+    # llm_crawler | ai_search | ai_assistant | search_engine | seo_tool
+    `category` LowCardinality(String) `json:$.category`,
+
+    # HOW MUCH THE ROW CAN BE TRUSTED — a first-class stored column, not a
+    # runtime inference. Values (api/lib/ai-crawler-detect.js VERIFICATION):
+    #   ip_verified                  — UA matched AND source IP fell inside the
+    #                                  operator's published range.
+    #   ip_mismatch                  — UA claimed this bot from OUTSIDE the
+    #                                  published range. An impersonation signal;
+    #                                  must never be counted as the real bot.
+    #   ua_only                      — operator publishes ranges but no check was
+    #                                  possible for this request.
+    #   ua_only_no_ranges_published  — operator publishes nothing; UA match is the
+    #                                  strongest signal that will ever exist.
+    # Stored per row so a reader can never present a UA-only count as verified.
+    `verification` LowCardinality(String) `json:$.verification`,
+
+    # Which page the crawler fetched, and what the origin answered. Path only —
+    # query strings are stripped at ingest so no UTM/PII rides along.
+    `path` String `json:$.path`,
+    `status_code` UInt16 `json:$.status_code`,
+
+    # Where the observation came from, so coverage gaps are legible in the data
+    # rather than assumed: edge_middleware | cdn_log | origin_log | server_api.
+    `collection_source` LowCardinality(String) `json:$.collection_source`
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
+ENGINE_SORTING_KEY "site_id, timestamp, bot_name"

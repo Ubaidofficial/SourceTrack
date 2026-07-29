@@ -1,0 +1,42 @@
+DESCRIPTION >
+    AI Visibility — "Agents" view. Which crawlers fetched this site, how often,
+    and how well each count is verified. Tenant-scoped; prunes via
+    (site_id, timestamp), matching the datasource sorting key.
+
+    Verification is NOT collapsed into a single "verified" number. Each row
+    carries the counts split by verification state so the UI can render a
+    UA-only count differently from an IP-verified one, per the requirement that
+    the distinction live in the data model rather than in a reader's head.
+
+    ip_mismatch is reported SEPARATELY and is excluded from `hits`: a request
+    claiming to be GPTBot from outside OpenAI's published ranges is evidence of
+    impersonation, not evidence of GPTBot, and adding it to the bot's total
+    would overstate exactly the number the report exists to answer.
+
+    NOT YET DEPLOYED — Tinybird pipe deploys are founder-gated (CLAUDE.md §8)
+    and `tb --cloud deploy --check` is the mandatory pre-deploy gate. This file
+    has NOT been run against a workspace.
+
+NODE crawler_agents_node
+SQL >
+    %
+    SELECT
+        bot_name,
+        operator,
+        category,
+        countIf(verification != 'ip_mismatch')                     AS hits,
+        countIf(verification = 'ip_verified')                      AS hits_ip_verified,
+        countIf(verification = 'ua_only')                          AS hits_ua_only,
+        countIf(verification = 'ua_only_no_ranges_published')      AS hits_ua_only_no_ranges,
+        countIf(verification = 'ip_mismatch')                      AS hits_ip_mismatch,
+        uniq(path)                                                 AS unique_paths,
+        max(timestamp)                                             AS last_seen
+    FROM crawler_hits
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND timestamp >= {{ DateTime(from_ts, required=True) }}
+      AND timestamp <= {{ DateTime(to_ts, required=True) }}
+    GROUP BY bot_name, operator, category
+    ORDER BY hits DESC
+    LIMIT 200
+
+TYPE endpoint
