@@ -3,6 +3,7 @@ import Base from "@/layouts/Base.astro";
 import Hero from "@/components/Hero.astro";
 import Statistics from "@/components/Statistics";
 import CallToAction from "@/partials/CallToAction.astro";
+import DirectRescueShowcase from "@/partials/DirectRescueShowcase.astro";
 import FAQ from "@/partials/FAQ";
 import Integration from "@/partials/Integration";
 import JourneyShowcase from "@/partials/JourneyShowcase.astro";
@@ -60,6 +61,7 @@ const faqSchema = {
   <Statistics data={statistics} client:visible />
   <WhyChooseUs data={whyChooseUs} />
   <JourneyShowcase />
+  <DirectRescueShowcase />
   <Integration data={integration} client:visible />
   <Pricing data={pricing} client:visible />
   <FAQ data={faq} client:visible />
