@@ -17,9 +17,9 @@
     "blog_folder": "blog"
   },
   "params": {
-    "contact_form_action": "#",
+    "contact_form_action": "https://api.srctk.com/api/marketing/submissions",
     "apply_form_action": "#",
-    "newsletter_form_action": "#",
+    "newsletter_form_action": "https://api.srctk.com/api/marketing/submissions",
     "footer_text": "Founder-simple attribution. Know which sources, search queries, and AI tools bring your leads and revenue.",
     "mail": "support@sourcetrack.ai",
     "phone": "",

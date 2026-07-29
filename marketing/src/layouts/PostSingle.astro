@@ -155,6 +155,7 @@ if (headings) {
                 Subscribe for newsletter
               </h3>
               <form
+                id="newsletter-form"
                 class="flex flex-col gap-4"
                 method="POST"
                 action={config.params.newsletter_form_action}
@@ -162,14 +163,25 @@ if (headings) {
                 <div class="relative">
                   <input
                     type="email"
+                    name="email"
                     placeholder="Email"
                     required
                     class="w-full px-7.5 py-3 bg-transparent border border-border/6 rounded-[120px] font-primary font-normal text-[16px] text-text placeholder:text-gray focus:outline-none focus:border-primary/50 transition-colors duration-200"
                   />
                 </div>
-                <button class="w-full px-7.5 py-3.5 btn btn-primary"
-                  >Subscribe</button
+                <button
+                  id="newsletter-submit"
+                  type="submit"
+                  class="w-full px-7.5 py-3.5 btn btn-primary disabled:opacity-50">Subscribe</button
                 >
+                <!-- Real outcome. Populated ONLY by an actual server response. -->
+                <p
+                  id="newsletter-status"
+                  class="font-primary text-sm hidden"
+                  role="status"
+                  aria-live="polite"
+                >
+                </p>
               </form>
             </div>
           </div>
@@ -213,3 +225,58 @@ if (headings) {
     </section>
   )
 }
+
+<script>
+  // Previously this form POSTed to action="#" and its email input had NO `name`
+  // attribute — so the address was never serialized, the page simply reloaded,
+  // the field cleared, and the visitor read that as a successful subscription.
+  // Nothing was ever sent or stored. It now posts JSON to the real API and
+  // reports the ACTUAL outcome; a failure is shown as a failure.
+  const form = document.getElementById("newsletter-form") as HTMLFormElement | null;
+  const submitBtn = document.getElementById("newsletter-submit") as HTMLButtonElement | null;
+  const status = document.getElementById("newsletter-status") as HTMLElement | null;
+
+  if (form && submitBtn && status) {
+    const showStatus = (message: string, ok: boolean) => {
+      status.textContent = message;
+      status.classList.remove("hidden", "text-primary", "text-red-400");
+      status.classList.add(ok ? "text-primary" : "text-red-400");
+    };
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = new FormData(form).get("email");
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Subscribing…";
+      status.classList.add("hidden");
+
+      try {
+        const res = await fetch(form.action, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind: "newsletter", email }),
+        });
+        const body = await res.json().catch(() => null);
+
+        if (res.ok && body?.success) {
+          form.reset();
+          showStatus("You're subscribed — thanks!", true);
+        } else {
+          showStatus(
+            body?.error || "Subscription failed. Please try again.",
+            false,
+          );
+        }
+      } catch {
+        showStatus(
+          "Could not reach the server, so you were not subscribed. Please try again.",
+          false,
+        );
+      } finally {
+        submitBtn.textContent = "Subscribe";
+        submitBtn.disabled = false;
+      }
+    });
+  }
+</script>
