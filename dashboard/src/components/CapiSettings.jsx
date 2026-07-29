@@ -5,9 +5,12 @@ import { fetchApi } from '../lib/api'
 // Minimal functional CAPI config surface (Phase 2). Per-platform: connect a
 // server-side conversion API token, see connected state + last delivery,
 // disconnect. Tokens are write-only — never returned by the API.
+// Keys MUST match CAPI_PLATFORMS in api/routes/capi.js — the key is the URL segment.
 const PLATFORMS = [
   { key: 'meta',   label: 'Meta CAPI',     tokenLabel: 'Access token',     idFields: [{ name: 'pixel_id', label: 'Pixel ID' }] },
-  { key: 'google', label: 'Google Ads',    tokenLabel: 'Developer token',  idFields: [{ name: 'customer_id', label: 'Customer ID' }, { name: 'conversion_action_id', label: 'Conversion action ID' }] }
+  { key: 'google', label: 'Google Ads',    tokenLabel: 'Developer token',  idFields: [{ name: 'customer_id', label: 'Customer ID' }, { name: 'conversion_action_id', label: 'Conversion action ID' }] },
+  { key: 'ga4',    label: 'Google Analytics 4', tokenLabel: 'API secret',  idFields: [{ name: 'measurement_id', label: 'Measurement ID' }] },
+  { key: 'tiktok', label: 'TikTok',        tokenLabel: 'Access token',     idFields: [{ name: 'pixel_code', label: 'Pixel Code' }] }
 ]
 
 function timeAgo(iso) {

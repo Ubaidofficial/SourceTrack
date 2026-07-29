@@ -18,14 +18,19 @@ import { encryptCapiToken } from '../lib/conversion-sync.js'
 const router = Router()
 
 // Per-platform column map. tokenCol holds the (encrypted) secret; idCols are the
-// non-secret identifiers shown back in status. Meta + Google forward LIVE via the
-// conversion fan-out (dispatchCapi). TikTok is intentionally absent: it has no
-// columns on prod and no forwarding wiring (#57), so it will ship later as one
-// complete unit (column + config + forwarding) rather than a config card that
-// saves a token but never forwards.
+// non-secret identifiers shown back in status. Every platform listed here forwards
+// LIVE via the conversion fan-out (dispatchCapi) — a platform belongs here only
+// once its column, config card AND forwarding wiring all exist, never as a config
+// card that saves a token but never forwards.
+//
+// Microsoft + LinkedIn remain absent DELIBERATELY: their senders exist and are in
+// the fan-out, but no columns are configurable here, so they stay stillborn until
+// separately finished (KNOWN_ISSUES "Dead CAPI senders"). Not widened by this PR.
 export const CAPI_PLATFORMS = {
   meta:   { tokenCol: 'meta_capi_token',           idCols: { pixel_id: 'meta_pixel_id' } },
-  google: { tokenCol: 'google_ads_developer_token', idCols: { customer_id: 'google_ads_customer_id', conversion_action_id: 'google_ads_conversion_action_id' } }
+  google: { tokenCol: 'google_ads_developer_token', idCols: { customer_id: 'google_ads_customer_id', conversion_action_id: 'google_ads_conversion_action_id' } },
+  ga4:    { tokenCol: 'ga4_api_secret',             idCols: { measurement_id: 'ga4_measurement_id' } },
+  tiktok: { tokenCol: 'tiktok_capi_token',          idCols: { pixel_code: 'tiktok_pixel_code' } }
 }
 
 const enforceCapi = (req, res, next) => {
