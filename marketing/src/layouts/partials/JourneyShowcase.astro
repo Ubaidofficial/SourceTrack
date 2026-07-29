@@ -1,0 +1,31 @@
+---
+// Section wrapper for the second product surface. Follows the same section conventions as
+// the rest of the homepage (main-container > container > container-padding-*, badge + h2)
+// so the vertical rhythm matches its neighbours.
+import JourneyMockup from "@/components/JourneyMockup.astro";
+---
+
+<section class="relative overflow-hidden">
+  <div class="main-container">
+    <div class="container">
+      <div class="container-padding-y container-padding-x">
+        <div class="mb-10 text-center">
+          <div class="bg-gradient-primary p-px inline-block rounded-full mb-2">
+            <div class="bg-gradient-black-grid px-4 py-1.5 rounded-full">
+              <span class="gradient-text-primary">Visitor Journey</span>
+            </div>
+          </div>
+          <h2 class="text-h2 font-medium lg:w-3/5 mx-auto">
+            Every conversion opens up into the path that produced it
+          </h2>
+          <p class="text-lg mt-4 lg:w-3/5 mx-auto">
+            Sessions, sources and the exact page where the money landed — so an attribution
+            number is something you can audit, not something you have to trust.
+          </p>
+        </div>
+
+        <JourneyMockup />
+      </div>
+    </div>
+  </div>
+</section>
