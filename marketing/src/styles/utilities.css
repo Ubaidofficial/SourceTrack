@@ -49,19 +49,6 @@
   );
 }
 
-@utility gradient-text-hero {
-  background: linear-gradient(
-    270deg,
-    var(--color-light) 2.46%,
-    #bc88ff 50.39%,
-    var(--color-light) 98.32%
-  );
-
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-
 @utility gradient-text-primary {
   background: linear-gradient(
     90deg,
