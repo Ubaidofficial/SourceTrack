@@ -75,10 +75,10 @@
   -webkit-text-fill-color: transparent;
 }
 
-@utility bg-radial-purple-dark {
+@utility bg-radial-accent-dark {
   background: radial-gradient(
     163.24% 100% at 50% 100%,
-    rgba(232, 124, 255, 0.3) 0%,
+    rgba(200, 240, 0, 0.3) 0%,
     rgba(25, 20, 29, 0.3) 42.49%
   );
 }
