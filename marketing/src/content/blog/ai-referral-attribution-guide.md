@@ -8,7 +8,6 @@ category: "Attribution"
 author:
   name: "SourceTrack Team"
   designation: "Attribution & Growth Engineering"
-  avatar: "/images/avatars/avatar-1.jpg"
 featured: true
 draft: false
 ---

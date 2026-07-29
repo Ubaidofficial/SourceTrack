@@ -2,7 +2,6 @@
 import AnimatedButton from "@/components/AnimatedButton.astro";
 import HeroShape from "@/components/shape/HeroShape";
 import { markdownify } from "@/lib/utils/textConverter";
-import ImageMod from "./ImageMod.astro";
 import DashboardMockup from "./DashboardMockup.astro";
 interface Props {
   data: any;
@@ -24,21 +23,16 @@ const { data } = Astro.props;
                 id="hero-badge"
                 class="bg-gradient-secondary p-px rounded-full mb-2"
               >
-                <div class="px-1.5 py-1.75 bg-gradient-black-grid rounded-full flex items-center gap-2.5">
-                  <ul class="flex">
-                    {data.badge.images.map((src: string) => (
-                      <li class="border border-secondary rounded-full -mr-2 last:mr-0 size-6">
-                        <ImageMod
-                          src={src}
-                          alt="avatar"
-                          width={24}
-                          height={24}
-                          class="rounded-full object-cover size-full"
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                  <p class="gradient-text-primary pr-3">{data.badge.label}</p>
+                {/* Text-only pill. This used to lead with a cluster of three stock faces
+                    (avatars/avatar-1..3) presented as social proof for a product with five
+                    attributed conversions — invented people vouching for it. The rendering
+                    path is removed rather than emptied, and the `images` key is gone from the
+                    content file, so it cannot be repopulated with another stock set.
+                    The asymmetric px-1.5/pr-3 padding existed only to sit tight against those
+                    avatars; without them the pill takes the same symmetric padding as every
+                    other badge on the site (see Badge.astro). */}
+                <div class="px-4 py-1.5 bg-gradient-black-grid rounded-full flex items-center">
+                  <p class="gradient-text-primary">{data.badge.label}</p>
                 </div>
               </div>
             )

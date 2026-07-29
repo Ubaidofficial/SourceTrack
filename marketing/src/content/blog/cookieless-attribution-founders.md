@@ -8,7 +8,6 @@ category: "Privacy & Data"
 author:
   name: "SourceTrack Team"
   designation: "Attribution & Growth Engineering"
-  avatar: "/images/avatars/avatar-2.jpg"
 featured: true
 draft: false
 ---
