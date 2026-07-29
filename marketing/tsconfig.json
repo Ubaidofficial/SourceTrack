@@ -12,7 +12,16 @@
     "incremental": true,
     "allowSyntheticDefaultImports": true,
     "paths": {
-      "@/components/*": ["./src/layouts/components/*"],
+      "_comment_components": [
+        "Two entries, tried in order, because @/components/ genuinely spans two",
+        "directories: most components live in src/layouts/components/, but the two",
+        "React islands (MarketingBeforeAfter, MarketingInteractiveDemo) live in",
+        "src/components/. The bundler already resolved both — Astro falls through to",
+        "the @/* rule below — so the pages built and rendered fine while tsc, which",
+        "stopped at the single first mapping, reported 4 ts(2307) 'Cannot find module'",
+        "errors. This makes tsc resolve what the bundler resolves."
+      ],
+      "@/components/*": ["./src/layouts/components/*", "./src/components/*"],
       "@/shortcodes/*": ["./src/layouts/shortcodes/*"],
       "@/helpers/*": ["./src/layouts/helpers/*"],
       "@/partials/*": ["./src/layouts/partials/*"],

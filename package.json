@@ -15,6 +15,7 @@
     "qa:attribution": "node scripts/qa-attribution-harness.mjs && node scripts/qa-attribution-integration.mjs",
     "qa:env-safety": "node scripts/qa-env-safety.mjs && npm run qa:secrets",
     "qa:secrets": "node scripts/check-secret-safety.js",
+    "qa:marketing:html": "node scripts/qa-marketing-html.mjs marketing/dist",
     "qa:static": "npm run qa:env-safety && node scripts/qa-release-readiness.mjs && node scripts/qa-static-launch-check.mjs",
     "qa:smoke": "node scripts/qa-runtime-smoke.mjs",
     "qa:edge": "node scripts/qa-edge-cases.mjs",
