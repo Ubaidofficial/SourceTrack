@@ -1,5 +1,14 @@
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { comparisonDemoData } from '../lib/marketingDemoData'
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion'
+
+// How long each vertical stays on screen before the next one. Long on purpose: the card
+// is dense (a full touchpoint chain plus three UTM fields), and anything under ~5s turns
+// reading into chasing.
+const CYCLE_MS = 7000
+// Cross-fade on swap. Short enough not to read as an effect, long enough that the two
+// data sets do not appear to teleport into each other.
+const FADE_MS = 160
 
 // title / subtitle / customData are OPTIONAL — each falls back to the active data set
 // just below. They were destructured bare, so tsc inferred them as required and flagged
@@ -16,6 +25,72 @@ export default function MarketingBeforeAfter({
   className = ''
 }) {
   const [selectedMode, setSelectedMode] = useState(mode)
+  const prefersReducedMotion = usePrefersReducedMotion()
+
+  // The auto-cycle exists to show that the SAME comparison holds for a second vertical
+  // without the visitor having to discover the pills. It is therefore only meaningful
+  // where the pills are actually offered: /compare/ga4. The two /solutions pages pass
+  // showToggle={false} and a fixed mode BECAUSE that page is about one vertical —
+  // rotating it there would argue against the page it sits on.
+  const canCycle = showToggle && !customData
+
+  const [pinned, setPinned] = useState(false)   // visitor picked a side; stop for good
+  const [hovered, setHovered] = useState(false) // pause while being read
+  const [onScreen, setOnScreen] = useState(false)
+  const [swapping, setSwapping] = useState(false)
+
+  const regionRef = useRef(null)
+  const fadeTimer = useRef(null)
+
+  // Swap with a cross-fade, or instantly when the visitor has asked for reduced motion.
+  // Manual clicks go through here too, so a click and an auto-advance cannot disagree
+  // about what is on screen mid-transition.
+  const swapTo = useCallback((next) => {
+    if (next === selectedMode) return
+    if (prefersReducedMotion) {
+      setSelectedMode(next)
+      return
+    }
+    setSwapping(true)
+    window.clearTimeout(fadeTimer.current)
+    fadeTimer.current = window.setTimeout(() => {
+      setSelectedMode(next)
+      setSwapping(false)
+    }, FADE_MS)
+  }, [selectedMode, prefersReducedMotion])
+
+  useEffect(() => () => window.clearTimeout(fadeTimer.current), [])
+
+  // Only run while the section is actually visible. An interval firing against a card
+  // three screens away is work nobody sees, and it would mean the visitor arrives to a
+  // vertical chosen by how long they took to scroll.
+  useEffect(() => {
+    const node = regionRef.current
+    if (!node || typeof IntersectionObserver === 'undefined') return undefined
+    const observer = new IntersectionObserver(
+      ([entry]) => setOnScreen(entry.isIntersecting),
+      { threshold: 0.35 }
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+
+  // prefers-reduced-motion is a hard stop, not a slower cycle: WCAG 2.2.2 wants moving
+  // content stoppable, and the pills + hover/focus pause are the other two escape hatches.
+  const cycling = canCycle && onScreen && !pinned && !hovered && !prefersReducedMotion
+
+  useEffect(() => {
+    if (!cycling) return undefined
+    const id = window.setInterval(() => {
+      swapTo(selectedMode === 'default' ? 'ecommerce' : 'default')
+    }, CYCLE_MS)
+    return () => window.clearInterval(id)
+  }, [cycling, selectedMode, swapTo])
+
+  const pickMode = useCallback((next) => {
+    setPinned(true)
+    swapTo(next)
+  }, [swapTo])
 
   const activeDataSet = customData || comparisonDemoData[selectedMode] || comparisonDemoData.default
   const displayTitle = title || activeDataSet.title
@@ -23,8 +98,21 @@ export default function MarketingBeforeAfter({
 
   const { before, after } = activeDataSet
 
+  // Applied to the two blocks that actually change (heading copy and the card grid) —
+  // never to the pills, which are controls and must not blink while you aim at them.
+  const fadeStyle = prefersReducedMotion
+    ? undefined
+    : { opacity: swapping ? 0 : 1, transition: `opacity ${FADE_MS}ms ease` }
+
   return (
-    <div className={`w-full ${className}`}>
+    <div
+      ref={regionRef}
+      className={`w-full ${className}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocusCapture={() => setHovered(true)}
+      onBlurCapture={() => setHovered(false)}
+    >
       {/* Header section */}
       {/* `text-st-black` was a DEAD class here, the same species of bug as the inert
           className attributes: st-* are dashboard-only tokens and are not defined in the
@@ -40,18 +128,22 @@ export default function MarketingBeforeAfter({
         <span className="inline-block px-3 py-1 text-xs font-black uppercase tracking-widest text-[#0F1012] bg-[#E8F0F0] rounded-full mb-3 border border-[#E5E7EB]">
           Attribution comparison
         </span>
-        <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-[-0.05em] leading-[1.05]">
-          {displayTitle}
-        </h2>
-        <p className="mt-3 text-sm sm:text-base text-[#586464] font-medium leading-relaxed">
-          {displaySubtitle}
-        </p>
+        <div style={fadeStyle}>
+          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-[-0.05em] leading-[1.05]">
+            {displayTitle}
+          </h2>
+          <p className="mt-3 text-sm sm:text-base text-[#586464] font-medium leading-relaxed">
+            {displaySubtitle}
+          </p>
+        </div>
 
         {/* Mode selector pills (if enabled and no custom data passed) */}
         {showToggle && !customData && (
           <div className="inline-flex p-1 mt-6 rounded-xl bg-[#161719] border border-[#2A2C30] text-xs font-extrabold gap-1">
             <button
-              onClick={() => setSelectedMode('default')}
+              type="button"
+              aria-pressed={selectedMode === 'default'}
+              onClick={() => pickMode('default')}
               className={`px-4 py-2 rounded-lg transition-colors ${
                 selectedMode === 'default'
                   ? 'bg-[#C8F000] text-[#0F1012] font-black'
@@ -61,7 +153,9 @@ export default function MarketingBeforeAfter({
               SaaS / B2B Journey
             </button>
             <button
-              onClick={() => setSelectedMode('ecommerce')}
+              type="button"
+              aria-pressed={selectedMode === 'ecommerce'}
+              onClick={() => pickMode('ecommerce')}
               className={`px-4 py-2 rounded-lg transition-colors ${
                 selectedMode === 'ecommerce'
                   ? 'bg-[#C8F000] text-[#0F1012] font-black'
@@ -75,7 +169,7 @@ export default function MarketingBeforeAfter({
       </div>
 
       {/* 2-column Before vs After comparison grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 max-w-[1240px] mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 max-w-[1240px] mx-auto" style={fadeStyle}>
         {/* BEFORE CARD */}
         <div className="rounded-2xl bg-[#161719] border border-[#2A2C30] p-6 sm:p-8 flex flex-col justify-between shadow-md">
           <div className="space-y-6">
