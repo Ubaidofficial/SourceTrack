@@ -97,15 +97,20 @@ router.get('/pages', async (req, res) => {
   const range = parseRange(req.query)
   if (range.error) return res.status(400).json({ success: false, data: null, error: range.error })
 
-  const category = typeof req.query.category === 'string' ? req.query.category : ''
+  const category = typeof req.query.category === 'string' ? req.query.category.trim() : ''
 
   try {
-    const rows = await readPipe('crawler_pages', {
+    const params = {
       site_id: req.site.id,
       from_ts: range.from_ts,
-      to_ts: range.to_ts,
-      category
-    })
+      to_ts: range.to_ts
+    }
+    // OMIT the param for "all categories". The pipe gates on `{% if
+    // defined(category) %}`, so sending an empty string would enter the block
+    // and filter on '' — matching nothing instead of everything.
+    if (category) params.category = category
+
+    const rows = await readPipe('crawler_pages', params)
 
     return res.json({
       success: true,

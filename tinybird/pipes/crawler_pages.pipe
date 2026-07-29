@@ -9,9 +9,12 @@ DESCRIPTION >
     are excluded from `hits` (impersonation is not the bot), and the verified /
     UA-only split is carried through rather than flattened.
 
-    Optional `category` filter uses the empty-string default idiom so the param
-    is genuinely optional under `tb --cloud deploy --check` (a required param
-    with no default breaks the check — see dash_top_pages.pipe's tz note).
+    Optional `category` filter uses the `{% if defined(...) %}` block already
+    proven in leads_count.pipe / browsers.pipe, with a defaulted String param
+    so `tb --cloud deploy --check` has a value to inject (a required param with
+    no default breaks the check — see dash_top_pages.pipe's tz note). The
+    caller OMITS the param entirely for "all categories" rather than sending an
+    empty string, so the block is never entered with a meaningless value.
 
     NOT YET DEPLOYED — founder-gated (CLAUDE.md §8); `tb --cloud deploy --check`
     has NOT been run against a workspace from here.
@@ -41,7 +44,7 @@ SQL >
     WHERE site_id = {{ String(site_id, required=True) }}
       AND timestamp >= {{ DateTime(from_ts, required=True) }}
       AND timestamp <= {{ DateTime(to_ts, required=True) }}
-      {% if defined(category) and category != '' %}
+      {% if defined(category) %}
       AND category = {{ String(category, '') }}
       {% end %}
     GROUP BY path
