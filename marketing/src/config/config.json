@@ -1,23 +1,20 @@
 {
   "site": {
-    "title": "SourceTrack — Know which sources bring your leads and revenue",
+    "title": "SourceTrack \u2014 Know which sources bring your leads and revenue",
     "base_url": "https://www.sourcetrack.ai",
     "base_path": "/",
     "trailing_slash": false,
     "favicon": "/images/favicon.png",
-    "logo": "/images/logo.png",
+    "logo": "",
     "logo_width": "140",
     "logo_height": "40",
     "logo_text": "SourceTrack"
   },
-
   "settings": {
     "sticky_header": true,
     "pagination": 9,
     "summary_length": 200,
-    "blog_folder": "blog",
-    "case_studies_folder": "case-studies",
-    "career_folder": "careers"
+    "blog_folder": "blog"
   },
   "params": {
     "contact_form_action": "#",
@@ -26,26 +23,22 @@
     "footer_text": "Founder-simple attribution. Know which sources, search queries, and AI tools bring your leads and revenue.",
     "mail": "support@sourcetrack.ai",
     "phone": "",
-    "copyright": "© 2026 SourceTrack. All rights reserved."
+    "copyright": "\u00a9 2026 SourceTrack. All rights reserved."
   },
-
   "navigation_button": {
     "enable": true,
     "label": "Start free",
     "link": "https://app.sourcetrack.ai/signup"
   },
-
   "google_tag_manager": {
     "enable": false,
     "gtm_id": "GTM-XXXXXX"
   },
-
   "metadata": {
     "meta_author": "SourceTrack",
     "meta_image": "/images/og-image.png",
-    "meta_description": "Founder-simple attribution. See which sources, search queries, and AI tools bring your leads and revenue — one script, no CRM, no heavy stack."
+    "meta_description": "Founder-simple attribution. See which sources, search queries, and AI tools bring your leads and revenue \u2014 one script, no CRM, no heavy stack."
   },
-
   "open-remark-comment": {
     "enable": false,
     "siteKey": ""

@@ -1,0 +1,101 @@
+---
+// SourceTrack dashboard mockup — replaces public/images/banner.png, which was a raster
+// screenshot of the PowerAI TEMPLATE's product: "PowerAI" wordmark, a sidebar reading
+// Templates / Generates / Documents, and metrics "Total Sales / Total Visits / New Users /
+// Word Generates". None of that is this product, and none of it could be corrected by
+// editing text, because it was pixels.
+//
+// Built as markup rather than a new PNG on purpose: the labels stay greppable and
+// editable, it inherits the real brand tokens instead of the template's violet, and it
+// cannot drift out of date the way a screenshot silently does.
+//
+// Ported from dashboard/src/components/HeroPreviewCard.jsx so the marketing site and the
+// app show the same thing. Deliberately DARK on a light page: it depicts the product UI,
+// which is a surface inside the page, not the page chrome that design.md §3.1 governs.
+//
+// EVERY NUMBER HERE IS ILLUSTRATIVE and the card says so in its own header badge. It is a
+// drawing of the product, not a claim about anyone's data (§6: never present sample
+// figures as if they were real).
+const rows = [
+  { source: "ChatGPT", channel: "AI Search", value: "$3,840" },
+  { source: "Google Ads", channel: "Paid Search", value: "$6,200" },
+  { source: "Organic", channel: "Search", value: "$5,820" },
+];
+---
+
+<div class="relative mx-auto w-full max-w-[560px]">
+  <div
+    class="absolute right-[30px] top-[20px] h-[320px] w-[320px] rounded-full bg-primary opacity-[0.24] blur-[48px]"
+    aria-hidden="true"
+  >
+  </div>
+
+  <div
+    class="relative rounded-[32px] border border-white/10 bg-[#0D1010] p-3 shadow-[0_30px_90px_rgba(31,35,35,.30)]"
+    style="transform: rotate(-0.8deg)"
+  >
+    <div class="overflow-hidden rounded-[22px] border border-[#2D3333] bg-[#121616]">
+      <!-- Header -->
+      <div
+        class="grid h-[48px] grid-cols-[80px_1fr_auto] items-center gap-2 border-b border-white/10 bg-[#171B1B] px-4 text-xs font-bold text-[#F5F8F8]"
+      >
+        <div class="flex gap-[6px]">
+          <span class="h-2.5 w-2.5 rounded-full bg-[#E54545]"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-[#FF8800]"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-primary"></span>
+        </div>
+        <span class="truncate">SourceTrack — Attribution</span>
+        <span
+          class="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-primary"
+          >Sample data</span
+        >
+      </div>
+
+      <!-- KPI row: the four labels that matter for attribution -->
+      <div class="grid grid-cols-2 gap-3 p-3 text-white">
+        <div class="rounded-2xl border border-[#2D3333] bg-[#181D1D] p-3">
+          <div class="text-[10px] font-extrabold uppercase tracking-wider text-[#9DA7A7]">Visitors</div>
+          <div class="mt-1 text-2xl font-black tracking-tight text-white">12,480</div>
+        </div>
+        <div class="rounded-2xl border border-[#2D3333] bg-[#181D1D] p-3">
+          <div class="text-[10px] font-extrabold uppercase tracking-wider text-[#9DA7A7]">Conversions</div>
+          <div class="mt-1 text-2xl font-black tracking-tight text-white">318</div>
+        </div>
+
+        <!-- Revenue by source -->
+        <div class="col-span-2 rounded-2xl border border-[#2D3333] bg-[#181D1D] p-3">
+          <div class="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-[#9DA7A7]">
+            Revenue by source
+          </div>
+          <div class="grid gap-1.5">
+            {
+              rows.map((r) => (
+                <div class="flex items-center justify-between border-b border-[#2D3333] py-1 text-xs font-bold last:border-0">
+                  <span class="text-[#DDE5E5]">{r.source}</span>
+                  <span class="text-[#9DA7A7]">{r.channel}</span>
+                  <span class="text-primary">{r.value}</span>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+
+        <!-- AI-referral share -->
+        <div class="col-span-2 rounded-2xl border border-[#2D3333] bg-[#181D1D] p-3.5">
+          <div class="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-[#9DA7A7]">
+            AI-referral share
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="h-2 flex-1 overflow-hidden rounded-full bg-[#2D3333]">
+              <div class="h-full rounded-full bg-primary" style="width:24%"></div>
+            </div>
+            <span class="text-sm font-black text-primary">24%</span>
+          </div>
+          <div class="mt-2 text-[10px] text-[#9DA7A7]">
+            ChatGPT, Claude and Perplexity, separated from direct traffic
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

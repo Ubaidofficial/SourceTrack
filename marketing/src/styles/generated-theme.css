@@ -9,16 +9,16 @@
   --color-primary: #C8F000;
   --color-secondary: #B8DD00;
   --color-primary-dark: #161719;
-  --color-body: #0F1012;
-  --color-border: #2A2C30;
-  --color-light: #F5F4F0;
+  --color-body: #F5F4F0;
+  --color-border: #E5E7EB;
+  --color-light: #FFFFFF;
   --color-gray: #6B7280;
   --color-dark: #111827;
   --color-dark-gray: #232527;
-  --color-card: #161719;
-  --color-text: #E8E9EB;
+  --color-card: #FFFFFF;
+  --color-text: #111827;
   --color-text-dark: #111827;
-  --color-text-light: #F5F4F0;
+  --color-text-light: #6B7280;
 
   /* === Font Families === */
   --font-primary: Inter, sans-serif;
