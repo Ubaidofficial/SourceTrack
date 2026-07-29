@@ -108,3 +108,62 @@ jobs:
             "$SLACK_WEBHOOK_URL")
           echo "slack http $code"
           [ "$code" = "200" ] || { echo "::error::alert POST returned $code"; exit 1; }
+
+  # marketing/ is a SEPARATE npm project (its own package.json + lockfile, Astro/Vite —
+  # not the root workspace and not dashboard/). Until this job existed, nothing in CI
+  # installed it or compiled a single .astro file: a green pipeline said only that the
+  # API and dashboard were unaffected, never that the marketing site still built. PRs
+  # #476-#482 all landed on that basis.
+  #
+  # A separate job rather than more steps on build-and-test: it needs none of that job's
+  # root/dashboard installs or VITE_* env, and a failure here should read as "marketing
+  # broke", not as a mystery step 12 in an API run. It also runs in parallel, so it adds
+  # no wall-clock to the critical path.
+  marketing-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: marketing/package-lock.json
+
+      - name: Install marketing dependencies
+        run: |
+          cd marketing
+          npm ci
+
+      # Build only, DELIBERATELY. `astro check` currently exits non-zero on 271
+      # pre-existing errors — 267 of them `className` used on plain HTML elements in 30
+      # .astro files, where Astro does not map it to `class`, so the attribute ships
+      # inert and those pages render substantially unstyled. That is a real bug being
+      # fixed separately; adding the gate before that lands would redden CI on every PR
+      # for a defect none of them introduced. Add `npx astro check` here as a
+      # fast-follow once the className fix merges — this comment is the reminder.
+      - name: Build marketing site
+        run: |
+          cd marketing
+          npm run build
+
+      # Same reasoning as build-and-test above: without this, a marketing build that
+      # breaks on main is invisible until someone happens to look at the Actions tab.
+      - name: Alert on red main
+        if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "::error::SLACK_WEBHOOK_URL secret is unset — red main would go unannounced"
+            exit 1
+          fi
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\":\"main is RED — marketing-build failed on ${GITHUB_SHA:0:7}. The marketing site does not compile. ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}" \
+            "$SLACK_WEBHOOK_URL")
+          echo "slack http $code"
+          [ "$code" = "200" ] || { echo "::error::alert POST returned $code"; exit 1; }
