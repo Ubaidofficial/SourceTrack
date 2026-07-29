@@ -19,6 +19,8 @@ import {
   conversionIpLimit,
   conversionSiteLimit,
   conversionGlobalIpLimit,
+  marketingFormIpLimit,
+  marketingFormGlobalIpLimit,
   identifyVisitorLimit,
   identifyIpLimit,
   identifySiteLimit,
@@ -52,6 +54,7 @@ import { integrationsRouter } from './routes/integrations.js'
 import { googleSearchConsoleRouter } from './routes/google-search-console.js'
 import { adPlatformsRouter } from './routes/ad-platforms.js'
 import { capiRouter } from './routes/capi.js'
+import { marketingRouter } from './routes/marketing.js'
 import { seoRevenueRouter } from './routes/seo-revenue.js'
 import { aiVisibilityRouter } from './routes/ai-visibility.js'
 import { adminRouter } from './routes/admin.js'
@@ -514,6 +517,12 @@ app.use('/api/server', serverEventsRouter)
 app.use('/api/server', serverCrawlerHitsRouter)
 app.use('/api/billing', billingRouter)
 app.use('/api/admin', requireUserAuth, adminRouter)
+// PUBLIC + UNAUTHENTICATED: marketing-site contact/newsletter intake. The
+// marketing site is a static Astro build with no server, so its writes come
+// here. No auth and no site_key by design (this is SourceTrack's own site, not
+// a tenant's) — the IP + global rate-limit pair is the abuse protection, same
+// posture as the other public write surfaces.
+app.use('/api/marketing', marketingFormIpLimit, marketingFormGlobalIpLimit, marketingRouter)
 app.use('/api/jobs', requireUserAuth, jobStatusRouter)
 app.use('/api/live', requireUserAuth, validateSiteKey, requireSiteMembership, liveRouter)
 app.use("/api/analytics", analyticsRouter)

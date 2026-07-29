@@ -38,6 +38,12 @@ const TRACKER_ID_IP_MAX      = getEnvInt('ST_RATE_TRACKER_ID_IP_PER_MIN', proces
 const TRACKER_ID_SITE_MAX    = getEnvInt('ST_RATE_TRACKER_ID_SITE_PER_MIN', process.env.NODE_ENV === 'test' ? 15 : 5000)
 const TRACKER_ID_GLOBAL_IP_MAX = getEnvInt('ST_RATE_TRACKER_ID_GLOBAL_IP_PER_MIN', process.env.NODE_ENV === 'test' ? 15 : 5000)
 
+// Marketing-site public form intake. Tight by design — a human submits a contact
+// form a few times a minute at most. The global cap bounds a distributed flood
+// that would slip past the per-IP cap.
+const MARKETING_FORM_IP_MAX     = getEnvInt('ST_RATE_MARKETING_FORM_IP_PER_MIN', process.env.NODE_ENV === 'test' ? 3 : 5)
+const MARKETING_FORM_GLOBAL_MAX = getEnvInt('ST_RATE_MARKETING_FORM_GLOBAL_PER_MIN', process.env.NODE_ENV === 'test' ? 5 : 300)
+
 const IDENTIFY_VISITOR_MAX = getEnvInt('ST_RATE_IDENTIFY_VISITOR_PER_MIN', process.env.NODE_ENV === 'test' ? 5 : 120)
 const IDENTIFY_IP_MAX      = getEnvInt('ST_RATE_IDENTIFY_IP_PER_MIN', process.env.NODE_ENV === 'test' ? 10 : 1200)
 const IDENTIFY_SITE_MAX    = getEnvInt('ST_RATE_IDENTIFY_SITE_PER_MIN', process.env.NODE_ENV === 'test' ? 15 : 5000)
@@ -413,6 +419,44 @@ export const trackerIdGlobalIpLimit = rateLimit({
   keyGenerator: (req) => {
     const ip = resolveClientIp(req)
     const key = `trackerId:global-ip:${hashKeyPart(ip)}`
+    req.rateLimitKey = key
+    return key
+  },
+  handler: makeRateLimitHandler('global-ip')
+})
+
+// 3b. /api/marketing/submissions limiters
+//
+// A new PUBLIC, UNAUTHENTICATED write surface, so it gets the same abuse
+// protection as every other one. Unlike the /api/track pair these key on IP
+// ALONE — there is no site_key on the marketing site (it is SourceTrack's own
+// site, not a tenant's), so there is nothing else to scope by.
+//
+// Deliberately much tighter than the track limits: a human fills in a contact
+// form a handful of times a minute at most, never hundreds.
+export const marketingFormIpLimit = rateLimit({
+  windowMs: 60_000,
+  max: MARKETING_FORM_IP_MAX,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS',
+  keyGenerator: (req) => {
+    const ip = resolveClientIp(req)
+    const key = `marketing:ip:${hashKeyPart(ip)}`
+    req.rateLimitKey = key
+    return key
+  },
+  handler: makeRateLimitHandler('ip')
+})
+
+export const marketingFormGlobalIpLimit = rateLimit({
+  windowMs: 60_000,
+  max: MARKETING_FORM_GLOBAL_MAX,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS',
+  keyGenerator: (req) => {
+    const key = 'marketing:global'
     req.rateLimitKey = key
     return key
   },

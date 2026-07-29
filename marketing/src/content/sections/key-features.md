@@ -6,7 +6,6 @@ track:
   top_note: "AI Referral Tracking"
   title: "Multi-Touch Models"
   bottom_note: "Search Console Revenue"
-  link: "/features"
 features:
   - title: "See which AI search tools and referrers drive leads and revenue"
     track: "AI Referral Tracking"
