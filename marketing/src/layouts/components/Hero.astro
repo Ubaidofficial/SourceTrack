@@ -3,6 +3,7 @@ import AnimatedButton from "@/components/AnimatedButton.astro";
 import HeroShape from "@/components/shape/HeroShape";
 import { markdownify } from "@/lib/utils/textConverter";
 import ImageMod from "./ImageMod.astro";
+import DashboardMockup from "./DashboardMockup.astro";
 interface Props {
   data: any;
 }
@@ -85,15 +86,7 @@ const { data } = Astro.props;
           id="hero-image"
           class="mt-30 bg-dark/45 backdrop-blur-2xl p-5 relative z-1"
         >
-          <ImageMod
-            src={data.image}
-            alt="banner"
-            width={1360}
-            height={800}
-            fetchpriority="high"
-            loading="eager"
-            class="object-cover w-full h-auto"
-          />
+          <DashboardMockup />
         </div>
       </div>
     </div>

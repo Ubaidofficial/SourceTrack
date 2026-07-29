@@ -1,24 +1,17 @@
 ---
 enable: true
-title: Scale Faster With Smarter Effort
-badge: Why Choose Us?
+title: What SourceTrack Tells You
+badge: Why SourceTrack
 feature_list:
-  - title: Higher Conversions
+  - title: Revenue by source
     icon: "/images/icons/conversions.svg"
-    content: Our strategies are designed to turn visitors into loyal customers by optimizing every touchpoint in your sales funnel
-  - title: Focus on Marketing
+    content: Every conversion is attributed to the source, campaign, and landing page that produced it — not just the last click before checkout
+  - title: AI referrals, named
     icon: "/images/icons/marketing-focus.svg"
-    content: Focusing on marketing allows you to truly understand your customers—their needs, challenges, and behaviors
-  - title: Save Time & Effort
+    content: ChatGPT, Claude, Perplexity and Gemini are identified as distinct sources. GA4 records most of these as direct / none
+  - title: One script, no CRM
     icon: "/images/icons/time-saving.svg"
-    content: Saving time and effort isn’t just about convenience—it’s about productivity, focus, and results
-  - title: Scale Faster
+    content: A single tag on your site. No data warehouse, no CRM integration, and no sales call before you see a number
+  - title: Cookieless by default
     icon: "/images/icons/scaling.svg"
-    content: Your business has the potential to grow exponentially—but only if every move is calculated and effective
-  - title: Competitive Edge
-    icon: "/images/icons/competitive-edge.svg"
-    content: We help uncover and amplify that edge by combining market intelligence, innovative strategies, and actionable insights
-  - title: Worldwide Impact
-    icon: "/images/icons/worldwide-impact.svg"
-    content: Across continents and industries, we empower organizations to grow, inspire, and create change
----
+    content: No cookies, no fingerprinting, and DNT and GPC are respected — so you often will not need a consent banner for SourceTrack
