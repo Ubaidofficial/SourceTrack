@@ -78,6 +78,8 @@ export default function Dashboard() {
     revTooltipRows, convTooltipRows, chartOpts, hasRevenue, isGscConnected,
     trafficKpis, trafficVisitors, trafficPageviews, trafficSources, trafficTopPages,
     hasConversions, hasTraffic, setupIncomplete, analyticsUnavailable,
+    trafficUnavailable, showEmptyState, summaryIsError, summaryError,
+    recentConversionsIsError, refetchSummary,
   } = useDashboardData()
 
   // Already conversions-only and newest-first from the endpoint; no client-side filter or re-sort.
@@ -255,22 +257,34 @@ export default function Dashboard() {
           )}
 
           <div className="space-y-6">
-              {!hasTraffic ? (
+              {/* ── The traffic read FAILED and nothing else proves traffic either way. ──
+                  This branch has to come FIRST. Previously /analytics/summary's isError was
+                  never even captured, so a failed read fell through to the empty state below
+                  and told a customer with real traffic to go install the tracker — an error
+                  rendered as an empty state, blaming their setup for our outage (§6, the
+                  #278/#413 class). queryError.js's rule: error before any empty/zero state. */}
+              {trafficUnavailable ? (
+                <QueryError isError error={summaryError} onRetry={refetchSummary} />
+              ) : showEmptyState ? (
                 <div className="bg-white dark:bg-[#1A1D1D] rounded-2xl border border-gray-200 dark:border-[#2A2E2E] p-12 text-center flex flex-col items-center justify-center space-y-6">
                   <div>
                     <Users className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-st-black dark:text-dark-primary mb-2">No attribution data yet</h3>
+                    {/* design.md §19.3 verbatim. Was "No attribution data yet", which reads as a
+                        report about missing data rather than the calm waiting state the spec
+                        specifies for a site with no tracking data yet. */}
+                    <h3 className="text-xl font-semibold text-st-black dark:text-dark-primary mb-2">Waiting for your first visitor...</h3>
                     <p className="text-sm text-st-gray dark:text-gray-400 max-w-md mx-auto">
                       {!site?.last_seen_at
                         ? 'Install the tracker on your website to start seeing traffic and attribution reports.'
-                        : 'Your dashboard is empty because no traffic or conversion data has been recorded for this date range.'}
+                        : 'No traffic or conversion data has been recorded for this date range.'}
                     </p>
                   </div>
                   <button
                     onClick={() => navigate('/snippet')}
                     className="px-4 py-2 bg-st-black text-white rounded-lg text-xs font-semibold hover:bg-st-black/90 transition-colors flex items-center gap-1.5"
                   >
-                    <Zap className="w-3.5 h-3.5" /> Go to Install Guide
+                    {/* design.md §19.3 names this CTA "Open Install Guide". */}
+                    <Zap className="w-3.5 h-3.5" /> Open Install Guide
                   </button>
                 </div>
               ) : analyticsUnavailable ? (
@@ -340,8 +354,13 @@ export default function Dashboard() {
 
                   {/* Top Sources + Top Pages — Analytics traffic data path */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* Both cards below read /analytics/summary. When that read FAILED, an empty
+                        array is not "no traffic" — it is "we don't know", so neither may render
+                        its empty copy (§6). */}
                     <DashboardCard title="Top Sources" subtitle="Traffic by source">
-                      {trafficSources.length === 0 ? (
+                      {summaryIsError ? (
+                        <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">Traffic data is temporarily unavailable — your tracking is unaffected.</p>
+                      ) : trafficSources.length === 0 ? (
                         <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No traffic detected yet.</p>
                       ) : (
                         <DashboardTable
@@ -355,7 +374,9 @@ export default function Dashboard() {
                     </DashboardCard>
 
                     <DashboardCard title="Top Pages" subtitle="Most viewed pages">
-                      {trafficTopPages.length === 0 ? (
+                      {summaryIsError ? (
+                        <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">Page data is temporarily unavailable — your tracking is unaffected.</p>
+                      ) : trafficTopPages.length === 0 ? (
                         <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No page data yet.</p>
                       ) : (
                         <DashboardTable
@@ -489,7 +510,11 @@ export default function Dashboard() {
                     </button>
                   }
                 >
-                  {conversionRows.length === 0 ? (
+                  {/* A failed fetch is not an empty window. Rendering "No conversions" over a
+                      failed read is the same fake-empty-state as the traffic panels above. */}
+                  {recentConversionsIsError ? (
+                    <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">Recent conversions are temporarily unavailable — your recorded conversions are unaffected.</p>
+                  ) : conversionRows.length === 0 ? (
                     <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No conversions in the recent window.</p>
                   ) : (
                     <DashboardTable

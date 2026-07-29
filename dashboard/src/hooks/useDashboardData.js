@@ -10,6 +10,7 @@ import { LIVE_FEED_POLL_MS } from '../lib/liveFeed'
 import { safeNumber } from '../utils/numbers'
 import { limeAreaGradient } from '../utils/limeAreaGradient'
 import { tooltipPlugin, CHART_COLORS } from '../utils/chartTooltip'
+import { deriveTrafficState } from '../lib/trafficState.js'
 import { normalizeSource } from '../components/SourceIcon'
 
 // Single source of truth for /dashboard AND /app/attribution. The two are separate routes
@@ -147,7 +148,15 @@ export function useDashboardData() {
     enabled: !!site?.site_key && !previewMode && hasFeature(site?.plan, 'dashboard_widgets')
   })
 
-  const { data: analyticsSummary } = useQuery({
+  // isError is captured, NOT just data. Destructuring `data` alone was the #278/#413 bug: a
+  // failed traffic read produced `undefined`, every derived count fell to 0, and the Dashboard
+  // told a customer with real traffic to go install the tracker. See lib/trafficState.js.
+  const {
+    data: analyticsSummary,
+    isError: summaryIsError,
+    error: summaryError,
+    refetch: refetchSummary
+  } = useQuery({
     queryKey: ['dashboard-traffic-summary', site?.site_key, timeRange],
     queryFn: async () => {
       if (!site?.site_key) return null
@@ -173,7 +182,13 @@ export function useDashboardData() {
   // fixed 30-MINUTE Tinybird live feed, which disagreed with a range-scoped header by
   // construction. #368 repointed both panels here, which left the recent-activity query polling
   // every 30s with no consumer — removed.
-  const { data: recentConversionsQuery } = useQuery({
+  // Same treatment as the summary read above: an empty list and a failed fetch are different
+  // facts, and the card must not render "No conversions in the recent window" for the latter.
+  const {
+    data: recentConversionsQuery,
+    isError: recentConversionsIsError,
+    refetch: refetchRecentConversions
+  } = useQuery({
     queryKey: ['recent-conversions', site?.site_key, timeRange],
     queryFn: async () => {
       if (!site?.site_key) return null
@@ -311,11 +326,17 @@ export function useDashboardData() {
   // (NULL first/last touch), which left activeResults empty and told the user to go
   // configure conversions they had already recorded.
   const hasConversions = totalConversions > 0 || activeResults.length > 0
-  const hasTraffic = previewMode
-    ? hasConversions
-    : (trafficPageviews > 0
-        || topPagesResults.length > 0
-        || safeNumber(overview?.kpis?.sessions, 0) > 0)
+  // hasTraffic keeps its exact previous meaning (positive proof only) so AttributionPage and the
+  // cold-start feed gate are unchanged. What is NEW is that a failed read no longer masquerades
+  // as proven absence — trafficUnavailable and showEmptyState carry that distinction.
+  const { hasTraffic, trafficUnavailable, showEmptyState } = deriveTrafficState({
+    previewMode,
+    summaryFailed: summaryIsError,
+    trafficPageviews,
+    topPagesCount: topPagesResults.length,
+    sessions: safeNumber(overview?.kpis?.sessions, 0),
+    hasConversions
+  })
 
   // "Tracking setup incomplete / No events received yet" banner (Dashboard + Attribution).
   // Derived HERE so the two pages cannot drift. NEITHER flag proves the absence of events:
@@ -343,5 +364,9 @@ export function useDashboardData() {
     revTooltipRows, convTooltipRows, chartOpts, hasRevenue, isGscConnected,
     trafficKpis, trafficVisitors, trafficPageviews, trafficSources, trafficTopPages,
     hasConversions, hasTraffic, setupIncomplete,
+    // Read-failure surfaces. An empty result and a failed fetch are different facts;
+    // pages must render the error BEFORE any empty state (queryError.js).
+    trafficUnavailable, showEmptyState, summaryIsError, summaryError,
+    recentConversionsIsError, refetchSummary, refetchRecentConversions,
   }
 }
