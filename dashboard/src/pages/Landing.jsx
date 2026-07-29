@@ -16,15 +16,15 @@ import Reveal from '../components/Reveal'
 const SEO = {
   title: 'SourceTrack — Know which sources bring your leads and revenue',
   description: 'Founder-simple attribution. See which sources, search queries, and AI tools bring your leads and revenue — one script, no CRM, no heavy stack.',
-  canonical: 'https://sourcetrack.ai/',
+  canonical: 'https://www.sourcetrack.ai/',
   ogTitle: 'SourceTrack — Know which sources bring your leads and revenue',
   jsonLd: [
     {
       "@context": "https://schema.org",
       "@type": "Organization",
       "name": "SourceTrack",
-      "url": "https://sourcetrack.ai",
-      "logo": "https://sourcetrack.ai/og-image.png",
+      "url": "https://www.sourcetrack.ai",
+      "logo": "https://www.sourcetrack.ai/og-image.png",
       "contactPoint": {
         "@type": "ContactPoint",
         "email": "support@sourcetrack.ai",
@@ -35,7 +35,7 @@ const SEO = {
       "@context": "https://schema.org",
       "@type": "WebSite",
       "name": "SourceTrack",
-      "url": "https://sourcetrack.ai"
+      "url": "https://www.sourcetrack.ai"
     },
     {
       "@context": "https://schema.org",
@@ -44,7 +44,7 @@ const SEO = {
       "applicationCategory": "AnalyticsApplication",
       "operatingSystem": "Web",
       "description": "Founder-simple attribution. See which sources, search queries, and AI tools bring your leads and revenue. First-, last-, and multi-touch views, AI-referral detection, Search Console SEO signal, and cookieless privacy-first tracking.",
-      "url": "https://sourcetrack.ai",
+      "url": "https://www.sourcetrack.ai",
       "offers": {
         "@type": "Offer",
         "price": "0",

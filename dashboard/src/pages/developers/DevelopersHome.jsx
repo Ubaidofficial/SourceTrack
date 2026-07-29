@@ -51,7 +51,7 @@ export default function DevelopersHome() {
       <Helmet>
         <title>Developer Portal — API & Integration Reference | SourceTrack</title>
         <meta name="description" content="Technical details, API specs, tracker configurations, and payloads for implementing first-party revenue attribution." />
-        <link rel="canonical" href="https://sourcetrack.ai/developers" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/developers" />
       </Helmet>
 
       <div className="space-y-6">

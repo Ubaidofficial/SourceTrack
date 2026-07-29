@@ -56,7 +56,7 @@ export default function DevelopersApi() {
       <Helmet>
         <title>Public Ingestion API Reference | SourceTrack Docs</title>
         <meta name="description" content="Technical reference for SourceTrack's public ingestion endpoints, payloads, HTTP responses, and authentication parameters." />
-        <link rel="canonical" href="https://sourcetrack.ai/developers/api" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/developers/api" />
       </Helmet>
 
       <div className="space-y-8">

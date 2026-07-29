@@ -8,7 +8,7 @@ import HeroPreviewCard from '../components/HeroPreviewCard'
 const SEO = {
   title: 'SourceTrack Product — Revenue Attribution Without the Analytics Maze',
   description: 'Explore how SourceTrack captures visitor sources, connects multi-touch customer journeys, tracks conversions and AI referrals, and attributes revenue back to the channels that created it.',
-  canonical: 'https://sourcetrack.ai/product',
+  canonical: 'https://www.sourcetrack.ai/product',
   ogTitle: 'SourceTrack Product — Revenue attribution without the analytics maze',
 }
 

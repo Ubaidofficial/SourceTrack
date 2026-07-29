@@ -8,7 +8,7 @@ import HeroPreviewCard from '../components/HeroPreviewCard'
 const SEO = {
   title: 'Marketing Attribution Software — Track Which Sources Create Revenue | SourceTrack',
   description: 'Track first touch, last touch, multi-touch journeys, campaign performance, landing pages, AI referrals, and revenue attribution across 9 models. Independent, neutral attribution for founders and marketers.',
-  canonical: 'https://sourcetrack.ai/attribution',
+  canonical: 'https://www.sourcetrack.ai/attribution',
   ogTitle: 'Marketing Attribution Software — SourceTrack',
 }
 

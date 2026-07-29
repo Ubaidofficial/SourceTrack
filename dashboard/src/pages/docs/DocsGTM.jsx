@@ -10,7 +10,7 @@ export default function DocsGTM() {
       <Helmet>
         <title>Google Tag Manager Setup Guide | SourceTrack Docs</title>
         <meta name="description" content="Deploy the SourceTrack tracking pixel using Google Tag Manager. Custom HTML tag configurations and triggering rules." />
-        <link rel="canonical" href="https://sourcetrack.ai/docs/platforms/google-tag-manager" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/docs/platforms/google-tag-manager" />
       </Helmet>
 
       <div className="space-y-6">

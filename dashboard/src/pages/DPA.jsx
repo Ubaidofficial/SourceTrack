@@ -3,7 +3,7 @@ import MarketingPage from '../components/MarketingPage'
 const SEO = {
   title: 'Data Processing Agreement (DPA) — SourceTrack',
   description: 'How to request SourceTrack’s Data Processing Agreement. Draft overview provided for transparency during the private beta.',
-  canonical: 'https://sourcetrack.ai/dpa',
+  canonical: 'https://www.sourcetrack.ai/dpa',
   ogTitle: 'Data Processing Agreement (DPA)',
 }
 

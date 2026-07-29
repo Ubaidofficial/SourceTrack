@@ -52,7 +52,7 @@ export default function DevelopersCampaignCosts() {
       <Helmet>
         <title>Campaign Cost CSV & API Reference | SourceTrack Docs</title>
         <meta name="description" content="Technical details for importing ad costs, clicks, and impressions. CSV format validation rules, deduplication indexing, and API ingestion endpoints." />
-        <link rel="canonical" href="https://sourcetrack.ai/developers/campaign-costs" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/developers/campaign-costs" />
       </Helmet>
 
       <div className="space-y-6">

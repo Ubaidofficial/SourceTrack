@@ -74,12 +74,12 @@ export default function SolutionPage({ data }) {
         <meta property="og:description" content={ogDescription} />
         <meta property="og:url"         content={canonical} />
         <meta property="og:type"        content="website" />
-        <meta property="og:image"       content="https://sourcetrack.ai/og-image.png" />
+        <meta property="og:image"       content="https://www.sourcetrack.ai/og-image.png" />
         <meta name="twitter:card"        content="summary_large_image" />
         <meta name="twitter:site"        content="@sourcetrackio" />
         <meta name="twitter:title"       content={ogTitle} />
         <meta name="twitter:description" content={ogDescription} />
-        <meta name="twitter:image"       content="https://sourcetrack.ai/og-image.png" />
+        <meta name="twitter:image"       content="https://www.sourcetrack.ai/og-image.png" />
         {jsonLd && <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>}
       </Helmet>
 

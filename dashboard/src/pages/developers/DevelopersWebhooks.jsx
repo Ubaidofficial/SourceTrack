@@ -34,7 +34,7 @@ export default function DevelopersWebhooks() {
       <Helmet>
         <title>Webhooks & Signature Verification Reference | SourceTrack Docs</title>
         <meta name="description" content="Technical guide for configuring outbound webhook listeners, validating HMAC payload signatures, and integrating Shopify and Stripe webhook recipes." />
-        <link rel="canonical" href="https://sourcetrack.ai/developers/webhooks" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/developers/webhooks" />
       </Helmet>
 
       <div className="space-y-8">

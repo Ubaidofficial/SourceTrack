@@ -3,7 +3,7 @@ import MarketingPage from '../components/MarketingPage'
 const SEO = {
   title: 'Do Not Sell or Share My Personal Information — SourceTrack',
   description: 'SourceTrack does not sell or share personal information. How our cookieless, first-party model works and how to exercise your CCPA rights.',
-  canonical: 'https://sourcetrack.ai/do-not-sell',
+  canonical: 'https://www.sourcetrack.ai/do-not-sell',
   ogTitle: 'Do Not Sell or Share My Personal Information',
 }
 

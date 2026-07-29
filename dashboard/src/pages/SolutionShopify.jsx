@@ -4,7 +4,7 @@ const DATA = {
   slug: 'use-cases/shopify',
   title: 'Shopify Order Attribution | SourceTrack',
   description: 'Trace every Shopify order back to its source. A manual webhook recipe and one lightweight script — no app to install, no native integration to wait for. Works with any Shopify store today.',
-  canonical: 'https://sourcetrack.ai/use-cases/shopify',
+  canonical: 'https://www.sourcetrack.ai/use-cases/shopify',
   ogTitle: 'Every Shopify order, traced to its source | SourceTrack',
   ogDescription: 'Order attribution for Shopify with a manual webhook recipe — no app required. See UTM campaigns and named AI referrals behind every sale.',
 

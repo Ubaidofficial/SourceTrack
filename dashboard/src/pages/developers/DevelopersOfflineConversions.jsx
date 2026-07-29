@@ -52,7 +52,7 @@ export default function DevelopersOfflineConversions() {
       <Helmet>
         <title>Offline & Server Conversions API Reference | SourceTrack Docs</title>
         <meta name="description" content="Integrate server-side revenue tracking via the offline conversions endpoint. Parameter specifications for Stripe, CRM, and Stripe webhooks." />
-        <link rel="canonical" href="https://sourcetrack.ai/developers/offline-conversions" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/developers/offline-conversions" />
       </Helmet>
 
       <div className="space-y-6">

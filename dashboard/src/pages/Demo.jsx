@@ -6,7 +6,7 @@ import SectionKicker from '../components/SectionKicker'
 const SEO = {
   title: 'Interactive Marketing Attribution Demo | SourceTrack',
   description: 'Explore SourceTrack attribution and visitor analytics with preloaded SaaS, ecommerce, and agency sample journeys. See how we trace conversions to acquisition sources.',
-  canonical: 'https://sourcetrack.ai/demo',
+  canonical: 'https://www.sourcetrack.ai/demo',
   ogTitle: 'Interactive Attribution & Journey Demo | SourceTrack',
 }
 

@@ -3,7 +3,7 @@ import MarketingPage from '../components/MarketingPage'
 const SEO = {
   title: 'Sub-processors — SourceTrack',
   description: 'The third-party sub-processors SourceTrack uses to provide the service, and where they operate. Draft list maintained during the private beta.',
-  canonical: 'https://sourcetrack.ai/subprocessors',
+  canonical: 'https://www.sourcetrack.ai/subprocessors',
   ogTitle: 'Sub-processors',
 }
 

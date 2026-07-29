@@ -17,4 +17,4 @@ Disallow: /onboarding
 Disallow: /share/
 Disallow: /api/
 
-Sitemap: https://sourcetrack.ai/sitemap.xml
+Sitemap: https://www.sourcetrack.ai/sitemap.xml

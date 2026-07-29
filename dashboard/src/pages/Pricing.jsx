@@ -7,7 +7,7 @@ import SectionKicker from '../components/SectionKicker'
 const SEO = {
   title: 'SourceTrack Pricing — Start free, no card required',
   description: 'Founder-simple attribution pricing: Starter $49/mo, Growth $79/mo, or a Founder annual seat at $99/yr. Start free, no credit card.',
-  canonical: 'https://sourcetrack.ai/pricing',
+  canonical: 'https://www.sourcetrack.ai/pricing',
   ogTitle: 'SourceTrack Pricing — Start free, no card required',
 }
 

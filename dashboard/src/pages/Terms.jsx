@@ -3,7 +3,7 @@ import MarketingPage from '../components/MarketingPage'
 const SEO = {
   title: 'Terms of Service — SourceTrack',
   description: 'Terms of service and usage policies for the SourceTrack attribution analytics platform.',
-  canonical: 'https://sourcetrack.ai/terms',
+  canonical: 'https://www.sourcetrack.ai/terms',
   ogTitle: 'Terms of Service',
 }
 

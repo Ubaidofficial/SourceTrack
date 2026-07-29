@@ -7,7 +7,7 @@ import SectionKicker from '../components/SectionKicker'
 const SEO = {
   title: 'SourceTrack vs the alternatives — founder-simple attribution',
   description: 'How SourceTrack compares: privacy-first attribution with AI-referral and SEO-revenue tracking, no CRM and no heavy stack. The simple middle option.',
-  canonical: 'https://sourcetrack.ai/compare/ga4',
+  canonical: 'https://www.sourcetrack.ai/compare/ga4',
   ogTitle: 'SourceTrack vs the alternatives',
 }
 
