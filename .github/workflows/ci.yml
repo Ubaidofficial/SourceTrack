@@ -126,10 +126,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 22, NOT the 20 that build-and-test uses — do not "unify" these. Astro 6.2.1
+      # hard-refuses to build on anything below 22.12.0 ("Node.js v20.20.2 is not
+      # supported by Astro!", exit 1, before it compiles a single page). This job was
+      # first written with 20 to match the job above and failed on exactly that; the
+      # error is invisible to anyone whose local Node is already 22+.
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
           cache-dependency-path: marketing/package-lock.json
 
