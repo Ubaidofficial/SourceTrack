@@ -214,7 +214,8 @@
 ## 18. Docs & marketing site
 - ✅ Docs: platform recipes (GTM, Google Ads, Shopify, Stripe, Webflow, WordPress, Framer, Install, Quickstart, Troubleshooting) + dev API docs + **live search + TOC + breadcrumbs + brand logos** (shipped this session)
 - ⚠️ **No form-attribution / auto-fill / cross-domain / booking-passthrough docs** — built moats, undocumented (discovery gap)
-- ✅ Marketing: Landing, Product, Attribution, AI-Referral-Tracking, Compare-GA4, Pricing, interactive no-login Demo, **Solution pages** (SaaS/Ecommerce/LeadGen/Agency/Shopify)
+- ✅ **The public marketing site is a separate Astro app (`marketing/`)**, deployed to its own Railway service and serving **`www.sourcetrack.ai` + `sourcetrack.ai`** (both verified 200 serving `/_astro/` assets, 2026-07-29). `app.sourcetrack.ai` still serves the dashboard SPA and is unaffected. De-templated across #479–#488: PowerAI branding, fabricated testimonials, the template's purple palette and every stock/AI image of a person are gone.
+- ✅ Marketing pages **inside the dashboard SPA** (`dashboard/src/pages/`): Landing, Product, Attribution, AI-Referral-Tracking, Compare-GA4, Pricing, interactive no-login Demo, **Solution pages** (SaaS/Ecommerce/LeadGen/Agency/Shopify) — these are the `app.` routes, *not* what www/apex serves. Two marketing surfaces now exist; check which one a change belongs to before editing.
 - ✅ Legal: Terms, Privacy, DPA, Do-Not-Sell, Sub-processors (draft, not lawyer-reviewed)
 - ✅ Pricing: Starter $49/mo · Growth $79/mo · Founder $99/yr (25 spots)
 
