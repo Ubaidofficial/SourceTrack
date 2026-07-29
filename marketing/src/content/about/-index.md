@@ -19,11 +19,11 @@ who_we_are:
       <br/>
       <br/>
     We provide a privacy-first third option: clear multi-touch attribution, AI referral tracking, and Search Console revenue signals readable in five seconds.
-  image: "/images/about-banner.png"
+  image: ""
 what_our_goals:
   badge: "Our Philosophy"
   title: "Simple, Privacy-First, and Truthful Metrics Only"
-  image: "/images/about-banner.png"
+  image: ""
   mission:
     title: "Our Mission"
     content: |
@@ -40,5 +40,4 @@ our_team:
   team_list:
     - name: "Abaid Ur Rehman"
       position: "Founder & Lead Engineer"
-      image: "/images/teams/avatar-3.png"
 ---

@@ -5,6 +5,28 @@ interface Props {
 }
 const { data } = Astro.props;
 const { badge, title, team_list } = data;
+
+// This section shows NO photographs, by decision — not as a placeholder pending real ones.
+// It previously rendered teams/avatar-3.png, a stock/AI headshot captioned "Abaid Ur Rehman,
+// Founder & Lead Engineer": a fabricated likeness attached to a real, named individual. That
+// file is deleted from the repo and there is no `image` field left to populate, so the
+// misrepresentation cannot come back by someone dropping a path into the content file.
+//
+// The visual anchor is a monogram built from the person's own initials — the same solid
+// dark-on-lime register as the pill badges, the primary buttons and the hero highlight, per
+// design.md 3.1. It is unambiguously typography, not a substitute for a face.
+const initials = (name: string) =>
+  String(name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((_, i, a) => i === 0 || i === a.length - 1)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+
+// One person should not render as the orphan of a three-column grid.
+const single = Array.isArray(team_list) && team_list.length === 1;
 ---
 
 <section>
@@ -12,27 +34,31 @@ const { badge, title, team_list } = data;
     <div class="container">
       <div class="container-padding-y container-padding-x">
         <SectionHeader title={title} badge={badge} />
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+        <div
+          class:list={[
+            "gap-2.5",
+            single ? "max-w-xl mx-auto" : "grid md:grid-cols-2 lg:grid-cols-3",
+          ]}
+        >
           {team_list.map((member: any) => {
             const uid = `team-${Math.random().toString(36).slice(2, 8)}`;
             return (
               <div
                 id={uid}
                 style="opacity:0"
-                class="bg-card/70 flex flex-col gap-5 items-start pb-5 pt-2.5 px-2.5 relative rounded-3xl w-full border border-border/6 group"
+                class="bg-card/70 flex gap-5 items-center p-5 relative rounded-3xl w-full border border-border/6"
               >
-                <img
-                  src={member.image}
-                  alt={member.name}
-                  width="300"
-                  height="300"
-                  class="w-full h-full object-cover rounded-3xl object-top grayscale-100 group-hover:grayscale-0 transition-all duration-300"
-                />
-                <div class="relative shrink-0 w-full">
-                  <div class="flex flex-col gap-1 items-start px-4">
-                    <h3 class="font-medium text-2xl">{member.name}</h3>
-                    <p class="text-gray">{member.position}</p>
-                  </div>
+                <div
+                  aria-hidden="true"
+                  class="shrink-0 size-20 rounded-2xl bg-primary flex items-center justify-center select-none"
+                >
+                  <span class="text-2xl font-semibold tracking-wide text-text">
+                    {initials(member.name)}
+                  </span>
+                </div>
+                <div class="flex flex-col gap-1 items-start min-w-0">
+                  <h3 class="font-medium text-2xl">{member.name}</h3>
+                  <p class="text-gray">{member.position}</p>
                 </div>
               </div>
             );
