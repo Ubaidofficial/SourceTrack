@@ -136,6 +136,50 @@ test('days with no conversions get null, never a zero plotted on the axis', () =
   assert.equal(markers.meta[1], null)
 })
 
+test('zero available detail never renders as "Showing 0 of N"', () => {
+  // Verified on staging, and NOT an edge case: /analytics/recent-conversions is .limit(20)
+  // newest-first, so on site de200000-babe…1111 (53 conversions in 30 days) every day from
+  // 2026-07-08 backwards has a correct bucket count and zero detail rows — including days whose
+  // true count is exactly 1. "Showing 0 of 1" contradicted the marker sitting next to it.
+  const markers = buildTrendMarkers({
+    labels: ['2026-07-04'],
+    values: [100],
+    buckets: [{ dim_value: '2026-07-04', conversions: 1 }],
+    conversions: [],                        // older than the newest 20 → no detail returned
+    timezone: 'UTC'
+  })
+  assert.equal(markers.meta[0].count, 1, 'the count itself is correct and must still show')
+  assert.equal(markers.meta[0].items.length, 0)
+  assert.equal(markers.meta[0].detailNote, 'Conversion detail not loaded for this day')
+  assert.doesNotMatch(markers.meta[0].detailNote, /showing 0/i)
+})
+
+test('detailNote is absent when the tooltip really does show every conversion', () => {
+  const markers = buildTrendMarkers({
+    labels: ['2026-07-04'],
+    values: [100],
+    buckets: [{ dim_value: '2026-07-04', conversions: 1 }],
+    conversions: [{ conversion_timestamp: '2026-07-04T09:00:00Z', conversion_type: 'lead' }],
+    timezone: 'UTC'
+  })
+  assert.equal(markers.meta[0].detailPartial, false)
+  assert.equal(markers.meta[0].detailNote, null, 'a complete tooltip must not carry a caveat')
+})
+
+test('detailNote counts what is DISPLAYED, not what was received', () => {
+  // items is capped at 3 for display. The caption must agree with the visible rows, or it
+  // becomes its own small lie ("Showing 5 of 9" above three rows).
+  const markers = buildTrendMarkers({
+    labels: ['2026-07-04'],
+    values: [100],
+    buckets: [{ dim_value: '2026-07-04', conversions: 9 }],
+    conversions: Array.from({ length: 5 }, () => ({ conversion_timestamp: '2026-07-04T09:00:00Z', conversion_type: 'lead' })),
+    timezone: 'UTC'
+  })
+  assert.equal(markers.meta[0].items.length, 3)
+  assert.equal(markers.meta[0].detailNote, 'Showing 3 of 9')
+})
+
 test('partial detail is flagged so the tooltip cannot imply it shows every conversion', () => {
   const markers = buildTrendMarkers({
     labels: ['2026-07-01'],
