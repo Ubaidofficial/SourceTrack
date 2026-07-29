@@ -167,6 +167,35 @@ const allSchemas = [orgSchema, ...structuredData];
     ))}
 
     <ClientRouter />
+
+    <script>
+      /*
+       * prefers-reduced-motion — JS layer (design.md §21).
+       *
+       * CSS cannot reach script-driven motion, and this site has a lot of it:
+       * the WAAPI `animate()` calls in ~15 .astro component scripts (Hero,
+       * Badge, BlogCard, IconBox, SectionHeader, Social, PricingCard,
+       * FeaturedPost, KeyFeatures, …) and every React `motion` island.
+       *
+       * `MotionGlobalConfig.skipAnimations` makes motion apply ONLY the final
+       * keyframe, so those elements land in their end state with no
+       * interpolation — a hard stop, not a shortened animation, and content
+       * still ends up visible (all of these animate opacity 0 -> 1 from a
+       * resting state of opacity 1).
+       *
+       * Declared in <head> so it runs before any component script creates an
+       * animation; the flag is read at animation-creation time.
+       */
+      import { MotionGlobalConfig } from "motion";
+
+      const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const sync = () => {
+        MotionGlobalConfig.skipAnimations = query.matches;
+      };
+
+      sync();
+      query.addEventListener("change", sync);
+    </script>
   </head>
   <body>
     <!-- Google Tag Manager (noscript) -->

@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { fadeInUpVariants } from "@/lib/animations";
+import usePrefersReducedMotion from "@/hooks/usePrefersReducedMotion";
 
 export interface CounterProps {
   target: number;
@@ -21,6 +22,7 @@ const Counter: React.FC<CounterProps> = ({
   startDelay = 0,
 }) => {
   const spanRef = useRef<HTMLSpanElement>(null);
+  const reducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     let frame: number;
@@ -55,6 +57,13 @@ const Counter: React.FC<CounterProps> = ({
 
     const startAnimation = () => {
       if (spanRef.current) {
+        // Reduced motion: the count-up is a hand-rolled rAF loop, so
+        // MotionGlobalConfig cannot skip it. Write the final value straight
+        // out — same number, no ticking.
+        if (reducedMotion) {
+          spanRef.current.textContent = `${prefix}${target}${suffix}`;
+          return;
+        }
         setTimeout(() => {
           animateCount(spanRef.current!, 0, target, duration, prefix, suffix);
         }, startDelay);
@@ -83,7 +92,7 @@ const Counter: React.FC<CounterProps> = ({
       if (frame) cancelAnimationFrame(frame);
       observer?.disconnect();
     };
-  }, [target, duration, prefix, suffix, startDelay]);
+  }, [target, duration, prefix, suffix, startDelay, reducedMotion]);
 
   return (
     <motion.span
