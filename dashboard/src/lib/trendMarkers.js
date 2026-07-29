@@ -51,6 +51,28 @@ export function localDateString(date, timeZone) {
   return year && month && day ? `${year}-${month}-${day}` : ''
 }
 
+// Caption for a marker whose tooltip cannot show every conversion behind it.
+//
+// The zero case is NOT "Showing 0 of 1" — that reads as a bug or a contradiction (the marker is
+// right there asserting one conversion). It is a real and COMMON state, not an edge case:
+// /analytics/recent-conversions is `.limit(20)` newest-first, so on a busy site EVERY day older
+// than the 20th most recent conversion has a correct count and zero detail rows. Verified on
+// staging — site de200000-babe…1111 has 53 conversions in 30 days, and every day from
+// 2026-07-08 backwards returns 0 detail rows, including days whose true count is exactly 1.
+//
+// A second, rarer path reaches the same state at the window edges: recent-conversions FILTERS on
+// `conversion_date`, which is the UTC date (verified: 42/42 rows on the Europe/Paris staging
+// site), while the trend buckets are keyed by the SITE-timezone local date. For a non-UTC site
+// those disagree — 36 of 42 rows on that site — so a conversion just inside the tz-local window
+// can fall outside the UTC-dated filter and arrive with no detail at all.
+//
+// Either way the COUNT is correct and the DETAIL is absent, so the caption says exactly that.
+function detailNote(shown, count) {
+  if (shown >= count) return null
+  if (shown === 0) return 'Conversion detail not loaded for this day'
+  return `Showing ${shown} of ${count}`
+}
+
 /**
  * Build the marker overlay for the trend chart.
  *
@@ -111,14 +133,15 @@ export function buildTrendMarkers(input = {}) {
     data.push(safeNumber(values[i], 0))
     // Gentle size ramp so a heavy day reads as heavier without the dot swallowing the line.
     radii.push(count >= 10 ? 7 : count >= 5 ? 6 : count >= 2 ? 5 : 4)
-    const items = detailByDate.get(label) || []
+    const items = (detailByDate.get(label) || []).slice(0, 3)
     meta.push({
       date: label,
       count,
       // Detail is a SAMPLE, not the full set — recentConversions is capped at 20 overall. The
       // flag lets the tooltip say so instead of implying these are all of them.
-      items: items.slice(0, 3),
-      detailPartial: items.length < count
+      items,
+      detailPartial: items.length < count,
+      detailNote: detailNote(items.length, count)
     })
   }
 

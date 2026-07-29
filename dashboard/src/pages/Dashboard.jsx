@@ -164,8 +164,10 @@ export default function Dashboard() {
       ...rows,
       { label: m.count === 1 ? '1 conversion' : `${m.count} conversions`, value: '', accent: true },
       ...detail,
-      // Says so rather than implying the three rows above are the whole day.
-      ...(m.detailPartial ? [{ label: `Showing ${m.items.length} of ${m.count}`, value: '' }] : [])
+      // Says so rather than implying the rows above are the whole day. Wording comes from
+      // lib/trendMarkers.js — the zero-detail case is common (see detailNote there), and
+      // "Showing 0 of 1" read as a contradiction against the marker's own count.
+      ...(m.detailNote ? [{ label: m.detailNote, value: '' }] : [])
     ]
   }
 
