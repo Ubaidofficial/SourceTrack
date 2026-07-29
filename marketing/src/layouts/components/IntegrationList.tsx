@@ -82,7 +82,7 @@ const IntegrationList = ({
               >
                 <div className="group relative flex cursor-pointer flex-col items-center justify-center overflow-hidden rounded-3xl bg-primary-dark py-12 px-8 text-center border border-border/6 h-full">
                   {/* Gradient overlay for smooth transition */}
-                  <div className="absolute inset-0 rounded-3xl bg-radial-purple-dark opacity-0 transition-opacity duration-300 ease-in-out group-hover:opacity-100 w-full h-full" />
+                  <div className="absolute inset-0 rounded-3xl bg-radial-accent-dark opacity-0 transition-opacity duration-300 ease-in-out group-hover:opacity-100 w-full h-full" />
 
                   {/* Content wrapper to stay above gradient overlay */}
                   <div className="relative z-10 flex flex-col items-center justify-center">

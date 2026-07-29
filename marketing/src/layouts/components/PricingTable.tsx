@@ -138,9 +138,9 @@ interface PricingTableProps {
 
 export default function PricingTable({ data }: PricingTableProps) {
   const primaryColor =
-    theme?.colors?.default?.theme_color?.primary || "#8F2FFE";
+    theme?.colors?.default?.theme_color?.primary || "#C8F000";
   const secondaryColor =
-    theme?.colors?.default?.theme_color?.secondary || "#DF53FE";
+    theme?.colors?.default?.theme_color?.secondary || "#B8DD00";
 
   const plans = data?.plans || [];
   const features = data?.features || [];
@@ -255,7 +255,7 @@ export default function PricingTable({ data }: PricingTableProps) {
                           key={plan.name}
                           className={`flex flex-col ${
                             plan.highlighted
-                              ? "flex-[1.2] -my-5 rounded-2xl overflow-hidden shadow-2xl shadow-purple-900/60 z-10"
+                              ? "flex-[1.2] -my-5 rounded-2xl overflow-hidden shadow-2xl shadow-primary/40 z-10"
                               : "flex-1"
                           }`}
                           style={

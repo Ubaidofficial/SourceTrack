@@ -127,7 +127,7 @@ const Integration = ({ data }: { data: PageData }) => {
 
                       {/* Dot */}
                       <motion.div
-                        className="absolute rounded-full bg-white/20"
+                        className="absolute rounded-full bg-border"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: introStarted ? 1 : 0 }}
                         transition={{
@@ -160,8 +160,8 @@ const Integration = ({ data }: { data: PageData }) => {
               >
                 <path
                   d="M2.22455 50.2414C58.8362 22.1179 126.223 5 205.589 5C286.429 5 354.892 22.754 412.225 51.8257"
-                  stroke="white"
-                  strokeOpacity="0.1"
+                  stroke="var(--color-border)"
+                  strokeOpacity="1"
                   strokeWidth="10"
                   strokeDasharray="2 60"
                 />
@@ -230,8 +230,8 @@ const Integration = ({ data }: { data: PageData }) => {
               y2="749"
               gradientUnits="userSpaceOnUse"
             >
-              <stop stopColor="#9A4DFE" />
-              <stop offset="1" stopColor="#E87CFF" />
+              <stop stopColor="#B8DD00" />
+              <stop offset="1" stopColor="#C8F000" />
             </linearGradient>
           </defs>
         </svg>

@@ -12,9 +12,9 @@ function seededRand(seed: number) {
 
 const CTAShape = () => {
   const primaryColor =
-    theme?.colors?.default?.theme_color?.primary ?? "#9A4DFE";
+    theme?.colors?.default?.theme_color?.primary ?? "#B8DD00";
   const secondaryColor =
-    theme?.colors?.default?.theme_color?.secondary ?? "#E87CFF";
+    theme?.colors?.default?.theme_color?.secondary ?? "#C8F000";
 
 
   /* stable star field */
@@ -35,13 +35,9 @@ const CTAShape = () => {
   /* stable ember particles that float upward */
   const embers = useMemo(() => {
     const r = seededRand(31);
-    const cols = [
-      primaryColor,
-      secondaryColor,
-      "#FF5DAA",
-      "#C44DFF",
-      "#B87CFE",
-    ];
+    // Brand palette only — the three hardcoded pink/violet stops that used to pad this
+    // array were template leftovers and a design.md 3.5 "purple gradients" violation.
+    const cols = [primaryColor, secondaryColor];
     return Array.from({ length: 18 }, (_, i) => ({
       id: i,
       cx: Math.round(110 + r() * 1300),
@@ -141,7 +137,7 @@ const CTAShape = () => {
             keySplines="0.42 0 0.58 1;0.42 0 0.58 1"
             repeatCount="indefinite"
           />
-          <stop stopColor={primaryColor ? primaryColor : "#9A4DFE"}>
+          <stop stopColor={primaryColor ? primaryColor : "#B8DD00"}>
             <animate
               attributeName="stop-opacity"
               values="0.95;1;0.95"
@@ -154,7 +150,7 @@ const CTAShape = () => {
           </stop>
           <stop
             offset="1"
-            stopColor={secondaryColor ? secondaryColor : "#E87CFF"}
+            stopColor={secondaryColor ? secondaryColor : "#C8F000"}
           >
             <animate
               attributeName="stop-opacity"
@@ -202,7 +198,7 @@ const CTAShape = () => {
             keySplines="0.42 0 0.58 1;0.42 0 0.58 1"
             repeatCount="indefinite"
           />
-          <stop stopColor={primaryColor ? primaryColor : "#9A4DFE"}>
+          <stop stopColor={primaryColor ? primaryColor : "#B8DD00"}>
             <animate
               attributeName="stop-opacity"
               values="0.92;1;0.92"
@@ -215,7 +211,7 @@ const CTAShape = () => {
           </stop>
           <stop
             offset="1"
-            stopColor={secondaryColor ? secondaryColor : "#E87CFF"}
+            stopColor={secondaryColor ? secondaryColor : "#C8F000"}
           >
             <animate
               attributeName="stop-opacity"
@@ -398,7 +394,7 @@ const CTAShape = () => {
             cy: 272,
             begin: "1.4s",
             dur: "4.6s",
-            stroke: "#FF5DAA",
+            stroke: secondaryColor,
             sw: 0.7,
             maxR: 32,
             op: 0.4,
