@@ -143,17 +143,31 @@ jobs:
           cd marketing
           npm ci
 
-      # Build only, DELIBERATELY. `astro check` currently exits non-zero on 271
-      # pre-existing errors — 267 of them `className` used on plain HTML elements in 30
-      # .astro files, where Astro does not map it to `class`, so the attribute ships
-      # inert and those pages render substantially unstyled. That is a real bug being
-      # fixed separately; adding the gate before that lands would redden CI on every PR
-      # for a defect none of them introduced. Add `npx astro check` here as a
-      # fast-follow once the className fix merges — this comment is the reminder.
       - name: Build marketing site
         run: |
           cd marketing
           npm run build
+
+      # The 271 pre-existing errors this gate used to be blocked on are FIXED (267 of them
+      # `className` on plain elements across 30 .astro files). `astro check` now reports
+      # 0 errors / 0 warnings, so the gate the previous comment here asked for as a
+      # fast-follow is now live. It catches the class of bug at the SOURCE.
+      - name: Type-check marketing site
+        run: |
+          cd marketing
+          npx astro check
+
+      # ...and this catches it in the OUTPUT, which is the only surface that proves what
+      # actually shipped. Both are kept because they fail at different moments and neither
+      # subsumes the other: `astro check` sees a .astro file the build might tree-shake,
+      # while this sees the rendered HTML including anything a component injected.
+      #
+      # This is not a hypothetical gate. 267 elements across 30 of 50 pages reached
+      # production rendering with NO class attribute at all — `className` is not an error
+      # in Astro, it is emitted verbatim and silently ignored by the DOM — and nothing in
+      # the pipeline looked at the built output, so it stayed invisible.
+      - name: Check built marketing HTML
+        run: node scripts/qa-marketing-html.mjs marketing/dist
 
       # Same reasoning as build-and-test above: without this, a marketing build that
       # breaks on main is invisible until someone happens to look at the Actions tab.
