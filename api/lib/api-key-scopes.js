@@ -7,8 +7,12 @@
 //   write:crawler_hits  — required by POST /api/server/crawler-hit (enforced, see
 //                         server-crawler-hits.js). See the note below on why this is its
 //                         own scope rather than a reuse of write:events.
-//   read:analytics      — grantable and stored, reserved for the read REST API.
-//                         Enforced by NOTHING today. Do not wire it to an endpoint here.
+//   read:analytics      — required by GET /api/diagnostics/* (enforced, see
+//                         api/middleware/api-key-scope.js + api/routes/diagnostics.js).
+//                         This line previously read "Enforced by NOTHING today"; MCP v1's
+//                         diagnostic reads are its first consumer, so it is now live. The
+//                         wider §1.3 goal — key-auth as an ALTERNATIVE mode on the existing
+//                         user-authed /api/analytics endpoints — is still NOT built.
 //
 // ── Why write:crawler_hits is separate, and not implied by write:events ───────────────
 // KI-43's MVP vocabulary was two values and this is a deliberate third, added while
@@ -34,6 +38,11 @@
 // Consequence, stated plainly: an existing write:events key gets 403 on /crawler-hit.
 // That is intended — write:events does not imply write:crawler_hits, and a customer
 // running both surfaces mints two keys. Safe today only because zero keys exist.
+//
+// ── Siblings, in all three directions ────────────────────────────────────────────────
+// Each scope is checked exactly and none implies another. Concretely, all of these are
+// 403s: write:events on /api/diagnostics/*, read:analytics on /api/server/event,
+// write:events on /api/server/crawler-hit. Every one is intended.
 //
 // TWO DIFFERENT DEFAULTS, ON PURPOSE — do not unify them:
 //   · DB column default is '{}' (see supabase/migrations/20260722000000_api_keys_scopes_and_revoke.sql,

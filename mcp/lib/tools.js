@@ -106,3 +106,96 @@ export async function handleVerifyInstallation({ siteKey, authToken, apiBaseUrl 
     }
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────────────
+// MCP v1 diagnostic tools (roadmap §1.5)
+//
+// TWO AUTH MODELS LIVE IN THIS SERVER AND THEY DO NOT SHARE A CREDENTIAL SLOT.
+//
+//   AUTH_USER_JWT — verify_installation. A Supabase user session JWT, taken from the
+//                   `auth_token` argument or SOURCETRACK_AUTH_TOKEN. Resolves to a PERSON,
+//                   who may belong to many sites, so the tool also takes a site_key and the
+//                   API checks membership.
+//   AUTH_API_KEY  — every tool below. A SourceTrack API key (st_live_…), taken from the
+//                   `api_key` argument or SOURCETRACK_API_KEY, and NEVER from auth_token /
+//                   SOURCETRACK_AUTH_TOKEN. Resolves to exactly ONE site_id, which is why
+//                   none of these tools accepts a site_id/site_key argument at all —
+//                   the key is the tenant.
+//
+// The separation is structural, not a heuristic: distinct argument names, distinct env
+// vars, and (server-side) distinct routes — /api/diagnostics/* accepts API keys only while
+// /api/analytics/* accepts user JWTs only. Nothing anywhere inspects a bearer token to
+// guess which verifier to use, and there is NO cross-fallback: a tool declaring
+// AUTH_API_KEY with no API key present fails before it opens a socket rather than
+// quietly reaching for the JWT.
+export const AUTH_NONE = 'none'
+export const AUTH_USER_JWT = 'user_jwt'
+export const AUTH_API_KEY = 'api_key'
+
+// Shared caller for the five diagnostic reads.
+async function callDiagnostic(path, { apiKey, apiBaseUrl, query = {} } = {}) {
+  const effectiveKey = apiKey || process.env.SOURCETRACK_API_KEY
+  if (!effectiveKey) {
+    // Fail closed BEFORE any request. Deliberately does not fall back to
+    // SOURCETRACK_AUTH_TOKEN — sending a user JWT to a key-authed route would produce a
+    // confusing 401 from the wrong subsystem and blur the two auth models.
+    return {
+      ok: false,
+      error: 'MISSING_API_KEY',
+      message: 'api_key is required (pass the api_key argument or set SOURCETRACK_API_KEY). A user auth_token will not work here: diagnostic tools authenticate with a SourceTrack API key holding the read:analytics scope.'
+    }
+  }
+
+  const baseUrl = (apiBaseUrl || process.env.SOURCETRACK_API_URL || 'https://api.srctk.com').replace(/\/+$/, '')
+  const qs = new URLSearchParams(
+    Object.entries(query).filter(([, v]) => v !== undefined && v !== null && v !== '')
+  ).toString()
+  const url = `${baseUrl}/api/diagnostics/${path}${qs ? `?${qs}` : ''}`
+
+  try {
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${effectiveKey}` } })
+    const json = await res.json().catch(() => null)
+
+    if (res.ok) return { ok: true, data: json?.data ?? json }
+
+    // Each of these means something different to an agent, so none of them collapses into
+    // a generic failure — and none of them is ever reported as "no data".
+    const byStatus = {
+      401: 'INVALID_API_KEY',
+      403: 'MISSING_SCOPE',
+      402: 'PLAN_GATED',
+      503: 'READ_STORE_UNAVAILABLE'
+    }
+    return {
+      ok: false,
+      error: byStatus[res.status] || `HTTP_ERROR_${res.status}`,
+      message: json?.error || `Diagnostics API returned HTTP ${res.status}`
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      error: 'FETCH_FAILED',
+      message: `Failed to reach the diagnostics API (${err?.message || 'network error'})`
+    }
+  }
+}
+
+export function handleGetWorkspaceContext({ apiKey, apiBaseUrl }) {
+  return callDiagnostic('workspace-context', { apiKey, apiBaseUrl })
+}
+
+export function handleGetSiteHealth({ apiKey, apiBaseUrl }) {
+  return callDiagnostic('site-health', { apiKey, apiBaseUrl })
+}
+
+export function handleGetDataQuality({ apiKey, apiBaseUrl }) {
+  return callDiagnostic('data-quality', { apiKey, apiBaseUrl })
+}
+
+export function handleDebugDataFlow({ apiKey, apiBaseUrl, days }) {
+  return callDiagnostic('data-flow', { apiKey, apiBaseUrl, query: { days } })
+}
+
+export function handleVerifyEvents({ apiKey, apiBaseUrl }) {
+  return callDiagnostic('verify-events', { apiKey, apiBaseUrl })
+}

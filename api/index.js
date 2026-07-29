@@ -67,6 +67,7 @@ import { serverCrawlerHitsRouter } from './routes/server-crawler-hits.js'
 import { sessionsOverview, visitorSessions } from './routes/sessions.js'
 import liveRouter from './routes/live.js'
 import analyticsRouter from './routes/analytics.js'
+import diagnosticsRouter from './routes/diagnostics.js'
 import proxyRouter from './routes/proxy.js'
 import webhookIncomingRouter from './routes/webhook-incoming.js'
 import { trackerIdRouter } from './routes/tracker-id.js'
@@ -526,6 +527,12 @@ app.use('/api/marketing', marketingFormIpLimit, marketingFormGlobalIpLimit, mark
 app.use('/api/jobs', requireUserAuth, jobStatusRouter)
 app.use('/api/live', requireUserAuth, validateSiteKey, requireSiteMembership, liveRouter)
 app.use("/api/analytics", analyticsRouter)
+
+// API-key-authed diagnostic reads for MCP v1. Intentionally NO requireUserAuth at the
+// mount — this surface takes API keys, not user sessions, and every route inside carries
+// its own requireApiKeyScope(read:analytics). See api/routes/diagnostics.js on why the two
+// auth models are separated by route rather than by inspecting the bearer token.
+app.use('/api/diagnostics', diagnosticsRouter)
 app.use("/sp", proxyRouter)
 app.use("/api/webhooks/incoming", trackLimit, webhookIncomingRouter)
 app.use("/api/webhooks", webhooksRouter)
