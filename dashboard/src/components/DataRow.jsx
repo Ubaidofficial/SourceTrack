@@ -25,7 +25,7 @@ export default function DataRow({ label, count, max, icon, onClick, active, reve
       {icon && <span className="flex-shrink-0 w-4 flex items-center justify-center">{icon}</span>}
       <div className="flex-1 min-w-0">
         <span className="text-xs truncate text-st-black dark:text-dark-primary block">{label}</span>
-        <div style={{ height: '2px', width: `${pct.toFixed(1)}%`, background: 'rgba(204,240,63,0.6)', borderRadius: '1px', marginTop: '3px' }} />
+        <div style={{ height: '2px', width: `${pct.toFixed(1)}%`, background: 'rgba(200,240,0,0.6)', borderRadius: '1px', marginTop: '3px' }} />
         {rev > 0 && (
           <div style={{ height: '2px', width: `${revPct.toFixed(1)}%`, background: '#C8F000', borderRadius: '1px', marginTop: '2px' }} />
         )}

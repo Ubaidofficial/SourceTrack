@@ -13,10 +13,10 @@ export default function HeroPreviewCard() {
             <div className="flex gap-[6px]">
               <span className="w-2.5 h-2.5 rounded-full bg-[#E54545]" />
               <span className="w-2.5 h-2.5 rounded-full bg-[#FF8800]" />
-              <span className="w-2.5 h-2.5 rounded-full bg-[#CCF03F]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#C8F000]" />
             </div>
             <span className="truncate">Sample Attribution Preview</span>
-            <span className="inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 bg-[#CCF03F]/10 text-st-lime text-[10px] font-black uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 bg-[#C8F000]/10 text-st-lime text-[10px] font-black uppercase tracking-wider">
               Sample Data
             </span>
           </div>
@@ -31,7 +31,7 @@ export default function HeroPreviewCard() {
 
             <div className="bg-[#181D1D] border border-[#2D3333] rounded-2xl p-3">
               <div className="text-[#9DA7A7] text-[10px] font-extrabold uppercase tracking-wider">Top Source</div>
-              <div className="mt-1 text-2xl font-black tracking-tight text-[#CCF03F]">ChatGPT</div>
+              <div className="mt-1 text-2xl font-black tracking-tight text-[#C8F000]">ChatGPT</div>
               <div className="mt-1 text-[#9DA7A7] text-[10px] font-bold">AI referral channel</div>
             </div>
 
@@ -43,7 +43,7 @@ export default function HeroPreviewCard() {
                 <span className="text-st-lime font-black">→</span>
                 <span className="px-2 py-1 rounded bg-[#2D3333] border border-white/5">/pricing</span>
                 <span className="text-st-lime font-black">→</span>
-                <span className="px-2 py-1 rounded bg-[#CCF03F]/20 text-st-lime border border-[#CCF03F]/20">checkout ($120.00)</span>
+                <span className="px-2 py-1 rounded bg-[#C8F000]/20 text-st-lime border border-[#C8F000]/20">checkout ($120.00)</span>
               </div>
               <div className="mt-2 text-[#9DA7A7] text-[10px]">Attributed 100% to ChatGPT referral (Linear model)</div>
             </div>
@@ -62,7 +62,7 @@ export default function HeroPreviewCard() {
                       <span className="text-[#D8E0E0]">{row[0]}</span>
                       <span className="text-[#586464] text-[9px] font-normal">{row[1]}</span>
                     </div>
-                    <span className="text-[#CCF03F]">{row[2]}</span>
+                    <span className="text-[#C8F000]">{row[2]}</span>
                   </div>
                 ))}
               </div>

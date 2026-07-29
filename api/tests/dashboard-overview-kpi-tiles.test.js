@@ -183,3 +183,58 @@ test('selection never throws on a malformed or absent payload', () => {
   assert.doesNotThrow(() => selectOverviewKpis({}))
   assert.doesNotThrow(() => selectOverviewKpis({ activeResults: null, aiSourceRows: null, kpis: null }))
 })
+
+// ── design.md §2.4 hierarchy: exactly one headline tile, chosen by business type ──────────
+//
+// "When available, revenue and conversions visually dominate." Before this flag every tile
+// rendered at one size, so Revenue and Sessions were typographically identical. MetricTile
+// steps the value size up for primary:true — so what these pin is that the flag lands on the
+// right tile per business type, and on NOTHING when the headline metric is gated off. The
+// wrong behaviour to guard is a secondary metric being promoted into the big slot just
+// because it happens to sort first.
+
+test('🔴 exactly one tile is primary, for every business type', () => {
+  for (const businessType of ['saas', 'ecommerce', 'leadgen']) {
+    const tiles = selectOverviewKpis(rich({ businessType }))
+    const primaries = tiles.filter(t => t.primary === true)
+    assert.equal(primaries.length, 1,
+      `${businessType} produced ${primaries.length} primary tiles: ${JSON.stringify(primaries.map(t => t.key))}`)
+  }
+})
+
+test('the primary tile is the type-appropriate headline number', () => {
+  assert.equal(selectOverviewKpis(rich({ businessType: 'saas' })).find(t => t.primary)?.key, 'revenue')
+  assert.equal(selectOverviewKpis(rich({ businessType: 'ecommerce' })).find(t => t.primary)?.key, 'revenue')
+  // Lead gen leads with Total Leads, not Revenue — the whole reason primacy is decided here
+  // and not hardcoded to "Revenue" in the component.
+  assert.equal(selectOverviewKpis(rich({ businessType: 'leadgen' })).find(t => t.primary)?.key, 'leads')
+})
+
+test('the primary tile is always slot 1 — the first tile rendered', () => {
+  for (const businessType of ['saas', 'ecommerce', 'leadgen']) {
+    const tiles = selectOverviewKpis(rich({ businessType }))
+    assert.equal(tiles[0].primary, true, `${businessType}: primary is not the first tile`)
+  }
+})
+
+test('🔴 no revenue -> NO primary tile; a secondary metric is never promoted', () => {
+  // §2.4 says revenue/conversions dominate "when available". With slot 1 gated off there is no
+  // headline, and the next tile in the list must stay at its normal size.
+  const tiles = selectOverviewKpis(rich({ businessType: 'saas', totalRevenue: 0 }))
+  assert.ok(!keys(tiles).includes('revenue'), 'revenue tile should be gated off')
+  assert.equal(tiles.filter(t => t.primary === true).length, 0,
+    'a secondary tile was promoted into the headline slot')
+})
+
+test('🔴 lead gen with leads untracked -> NO primary tile', () => {
+  const tiles = selectOverviewKpis(rich({ businessType: 'leadgen', leadsTracked: false }))
+  assert.ok(!keys(tiles).includes('leads'))
+  assert.equal(tiles.filter(t => t.primary === true).length, 0)
+})
+
+test('secondary tiles never carry the primary flag', () => {
+  const tiles = selectOverviewKpis(rich({ businessType: 'ecommerce' }))
+  for (const t of tiles.slice(1)) {
+    assert.notEqual(t.primary, true, `${t.key} should not be primary`)
+  }
+})

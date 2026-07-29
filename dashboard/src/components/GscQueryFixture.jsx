@@ -19,7 +19,7 @@ export default function GscQueryFixture() {
           {/* Header */}
           <div className="h-[44px] flex items-center justify-between px-4 bg-[#171B1B] border-b border-white/10">
             <span className="text-[#F5F8F8] text-xs font-bold">Search Console — top queries</span>
-            <span className="inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 bg-[#CCF03F]/10 text-st-lime text-[10px] font-black uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 bg-[#C8F000]/10 text-st-lime text-[10px] font-black uppercase tracking-wider">
               Sample data
             </span>
           </div>

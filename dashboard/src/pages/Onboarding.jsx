@@ -464,7 +464,7 @@ export default function Onboarding() {
                     }`}
                   >
                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                      selected ? 'border-[#1F2323] bg-[#1F2323] dark:border-[#CCF03F] dark:bg-[#CCF03F]' : 'border-gray-300'
+                      selected ? 'border-[#1F2323] bg-[#1F2323] dark:border-[#C8F000] dark:bg-[#C8F000]' : 'border-gray-300'
                     }`}>
                       {selected && <Check className="w-3 h-3 text-white" />}
                     </div>

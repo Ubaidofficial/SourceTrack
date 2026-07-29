@@ -12,6 +12,16 @@ const MetricTile = ({
   // tiles can sit inside one shared divided strip — the treatment the Analytics page already
   // uses. Purely presentational; defaults false, so every existing call site is unchanged.
   flush = false,
+  // design.md §2.4: "When available, revenue and conversions visually dominate. Secondary
+  // metrics ... should be quieter but still polished." Before this, every tile rendered its
+  // value at exactly one size (text-xl tight / text-2xl otherwise), so Revenue and Sessions
+  // were typographically identical and the section had no hierarchy at all.
+  //
+  // This is a step for ONE tile, not a bump for all of them — differentiation is the point,
+  // so the secondary sizes below are deliberately unchanged. Which tile is primary is decided
+  // by data, not hardcoded here: overviewKpis.js marks its slot-1 "headline number for this
+  // business type", which is Revenue for saas/ecommerce and Total Leads for leadgen.
+  primary = false,
   delta = null,
   sub = null,
   // Why this tile has no value. A bare "—" reads as broken; the reason is what makes it read as
@@ -83,6 +93,8 @@ const MetricTile = ({
 
   const showTrend = !isEmptyState && (trend != null || delta)
   const tight = compact || flush
+  // One step up for the headline tile; secondary tiles keep the size they already had.
+  const valueSize = primary ? 'text-3xl' : tight ? 'text-xl' : 'text-2xl'
 
   return (
     <div
@@ -98,9 +110,9 @@ const MetricTile = ({
       <div>
         <p className={`text-st-gray dark:text-gray-400 font-semibold uppercase tracking-wider ${tight ? 'text-[10px] mb-1' : 'text-[11px] mb-1.5'}`}>{label}</p>
         {displayValue != null ? (
-          <p className={`text-st-black dark:text-dark-primary font-bold tabular-nums tracking-tight ${tight ? 'text-xl' : 'text-2xl'}`}>{displayValue}</p>
+          <p className={`text-st-black dark:text-dark-primary font-bold tabular-nums tracking-tight ${valueSize}`}>{displayValue}</p>
         ) : (
-          <p className={`text-st-black dark:text-dark-primary font-bold tracking-tight ${tight ? 'text-xl' : 'text-2xl'}`}>—</p>
+          <p className={`text-st-black dark:text-dark-primary font-bold tracking-tight ${valueSize}`}>—</p>
         )}
       </div>
       {(isEmptyState || showTrend || sub) && (

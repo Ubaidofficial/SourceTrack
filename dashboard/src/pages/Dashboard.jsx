@@ -405,6 +405,7 @@ export default function Dashboard() {
                         <MetricTile
                           key={t.key}
                           flush
+                          primary={t.primary === true}
                           label={t.label}
                           value={t.value}
                           format={t.format}
@@ -743,7 +744,7 @@ function DashboardWidgetCard({ report, site }) {
                         <span className="truncate">{label}</span>
                         {isDirectLabel(label) && <DirectInfo />}
                       </span>
-                      <div style={{ height: '2px', width: `${barW}%`, background: 'rgba(204,240,63,0.6)', borderRadius: '1px', marginTop: '3px' }} />
+                      <div style={{ height: '2px', width: `${barW}%`, background: 'rgba(200,240,0,0.6)', borderRadius: '1px', marginTop: '3px' }} />
                     </div>
                     <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300 w-14 text-right flex-shrink-0 tabular-nums">
                       {metricDef.format(val)}

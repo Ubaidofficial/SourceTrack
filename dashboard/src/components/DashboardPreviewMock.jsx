@@ -11,7 +11,7 @@ export default function DashboardPreviewMock() {
               <span className="w-[10px] h-[10px] rounded-full bg-st-lime" />
             </div>
             <span>SourceTrack — revenue attribution dashboard</span>
-            <span className="inline-flex items-center gap-[7px] rounded-full py-[6px] px-[10px] bg-[rgba(204,240,63,.12)] text-st-lime text-xs font-black">
+            <span className="inline-flex items-center gap-[7px] rounded-full py-[6px] px-[10px] bg-[rgba(200,240,0,.12)] text-st-lime text-xs font-black">
               <span className="w-2 h-2 rounded-full bg-st-lime" />Demo
             </span>
           </div>
@@ -32,7 +32,7 @@ export default function DashboardPreviewMock() {
                 ].map((row, i) => (
                   <div key={i} className="grid grid-cols-[1.3fr_.72fr_.55fr_.55fr] gap-[10px] py-[10px] border-b border-white/10 text-[#D8E0E0] text-[11px] font-bold leading-tight last:border-0">
                     <span className="truncate">{row[0]}</span><span className="text-[#B9C2C2]">{row[1]}</span>
-                    <span className="inline-flex items-center justify-center min-w-[54px] px-2 py-[3px] rounded-full bg-[rgba(204,240,63,.16)] text-st-lime text-[11px] font-black">{row[2]}</span>
+                    <span className="inline-flex items-center justify-center min-w-[54px] px-2 py-[3px] rounded-full bg-[rgba(200,240,0,.16)] text-st-lime text-[11px] font-black">{row[2]}</span>
                     <span>{row[3]}</span>
                   </div>
                 ))}
@@ -43,7 +43,7 @@ export default function DashboardPreviewMock() {
               <div className="text-[#9DA7A7] text-[11px] font-black uppercase tracking-[0.055em]">Landing page revenue</div>
               <div className="flex items-end gap-2 h-[132px] mt-[18px] pb-1 border-b border-dashed border-white/20">
                 {[42, 72, 55, 88, 63, 78, 48].map((h, i) => (
-                  <span key={i} className="flex-1 min-h-[20px] rounded-t-full" style={{ height: `${h}%`, background: 'linear-gradient(180deg, #CCF03F, rgba(204,240,63,.06))' }} />
+                  <span key={i} className="flex-1 min-h-[20px] rounded-t-full" style={{ height: `${h}%`, background: 'linear-gradient(180deg, #C8F000, rgba(200,240,0,.06))' }} />
                 ))}
               </div>
               <div className="flex justify-between mt-2 text-[9px] font-bold text-[#9DA7A7] uppercase">

@@ -11,7 +11,7 @@ export default {
         st: {
           black: '#1F2323',
           gray: '#7D8090',
-          lime: '#CCF03F',
+          lime: '#C8F000',
           'lime-dark': '#C5E838', // Softer lime for dark mode
           green: '#00A457',
           orange: '#FF8800',

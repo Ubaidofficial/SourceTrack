@@ -115,6 +115,7 @@ export function selectOverviewKpis(input = {}) {
   if (type === 'leadgen') {
     push(leadsTracked ? {
       key: 'leads',
+      primary: true,
       label: 'Total Leads',
       value: safeNumber(totalLeads, 0),
       format: 'number',
@@ -124,6 +125,7 @@ export function selectOverviewKpis(input = {}) {
   } else {
     push(hasRevenue ? {
       key: 'revenue',
+      primary: true,
       label: type === 'ecommerce' ? 'Total Revenue' : 'Revenue',
       value: safeNumber(totalRevenue, 0),
       format: 'currency',
