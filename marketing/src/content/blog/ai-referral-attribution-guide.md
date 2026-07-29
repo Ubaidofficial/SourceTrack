@@ -3,7 +3,7 @@ title: "How to Track ChatGPT and AI Referrals That GA4 Marks as Direct Traffic"
 meta_title: "How to Track ChatGPT and AI Referrals That GA4 Marks as Direct Traffic"
 description: "Learn how standard analytics tools misclassify AI search recommendations from ChatGPT, Claude, and Perplexity as dark traffic, and how to capture true AI revenue."
 date: 2026-07-28T12:00:00Z
-image: "/images/blog/blog-1.png"
+image: ""
 category: "Attribution"
 author:
   name: "SourceTrack Team"

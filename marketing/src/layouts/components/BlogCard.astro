@@ -15,11 +15,11 @@ const uid = `blogcard-${Math.random().toString(36).slice(2, 8)}`;
   class="bg-card/70 border border-border/6 rounded-3xl overflow-hidden w-full flex flex-col gap-0 group relative"
 >
   <div class="absolute inset-0 size-full bg-radial-accent-dark transition-all duration-300 opacity-0 group-hover:opacity-100"></div>
-  <!-- Image -->
-  <div class="p-2.5">
-    <a href={`/blog/${data.slug}`}>
-      <div class="rounded-3xl overflow-hidden bg-dark/10 w-full aspect-1150/600 relative">
-        {image ? (
+  <!-- Image (omitted entirely when absent — see FeaturedPost.astro for the reasoning) -->
+  {image && (
+    <div class="p-2.5">
+      <a href={`/blog/${data.slug}`}>
+        <div class="rounded-3xl overflow-hidden bg-dark/10 w-full aspect-1150/600 relative">
           <img
             src={image}
             alt={title}
@@ -27,14 +27,10 @@ const uid = `blogcard-${Math.random().toString(36).slice(2, 8)}`;
             height="600"
             class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
           />
-        ) : (
-          <div class="w-full h-full flex items-center justify-center text-gray">
-            <span class="text-sm">No image available</span>
-          </div>
-        )}
-      </div>
-    </a>
-  </div>
+        </div>
+      </a>
+    </div>
+  )}
   <!-- Content -->
   <div class="px-5 pt-4 pb-5 flex flex-col gap-3 relative z-2">
     <a href={`/blog/${data.slug}`}>

@@ -35,20 +35,19 @@ const uid = `featpost-${Math.random().toString(36).slice(2, 8)}`;
     </div>
   </div>
 
-  <!-- Hero Image -->
-  <div class="p-5">
-    <a href={`/blog/${data.slug}`}>
-      <div class="rounded-3xl overflow-hidden bg-dark/10 w-full aspect-1150/600 relative">
-        {image ? (
+  {/* Hero image. When a post has no image the whole block is omitted rather than showing the
+      old "No image available" panel — at aspect 1150/600 that was a large grey rectangle
+      reading as a broken build, and this state persists until real art exists. A text-only
+      card is a deliberate-looking absence; a captioned grey box is not. */}
+  {image && (
+    <div class="p-5">
+      <a href={`/blog/${data.slug}`}>
+        <div class="rounded-3xl overflow-hidden bg-dark/10 w-full aspect-1150/600 relative">
           <img src={image} alt={title} width="1150" height="600" class="object-cover w-full h-full" />
-        ) : (
-          <div class="w-full h-full flex items-center justify-center text-gray">
-            <span class="text-sm">No image available</span>
-          </div>
-        )}
-      </div>
-    </a>
-  </div>
+        </div>
+      </a>
+    </div>
+  )}
 
   <!-- Title -->
   <div class="px-6.5 sm:px-10 pt-6 pb-5">

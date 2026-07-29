@@ -3,7 +3,7 @@ title: "Why Cookieless First-Party Attribution Is the Moat for SaaS Growth"
 meta_title: "Why Cookieless First-Party Attribution Is the Moat for SaaS Growth"
 description: "Third-party cookies are failing under ITP and ad-blockers. Here is how cookieless first-party attribution protects data accuracy and respects user privacy."
 date: 2026-07-27T10:00:00Z
-image: "/images/blog/blog-2.png"
+image: ""
 category: "Privacy & Data"
 author:
   name: "SourceTrack Team"

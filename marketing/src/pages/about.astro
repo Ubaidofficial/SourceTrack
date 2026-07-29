@@ -25,15 +25,17 @@ const callToAction = await getListPage("sections/call-to-action.md");
 <Base title={title} meta_title={meta_title} description={description} image={image}>
   <PageHeader page_header={page_header}>
     <div class="border border-border/6 bg-card rounded-4xl p-2.5">
-      <CardShape>
-        <img
-          src={who_we_are?.image}
-          alt="Feature"
-          width="1230"
-          height="800"
-          class="rounded-3xl object-cover relative z-1 w-full sm:h-140"
-        />
-      </CardShape>
+      {who_we_are?.image && (
+        <CardShape>
+          <img
+            src={who_we_are.image}
+            alt="Feature"
+            width="1230"
+            height="800"
+            class="rounded-3xl object-cover relative z-1 w-full sm:h-140"
+          />
+        </CardShape>
+      )}
       <div class="p-10 grid lg:grid-cols-2 text-left gap-10 sm:gap-20">
         <div>
           <Badge>{who_we_are?.badge}</Badge>
