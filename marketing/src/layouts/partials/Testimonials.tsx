@@ -5,6 +5,7 @@ import ImageFallback from "@/helpers/ImageFallback";
 import { markdownify } from "@/lib/utils/textConverter";
 import { AnimatePresence, motion } from "motion/react";
 import { fadeInUpVariants } from "@/lib/animations";
+import usePrefersReducedMotion from "@/hooks/usePrefersReducedMotion";
 
 type TestimonialItem = {
   name: string;
@@ -38,6 +39,7 @@ interface PageData {
 const Testimonials = ({ data }: { data: PageData }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(1);
+  const reducedMotion = usePrefersReducedMotion();
 
   const legacyItem: TestimonialItem | null =
     data.frontmatter.name &&
@@ -61,6 +63,10 @@ const Testimonials = ({ data }: { data: PageData }) => {
 
   useEffect(() => {
     if (testimonials.length <= 1) return;
+    // Reduced motion: never start the auto-advance timer. The content
+    // swapping itself is the motion here, so shortening the slide transition
+    // would not be enough — the carousel simply holds on the first quote.
+    if (reducedMotion) return;
 
     const intervalId = window.setInterval(() => {
       setDirection(1);
@@ -68,7 +74,7 @@ const Testimonials = ({ data }: { data: PageData }) => {
     }, 4000);
 
     return () => window.clearInterval(intervalId);
-  }, [testimonials.length]);
+  }, [testimonials.length, reducedMotion]);
 
   if (!data.frontmatter.enable || testimonials.length === 0) {
     return null;

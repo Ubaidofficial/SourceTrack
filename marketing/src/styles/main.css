@@ -17,3 +17,6 @@
   @import "./navigation.css";
   @import "./buttons.css";
 }
+
+/* Unlayered on purpose — must outrank every layer above. Keep last. */
+@import "./reduced-motion.css";

@@ -1,0 +1,44 @@
+/*
+ * prefers-reduced-motion — CSS layer (design.md section 21)
+ *
+ * Covers every CSS-driven animation and transition on the marketing site:
+ * the header entrance (Header.astro headerFadeInDown), the desktop dropdown
+ * reveal, the pricing text-reveal and text-hide pair, .animate-spin-slow, the
+ * CTAShape twinkle and shimmer keyframes, and the Tailwind transition and
+ * animate utilities used throughout the markup.
+ *
+ * WHY DURATION-COLLAPSE AND NOT "animation: none":
+ * several animations here own the final visible state of their element via a
+ * forwards or both fill, so "animation: none" would strand the element on its
+ * START keyframe rather than disable motion:
+ *   - .price-tag.active is opacity 0 plus "animation: text-reveal ... forwards"
+ *     so "none" leaves the price invisible on /pricing.
+ *   - .price-tag.inactive ends at opacity 0 and is absolutely positioned, so
+ *     "none" leaves the hidden billing period painted over the active one.
+ *   - #site-header uses a "both" fill starting from opacity 0.
+ * Collapsing the duration instead lets each animation reach its end state
+ * immediately: same final pixels, zero perceptible motion.
+ *
+ * This file is imported UNLAYERED (after the layer blocks in main.css) so it
+ * outranks anything in layer base or layer components, and Tailwind utilities.
+ *
+ * Astro view transitions are NOT handled here — astro/components/
+ * viewtransitions.css already ships its own prefers-reduced-motion block for
+ * the view-transition pseudo-elements, which this selector cannot reach.
+ *
+ * JS-driven motion is not reachable from CSS and is guarded separately:
+ * Base.astro sets MotionGlobalConfig.skipAnimations, and the three hand-rolled
+ * cases live in Counter, Testimonials and TrustedClients.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}

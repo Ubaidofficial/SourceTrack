@@ -3,6 +3,7 @@ import ImageFallback from "@/helpers/ImageFallback";
 import type { LogoMarqueeType } from "@/types/index";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import usePrefersReducedMotion from "@/hooks/usePrefersReducedMotion";
 
 interface PageData {
   notFound?: boolean;
@@ -17,6 +18,7 @@ const TrustedClients = ({ data }: { data: PageData }) => {
   const section = data.frontmatter;
   const groupRef = useRef<HTMLDivElement>(null);
   const [groupWidth, setGroupWidth] = useState(0);
+  const reducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     const updateGroupWidth = () => {
@@ -71,7 +73,16 @@ const TrustedClients = ({ data }: { data: PageData }) => {
           <div className="z-10 flex items-center relative  overflow-hidden">
             <motion.div
               className="flex w-max gap-18"
-              animate={loopDistance ? { x: [0, -loopDistance] } : undefined}
+              // Reduced motion: drop the animation entirely rather than let
+              // MotionGlobalConfig.skipAnimations resolve it. This one repeats
+              // forever, so its "final keyframe" is -loopDistance — skipping to
+              // that would park the strip mid-scroll. Leaving x unset holds it
+              // at 0, i.e. the start of the logo list.
+              animate={
+                loopDistance && !reducedMotion
+                  ? { x: [0, -loopDistance] }
+                  : undefined
+              }
               transition={{
                 x: {
                   repeat: Infinity,
