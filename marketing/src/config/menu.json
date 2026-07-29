@@ -36,28 +36,8 @@
       "url": "/pricing"
     },
     {
-      "name": "Demo",
-      "url": "/demo"
-    },
-    {
-      "name": "Integrations",
-      "url": "/integrations"
-    },
-    {
-      "name": "Docs",
-      "url": "/docs"
-    },
-    {
-      "name": "Developers",
-      "url": "/developers"
-    },
-    {
       "name": "Blog",
       "url": "/blog"
-    },
-    {
-      "name": "Changelog",
-      "url": "/changelog"
     }
   ],
   "footer_company": [
@@ -83,6 +63,10 @@
     }
   ],
   "footer_resource": [
+    {
+      "name": "Live Demo",
+      "url": "/demo"
+    },
     {
       "name": "Blog",
       "url": "/blog"
