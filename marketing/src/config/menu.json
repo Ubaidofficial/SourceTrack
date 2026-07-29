@@ -76,6 +76,14 @@
       "url": "/changelog"
     },
     {
+      "name": "Roadmap",
+      "url": "/roadmap"
+    },
+    {
+      "name": "Comparisons",
+      "url": "/compare/ga4"
+    },
+    {
       "name": "Docs & Guides",
       "url": "/docs"
     },
