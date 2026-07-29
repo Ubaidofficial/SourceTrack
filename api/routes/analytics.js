@@ -1133,6 +1133,16 @@ router.get('/goals', requireUserAuth, validateSiteKey, requireSiteMembership, as
   }
 })
 
+// Row cap for the funnel's single pageview read. Exported so the test pins the SAME
+// number the handler uses — a test with its own copy of 50000 would keep passing if the
+// handler's cap changed, which is the bug class this whole change is about.
+//
+// This is an APP-SIDE choice, not a Tinybird ceiling: the `summary` pipe takes the limit
+// as a parameter (`LIMIT {{ Int32(limit_val, 10000) }}`), so it would serve more. The
+// binding constraint is that the handler pulls RAW pageview rows and sessionizes them in
+// Node — so the cap protects API memory, and lifting it just moves the cliff.
+export const FUNNEL_ROW_CAP = 50000
+
 router.get('/funnel', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   const block = requireFeature(req.site?.plan, 'funnels_cohorts', 'Funnels')
   if (block) return res.status(402).json(block)
@@ -1153,7 +1163,22 @@ router.get('/funnel', requireUserAuth, validateSiteKey, requireSiteMembership, a
     // against `pageviews` — a table that is EMPTY BY DESIGN (CLAUDE.md §5: analytics reads
     // come from Tinybird), so this endpoint returned an all-zero funnel for every site.
     const to = new Date().toISOString()
-    const rows = await dispatchPageviews(siteId, from, to, { filters: [], limit: 50000, queryName: 'summary' })
+    const rows = await dispatchPageviews(siteId, from, to, { filters: [], limit: FUNNEL_ROW_CAP, queryName: 'summary' })
+
+    // TRUNCATION DETECTION (§6 — never present a partial dataset as a complete one).
+    // The read above is capped, and a site can exceed the cap inside the funnel's date
+    // range: the `summary` pipe orders by timestamp, so what survives is a SLICE of the
+    // range, not a random sample of it. Every count below is then a floor.
+    //
+    // Deliberately `>=` and not `>`: a result landing exactly ON the cap is
+    // indistinguishable from one that was clipped, so it is reported as possibly-
+    // truncated. A caveat shown on a complete funnel is a cosmetic cost; a silently
+    // wrong conversion rate on a paid, plan-gated feature is not.
+    //
+    // The cap is DETECTED, not raised — see the PR body. Raising it moves the same
+    // silent-truncation bug to a higher threshold, and the real fix (push the step math
+    // into ClickHouse) changes funnel semantics and so needs its own verified change.
+    const truncated = rows.length >= FUNNEL_ROW_CAP
 
     // Group by visitor, chronological. `anonymous_id` is the summary pipe's alias for the
     // typed distinct_id column; `url` is its alias for page_url.
@@ -1219,7 +1244,21 @@ router.get('/funnel', requireUserAuth, validateSiteKey, requireSiteMembership, a
       }
     }
 
-    res.json({ success: true, data: result })
+    // `data` is an OBJECT, not the bare steps array it used to be. The truncation flag has
+    // to travel with the numbers it qualifies — fetchApi() unwraps to `data` and discards
+    // siblings, so a top-level field next to `data` would never reach the UI. The consumer
+    // (dashboard/src/pages/Analytics.jsx) reads `data.steps` and is updated in this PR.
+    res.json({
+      success: true,
+      data: {
+        steps: result,
+        truncated,
+        // Rows actually read. Named `sample_size` because that is what it is when the cap
+        // was hit; it equals the true pageview count in the range only when it was not.
+        sample_size: rows.length,
+        row_cap: FUNNEL_ROW_CAP
+      }
+    })
   } catch (err) {
     console.error('[analytics/funnel]', err.message)
     res.status(500).json({ success: false, error: 'Funnel analysis failed' })

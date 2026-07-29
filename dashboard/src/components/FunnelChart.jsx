@@ -1,6 +1,16 @@
-import { TrendingDown } from 'lucide-react'
+import { TrendingDown, Info } from 'lucide-react'
 
-export default function FunnelChart({ steps = [], loading = false, hasSteps = false, error = false }) {
+export default function FunnelChart({
+  steps = [],
+  loading = false,
+  hasSteps = false,
+  error = false,
+  // Set when the backend's pageview read hit its row cap, so these counts are a floor
+  // rather than a total. Shown as a caveat ON the result (§6: never present a partial
+  // dataset as complete) — not as an error, because the numbers are real, just incomplete.
+  truncated = false,
+  sampleSize = null
+}) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -96,6 +106,21 @@ export default function FunnelChart({ steps = [], loading = false, hasSteps = fa
           ({steps[0]?.visitors.toLocaleString()} → {lastStep?.visitors.toLocaleString()})
         </span>
       </div>
+
+      {/* Truncation caveat. Deliberately rendered BELOW the numbers it qualifies, and
+          worded as a floor ("at least", "may be incomplete") rather than implying the
+          rate above is exact. */}
+      {truncated && (
+        <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 px-3 py-2">
+          <Info className="w-3.5 h-3.5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+          <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">
+            Based on the most recent{' '}
+            {sampleSize ? sampleSize.toLocaleString() : 'capped set of'} pageviews in this
+            range — results may be incomplete for high-traffic date ranges. Narrow the date
+            range for a complete funnel.
+          </p>
+        </div>
+      )}
     </div>
   )
 }
