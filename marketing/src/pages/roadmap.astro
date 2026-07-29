@@ -1,0 +1,97 @@
+---
+// Public roadmap — Kanban, 3 columns, content from config/roadmap.json.
+//
+// WHY THE COPY IS WORDED THE WAY IT IS: a public roadmap is a trust surface, so every
+// column is a §6 truthfulness claim rather than a status label. Two rules are load-bearing
+// and should survive any redesign:
+//
+//   1. "Building" entries render their `note` — the plain-English reason a customer cannot
+//      rely on the item yet. Dropping the note would turn an honest column into a teaser.
+//   2. An empty column renders its `empty_state`, never a placeholder item. Padding
+//      "Coming soon" to make the layout balance would be inventing commitments.
+//
+// `verified_note` in the JSON is deliberately NOT rendered — it is internal evidence for
+// whoever edits the file, not customer copy.
+import Base from "@/layouts/Base.astro";
+import CallToAction from "@/partials/CallToAction.astro";
+import PageHeader from "@/partials/PageHeader.astro";
+import MainContainer from "@/components/MainContainer.astro";
+import { getListPage } from "@/lib/contentParser";
+import roadmap from "@/config/roadmap.json";
+
+const callToAction = await getListPage("sections/call-to-action.md");
+
+const page_header = {
+  title: "Roadmap",
+  badge: "What we're building",
+  subtitle:
+    "What is live, what is in progress, and what is not. If something is merged but not yet giving you a correct answer, it stays under Building until it does.",
+};
+
+// Column accent per state. Building is amber rather than red — in progress is not a fault.
+const accent: Record<string, { dot: string; chip: string }> = {
+  shipped: { dot: "bg-primary", chip: "text-primary" },
+  building: { dot: "bg-amber-400", chip: "text-amber-400" },
+  soon: { dot: "bg-gray", chip: "text-gray" },
+};
+---
+
+<Base
+  title="Roadmap"
+  meta_title="SourceTrack Roadmap — what's shipped, what's building"
+  description="An honest view of what SourceTrack ships today, what is in progress, and what is not built yet."
+>
+  <PageHeader page_header={page_header} />
+
+  <section>
+    <MainContainer>
+      <div class="container-padding-x pb-16">
+        <div class="grid gap-6 lg:grid-cols-3">
+          {
+            roadmap.columns.map((column: any) => (
+              <div class="flex flex-col gap-5 rounded-2xl border border-border/6 bg-light/40 p-6">
+                <div class="flex flex-col gap-2 border-b border-border/6 pb-4">
+                  <div class="flex items-center gap-3">
+                    <div class={`h-2 w-2 shrink-0 rounded-full ${accent[column.key]?.dot ?? "bg-gray"}`} />
+                    <h2 class="text-h5 font-bold text-text">{column.title}</h2>
+                    {column.items.length > 0 && (
+                      <span class={`ml-auto text-sm font-medium ${accent[column.key]?.chip ?? "text-gray"}`}>
+                        {column.items.length}
+                      </span>
+                    )}
+                  </div>
+                  <p class="text-sm text-gray">{column.description}</p>
+                </div>
+
+                {column.items.length === 0 ? (
+                  <p class="py-6 text-sm leading-relaxed text-gray">{column.empty_state}</p>
+                ) : (
+                  <div class="flex flex-col gap-4">
+                    {column.items.map((item: any) => (
+                      <article class="flex flex-col gap-3 rounded-xl border border-border/6 bg-body p-5">
+                        <h3 class="text-base font-bold text-text">{item.title}</h3>
+                        <p class="text-sm leading-relaxed text-gray">{item.description}</p>
+                        {item.note && (
+                          <p class="rounded-lg border border-amber-400/25 bg-amber-400/5 px-3 py-2 text-xs leading-relaxed text-gray">
+                            {item.note}
+                          </p>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          }
+        </div>
+
+        <p class="mt-8 text-center text-xs text-gray">
+          Last verified {roadmap.verified_on}. We move an item to Shipped only once it works
+          end to end for a customer — not when the code merges.
+        </p>
+      </div>
+    </MainContainer>
+  </section>
+
+  <CallToAction data={callToAction} />
+</Base>
