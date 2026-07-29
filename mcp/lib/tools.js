@@ -199,3 +199,17 @@ export function handleDebugDataFlow({ apiKey, apiBaseUrl, days }) {
 export function handleVerifyEvents({ apiKey, apiBaseUrl }) {
   return callDiagnostic('verify-events', { apiKey, apiBaseUrl })
 }
+
+// ── Volume tools ─────────────────────────────────────────────────────────────────────
+// Counts only. Neither accepts an attribution_model argument: the touch convention is
+// FIXED at first-touch server-side and is echoed back as `touch: "first"` on every row,
+// so it is a stated convention rather than an invisible default. Neither returns revenue,
+// cost, or any cost-derived metric — see api/lib/volume-only-guard.js for the enforcement.
+
+export function handleGetLeadsVolume({ apiKey, apiBaseUrl, days, dimension }) {
+  return callDiagnostic('leads-volume', { apiKey, apiBaseUrl, query: { days, dimension } })
+}
+
+export function handleGetCampaignVolume({ apiKey, apiBaseUrl, days }) {
+  return callDiagnostic('campaign-volume', { apiKey, apiBaseUrl, query: { days } })
+}

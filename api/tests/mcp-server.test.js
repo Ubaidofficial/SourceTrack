@@ -21,7 +21,7 @@ test('MCP Server — initialize handshake', async () => {
   assert.ok(res.result.capabilities.tools)
 })
 
-test('MCP Server — tools/list exposes the install-support + MCP v1 diagnostic surface', async () => {
+test('MCP Server — tools/list exposes the install-support + diagnostic + volume surface', async () => {
   const req = {
     jsonrpc: '2.0',
     id: 2,
@@ -31,8 +31,12 @@ test('MCP Server — tools/list exposes the install-support + MCP v1 diagnostic 
   assert.strictEqual(res.id, 2)
   const toolNames = res.result.tools.map(t => t.name)
   // Exact surface, deliberately: this list is the thing that must not grow by accident.
-  // The five diagnostics are roadmap §1.5's locked set. Note what is NOT here and must
-  // not be added without a §26 ruling — no attribution-model query, no revenue/ROAS tool.
+  // The five diagnostics are roadmap §1.5's locked set; the two volume tools were added
+  // under an explicit volume-only ruling (counts, no revenue, no attribution model).
+  // Note what is STILL NOT here and must not be added without a §26 ruling — no
+  // attribution-model query, no revenue/ROAS/CAC tool. Full attribution tooling is
+  // deferred, not declined; if it ever lands it needs its own decision, not a quiet
+  // append to this array.
   assert.deepStrictEqual(toolNames, [
     'detect_platform',
     'get_install_snippet',
@@ -41,7 +45,9 @@ test('MCP Server — tools/list exposes the install-support + MCP v1 diagnostic 
     'get_site_health',
     'get_data_quality',
     'debug_data_flow',
-    'verify_events'
+    'verify_events',
+    'get_leads_volume',
+    'get_campaign_volume'
   ])
 })
 

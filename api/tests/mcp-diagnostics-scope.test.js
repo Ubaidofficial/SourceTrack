@@ -172,12 +172,17 @@ test('🔴 EVERY registered /api/diagnostics route has more than one handler (i.
   }
 })
 
-test('🔴 the five roadmap §1.5 routes are all present', async () => {
+test('🔴 the roadmap §1.5 routes plus the two volume routes are all present', async () => {
   const { default: router } = await import('../routes/diagnostics.js')
   const paths = router.stack.filter(l => l.route).map(l => l.route.path).sort()
+  // Exact list. The guard test above proves each of these carries its scope guard; this
+  // one proves the SET is what was decided, so a route cannot appear here without a
+  // deliberate edit to this array.
   assert.deepStrictEqual(paths, [
+    '/campaign-volume',
     '/data-flow',
     '/data-quality',
+    '/leads-volume',
     '/site-health',
     '/verify-events',
     '/workspace-context'
