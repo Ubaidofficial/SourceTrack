@@ -7,13 +7,18 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { sectionHeaderVariants } from "@/lib/animations";
 
+interface IntegrationItem {
+  name: string;
+  logo: string;
+}
+
 interface PageData {
   notFound?: boolean;
   content?: string;
   frontmatter: {
     badge: string;
     title: string;
-    list: string[];
+    list: IntegrationItem[];
     button: Button;
   };
 }
@@ -43,17 +48,17 @@ const Integration = ({ data }: { data: PageData }) => {
   return (
     <section className="overflow-hidden relative">
       <div className="main-container"><div className="container">
-        <div className="pt-30 pb-10 container-padding-x relative overflow-hidden">
+        <div className="pt-16 pb-6 container-padding-x relative overflow-hidden">
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "0px", amount: 0.05 }}
             variants={sectionHeaderVariants}
           >
-            <div className="text-center mb-14">{badge && <div className="bg-gradient-primary p-px inline-block rounded-full mb-2"><div className="bg-gradient-black-grid px-4 py-1.5 rounded-full"><span className="gradient-text-primary">{badge}</span></div></div>}<h2 className="text-h2 font-medium lg:w-2/5 mx-auto">{title}</h2></div>
+            <div className="text-center mb-8">{badge &&<div className="bg-gradient-primary p-px inline-block rounded-full mb-2"><div className="bg-gradient-black-grid px-4 py-1.5 rounded-full"><span className="gradient-text-primary">{badge}</span></div></div>}<h2 className="text-h2 font-medium lg:w-2/5 mx-auto">{title}</h2></div>
           </motion.div>
 
-          <div className="relative h-120 sm:h-[550px] flex justify-center items-end mt-8 overflow-hidden">
+          <div className="relative h-[340px] sm:h-[400px] flex justify-center items-end mt-4 overflow-hidden">
             {/* Main Circle Area */}
             <motion.div
               onViewportEnter={() => {
@@ -62,7 +67,7 @@ const Integration = ({ data }: { data: PageData }) => {
                 }
               }}
               viewport={{ once: true, amount: 0.1 }}
-              className={`absolute top-[80px] w-[900px] h-[900px] lg:w-[1370px] lg:h-[1370px] ${
+              className={`absolute top-[30px] w-[900px] h-[900px] lg:w-[1370px] lg:h-[1370px] ${
                 shouldSpin ? "animate-[spin_60s_linear_infinite]" : ""
               }`}
             >
@@ -116,8 +121,8 @@ const Integration = ({ data }: { data: PageData }) => {
                           }
                         >
                           <ImageFallback
-                            src={item}
-                            alt={`Integration ${index + 1}`}
+                            src={item.logo}
+                            alt={item.name}
                             width={40}
                             height={40}
                             className={`w-8 h-8 md:w-10 md:h-10 object-contain`}
@@ -147,10 +152,55 @@ const Integration = ({ data }: { data: PageData }) => {
                   );
                 })}
               </div>
+
+              {/* Labels — a SEPARATE layer, deliberately not nested inside the icon
+                  bubbles. Two reasons: it paints after every bubble, so a long name
+                  can never disappear behind the neighbouring circle further round the
+                  arc; and sitting at a smaller radius puts each name below its own
+                  icon (for the top arc, "inward" is "down the screen") instead of
+                  overlapping the bubble it belongs to. Each label counter-spins so it
+                  stays upright and legible while the ring turns. */}
+              <div className="absolute inset-0" aria-hidden="true">
+                {displayList.map((item, index) => {
+                  const radians = ((startAngle + step * index) * Math.PI) / 180;
+                  const labelRadius = 45.5; // %, vs 50% for the icons themselves
+                  const x = 50 + labelRadius * Math.cos(radians);
+                  const y = 50 + labelRadius * Math.sin(radians);
+
+                  return (
+                    <motion.div
+                      key={`label-${index}`}
+                      className="absolute"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: introStarted ? 1 : 0 }}
+                      transition={{
+                        duration: fadeDuration,
+                        delay: index * fadeStagger,
+                        ease: "easeOut",
+                      }}
+                      style={{
+                        left: toPercent(x),
+                        top: toPercent(y),
+                        transform: "translate(-50%, -50%)",
+                      }}
+                    >
+                      <span
+                        className={`block whitespace-nowrap text-xs md:text-sm font-medium text-text/75 ${
+                          shouldSpin
+                            ? "animate-[spin_60s_linear_infinite_reverse]"
+                            : ""
+                        }`}
+                      >
+                        {item.name}
+                      </span>
+                    </motion.div>
+                  );
+                })}
+              </div>
             </motion.div>
 
             {/* dots */}
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-30 sm:bottom-50 z-30 flex justify-center w-full">
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-24 sm:bottom-28 z-30 flex justify-center w-full">
               <svg
                 width="415"
                 height="57"
@@ -173,7 +223,7 @@ const Integration = ({ data }: { data: PageData }) => {
               whileInView="visible"
               viewport={{ once: true, margin: "0px", amount: 0.05 }}
               variants={sectionHeaderVariants}
-              className="absolute bottom-10 z-10 flex justify-center w-full"
+              className="absolute bottom-4 z-10 flex justify-center w-full"
             >
               {button?.enable && (
                 <a href={button?.link || "/"} className="border border-border/30 rounded-full group inline-block"><span className="btn btn-primary py-3.5 mx-1.5 my-1.25 group-hover:m-0 group-hover:py-4.75 group-hover:px-7.5 transition-all duration-300 rounded-full">{button?.label}</span></a>

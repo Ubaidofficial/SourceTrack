@@ -5,6 +5,7 @@ import Statistics from "@/components/Statistics";
 import CallToAction from "@/partials/CallToAction.astro";
 import FAQ from "@/partials/FAQ";
 import Integration from "@/partials/Integration";
+import JourneyShowcase from "@/partials/JourneyShowcase.astro";
 import KeyFeatures from "@/partials/KeyFeatures.astro";
 import Pricing from "@/partials/Pricing";
 import WhyChooseUs from "@/partials/WhyChooseUs.astro";
@@ -36,27 +37,20 @@ const softwareSchema = {
   "description": "Multi-touch marketing attribution, AI search referral detection, and Search Console revenue signals."
 };
 
+// Derived from the SAME faq_list the page renders. Google requires FAQPage markup to
+// match the visible content; this block previously hardcoded two questions that appeared
+// nowhere on the page, so the markup described a page that did not exist.
 const faqSchema = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
-  "mainEntity": [
-    {
-      "@type": "Question",
-      "name": "How does SourceTrack detect ChatGPT and AI referrals?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "SourceTrack uses cookieless browser referral inspection heuristics to identify sessions originating from AI search engines and assistants like ChatGPT, Claude, Perplexity, and Gemini that traditional tools classify as direct traffic."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Does SourceTrack use third-party cookies?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "No. SourceTrack relies entirely on a first-party, cookieless identity boundary. We do not use third-party tracking cookies or invasive device fingerprinting."
-      }
+  "mainEntity": (faq.frontmatter.faq_list ?? []).map((item: { question: string; answer: string }) => ({
+    "@type": "Question",
+    "name": item.question,
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": item.answer
     }
-  ]
+  }))
 };
 ---
 
@@ -65,6 +59,7 @@ const faqSchema = {
   <KeyFeatures data={key_features} />
   <Statistics data={statistics} client:visible />
   <WhyChooseUs data={whyChooseUs} />
+  <JourneyShowcase />
   <Integration data={integration} client:visible />
   <Pricing data={pricing} client:visible />
   <FAQ data={faq} client:visible />
