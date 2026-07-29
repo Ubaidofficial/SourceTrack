@@ -69,6 +69,7 @@ import Subprocessors from './pages/Subprocessors'
 import DoNotSell from './pages/DoNotSell'
 import Terms from './pages/Terms'
 import SEORevenue from './pages/SEORevenue'
+import AIVisibility from './pages/AIVisibility'
 import PublicIntegrations from './pages/PublicIntegrations'
 import Security from './pages/Security'
 import Demo from './pages/Demo'
@@ -385,6 +386,7 @@ export default function App() {
               <Route path="/demo" element={<Demo />} />
               <Route path="/report-builder" element={<ReportBuilderGate />} />
               <Route path="/seo-revenue" element={<ProtectedRoute><SEORevenue /></ProtectedRoute>} />
+              <Route path="/ai-visibility" element={<ProtectedRoute><AIVisibility /></ProtectedRoute>} />
               <Route path="/old-analytics" element={<Navigate to="/analytics" replace />} />
               <Route path="/snippet" element={<Navigate to="/setup" replace />} />
               <Route path="/setup" element={<ProtectedRoute><Setup /></ProtectedRoute>} />

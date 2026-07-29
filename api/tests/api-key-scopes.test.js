@@ -125,6 +125,20 @@ test('2. key with [read:analytics] only is DENIED 403 on /event', async (t) => {
   assert.match(res.body.error, /write:events/, 'the error should name the scope that is required')
 })
 
+// ── 2b. the reverse direction of the same rule ────────────────────────────────
+// The mirror of api/tests/server-crawler-hit.test.js case 3b. Together they pin that the
+// two write scopes are siblings: neither endpoint accepts the other's credential.
+test('2b. key with [write:crawler_hits] only is DENIED 403 on /event', async (t) => {
+  installSupabase({ apiKeyRow: keyRow(['write:crawler_hits']) })
+  t.after(restoreSupabase)
+
+  const res = mockRes()
+  await postEvent(eventReq(), res)
+
+  assert.strictEqual(res.statusCode, 403, 'a crawler-hit key must not reach the events/revenue rail')
+  assert.match(res.body.error, /write:events/)
+})
+
 // ── 3. '{}' DB default (non-app INSERT) -> 403 ────────────────────────────────
 test('3. key with [] — the DB default, i.e. a non-app INSERT — is DENIED 403', async (t) => {
   installSupabase({ apiKeyRow: keyRow([]) })
@@ -206,9 +220,22 @@ test('the APP default and the DB default are DIFFERENT on purpose', () => {
   assert.strictEqual(hasScope([], 'write:events'), false, "the DB default '{}' must grant nothing")
 })
 
-// ── the scope vocabulary is exactly two values ────────────────────────────────
-test('the scope vocabulary is exactly write:events and read:analytics', () => {
-  assert.deepStrictEqual([...VALID_API_KEY_SCOPES], ['write:events', 'read:analytics'])
+// ── the scope vocabulary is exactly three values ──────────────────────────────
+// Was two (KI-43's MVP set). `write:crawler_hits` was added deliberately for
+// POST /api/server/crawler-hit — the rationale is in api/lib/api-key-scopes.js, and the
+// enforcement is pinned in api/tests/server-crawler-hit.test.js (3b asserts a
+// write:events key gets 403 there). This assertion is the guard against ACCIDENTAL
+// vocabulary creep, not a prohibition: a fourth value is allowed, but only alongside a
+// stated reason and an enforcing endpoint.
+test('the scope vocabulary is exactly write:events, write:crawler_hits and read:analytics', () => {
+  assert.deepStrictEqual([...VALID_API_KEY_SCOPES], ['write:events', 'write:crawler_hits', 'read:analytics'])
+})
+
+test('write:crawler_hits does not imply write:events, and vice versa', () => {
+  // The two write scopes are siblings, not a hierarchy. If either ever implies the other,
+  // scoping the edge-deployed credential to a narrow blast radius stops working.
+  assert.strictEqual(hasScope(['write:crawler_hits'], 'write:events'), false)
+  assert.strictEqual(hasScope(['write:events'], 'write:crawler_hits'), false)
 })
 
 test('normalizeRequestedScopes rejects non-arrays, empty arrays, and non-strings', () => {

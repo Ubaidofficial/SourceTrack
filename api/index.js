@@ -56,12 +56,14 @@ import { adPlatformsRouter } from './routes/ad-platforms.js'
 import { capiRouter } from './routes/capi.js'
 import { marketingRouter } from './routes/marketing.js'
 import { seoRevenueRouter } from './routes/seo-revenue.js'
+import { aiVisibilityRouter } from './routes/ai-visibility.js'
 import { adminRouter } from './routes/admin.js'
 import { savedReportsRouter } from './routes/saved-reports.js'
 import { requireUserAuth } from './middleware/user-auth.js'
 import { billingWebhookHandler, billingRouter } from './routes/billing.js'
 import jobStatusRouter from './routes/job-status.js'
 import { serverEventsRouter } from './routes/server-events.js'
+import { serverCrawlerHitsRouter } from './routes/server-crawler-hits.js'
 import { sessionsOverview, visitorSessions } from './routes/sessions.js'
 import liveRouter from './routes/live.js'
 import analyticsRouter from './routes/analytics.js'
@@ -507,8 +509,12 @@ app.use('/api/integrations/ad-platforms', adPlatformsRouter)
 app.use('/api/integrations/capi', requireUserAuth, validateSiteKey, requireSiteMembership, capiRouter)
 app.use('/api/integrations', requireUserAuth, validateSiteKey, requireSiteMembership, integrationsRouter)
 app.use('/api/seo-revenue', requireUserAuth, validateSiteKey, requireSiteMembership, seoRevenueRouter)
+app.use('/api/ai-visibility', requireUserAuth, validateSiteKey, requireSiteMembership, aiVisibilityRouter)
 app.use('/api/campaign-costs', requireUserAuth, validateSiteKey, requireSiteMembership, campaignCostsRouter)
 app.use('/api/server', serverEventsRouter)
+// Same /api/server prefix, separate router: crawler hits are NOT events. Different
+// scope (write:crawler_hits), different datasource (crawler_hits), and no meter.
+app.use('/api/server', serverCrawlerHitsRouter)
 app.use('/api/billing', billingRouter)
 app.use('/api/admin', requireUserAuth, adminRouter)
 // PUBLIC + UNAUTHENTICATED: marketing-site contact/newsletter intake. The

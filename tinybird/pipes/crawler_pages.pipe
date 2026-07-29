@@ -1,0 +1,54 @@
+DESCRIPTION >
+    AI Visibility — "Pages" view. Which pages crawlers fetched, how many
+    distinct crawlers touched each, and the split by category so a page read
+    heavily by LLM training crawlers is distinguishable from one that only
+    classic search engines index. Tenant-scoped; prunes via
+    (site_id, timestamp).
+
+    Mirrors crawler_agents.pipe on the two rules that matter: ip_mismatch rows
+    are excluded from `hits` (impersonation is not the bot), and the verified /
+    UA-only split is carried through rather than flattened.
+
+    Optional `category` filter uses the `{% if defined(...) %}` block already
+    proven in leads_count.pipe / browsers.pipe, with a defaulted String param
+    so `tb --cloud deploy --check` has a value to inject (a required param with
+    no default breaks the check — see dash_top_pages.pipe's tz note). The
+    caller OMITS the param entirely for "all categories" rather than sending an
+    empty string, so the block is never entered with a meaningless value.
+
+    NOT YET DEPLOYED — founder-gated (CLAUDE.md §8); `tb --cloud deploy --check`
+    has NOT been run against a workspace from here.
+
+NODE crawler_pages_node
+SQL >
+    %
+    SELECT
+        path,
+        countIf(verification != 'ip_mismatch')                  AS hits,
+        countIf(verification = 'ip_verified')                   AS hits_ip_verified,
+        countIf(verification != 'ip_verified'
+                AND verification != 'ip_mismatch')              AS hits_ua_only_total,
+        uniqIf(bot_name, verification != 'ip_mismatch')         AS unique_bots,
+        countIf(category = 'llm_crawler'
+                AND verification != 'ip_mismatch')              AS hits_llm_crawler,
+        countIf(category = 'ai_search'
+                AND verification != 'ip_mismatch')              AS hits_ai_search,
+        countIf(category = 'ai_assistant'
+                AND verification != 'ip_mismatch')              AS hits_ai_assistant,
+        countIf(category = 'search_engine'
+                AND verification != 'ip_mismatch')              AS hits_search_engine,
+        countIf(category = 'seo_tool'
+                AND verification != 'ip_mismatch')              AS hits_seo_tool,
+        max(timestamp)                                          AS last_seen
+    FROM crawler_hits
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND timestamp >= {{ DateTime(from_ts, required=True) }}
+      AND timestamp <= {{ DateTime(to_ts, required=True) }}
+      {% if defined(category) %}
+      AND category = {{ String(category, '') }}
+      {% end %}
+    GROUP BY path
+    ORDER BY hits DESC
+    LIMIT 500
+
+TYPE endpoint

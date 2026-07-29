@@ -15,6 +15,7 @@ import { hasFeature } from '../lib/planFeatures'
 // endpoint yet, and must not be described as if it unlocks something.
 const API_TOKEN_SCOPES = [
   { value: 'write:events', description: 'Send server-side events to POST /api/server/event.' },
+  { value: 'write:crawler_hits', description: 'Report AI/search crawler fetches to POST /api/server/crawler-hit. Does not grant event access.' },
   { value: 'read:analytics', description: 'Reserved for the upcoming read API. Grants no access today.' }
 ]
 
