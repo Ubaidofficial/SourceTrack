@@ -61,7 +61,14 @@ const { footer_company, footer_legal, footer_resource } = menu;
 
     <!-- Bottom footer -->
     <div id="footer-bottom" style="opacity:0" class="lg:sticky bottom-0 z-0 relative">
-      <h1 class="footer-title leading-tight mt-12 lg:mt-20">{config.site.title}</h1>
+      {/* The wordmark, NOT config.site.title. site.title is the 60-character SEO string
+          ("SourceTrack — Know which sources bring your leads and revenue"); rendered here it
+          overflowed .footer-title's whitespace-nowrap/overflow-hidden and was clipped
+          mid-letter, reading "SOURCETF". This slot wants the brand word only.
+          The wrapper is the sizing container — see .footer-title-fit in components.css. */}
+      <div class="footer-title-fit mt-12 lg:mt-20">
+        <h1 class="footer-title leading-tight">{config.site.logo_text}</h1>
+      </div>
       <div class="flex justify-between lg:-translate-y-12 items-center flex-col sm:flex-row gap-y-6 py-6">
         <p class="text-text text-sm" set:html={markdownify(copyright).__html} />
         <Social source={social.main} className="social-icons" />

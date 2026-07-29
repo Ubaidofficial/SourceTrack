@@ -9,8 +9,6 @@ list:
   - "/images/integrations/wordpress.svg"
   - "/images/integrations/Webflow.svg"
   - "/images/integrations/Framer.svg"
-  - "/images/integrations/HTML5.svg"
-  - "/images/integrations/JS.svg"
 button:
   enable: true
   label: Explore Integrations

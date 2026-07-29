@@ -155,7 +155,7 @@ const Pricing = ({
                   <motion.button
                     role="tab"
                     aria-selected={isYearly}
-                    className={`px-6 py-2 rounded-full relative z-10 cursor-pointer text-light`}
+                    className={`px-6 py-2 rounded-full relative z-10 cursor-pointer text-text-light`}
                     onClick={() => setIsYearly(true)}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -184,9 +184,9 @@ const Pricing = ({
                         viewport={{ once: true, margin: "0px", amount: 0.05 }}
                         whileHover="hover"
                         variants={cardVariants}
-                        className="bg-card/70 border border-border/6 rounded-3xl p-2.5"
+                        className="bg-card border border-border rounded-3xl p-2.5"
                       >
-                        <div className="bg-card border border-border/6 rounded-3xl p-7.5">
+                        <div className="rounded-3xl p-7.5 pb-0">
                           <div className="size-14 bg-gradient-dark border border-border/6 rounded-2xl flex justify-center items-center relative overflow-hidden mb-3">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                               <path d="M16.875 4.5H16.875C17.5712 4.5 18.2389 4.77656 18.7312 5.26884C19.2234 5.76113 19.5 6.4288 19.5 7.12499V7.125C19.5 7.82119 19.2234 8.48887 18.7312 8.98116C18.2389 9.47344 17.5712 9.75 16.875 9.75H14.25V7.125C14.25 6.42881 14.5266 5.76113 15.0188 5.26884C15.5111 4.77656 16.1788 4.5 16.875 4.5V4.5Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -218,7 +218,7 @@ const Pricing = ({
                             </h3>
                           </div>
                         </div>
-                        <div className="p-7.5">
+                        <div className="p-7.5 pt-6">
                           <ul className="flex flex-col gap-y-3 list-disc list-inside">
                             {plan.features?.map((feature, index) => (
                               <li key={index} className={`${feature.include ? "text-text" : "text-text-light"}`}>
@@ -227,7 +227,7 @@ const Pricing = ({
                             ))}
                           </ul>
                           {plan.button?.enable && (
-                            <a href={plan.button.link} className={`btn ${plan.highlighted ? "btn-primary" : "bg-gradient-dark"} w-full mt-7.5 text-center font-medium py-3.5 text-text border border-border/6`}>
+                            <a href={plan.button.link} className={`btn ${plan.highlighted ? "btn-primary text-text" : "bg-gradient-dark text-light"} w-full mt-7.5 text-center font-medium py-3.5 border border-border/6`}>
                               {plan.button.label}
                             </a>
                           )}
@@ -272,7 +272,7 @@ const Pricing = ({
               <motion.button
                 role="tab"
                 aria-selected={isYearly}
-                className={`px-6 py-2 rounded-full relative z-10 cursor-pointer text-light`}
+                className={`px-6 py-2 rounded-full relative z-10 cursor-pointer text-text-light`}
                 onClick={() => setIsYearly(true)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -299,9 +299,9 @@ const Pricing = ({
                     viewport={{ once: true, margin: "0px", amount: 0.05 }}
                     whileHover="hover"
                     variants={cardVariants}
-                    className="bg-card/70 border border-border/6 rounded-3xl p-2.5"
+                    className="bg-card border border-border rounded-3xl p-2.5"
                   >
-                    <div className="bg-card border border-border/6 rounded-3xl p-7.5">
+                    <div className="rounded-3xl p-7.5 pb-0">
                       <div className="size-14 bg-gradient-dark border border-border/6 rounded-2xl flex justify-center items-center relative overflow-hidden mb-3">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M16.875 4.5H16.875C17.5712 4.5 18.2389 4.77656 18.7312 5.26884C19.2234 5.76113 19.5 6.4288 19.5 7.12499V7.125C19.5 7.82119 19.2234 8.48887 18.7312 8.98116C18.2389 9.47344 17.5712 9.75 16.875 9.75H14.25V7.125C14.25 6.42881 14.5266 5.76113 15.0188 5.26884C15.5111 4.77656 16.1788 4.5 16.875 4.5V4.5Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -333,7 +333,7 @@ const Pricing = ({
                         </h3>
                       </div>
                     </div>
-                    <div className="p-7.5">
+                    <div className="p-7.5 pt-6">
                       <ul className="flex flex-col gap-y-3 list-disc list-inside">
                         {plan.features?.map((feature, index) => (
                           <li key={index} className={`${feature.include ? "text-text" : "text-text-light"}`}>
@@ -342,7 +342,7 @@ const Pricing = ({
                         ))}
                       </ul>
                       {plan.button?.enable && (
-                        <a href={plan.button.link} className={`btn ${plan.highlighted ? "btn-primary" : "bg-gradient-dark"} w-full mt-7.5 text-center font-medium py-3.5 text-text border border-border/6`}>
+                        <a href={plan.button.link} className={`btn ${plan.highlighted ? "btn-primary text-text" : "bg-gradient-dark text-light"} w-full mt-7.5 text-center font-medium py-3.5 border border-border/6`}>
                           {plan.button.label}
                         </a>
                       )}
