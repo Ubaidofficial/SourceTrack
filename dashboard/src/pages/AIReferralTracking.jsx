@@ -46,7 +46,7 @@ export default function AIReferralTracking() {
               { icon: 'P', title: 'Perplexity.', body: 'Reveal answer-engine referrals that assist pipeline and purchases. Compare AI-driven quality against all channels.' },
             ].map((f, i) => (
               <article key={i} className="relative overflow-hidden p-7 rounded-[28px] bg-white border border-[rgba(31,35,35,.10)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[220px]">
-                <div className="absolute right-[-48px] bottom-[-48px] w-[158px] h-[158px] rounded-full bg-[rgba(204,240,63,.18)]" />
+                <div className="absolute right-[-48px] bottom-[-48px] w-[158px] h-[158px] rounded-full bg-[rgba(200,240,0,.18)]" />
                 <div className="relative z-10 w-[52px] h-[52px] rounded-[18px] grid place-items-center text-st-black bg-st-lime font-black tracking-[-0.04em]">
                   {f.icon}
                 </div>
@@ -105,7 +105,7 @@ export default function AIReferralTracking() {
               <p className="mt-4 text-[#B9C2C2] text-base leading-[1.55]">
                 Separate curiosity traffic from visitors that become qualified leads, trials, and customers. SourceTrack shows you the full journey and conversion path from each AI source — measured in revenue, not just clicks.
               </p>
-              <Link to="/report-builder" className="mt-6 inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full bg-st-lime text-st-black text-[15px] font-extrabold tracking-[-0.025em] shadow-[0_18px_52px_rgba(204,240,63,0.28)] hover:bg-[#D9FA64] transition-all hover:-translate-y-px">
+              <Link to="/report-builder" className="mt-6 inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full bg-st-lime text-st-black text-[15px] font-extrabold tracking-[-0.025em] shadow-[0_18px_52px_rgba(200,240,0,0.28)] hover:bg-[#D9FA64] transition-all hover:-translate-y-px">
                 Build an AI tracking report
               </Link>
             </div>

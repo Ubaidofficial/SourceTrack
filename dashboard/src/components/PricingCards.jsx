@@ -75,7 +75,7 @@ export default function PricingCards() {
             ))}
           </ul>
           <Link to={p.href} className={`mt-auto inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full text-[15px] font-extrabold tracking-[-0.025em] transition-all hover:-translate-y-px ${
-            p.featured ? 'bg-st-lime text-st-black shadow-[0_18px_52px_rgba(204,240,63,0.28)] hover:bg-[#D9FA64]' : 'border border-[rgba(31,35,35,.10)] bg-white text-st-black hover:border-[rgba(31,35,35,.24)]'
+            p.featured ? 'bg-st-lime text-st-black shadow-[0_18px_52px_rgba(200,240,0,0.28)] hover:bg-[#D9FA64]' : 'border border-[rgba(31,35,35,.10)] bg-white text-st-black hover:border-[rgba(31,35,35,.24)]'
           }`}>
             {p.cta}
           </Link>

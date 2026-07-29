@@ -14,7 +14,7 @@ export default function HeroSection({
 }) {
   return (
     <section className="relative overflow-hidden py-[82px] md:pb-[100px]" style={{
-      background: 'radial-gradient(circle at 88% 18%, rgba(204,240,63,.52), transparent 24%), radial-gradient(circle at 22% 6%, rgba(0,170,87,.12), transparent 26%), linear-gradient(180deg, #FFFFFF 0%, #F8FBFB 100%)',
+      background: 'radial-gradient(circle at 88% 18%, rgba(200,240,0,.52), transparent 24%), radial-gradient(circle at 22% 6%, rgba(0,170,87,.12), transparent 26%), linear-gradient(180deg, #FFFFFF 0%, #F8FBFB 100%)',
     }}>
       <div className="absolute inset-0 pointer-events-none" style={{
         backgroundImage: 'linear-gradient(rgba(31,35,35,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(31,35,35,.045) 1px, transparent 1px)',
@@ -44,7 +44,7 @@ export default function HeroSection({
             <p className="mt-7 max-w-[640px] text-[#586464] text-xl leading-[1.55] tracking-[-0.025em]">{sub}</p>
 
             <div className="flex flex-wrap gap-[14px] mt-[34px]">
-              <Link to={primaryHref} className="inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full bg-st-lime text-st-black text-[15px] font-extrabold tracking-[-0.025em] shadow-[0_18px_52px_rgba(204,240,63,0.28)] hover:bg-[#D9FA64] transition-all hover:-translate-y-px">
+              <Link to={primaryHref} className="inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full bg-st-lime text-st-black text-[15px] font-extrabold tracking-[-0.025em] shadow-[0_18px_52px_rgba(200,240,0,0.28)] hover:bg-[#D9FA64] transition-all hover:-translate-y-px">
                 {primaryCta}
               </Link>
               {secondaryCta && (

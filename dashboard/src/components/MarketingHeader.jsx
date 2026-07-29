@@ -72,7 +72,7 @@ export default function MarketingHeader({ themed = false }) {
           <Link to="/login" className={`inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full border border-[rgba(31,35,35,0.10)] bg-white text-st-black text-[15px] font-extrabold tracking-[-0.025em] hover:border-[rgba(31,35,35,0.24)] transition-all hover:-translate-y-px${dk('dark:bg-dark-card dark:text-dark-text dark:border-dark-border dark:hover:border-white/20 card-hairline')}`}>
             Log in
           </Link>
-          <Link to="/signup" className="inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full bg-st-lime text-st-black text-[15px] font-extrabold tracking-[-0.025em] shadow-[0_18px_52px_rgba(204,240,63,0.28)] hover:bg-[#D9FA64] transition-all hover:-translate-y-px">
+          <Link to="/signup" className="inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full bg-st-lime text-st-black text-[15px] font-extrabold tracking-[-0.025em] shadow-[0_18px_52px_rgba(200,240,0,0.28)] hover:bg-[#D9FA64] transition-all hover:-translate-y-px">
             Start free
           </Link>
         </div>

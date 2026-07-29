@@ -19,7 +19,7 @@ export default function JourneyFixture() {
           {/* Header */}
           <div className="h-[44px] flex items-center justify-between px-4 bg-[#171B1B] border-b border-white/10">
             <span className="text-[#F5F8F8] text-xs font-bold">Recent converting journeys</span>
-            <span className="inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 bg-[#CCF03F]/10 text-st-lime text-[10px] font-black uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 bg-[#C8F000]/10 text-st-lime text-[10px] font-black uppercase tracking-wider">
               Sample data
             </span>
           </div>
@@ -38,7 +38,7 @@ export default function JourneyFixture() {
                     </span>
                   ))}
                   <span className="text-st-lime font-black">→</span>
-                  <span className="px-2 py-1 rounded bg-[#CCF03F]/20 text-st-lime border border-[#CCF03F]/20">{j.event}</span>
+                  <span className="px-2 py-1 rounded bg-[#C8F000]/20 text-st-lime border border-[#C8F000]/20">{j.event}</span>
                 </div>
                 <div className="mt-2 text-[#9DA7A7] text-[10px] font-bold">{j.model}</div>
               </div>

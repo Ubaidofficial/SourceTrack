@@ -93,7 +93,7 @@ export default function AuthCallback() {
           Authentication failed: {error}
         </div>
       ) : (
-        <div className="h-8 w-8 rounded-full border-2 border-[#CCF03F] border-t-transparent animate-spin" />
+        <div className="h-8 w-8 rounded-full border-2 border-[#C8F000] border-t-transparent animate-spin" />
       )}
     </div>
   )

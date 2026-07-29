@@ -32,10 +32,10 @@ function Widget({ bars, list, title }) {
         <div className="flex items-end gap-[7px] h-16">
           {bars === 1
             ? [42, 85, 58, 72, 49].map((h, i) => (
-                <span key={i} className="flex-1 rounded-t-full" style={{ height: `${h}%`, background: 'linear-gradient(180deg, #CCF03F, #F1FFC8)' }} />
+                <span key={i} className="flex-1 rounded-t-full" style={{ height: `${h}%`, background: 'linear-gradient(180deg, #C8F000, #F1FFC8)' }} />
               ))
             : [40, 50, 78].map((h, i) => (
-                <span key={i} className="flex-1 rounded-t-full" style={{ height: `${h}%`, background: 'linear-gradient(180deg, #CCF03F, #F1FFC8)' }} />
+                <span key={i} className="flex-1 rounded-t-full" style={{ height: `${h}%`, background: 'linear-gradient(180deg, #C8F000, #F1FFC8)' }} />
               ))}
         </div>
       )}
