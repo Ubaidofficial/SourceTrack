@@ -21,7 +21,7 @@ test('MCP Server — initialize handshake', async () => {
   assert.ok(res.result.capabilities.tools)
 })
 
-test('MCP Server — tools/list exposes Phase 1 MVP tool surface', async () => {
+test('MCP Server — tools/list exposes the install-support + MCP v1 diagnostic surface', async () => {
   const req = {
     jsonrpc: '2.0',
     id: 2,
@@ -30,7 +30,66 @@ test('MCP Server — tools/list exposes Phase 1 MVP tool surface', async () => {
   const res = processRpcMessage(req)
   assert.strictEqual(res.id, 2)
   const toolNames = res.result.tools.map(t => t.name)
-  assert.deepStrictEqual(toolNames, ['detect_platform', 'get_install_snippet', 'verify_installation'])
+  // Exact surface, deliberately: this list is the thing that must not grow by accident.
+  // The five diagnostics are roadmap §1.5's locked set. Note what is NOT here and must
+  // not be added without a §26 ruling — no attribution-model query, no revenue/ROAS tool.
+  assert.deepStrictEqual(toolNames, [
+    'detect_platform',
+    'get_install_snippet',
+    'verify_installation',
+    'get_workspace_context',
+    'get_site_health',
+    'get_data_quality',
+    'debug_data_flow',
+    'verify_events'
+  ])
+})
+
+test('MCP Server — tools/list does not leak the internal `auth` routing field', async () => {
+  const res = processRpcMessage({ jsonrpc: '2.0', id: 21, method: 'tools/list' })
+  for (const tool of res.result.tools) {
+    assert.ok(!('auth' in tool), `${tool.name} leaked its internal auth field into tools/list`)
+  }
+})
+
+// The two auth models must not share a credential slot. A diagnostic tool given only a
+// user JWT must fail CLOSED before it opens a socket — never silently reach for
+// auth_token / SOURCETRACK_AUTH_TOKEN, which would send a user session to a key-authed
+// route and surface as a baffling 401 from the wrong subsystem.
+test('MCP Server — a diagnostic tool given no api_key fails closed and does not fall back to auth_token', async () => {
+  const prevKey = process.env.SOURCETRACK_API_KEY
+  const prevTok = process.env.SOURCETRACK_AUTH_TOKEN
+  delete process.env.SOURCETRACK_API_KEY
+  process.env.SOURCETRACK_AUTH_TOKEN = 'a-user-jwt-that-must-not-be-used'
+  try {
+    for (const name of ['get_workspace_context', 'get_site_health', 'get_data_quality', 'debug_data_flow', 'verify_events']) {
+      const res = await processRpcMessage({
+        jsonrpc: '2.0',
+        id: 22,
+        method: 'tools/call',
+        // An auth_token is passed deliberately — it must be ignored by these tools.
+        params: { name, arguments: { auth_token: 'a-user-jwt-that-must-not-be-used' } }
+      })
+      const payload = JSON.parse(res.result.content[0].text)
+      assert.strictEqual(payload.ok, false, `${name} should fail without an api_key`)
+      assert.strictEqual(payload.error, 'MISSING_API_KEY', `${name} should report MISSING_API_KEY`)
+    }
+  } finally {
+    if (prevKey === undefined) delete process.env.SOURCETRACK_API_KEY; else process.env.SOURCETRACK_API_KEY = prevKey
+    if (prevTok === undefined) delete process.env.SOURCETRACK_AUTH_TOKEN; else process.env.SOURCETRACK_AUTH_TOKEN = prevTok
+  }
+})
+
+// The key is the tenant. If any diagnostic tool ever accepts a site_id/site_key argument,
+// a caller could aim it at a site their key does not own.
+test('MCP Server — no diagnostic tool accepts a site_id or site_key argument', async () => {
+  const res = processRpcMessage({ jsonrpc: '2.0', id: 23, method: 'tools/list' })
+  const diagnostics = ['get_workspace_context', 'get_site_health', 'get_data_quality', 'debug_data_flow', 'verify_events']
+  for (const tool of res.result.tools.filter(t => diagnostics.includes(t.name))) {
+    const props = Object.keys(tool.inputSchema?.properties || {})
+    assert.ok(!props.includes('site_id'), `${tool.name} must not accept site_id — the API key is the tenant`)
+    assert.ok(!props.includes('site_key'), `${tool.name} must not accept site_key — the API key is the tenant`)
+  }
 })
 
 test('MCP Server — tools/call detect_platform', async () => {
