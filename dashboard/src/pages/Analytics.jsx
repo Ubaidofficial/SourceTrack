@@ -391,8 +391,14 @@ export default function Analytics() {
     staleTime: 60_000,
     retry: false
   })
-  // The route returns { success, data: [...] }; fetchApi unwraps to the `data` array.
-  const funnelRows = Array.isArray(funnelData) ? funnelData : []
+  // The route returns { success, data: { steps, truncated, sample_size, row_cap } };
+  // fetchApi unwraps to `data`. The Array.isArray fallback keeps a stale cached response
+  // from the previous bare-array shape rendering rather than blanking the chart.
+  const funnelRows = Array.isArray(funnelData)
+    ? funnelData
+    : Array.isArray(funnelData?.steps) ? funnelData.steps : []
+  const funnelTruncated = funnelData?.truncated === true
+  const funnelSampleSize = typeof funnelData?.sample_size === 'number' ? funnelData.sample_size : null
 
   const goalRows = goalsData?.goals || []
   const goalRate = (conversions) => (uniqVis > 0 ? (safeNumber(conversions, 0) / uniqVis) * 100 : null)
@@ -823,6 +829,8 @@ export default function Analytics() {
                   steps={funnelRows}
                   loading={funnelLoading}
                   hasSteps={funnelRows.length > 0}
+                  truncated={funnelTruncated}
+                  sampleSize={funnelSampleSize}
                 />
               )}
             </div>

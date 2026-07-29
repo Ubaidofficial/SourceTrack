@@ -99,7 +99,7 @@ test('funnels_cohorts gate: every PAID tier passes, free still 402s before any r
 
 // ── shape + math ─────────────────────────────────────────────────────────────
 
-test('response shape is unchanged: steps[] of { step, visitors, dropoff_rate }', async () => {
+test('per-step shape is unchanged: { step, visitors, dropoff_rate } under data.steps', async () => {
   const res = await runFunnel([
     ROW('v1', 'https://x/pricing', T(0)),
     ROW('v1', 'https://x/checkout', T(5))
@@ -107,11 +107,11 @@ test('response shape is unchanged: steps[] of { step, visitors, dropoff_rate }',
 
   assert.strictEqual(res.statusCode, 200)
   assert.strictEqual(res.body.success, true)
-  assert.deepStrictEqual(res.body.data, [
+  assert.deepStrictEqual(res.body.data.steps, [
     { step: '/pricing', visitors: 1, dropoff_rate: 0 },
     { step: '/checkout', visitors: 1, dropoff_rate: 0 }
   ])
-  assert.deepStrictEqual(Object.keys(res.body.data[0]), ['step', 'visitors', 'dropoff_rate'],
+  assert.deepStrictEqual(Object.keys(res.body.data.steps[0]), ['step', 'visitors', 'dropoff_rate'],
     'no key may be added or renamed — the shape is the contract')
 })
 
@@ -121,7 +121,7 @@ test('drop-off math matches the Supabase version exactly: 4 -> 1 is 75.0', async
   rows.push(ROW('v1', 'https://x/checkout', T(5)))
 
   const res = await runFunnel(rows, '/pricing,/checkout')
-  assert.deepStrictEqual(res.body.data, [
+  assert.deepStrictEqual(res.body.data.steps, [
     { step: '/pricing', visitors: 4, dropoff_rate: 0 },
     { step: '/checkout', visitors: 1, dropoff_rate: 75 }
   ])
@@ -135,7 +135,7 @@ test('step order does not matter WITHIN a session — same as the old .in(sessio
     ROW('v1', 'https://x/checkout', T(0)),
     ROW('v1', 'https://x/pricing', T(5))
   ], '/pricing,/checkout')
-  assert.deepStrictEqual(res.body.data, [
+  assert.deepStrictEqual(res.body.data.steps, [
     { step: '/pricing', visitors: 1, dropoff_rate: 0 },
     { step: '/checkout', visitors: 1, dropoff_rate: 0 }
   ])
@@ -151,7 +151,7 @@ test('a >30min gap splits the visitor into 2 sessions, so the funnel does NOT co
     ROW('v1', 'https://x/pricing', T(0)),
     ROW('v1', 'https://x/checkout', T(45))
   ], '/pricing,/checkout')
-  assert.deepStrictEqual(res.body.data, [
+  assert.deepStrictEqual(res.body.data.steps, [
     { step: '/pricing', visitors: 1, dropoff_rate: 0 },
     { step: '/checkout', visitors: 0, dropoff_rate: 100 }
   ])
@@ -162,8 +162,8 @@ test('a <30min gap keeps one session, so the same two pageviews DO complete', as
     ROW('v1', 'https://x/pricing', T(0)),
     ROW('v1', 'https://x/checkout', T(29))
   ], '/pricing,/checkout')
-  assert.strictEqual(res.body.data[1].visitors, 1)
-  assert.strictEqual(res.body.data[1].dropoff_rate, 0)
+  assert.strictEqual(res.body.data.steps[1].visitors, 1)
+  assert.strictEqual(res.body.data.steps[1].dropoff_rate, 0)
 })
 
 test('differing UTMs inside 30 minutes DO NOT split funnel sessions (Option B 30-min inactivity rule)', async () => {
@@ -173,7 +173,7 @@ test('differing UTMs inside 30 minutes DO NOT split funnel sessions (Option B 30
     ROW('v1', 'https://x/pricing', T(0), { utm_source: 'google', utm_medium: 'cpc' }),
     ROW('v1', 'https://x/checkout', T(10), { utm_source: 'facebook', utm_medium: 'cpc' })
   ], '/pricing,/checkout')
-  assert.deepStrictEqual(res.body.data, [
+  assert.deepStrictEqual(res.body.data.steps, [
     { step: '/pricing', visitors: 1, dropoff_rate: 0 },
     { step: '/checkout', visitors: 1, dropoff_rate: 0 }
   ])
@@ -186,7 +186,7 @@ test('differing click IDs or missing click-ID properties inside 30 minutes DO NO
     ROW('v1', 'https://x/pricing', T(0), { gclid: 'click_abc123' }),
     ROW('v1', 'https://x/checkout', T(15), { fbclid: 'click_xyz789' })
   ], '/pricing,/checkout')
-  assert.deepStrictEqual(res.body.data, [
+  assert.deepStrictEqual(res.body.data.steps, [
     { step: '/pricing', visitors: 1, dropoff_rate: 0 },
     { step: '/checkout', visitors: 1, dropoff_rate: 0 }
   ])
@@ -198,7 +198,7 @@ test('two visitors are never merged, and one session each counts once', async ()
     ROW('v1', 'https://x/checkout', T(2)),
     ROW('v2', 'https://x/pricing', T(0))
   ], '/pricing,/checkout')
-  assert.deepStrictEqual(res.body.data, [
+  assert.deepStrictEqual(res.body.data.steps, [
     { step: '/pricing', visitors: 2, dropoff_rate: 0 },
     { step: '/checkout', visitors: 1, dropoff_rate: 50 }
   ])
@@ -211,14 +211,14 @@ test('matching is case-SENSITIVE — .like() was used, not .ilike()', async () =
     ROW('v1', 'https://x/Pricing', T(0)),
     ROW('v1', 'https://x/checkout', T(5))
   ], 'pricing,checkout')
-  assert.strictEqual(res.body.data[0].visitors, 0, '/Pricing must not match step "pricing"')
-  assert.strictEqual(res.body.data[1].visitors, 0)
-  assert.strictEqual(res.body.data[1].dropoff_rate, 100)
+  assert.strictEqual(res.body.data.steps[0].visitors, 0, '/Pricing must not match step "pricing"')
+  assert.strictEqual(res.body.data.steps[1].visitors, 0)
+  assert.strictEqual(res.body.data.steps[1].dropoff_rate, 100)
 })
 
 test('an empty first step short-circuits every later step to 0 / 100', async () => {
   const res = await runFunnel([ROW('v1', 'https://x/home', T(0))], '/nope,/checkout,/thanks')
-  assert.deepStrictEqual(res.body.data, [
+  assert.deepStrictEqual(res.body.data.steps, [
     { step: '/nope', visitors: 0, dropoff_rate: 0 },
     { step: '/checkout', visitors: 0, dropoff_rate: 100 },
     { step: '/thanks', visitors: 0, dropoff_rate: 100 }
@@ -240,7 +240,7 @@ test('rows with no visitor id or no timestamp are skipped, never bucketed as one
     ROW('v1', 'https://x/pricing', null),
     ROW('v2', 'https://x/pricing', T(0))
   ], '/pricing,/checkout')
-  assert.strictEqual(res.body.data[0].visitors, 1, 'only the one complete row counts')
+  assert.strictEqual(res.body.data.steps[0].visitors, 1, 'only the one complete row counts')
 })
 
 // ── dead store must stay loud ────────────────────────────────────────────────
@@ -257,4 +257,70 @@ test('a dead pipe read is a 500, never a fabricated empty funnel', async () => {
     restore()
     __resetAnalyticsReadDeps()
   }
+})
+
+// ── Truncation honesty (fix/funnel-pageview-truncation) ──────────────────────
+// The read is capped at FUNNEL_ROW_CAP rows. Before this change the handler
+// reported on whatever slice came back with no signal that anything was missing,
+// so a high-traffic site got a confident, wrong conversion rate. These tests pin
+// the DETECTION, not the cap value — the cap stays where it is on purpose.
+
+const { FUNNEL_ROW_CAP } = mod
+
+// Build n rows for one visitor that complete a 2-step funnel, so the math is
+// incidental and the assertions are purely about the truncation flag.
+function nRows (n) {
+  const out = []
+  for (let i = 0; i < n; i++) {
+    out.push(ROW(`v${i}`, i % 2 === 0 ? 'https://x/pricing' : 'https://x/checkout', T(i % 60)))
+  }
+  return out
+}
+
+test('the cap is a real exported constant, not a literal duplicated in the test', () => {
+  assert.strictEqual(typeof FUNNEL_ROW_CAP, 'number')
+  assert.ok(FUNNEL_ROW_CAP > 0)
+})
+
+test('a read UNDER the cap reports truncated:false and the true row count', async () => {
+  const res = await runFunnel(nRows(10), '/pricing,/checkout')
+  assert.strictEqual(res.body.data.truncated, false)
+  assert.strictEqual(res.body.data.sample_size, 10)
+  assert.strictEqual(res.body.data.row_cap, FUNNEL_ROW_CAP)
+})
+
+test('a read that fills the cap EXACTLY reports truncated:true — ON the cap is indistinguishable from clipped', async () => {
+  const res = await runFunnel(nRows(FUNNEL_ROW_CAP), '/pricing,/checkout')
+  assert.strictEqual(res.body.data.truncated, true,
+    'exactly-at-cap must be reported as possibly-incomplete, never as complete')
+  assert.strictEqual(res.body.data.sample_size, FUNNEL_ROW_CAP)
+})
+
+test('one row below the cap is still reported as complete — the boundary is not off by one', async () => {
+  const res = await runFunnel(nRows(FUNNEL_ROW_CAP - 1), '/pricing,/checkout')
+  assert.strictEqual(res.body.data.truncated, false)
+})
+
+test('an empty read is complete, not truncated — 0 rows is a real answer', async () => {
+  const res = await runFunnel([], '/pricing,/checkout')
+  assert.strictEqual(res.body.data.truncated, false)
+  assert.strictEqual(res.body.data.sample_size, 0)
+})
+
+test('the truncation flag travels INSIDE data, where fetchApi can reach it', async () => {
+  // fetchApi() returns `data.data` and discards siblings, so a top-level flag next to
+  // `data` would be silently dropped on the way to the UI. This pins that it is not.
+  const res = await runFunnel(nRows(FUNNEL_ROW_CAP), '/pricing,/checkout')
+  assert.deepStrictEqual(
+    Object.keys(res.body.data).sort(),
+    ['row_cap', 'sample_size', 'steps', 'truncated']
+  )
+  assert.strictEqual(res.body.truncated, undefined, 'must NOT be a sibling of data — fetchApi would drop it')
+})
+
+test('the funnel still returns real step math when truncated — a caveat, not an error', async () => {
+  const res = await runFunnel(nRows(FUNNEL_ROW_CAP), '/pricing,/checkout')
+  assert.strictEqual(res.statusCode, 200, 'truncation is not a failure')
+  assert.ok(res.body.data.steps.length === 2)
+  assert.ok(res.body.data.steps[0].visitors > 0, 'the numbers are real, just a floor')
 })
