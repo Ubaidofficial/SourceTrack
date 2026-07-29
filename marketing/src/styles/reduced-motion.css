@@ -28,7 +28,7 @@
  *
  * JS-driven motion is not reachable from CSS and is guarded separately:
  * Base.astro sets MotionGlobalConfig.skipAnimations, and the three hand-rolled
- * cases live in Counter, Testimonials and TrustedClients.
+ * cases live in Counter and TrustedClients.
  */
 @media (prefers-reduced-motion: reduce) {
   *,
