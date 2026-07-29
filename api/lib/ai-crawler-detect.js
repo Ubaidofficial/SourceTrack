@@ -279,6 +279,24 @@ export function ipInCidr(ip, cidr) {
 }
 
 /**
+ * True when `cidr` is a well-formed IPv4/IPv6 CIDR block.
+ *
+ * Exists so the range-refresh job (api/lib/ai-crawler-ranges.js) can reject
+ * garbage from a vendor endpoint using THIS module's IP parser rather than a
+ * second, subtly-different one. A malformed CIDR is silently false in
+ * ipInCidr(), which is right at match time but wrong at ingest time — there we
+ * want to drop it loudly before it is persisted as if it were a real range.
+ */
+export function isValidCidr(cidr) {
+  const [network, prefixRaw] = String(cidr || '').trim().split('/')
+  if (prefixRaw === undefined) return false
+  const base = parseIp(network)
+  if (!base) return false
+  const prefix = Number(prefixRaw)
+  return Number.isInteger(prefix) && prefix >= 0 && prefix <= base.bits
+}
+
+/**
  * Identify the crawler behind a request.
  *
  * @param {string} userAgent  raw User-Agent header
