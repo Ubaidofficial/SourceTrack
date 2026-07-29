@@ -15,3 +15,4 @@ feature_list:
   - title: Cookieless by default
     icon: "/images/icons/scaling.svg"
     content: No cookies, no fingerprinting, and DNT and GPC are respected — so you often will not need a consent banner for SourceTrack
+---

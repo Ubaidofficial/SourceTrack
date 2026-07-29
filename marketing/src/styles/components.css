@@ -188,8 +188,23 @@
   @apply gradient-text-hero;
 }
 /* footer-title */
+/* Sized so the wordmark FITS instead of being clipped by the whitespace-nowrap +
+   overflow-hidden pair. The old ramp was a fixed px-per-breakpoint ladder topping out at
+   250px, which holds ~8 uppercase characters in the 1268px container — the template's own
+   wordmark was short enough to get away with it, "SOURCETRACK" is 11 and was cut to
+   "SOURCETF".
+   A re-tuned px ladder does not actually solve this: the container is not a fixed fraction of
+   the viewport (its padding changes per breakpoint), so any fixed size is wrong at the low end
+   of some range — measured, a hand-fitted ladder still clipped at 5 of 6 widths. Sizing
+   against the container instead is exact everywhere. In this face the rendered text is a
+   steady 7.59x the font-size, so 12.5cqw lands at ~95% of the container with margin to spare.
+   The vw line above it is the fallback for engines without container queries. */
+.footer-title-fit {
+  container-type: inline-size;
+}
 .footer-title {
-  @apply uppercase text-[16vw] sm:text-[100px] md:text-[150px] lg:text-[200px] xl:text-[250px] whitespace-nowrap overflow-hidden text-center;
+  @apply uppercase text-[11vw] whitespace-nowrap overflow-hidden text-center;
+  font-size: 12.5cqw;
   background: linear-gradient(
     0deg,
     #0e0912 23.53%,
