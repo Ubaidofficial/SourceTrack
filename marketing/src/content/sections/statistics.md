@@ -16,9 +16,9 @@ stats_list:
       prefix: ""
       number: 0
       suffix: ""
-  - label: "AI Search Referral Domains Tracked"
+  - label: "AI Assistants & Search Engines Detected"
     value:
       prefix: ""
-      number: 22
-      suffix: " Domains"
+      number: 13
+      suffix: ""
 ---
