@@ -3,6 +3,7 @@ import {
   handleDetectPlatform, handleGetInstallSnippet, handleVerifyInstallation,
   handleGetWorkspaceContext, handleGetSiteHealth, handleGetDataQuality,
   handleDebugDataFlow, handleVerifyEvents,
+  handleGetLeadsVolume, handleGetCampaignVolume,
   AUTH_NONE, AUTH_USER_JWT, AUTH_API_KEY
 } from './lib/tools.js'
 
@@ -115,6 +116,33 @@ const TOOLS = [
       },
       required: []
     }
+  },
+  {
+    name: 'get_leads_volume',
+    auth: AUTH_API_KEY,
+    description: 'Lead COUNTS over a window, plus a breakdown by one dimension (source, medium or campaign). Volume only: returns no revenue, no cost and no cost-derived metric, and takes no attribution-model argument — dimension values are always the FIRST touch, echoed back as "touch":"first" on every row. The breakdown is a complete partition: untagged traffic is reported as its own "(untagged)" bucket rather than omitted. distinct_leads (unique converting visitors) and breakdown.total (conversion events) are different units and are not expected to match.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        days: { type: 'number', description: 'Window in days, 1-90 (default 30)' },
+        dimension: { type: 'string', description: 'Breakdown dimension: source (default), medium, or campaign' },
+        api_key: { type: 'string', description: 'SourceTrack API key with the read:analytics scope (or set SOURCETRACK_API_KEY). The key determines which site is read — no site_id/site_key is accepted.' }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'get_campaign_volume',
+    auth: AUTH_API_KEY,
+    description: 'Per-campaign VOLUME over a window: distinct visitors and lead-type conversions per campaign. Volume only: there is no revenue, cost, ROAS or CPL column, and no attribution-model argument — campaign values are always the FIRST touch, echoed back as "touch":"first" on every row. Untagged traffic is included as the "(untagged)" campaign so the totals are a complete partition. This tool ranks campaigns by volume and says nothing about which campaign caused or deserves credit for anything.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        days: { type: 'number', description: 'Window in days, 1-90 (default 30)' },
+        api_key: { type: 'string', description: 'SourceTrack API key with the read:analytics scope (or set SOURCETRACK_API_KEY). The key determines which site is read — no site_id/site_key is accepted.' }
+      },
+      required: []
+    }
   }
 ]
 
@@ -188,6 +216,16 @@ export function processRpcMessage(msg, config = {}) {
           resData = await handleDebugDataFlow({ apiKey: args?.api_key, days: args?.days, apiBaseUrl })
         } else if (name === 'verify_events') {
           resData = await handleVerifyEvents({ apiKey: args?.api_key, apiBaseUrl })
+
+        // Volume tools. Note what is NOT forwarded: no attribution_model / model
+        // argument is read from args at all, so a caller cannot reintroduce the model
+        // choice these tools deliberately fix server-side.
+        } else if (name === 'get_leads_volume') {
+          resData = await handleGetLeadsVolume({
+            apiKey: args?.api_key, days: args?.days, dimension: args?.dimension, apiBaseUrl
+          })
+        } else if (name === 'get_campaign_volume') {
+          resData = await handleGetCampaignVolume({ apiKey: args?.api_key, days: args?.days, apiBaseUrl })
         } else {
           return {
             jsonrpc: '2.0',
