@@ -8,12 +8,6 @@ const homepageCollection = defineCollection({
   schema: z.object({}).catchall(z.any()),
 });
 
-// About collection
-const aboutCollection = defineCollection({
-  loader: glob({ pattern: "**/*.{md,mdx}", base: "src/content/about" }),
-  schema: z.object({}).catchall(z.any()),
-});
-
 // Blog collection
 const blogCollection = defineCollection({
   loader: glob({ pattern: "**/*.{md,mdx}", base: "src/content/blog" }),
@@ -46,12 +40,6 @@ const contactCollection = defineCollection({
   schema: z.object({}).catchall(z.any()),
 });
 
-// Features collection
-const featuresCollection = defineCollection({
-  loader: glob({ pattern: "**/*.{md,mdx}", base: "src/content/features" }),
-  schema: z.object({}).catchall(z.any()),
-});
-
 // Integrations collection
 const integrationsCollection = defineCollection({
   loader: glob({ pattern: "**/*.{md,mdx}", base: "src/content/integrations" }),
@@ -79,11 +67,9 @@ const sectionsCollection = defineCollection({
 // Export collections
 export const collections = {
   homepage: homepageCollection,
-  about: aboutCollection,
   blog: blogCollection,
   changelog: changelogCollection,
   contact: contactCollection,
-  features: featuresCollection,
   integrations: integrationsCollection,
   pages: pagesCollection,
   pricing: pricingCollection,
