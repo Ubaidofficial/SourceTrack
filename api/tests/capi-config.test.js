@@ -53,7 +53,34 @@ test('buildCapiStatus: NEVER returns a token; reports connected + last delivery'
   assert.deepStrictEqual(status.meta.last_delivery, { status: 'success', at: '2026-06-28T10:00:00Z' })
   assert.strictEqual(status.google.connected, false)        // missing token + ids
   assert.strictEqual(status.google.last_delivery, null)     // no deliveries yet
-  assert.ok(!('tiktok' in status), 'tiktok is not part of this release')
+
+  // Microsoft + LinkedIn have senders in the fan-out but NO config columns here,
+  // so they must stay out of status — surfacing them would offer a card that can
+  // never store a token (KNOWN_ISSUES "Dead CAPI senders"). Not fixed by this PR.
+  assert.ok(!('microsoft' in status), 'microsoft has no config surface yet')
+  assert.ok(!('linkedin' in status), 'linkedin has no config surface yet')
+})
+
+test('buildCapiUpdate/Status: ga4 + tiktok round-trip their own columns', () => {
+  const ga4 = buildCapiUpdate('ga4', { token: 'secret-api-key', measurement_id: 'G-ABC123' })
+  assert.strictEqual(ga4.update.ga4_measurement_id, 'G-ABC123')
+  assert.notStrictEqual(ga4.update.ga4_api_secret, 'secret-api-key')            // not plaintext
+  assert.strictEqual(decryptSecret(ga4.update.ga4_api_secret), 'secret-api-key') // round-trips
+
+  const tt = buildCapiUpdate('tiktok', { token: 'tt-access-token', pixel_code: 'CXXXXXXX' })
+  assert.strictEqual(tt.update.tiktok_pixel_code, 'CXXXXXXX')
+  assert.strictEqual(decryptSecret(tt.update.tiktok_capi_token), 'tt-access-token')
+
+  // Both require their id field, same as google's two-id contract.
+  assert.ok(buildCapiUpdate('ga4', { token: 't' }).error)
+  assert.ok(buildCapiUpdate('tiktok', { token: 't' }).error)
+
+  // Status must never leak either secret.
+  const json = JSON.stringify(buildCapiStatus({
+    ga4_api_secret: 'ENC1', ga4_measurement_id: 'G-ABC123',
+    tiktok_capi_token: 'ENC2', tiktok_pixel_code: 'CXXXXXXX'
+  }, []))
+  assert.ok(!json.includes('ENC1') && !json.includes('ENC2'), 'secrets must never appear in status')
 })
 
 test('plan-gate: free is rejected, starter+ allowed for capi_server_side', () => {
@@ -62,6 +89,10 @@ test('plan-gate: free is rejected, starter+ allowed for capi_server_side', () =>
   assert.strictEqual(requireFeature('growth', 'capi_server_side', 'x'), null)
 })
 
-test('CAPI_PLATFORMS: exactly the 2 live platforms (TikTok deferred)', () => {
-  assert.deepStrictEqual(Object.keys(CAPI_PLATFORMS).sort(), ['google', 'meta'])
+// Was ['google','meta'] while TikTok was deferred. That deferral is reversed by
+// this PR: GA4 + TikTok now have columns, config cards AND forwarding wiring, so
+// they belong here. Microsoft/LinkedIn deliberately still do NOT — they remain
+// stillborn senders until separately finished.
+test('CAPI_PLATFORMS: exactly the 4 live platforms (microsoft/linkedin still unwired)', () => {
+  assert.deepStrictEqual(Object.keys(CAPI_PLATFORMS).sort(), ['ga4', 'google', 'meta', 'tiktok'])
 })

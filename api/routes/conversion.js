@@ -420,7 +420,7 @@ export async function conversion(req, res) {
     if (hasFeature(req.site?.plan, 'capi_server_side')) try {
       getCapiSupabase()
         .from('sites')
-        .select('id,meta_pixel_id,meta_capi_token,google_ads_customer_id,google_ads_conversion_action_id,google_ads_developer_token,microsoft_tag_id,microsoft_capi_token,linkedin_partner_id,linkedin_capi_token')
+        .select('id,meta_pixel_id,meta_capi_token,google_ads_customer_id,google_ads_conversion_action_id,google_ads_developer_token,microsoft_tag_id,microsoft_capi_token,linkedin_partner_id,linkedin_capi_token,ga4_measurement_id,ga4_api_secret,tiktok_pixel_code,tiktok_capi_token')
         .eq('id', req.site.id)
         .single()
         .then(({ data: capiSite }) => {

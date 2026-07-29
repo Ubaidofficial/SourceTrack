@@ -285,6 +285,180 @@ export async function sendLinkedInConversion(site, evt) {
   return { ok: r.ok, http_status: r.status, error_message: r.ok ? null : `HTTP ${r.status}` }
 }
 
+// ─── GA4 Measurement Protocol event name mapping ─────────────────────────────
+// Maps SourceTrack conversion_type → GA4 RECOMMENDED event name. These exact
+// strings are what GA4's built-in reports key off — a 'purchase' populates the
+// revenue reports, an arbitrary string lands in "other" and reports nothing. So
+// the map is the minimum correct behaviour, not decoration.
+// Reference: https://developers.google.com/analytics/devguides/collection/ga4/reference/events
+const GA4_EVENT_MAP = {
+  purchase:          'purchase',
+  sale:              'purchase',
+  order:             'purchase',
+  buy:               'purchase',
+  subscribe:         'purchase',
+  subscription:      'purchase',
+  donate:            'purchase',
+  add_to_cart:       'add_to_cart',
+  addtocart:         'add_to_cart',
+  add_cart:          'add_to_cart',
+  checkout:          'begin_checkout',
+  initiate_checkout: 'begin_checkout',
+  begin_checkout:    'begin_checkout',
+  lead:              'generate_lead',
+  form:              'generate_lead',
+  form_submit:       'generate_lead',
+  contact:           'generate_lead',
+  signup:            'sign_up',
+  sign_up:           'sign_up',
+  register:          'sign_up',
+  registration:      'sign_up',
+  trial:             'sign_up',
+  trial_start:       'sign_up',
+  view_content:      'view_item',
+  page_view:         'page_view',
+  search:            'search',
+  wishlist:          'add_to_wishlist',
+}
+
+// ─── GA4 Measurement Protocol ────────────────────────────────────────────────
+// No OAuth: measurement_id + api_secret are query params. api_secret is the
+// secret half and is stored encrypted (safeDecrypt below).
+//
+// ⚠️ HONEST LIMITATION — what a 'success' delivery row means here. GA4's
+// production ingestion endpoint answers 204 No Content for ANY structurally
+// readable payload, including a malformed or rejected body; only the separate
+// /debug/mp/collect endpoint validates. So for this platform (unlike Meta or
+// TikTok) `ok: true` means "GA4 accepted the request", NOT "GA4 processed the
+// event". The delivery log cannot say more than that because GA4 does not tell
+// us more. Documented rather than dressed up as a stronger guarantee.
+export async function sendGA4Conversion(site, evt) {
+  const apiSecret = safeDecrypt(site.ga4_api_secret)
+  if (!site.ga4_measurement_id || !apiSecret) return null  // no/undecryptable secret → no-op (fail-safe)
+
+  // MP requires a client_id to attach the event to a user. Prefer a real GA4
+  // client_id when the merchant forwards one; otherwise fall back to our own
+  // visitor id. On the fallback the event still lands, but it starts a NEW GA4
+  // user instead of joining the visitor's existing _ga session — a real
+  // match-quality limit, stated here rather than hidden.
+  const clientId = evt.ga_client_id || evt.anonymous_id || evt.distinct_id || null
+  if (!clientId) return null  // no client_id = MP cannot attribute it → no attempt
+
+  const eventName = GA4_EVENT_MAP[normalizeKey(evt.conversion_type)] || 'purchase'
+
+  const body = {
+    client_id: String(clientId),
+    events: [{
+      name: eventName,
+      params: {
+        value:                 Number(evt.conversion_value) || 0,
+        currency:              evt.currency ?? 'USD',
+        engagement_time_msec:  1,           // required for the event to count toward engagement
+        ...(evt.order_id ? { transaction_id: evt.order_id } : {}),
+        ...(evt.page_url ? { page_location: evt.page_url } : {}),
+      }
+    }]
+  }
+
+  const r = await fetchWithRetry(
+    `https://www.google-analytics.com/mp/collect?measurement_id=${encodeURIComponent(site.ga4_measurement_id)}&api_secret=${encodeURIComponent(apiSecret)}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
+    'GA4 MP'
+  )
+  if (!r.ok) console.error('[GA4 MP]', eventName, 'HTTP', r.status)
+  return { ok: r.ok, http_status: r.status, error_message: r.ok ? null : `HTTP ${r.status}` }
+}
+
+// ─── TikTok Events API event name mapping ────────────────────────────────────
+// TikTok's standard web events differ from Meta's — same conversion, different
+// vocabulary (Purchase → CompletePayment, Lead → SubmitForm). A non-standard
+// name is accepted by the API but cannot be optimised against, so this map is
+// load-bearing for the customer's campaigns.
+// Reference: https://business-api.tiktok.com/portal/docs (Events API — standard events)
+const TIKTOK_EVENT_MAP = {
+  purchase:          'CompletePayment',
+  sale:              'CompletePayment',
+  order:             'CompletePayment',
+  buy:               'CompletePayment',
+  donate:            'CompletePayment',
+  add_to_cart:       'AddToCart',
+  addtocart:         'AddToCart',
+  add_cart:          'AddToCart',
+  checkout:          'InitiateCheckout',
+  initiate_checkout: 'InitiateCheckout',
+  begin_checkout:    'InitiateCheckout',
+  lead:              'SubmitForm',
+  form:              'SubmitForm',
+  form_submit:       'SubmitForm',
+  contact:           'Contact',
+  signup:            'CompleteRegistration',
+  sign_up:           'CompleteRegistration',
+  register:          'CompleteRegistration',
+  registration:      'CompleteRegistration',
+  trial:             'CompleteRegistration',
+  trial_start:       'CompleteRegistration',
+  subscribe:         'Subscribe',
+  subscription:      'Subscribe',
+  view_content:      'ViewContent',
+  page_view:         'ViewContent',
+  search:            'Search',
+  wishlist:          'AddToWishlist',
+}
+
+// ─── TikTok Events API ───────────────────────────────────────────────────────
+// Auth is the `Access-Token` header (a real header — not Microsoft's mistake of
+// decrypting a token only to gate on its presence and then never sending it).
+// `event_source_id` is the TikTok PIXEL CODE, not the advertiser id — see the
+// column-name note in supabase/migrations/20260729000000_capi_ga4_tiktok_columns.sql.
+export async function sendTikTokConversion(site, evt) {
+  const token = safeDecrypt(site.tiktok_capi_token)
+  if (!site.tiktok_pixel_code || !token) return null  // no/undecryptable token → no-op (fail-safe)
+
+  // TikTok requires email/phone SHA-256 hashed; ttclid / ip / user_agent go raw.
+  const user = {}
+  if (evt.email)      user.email      = sha256(evt.email)
+  if (evt.ttclid)     user.ttclid     = evt.ttclid
+  if (evt.ip_address) user.ip         = evt.ip_address
+  if (evt.user_agent) user.user_agent = evt.user_agent
+
+  const eventName = TIKTOK_EVENT_MAP[normalizeKey(evt.conversion_type)] || 'CompletePayment'
+
+  const body = {
+    event_source:    'web',
+    event_source_id: site.tiktok_pixel_code,
+    data: [{
+      event:      eventName,
+      event_time: Math.floor(new Date(evt.timestamp ?? Date.now()).getTime() / 1000),
+      ...(evt.external_event_id ? { event_id: evt.external_event_id } : {}),  // dedup vs browser pixel
+      ...(evt.page_url ? { page: { url: evt.page_url } } : {}),
+      user,
+      properties: {
+        value:    Number(evt.conversion_value) || 0,
+        currency: evt.currency ?? 'USD',
+        ...(evt.order_id ? { order_id: evt.order_id } : {}),
+      }
+    }]
+  }
+
+  const r = await fetchWithRetry('https://business-api.tiktok.com/open_api/v1.3/event/track/', {
+    method: 'POST',
+    headers: { 'Access-Token': token, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }, 'TikTok Events API')
+
+  // TikTok answers HTTP 200 with the real verdict in the BODY: code 0 = accepted,
+  // non-zero = rejected. Trusting r.ok alone would log a REJECTED event as
+  // 'success' — the silent-success class this codebase treats as a defect.
+  const result = await r.json().catch(() => ({}))
+  const accepted = r.ok && Number(result?.code) === 0
+  if (!accepted) console.error('[TikTok Events API]', eventName, 'HTTP', r.status, JSON.stringify(result).slice(0, 200))
+  return {
+    ok: accepted,
+    http_status: r.status,
+    error_message: accepted ? null : JSON.stringify({ code: result?.code ?? null, message: result?.message ?? null }).slice(0, 500)
+  }
+}
+
 // ─── CAPI fan-out + delivery log ─────────────────────────────────────────────
 // Runs the configured senders for one conversion and writes ONE capi_deliveries
 // row per real send attempt (success/failed). A sender that returns null (no
@@ -297,7 +471,9 @@ export async function dispatchCapi(supabase, site, evt) {
     ['meta', sendMetaCAPI],
     ['google', sendGoogleConversion],
     ['microsoft', sendMicrosoftConversion],
-    ['linkedin', sendLinkedInConversion]
+    ['linkedin', sendLinkedInConversion],
+    ['ga4', sendGA4Conversion],
+    ['tiktok', sendTikTokConversion]
   ]
 
   await Promise.allSettled(senders.map(async ([platform, fn]) => {
