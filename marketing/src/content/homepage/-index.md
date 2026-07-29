@@ -9,10 +9,6 @@ banner:
   badge:
     enable: true
     label: Privacy-First Cookieless Engine
-    images:
-      - "/images/avatars/avatar-1.jpg"
-      - "/images/avatars/avatar-2.jpg"
-      - "/images/avatars/avatar-3.png"
   image: "/images/banner.png"
   button_dark:
     enable: true
