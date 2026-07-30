@@ -14,12 +14,31 @@ test('buildCapiUpdate: token is ENCRYPTED on write (never stored plaintext)', ()
   assert.strictEqual(decryptSecret(update.meta_capi_token), 'EAAreal-token') // round-trips
 })
 
-test('buildCapiUpdate: google requires customer_id + conversion_action_id', () => {
-  assert.ok(buildCapiUpdate('google', { token: 't' }).error)
-  const ok = buildCapiUpdate('google', { token: 't', customer_id: 'c1', conversion_action_id: 'a1' })
-  assert.strictEqual(ok.update.google_ads_customer_id, 'c1')
-  assert.strictEqual(ok.update.google_ads_conversion_action_id, 'a1')
-  assert.strictEqual(decryptSecret(ok.update.google_ads_developer_token), 't')
+// GOOGLE IS AN OAUTH PLATFORM, NOT A TOKEN PLATFORM.
+// It previously took a pasted "developer token" into sites.google_ads_developer_token —
+// a credential Google issues once to the software provider, never to an advertiser, so no
+// customer could ever supply a working value. Its credential is now the OAuth grant in
+// ad_platform_connections, and this surface only chooses the conversion action.
+test('buildCapiUpdate: google takes conversion_action_id, writes ad_platform_connections, and REFUSES a token', () => {
+  const ok = buildCapiUpdate('google', { conversion_action_id: '987654321' })
+  assert.strictEqual(ok.error, undefined)
+  assert.strictEqual(ok.external.externalPlatformValue, 'google_ads')
+  assert.deepStrictEqual(ok.connectionUpdate, { conversion_action_id: '987654321' })
+  // It must NOT produce a `sites` update — that is what would resurrect the dead columns.
+  assert.strictEqual(ok.update, undefined)
+
+  assert.strictEqual(buildCapiUpdate('google', {}).error, 'conversion_action_id is required')
+  assert.strictEqual(buildCapiUpdate('google', { conversion_action_id: 'abc' }).error, 'conversion_action_id must be numeric')
+  // A pasted token is rejected outright rather than quietly ignored — otherwise the old
+  // "paste your developer token" habit would appear to succeed and store nothing.
+  assert.ok(buildCapiUpdate('google', { conversion_action_id: '1', token: 't' }).error)
+})
+
+test('CAPI_PLATFORMS.google is external and declares NO sites columns', () => {
+  assert.strictEqual(CAPI_PLATFORMS.google.external, 'ad_platform_connections')
+  assert.strictEqual(CAPI_PLATFORMS.google.externalPlatformValue, 'google_ads')
+  assert.strictEqual(CAPI_PLATFORMS.google.tokenCol, undefined)
+  assert.strictEqual(CAPI_PLATFORMS.google.idCols, undefined)
 })
 
 test('buildCapiUpdate: rejects unknown platform and missing token', () => {
@@ -27,11 +46,23 @@ test('buildCapiUpdate: rejects unknown platform and missing token', () => {
   assert.ok(buildCapiUpdate('meta', { pixel_id: 'x' }).error) // no token
 })
 
-test('buildCapiDisconnect: nulls token + ids', () => {
-  const { update } = buildCapiDisconnect('google')
-  assert.strictEqual(update.google_ads_developer_token, null)
-  assert.strictEqual(update.google_ads_customer_id, null)
-  assert.strictEqual(update.google_ads_conversion_action_id, null)
+// Disconnecting CAPI for Google clears ONLY the conversion action. It must never delete
+// the connection row or revoke the grant: that same row powers ad-cost import, a separate
+// feature the operator did not ask to turn off.
+test('buildCapiDisconnect: google clears only conversion_action_id, never the connection', () => {
+  const res = buildCapiDisconnect('google')
+  assert.strictEqual(res.external.externalPlatformValue, 'google_ads')
+  assert.deepStrictEqual(res.connectionUpdate, { conversion_action_id: null })
+  assert.strictEqual(res.update, undefined)
+  const keys = Object.keys(res.connectionUpdate)
+  assert.ok(!keys.includes('encrypted_refresh_token'), 'must not touch the OAuth credential')
+  assert.ok(!keys.includes('status'), 'must not change connection status')
+})
+
+test('buildCapiDisconnect: token platforms still null token + ids', () => {
+  const { update } = buildCapiDisconnect('meta')
+  assert.strictEqual(update.meta_capi_token, null)
+  assert.strictEqual(update.meta_pixel_id, null)
 })
 
 test('buildCapiStatus: NEVER returns a token; reports connected + last delivery', () => {
@@ -86,6 +117,51 @@ test('buildCapiUpdate/Status: ga4 + tiktok round-trip their own columns', () => 
     tiktok_capi_token: 'ENC2', tiktok_pixel_code: 'CXXXXXXX'
   }, []))
   assert.ok(!json.includes('ENC1') && !json.includes('ENC2'), 'secrets must never appear in status')
+})
+
+// Google's THREE states, pinned. Collapsing "OAuth grant exists" and "forwarding is
+// configured" into one boolean is the specific failure this guards: sendGoogleConversion
+// no-ops without a conversion action, so a card reading "Connected" on an action-less
+// connection would advertise a forwarding path that does not exist.
+test('buildCapiStatus: google separates oauth_connected from connected', () => {
+  const none = buildCapiStatus({}, [], [])
+  assert.strictEqual(none.google.connected, false)
+  assert.strictEqual(none.google.oauth_connected, false)
+  assert.strictEqual(none.google.connection_status, null)
+
+  const oauthOnly = buildCapiStatus({}, [], [
+    { platform: 'google_ads', status: 'connected', account_id: '123-456-7890', conversion_action_id: null }
+  ])
+  assert.strictEqual(oauthOnly.google.oauth_connected, true, 'grant exists')
+  assert.strictEqual(oauthOnly.google.connected, false, 'but NOT forwarding without an action id')
+  assert.strictEqual(oauthOnly.google.customer_id, '123-456-7890')
+
+  const forwarding = buildCapiStatus({}, [], [
+    { platform: 'google_ads', status: 'connected', account_id: '123', conversion_action_id: '987' }
+  ])
+  assert.strictEqual(forwarding.google.connected, true)
+  assert.strictEqual(forwarding.google.conversion_action_id, '987')
+
+  // A non-connected grant (revoked / errored / awaiting account) is never forwarding.
+  for (const st of ['needs_account', 'needs_reconnect', 'error']) {
+    const row = buildCapiStatus({}, [], [
+      { platform: 'google_ads', status: st, account_id: '123', conversion_action_id: '987' }
+    ])
+    assert.strictEqual(row.google.connected, false, `status=${st} must not be connected`)
+    assert.strictEqual(row.google.oauth_connected, false, `status=${st} must not be oauth_connected`)
+  }
+})
+
+// The connection row carries the encrypted OAuth refresh token and is keyed by site_key.
+// Neither may reach the response (§6.5) — status is rendered in the browser.
+test('buildCapiStatus: never leaks the refresh token or site_key from a connection row', () => {
+  const status = buildCapiStatus({}, [], [{
+    platform: 'google_ads', status: 'connected', account_id: '123', conversion_action_id: '9',
+    encrypted_refresh_token: 'ENCRYPTED_REFRESH', site_key: 'st_live_secret', login_customer_id: '555'
+  }])
+  const json = JSON.stringify(status)
+  assert.ok(!json.includes('ENCRYPTED_REFRESH'), 'refresh token must never appear in status')
+  assert.ok(!json.includes('st_live_secret'), 'site_key must never appear in status')
 })
 
 test('plan-gate: free is rejected, starter+ allowed for capi_server_side', () => {
