@@ -23,14 +23,33 @@ const router = Router()
 // once its column, config card AND forwarding wiring all exist, never as a config
 // card that saves a token but never forwards.
 //
-// Microsoft + LinkedIn remain absent DELIBERATELY: their senders exist and are in
-// the fan-out, but no columns are configurable here, so they stay stillborn until
-// separately finished (KNOWN_ISSUES "Dead CAPI senders"). Not widened by this PR.
+// LinkedIn joins here: sendLinkedInConversion already Bearer-authenticates against
+// api.linkedin.com/v2/conversionEvents and is already in the fan-out, so adding the
+// config card is the last thing it was missing. No migration — linkedin_partner_id
+// and linkedin_capi_token already exist on prod (verified) via the baseline schema
+// and 20260712000000_backfill_sites_capi_google_ads_columns.sql, and both are
+// already in the SELECT on api/routes/conversion.js and conversion-offline.js.
+//
+// MICROSOFT REMAINS ABSENT, and now for a sharper reason than "no columns".
+// sendMicrosoftConversion POSTs to https://bat.bing.com/bat.svc/c — the UET
+// *tracking* endpoint — with `Content-Type` as its ONLY header. It reads
+// microsoft_capi_token solely to check it is present and decryptable and then never
+// transmits it; its own comment says "Phase 2 wires the token into the request
+// if/when needed". Exposing a Microsoft card here would therefore save a credential
+// that is never sent, which is exactly the failure the rule above forbids — a config
+// card that appears connected while the token does nothing.
+//
+// Finishing it is not a config-map entry: Microsoft's offline conversions run through
+// the Microsoft Advertising Campaign Management API, which needs OAuth2 (developer
+// token + customer ID + account ID + refresh/access token) — a different credential
+// SHAPE from the tag_id + token pair the current column pair models. That is a sender
+// rewrite plus new columns, tracked separately.
 export const CAPI_PLATFORMS = {
-  meta:   { tokenCol: 'meta_capi_token',           idCols: { pixel_id: 'meta_pixel_id' } },
-  google: { tokenCol: 'google_ads_developer_token', idCols: { customer_id: 'google_ads_customer_id', conversion_action_id: 'google_ads_conversion_action_id' } },
-  ga4:    { tokenCol: 'ga4_api_secret',             idCols: { measurement_id: 'ga4_measurement_id' } },
-  tiktok: { tokenCol: 'tiktok_capi_token',          idCols: { pixel_code: 'tiktok_pixel_code' } }
+  meta:     { tokenCol: 'meta_capi_token',            idCols: { pixel_id: 'meta_pixel_id' } },
+  google:   { tokenCol: 'google_ads_developer_token', idCols: { customer_id: 'google_ads_customer_id', conversion_action_id: 'google_ads_conversion_action_id' } },
+  ga4:      { tokenCol: 'ga4_api_secret',             idCols: { measurement_id: 'ga4_measurement_id' } },
+  tiktok:   { tokenCol: 'tiktok_capi_token',          idCols: { pixel_code: 'tiktok_pixel_code' } },
+  linkedin: { tokenCol: 'linkedin_capi_token',        idCols: { partner_id: 'linkedin_partner_id' } }
 }
 
 const enforceCapi = (req, res, next) => {

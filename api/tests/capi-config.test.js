@@ -54,11 +54,16 @@ test('buildCapiStatus: NEVER returns a token; reports connected + last delivery'
   assert.strictEqual(status.google.connected, false)        // missing token + ids
   assert.strictEqual(status.google.last_delivery, null)     // no deliveries yet
 
-  // Microsoft + LinkedIn have senders in the fan-out but NO config columns here,
-  // so they must stay out of status — surfacing them would offer a card that can
-  // never store a token (KNOWN_ISSUES "Dead CAPI senders"). Not fixed by this PR.
+  // LinkedIn is now configurable, so it MUST appear in status — and, having no token in
+  // this fixture, must appear as not-connected rather than be omitted. An absent platform
+  // and a disconnected one are different states, and only one of them is honest here.
+  assert.ok('linkedin' in status, 'linkedin is configurable and must be reported in status')
+  assert.strictEqual(status.linkedin.connected, false)
+
+  // Microsoft still has no config surface: its sender is in the fan-out but never
+  // transmits its token, so it can never be connected. Surfacing it would offer a card
+  // that saves a credential which does nothing.
   assert.ok(!('microsoft' in status), 'microsoft has no config surface yet')
-  assert.ok(!('linkedin' in status), 'linkedin has no config surface yet')
 })
 
 test('buildCapiUpdate/Status: ga4 + tiktok round-trip their own columns', () => {
@@ -89,10 +94,98 @@ test('plan-gate: free is rejected, starter+ allowed for capi_server_side', () =>
   assert.strictEqual(requireFeature('growth', 'capi_server_side', 'x'), null)
 })
 
-// Was ['google','meta'] while TikTok was deferred. That deferral is reversed by
-// this PR: GA4 + TikTok now have columns, config cards AND forwarding wiring, so
-// they belong here. Microsoft/LinkedIn deliberately still do NOT — they remain
-// stillborn senders until separately finished.
-test('CAPI_PLATFORMS: exactly the 4 live platforms (microsoft/linkedin still unwired)', () => {
-  assert.deepStrictEqual(Object.keys(CAPI_PLATFORMS).sort(), ['ga4', 'google', 'meta', 'tiktok'])
+// History of this list: ['google','meta'] -> +ga4,+tiktok (#498) -> +linkedin (here).
+// A platform belongs in CAPI_PLATFORMS only once its columns, config card AND
+// forwarding wiring all exist. This assertion is the gate that enforces it, and it is
+// exact (deepStrictEqual on the sorted keys) rather than a contains-check, so adding a
+// platform anywhere without deciding it here fails loudly instead of silently.
+test('CAPI_PLATFORMS: exactly the 5 live platforms (linkedin added, microsoft still out)', () => {
+  assert.deepStrictEqual(Object.keys(CAPI_PLATFORMS).sort(), ['ga4', 'google', 'linkedin', 'meta', 'tiktok'])
+})
+
+// LinkedIn's credential SHAPE, pinned. Its sender reads exactly these two columns, so a
+// rename on either side silently reverts LinkedIn to a permanent no-op (the sender
+// returns null when either is falsy) — with no error and no delivery row to notice.
+test('CAPI_PLATFORMS.linkedin maps to the two columns sendLinkedInConversion actually reads', () => {
+  assert.strictEqual(CAPI_PLATFORMS.linkedin.tokenCol, 'linkedin_capi_token')
+  assert.deepStrictEqual(CAPI_PLATFORMS.linkedin.idCols, { partner_id: 'linkedin_partner_id' })
+})
+
+test('buildCapiUpdate: linkedin encrypts the token and requires partner_id', () => {
+  const ok = buildCapiUpdate('linkedin', { token: 'li-tok', partner_id: '123456' })
+  assert.strictEqual(ok.error, undefined)
+  assert.strictEqual(ok.update.linkedin_partner_id, '123456')
+  // Never stored raw — the whole point of encrypt-on-write.
+  assert.notStrictEqual(ok.update.linkedin_capi_token, 'li-tok')
+  assert.ok(ok.update.linkedin_capi_token.length > 0)
+
+  assert.strictEqual(buildCapiUpdate('linkedin', { token: 'li-tok' }).error, 'partner_id is required')
+  assert.strictEqual(buildCapiUpdate('linkedin', { partner_id: '1' }).error, 'token is required')
+})
+
+test('buildCapiDisconnect: linkedin nulls BOTH columns, not just the token', () => {
+  // Clearing only the token would leave partner_id set, which reads as "half connected"
+  // in status and leaves a stale identifier behind after an explicit disconnect.
+  assert.deepStrictEqual(buildCapiDisconnect('linkedin').update, {
+    linkedin_capi_token: null,
+    linkedin_partner_id: null
+  })
+})
+
+// Microsoft stays OUT, and this asserts the reason rather than just the absence:
+// sendMicrosoftConversion posts to the UET tracking endpoint with Content-Type as its
+// only header and never transmits microsoft_capi_token. A config card would save a
+// credential that does nothing. If someone finishes that sender (OAuth2 against the
+// Microsoft Advertising API, which needs a different column shape), this test is the
+// thing that should be updated deliberately — not quietly deleted to make a card work.
+test('microsoft is NOT configurable while its sender never transmits the token', () => {
+  assert.strictEqual(CAPI_PLATFORMS.microsoft, undefined)
+  assert.strictEqual(buildCapiUpdate('microsoft', { token: 't', tag_id: 'x' }).error, 'Unknown platform')
+})
+
+// ── UI/config drift guard ─────────────────────────────────────────────────────────────
+// The #498 lesson, made mechanical. GA4 and TikTok were added to CAPI_PLATFORMS and to the
+// fan-out but NOT to CapiDeliveryStatus.jsx's chips, so two live platforms silently had no
+// filter and rendered their raw key as a label for a whole release. Nothing failed, because
+// the label lookup has a `|| r.platform` fallback — the drift was invisible by construction.
+//
+// These read the real JSX as source (node --test cannot import JSX) and assert every
+// configurable platform is represented in both customer-facing surfaces. Adding a platform
+// to CAPI_PLATFORMS without touching the UI now fails here.
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+
+const __capiDir = dirname(fileURLToPath(import.meta.url))
+const readDash = (f) => readFileSync(join(__capiDir, '..', '..', 'dashboard', 'src', 'components', f), 'utf8')
+
+test('every configurable platform has a CapiSettings card', () => {
+  const src = readDash('CapiSettings.jsx')
+  for (const key of Object.keys(CAPI_PLATFORMS)) {
+    assert.ok(
+      new RegExp(`key:\\s*'${key}'`).test(src),
+      `CAPI_PLATFORMS has '${key}' but CapiSettings.jsx has no card for it — a customer cannot supply its credentials`
+    )
+  }
+})
+
+test('every configurable platform has a CapiDeliveryStatus chip AND a label', () => {
+  const src = readDash('CapiDeliveryStatus.jsx')
+  for (const key of Object.keys(CAPI_PLATFORMS)) {
+    assert.ok(
+      new RegExp(`key:\\s*'${key}'`).test(src),
+      `CAPI_PLATFORMS has '${key}' but CapiDeliveryStatus.jsx has no filter chip for it`
+    )
+    assert.ok(
+      new RegExp(`\\b${key}:\\s*'`).test(src),
+      `'${key}' has no PLATFORM_LABEL entry — it would render as the raw key in the delivery table`
+    )
+  }
+})
+
+test('the delivery UI does NOT advertise microsoft, which can never produce a row', () => {
+  // A chip for a platform no site can configure filters to permanently empty, which reads
+  // as "connected, quiet" instead of "not available".
+  const src = readDash('CapiDeliveryStatus.jsx')
+  assert.ok(!/key:\s*'microsoft'/.test(src), 'microsoft must not have a filter chip while it is unconfigurable')
 })

@@ -10,7 +10,11 @@ const PLATFORMS = [
   { key: 'meta',   label: 'Meta CAPI',     tokenLabel: 'Access token',     idFields: [{ name: 'pixel_id', label: 'Pixel ID' }] },
   { key: 'google', label: 'Google Ads',    tokenLabel: 'Developer token',  idFields: [{ name: 'customer_id', label: 'Customer ID' }, { name: 'conversion_action_id', label: 'Conversion action ID' }] },
   { key: 'ga4',    label: 'Google Analytics 4', tokenLabel: 'API secret',  idFields: [{ name: 'measurement_id', label: 'Measurement ID' }] },
-  { key: 'tiktok', label: 'TikTok',        tokenLabel: 'Access token',     idFields: [{ name: 'pixel_code', label: 'Pixel Code' }] }
+  { key: 'tiktok', label: 'TikTok',        tokenLabel: 'Access token',     idFields: [{ name: 'pixel_code', label: 'Pixel Code' }] },
+  // Field names must match CAPI_PLATFORMS.linkedin.idCols in api/routes/capi.js —
+  // buildCapiUpdate rejects the request by field NAME, so a mismatch here surfaces as
+  // "partner_id is required" on a form that appears filled in.
+  { key: 'linkedin', label: 'LinkedIn',    tokenLabel: 'Access token',     idFields: [{ name: 'partner_id', label: 'Partner ID' }] }
 ]
 
 function timeAgo(iso) {
