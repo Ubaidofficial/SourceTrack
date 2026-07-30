@@ -4,8 +4,9 @@ import { Link } from 'react-router-dom'
 // api/lib/plan-features.js: starter 50_000, growth 150_000. Founder (early-bird
 // annual) maps to Growth entitlements, so 150,000. Data-retention is NOT claimed
 // here — it is not enforced in prod. "First month free" is intentionally NOT
-// claimed: the live Stripe trial is 14 days, so that copy would be untrue until
-// the trial is changed to 30d (tracked as a separate follow-up).
+// claimed: the trial is 28 days (raised from 14 in migration 20260730000000), and
+// 28 days is still not a month, so that copy would still overstate it. The
+// conclusion is unchanged by the raise; only the number it turns on has moved.
 const PLANS = [
   {
     key: 'starter', name: 'Starter', price: '$49', period: '/mo',

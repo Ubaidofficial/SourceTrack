@@ -2363,7 +2363,7 @@ test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', asy
     await handler(req, res)
 
     assert.strictEqual(res.statusCode, 402, 'expired trial must return 402')
-    assert.strictEqual(res.json_body.error, 'Your 14-day trial has ended. Upgrade to continue tracking.')
+    assert.strictEqual(res.json_body.error, 'Your 28-day trial has ended. Upgrade to continue tracking.')
     assert.strictEqual(insertedPageviews.length, 0, 'must not insert pageview row')
     assert.strictEqual(rpcCalls.length, 0, 'must not call RPC')
   })

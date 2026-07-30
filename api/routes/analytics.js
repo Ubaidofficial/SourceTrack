@@ -237,7 +237,7 @@ router.post('/collect',
         const msg = site.plan === 'archived'
           ? 'Site archived after 60 days of inactivity. Reactivate from your dashboard.'
           : site.plan === 'trial'
-            ? 'Your 14-day trial has ended. Upgrade to continue tracking.'
+            ? 'Your 28-day trial has ended. Upgrade to continue tracking.'
             : 'Subscription inactive'
         return res.status(402).json({ success: false, data: null, error: msg })
       }
