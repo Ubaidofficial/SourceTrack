@@ -161,8 +161,10 @@ export async function sendMetaCAPI(site, evt) {
   const testCode = process.env.META_TEST_EVENT_CODE
   if (testCode) body.test_event_code = testCode
 
+  // Same env var + default as the ad-cost sync path, so the two Meta callers cannot drift.
+  const apiVersion = process.env.META_GRAPH_API_VERSION || 'v26.0'
   const r = await fetchWithRetry(
-    `https://graph.facebook.com/v19.0/${site.meta_pixel_id}/events?access_token=${token}`,
+    `https://graph.facebook.com/${apiVersion}/${site.meta_pixel_id}/events?access_token=${token}`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
     'Meta CAPI'
   )

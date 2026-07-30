@@ -1,4 +1,9 @@
-const META_API_BASE = 'https://graph.facebook.com/v19.0'
+// Version comes from the same env var + default as the CAPI sender, so the two Meta
+// callers cannot drift. The old hardcoded v19.0 expired 2026-05-21, and Marketing API
+// endpoints (the Conversions API included) return an exception rather than falling back
+// to a live version the way plain Graph API calls do.
+// Read at call time, not at module load, so a job's dotenv.config() always lands first.
+const metaApiBase = () => `https://graph.facebook.com/${process.env.META_GRAPH_API_VERSION || 'v26.0'}`
 
 // Normalize Ad Account ID by removing "act_" prefix
 export function normalizeMetaAccountId(id = '') {
@@ -23,7 +28,7 @@ export async function validateMetaCredentials(adAccountId, accessToken) {
     return { name: 'Mock Meta Ad Account', currency: 'USD' }
   }
 
-  const url = `${META_API_BASE}/act_${cleanId}?fields=name,currency&access_token=${encodeURIComponent(accessToken)}`
+  const url = `${metaApiBase()}/act_${cleanId}?fields=name,currency&access_token=${encodeURIComponent(accessToken)}`
   const response = await fetch(url)
 
   if (!response.ok) {
@@ -89,7 +94,7 @@ export async function fetchMetaPerformance(adAccountId, startDate, endDate, acce
     limit: '500' // Bounded page size limit
   })
 
-  const url = `${META_API_BASE}/act_${cleanId}/insights?${params.toString()}`
+  const url = `${metaApiBase()}/act_${cleanId}/insights?${params.toString()}`
   const response = await fetch(url)
 
   if (!response.ok) {
