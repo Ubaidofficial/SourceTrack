@@ -1,0 +1,41 @@
+---
+// Section wrapper for the Direct-Rescue before/after. Mirrors JourneyShowcase.astro's
+// conventions exactly (main-container > container > container-padding-*, badge + h2 + lede)
+// so the homepage's vertical rhythm is unchanged.
+//
+// COPY IS THE LOAD-BEARING PART HERE. The headline is GTM §1.2's own sanctioned phrasing:
+//   "The lead your other tools log as 'Direct'? We show it came from ChatGPT."
+// That is a claim about SourceTrack's REPORTING, which is true today. It is deliberately
+// NOT "your CRM will show ChatGPT" — the synthetic-UTM-into-form/CRM half of GTM §4 Tier 1
+// is unbuilt, and copy implying it would be a live-behaviour claim rather than a demo (§6).
+//
+// Register follows GTM §1.2's VOICE RULE: specific and practitioner-plain, never inflated.
+// No "revolutionary", no "AI-powered", no superlative about beating anyone.
+import DirectRescueMockup from "@/components/DirectRescueMockup.astro";
+---
+
+<section class="relative overflow-hidden">
+  <div class="main-container">
+    <div class="container">
+      <div class="container-padding-y container-padding-x">
+        <div class="mb-10 text-center">
+          <div class="bg-gradient-primary p-px inline-block rounded-full mb-2">
+            <div class="bg-gradient-black-grid px-4 py-1.5 rounded-full">
+              <span class="gradient-text-primary">AI sources</span>
+            </div>
+          </div>
+          <h2 class="text-h2 font-medium lg:w-3/5 mx-auto">
+            The lead your other tools log as &ldquo;Direct&rdquo;
+          </h2>
+          <p class="text-lg mt-4 lg:w-3/5 mx-auto">
+            When someone arrives from ChatGPT, Perplexity or another AI tool, most analytics
+            have nothing to read and file the visit under Direct. SourceTrack recognises the
+            referrer and reports it as the channel it was.
+          </p>
+        </div>
+
+        <DirectRescueMockup />
+      </div>
+    </div>
+  </div>
+</section>
