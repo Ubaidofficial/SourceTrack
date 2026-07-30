@@ -10,7 +10,7 @@ export default function DocsFramer() {
       <Helmet>
         <title>Framer Setup Guide | SourceTrack Docs</title>
         <meta name="description" content="Add the SourceTrack tracking pixel to Framer. Learn where to insert custom tracking codes and how to verify page view events." />
-        <link rel="canonical" href="https://www.sourcetrack.ai/docs/platforms/framer" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/docs/framer" />
       </Helmet>
 
       <div className="space-y-6">
