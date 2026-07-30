@@ -27,6 +27,10 @@ This version expands the prior V1.1 design system with the missing product surfa
 - v1.3: §26 gains the lead-intelligence / enrichment prohibitions (§26.1), carried from the retired
   `docs/marketing/seo_content_backlog.md` — this doc's §0 Scope Gate is now the named scope authority
   in `CLAUDE.md` / `AGENTS.md`.
+- v1.3: §35.3 logs a 2026-07-30 competitive pattern-validation pass (orchly.ai, sourceloop.ai,
+  getsleek.io, Uny Elements). Additive only — it confirms existing §29.2/§35 rules and changes none of
+  them. It also states the competitor logo/icon/screenshot prohibition explicitly as a trademark
+  constraint, and cross-references a live competitor example of the §26 LLM-analyzer prohibition.
 
 ---
 
@@ -3273,6 +3277,47 @@ Ops must stay:
 - safe
 - operational
 - internal-only
+
+### 35.3 Competitive pattern validation (2026-07-30)
+
+Research pass over orchly.ai, sourceloop.ai, getsleek.io and Uny Elements. **Nothing below changes a
+rule.** Every finding CONFIRMS a rule this doc already states, so this subsection is a log of external
+validation, not a spec revision. Recorded so a future contributor can see that these patterns were
+independently arrived at rather than copied, and does not re-litigate them.
+
+**1. Three-step "how it works" — validated twice, still unbuilt.**
+Already required by §29.2 ("clear three-step explanation") and §35 Borrow ("simple three-step
+explanation"). Two direct/adjacent competitors ship it: SourceLoop's *Track / Measure / Act*, and
+Sleek's *"Three steps, that is all"* with numbered 01/02/03. Two independent arrivals at the same
+structure raises the PRIORITY of actually building ours — it does not change the spec, which was
+already correct.
+
+**2. Comparison table — validated a third time, and the fix is promotion not construction.**
+Already built at `/compare/ga4`. Sleek ships an identical grid (Sleek / Google / Plausible / Datafast).
+The #501 UI audit flagged ours as under-promoted, not missing. So the action stays **promote, don't
+rebuild** — the footer link added in #505 is that promotion, not a new page.
+
+**3. Competitor brand assets are OFF LIMITS — trademark, not taste.**
+Stated explicitly because §35's existing "do not borrow: fake logos" reads as a style rule and this is
+not one:
+
+- Competitor **logos**, **icon sets**, and product **screenshots** may never be reused, embedded, or
+  presented as SourceTrack's own. This is a trademark / misrepresentation exposure, not a design
+  preference, and no visual-polish argument overrides it.
+- Layout, composition, information architecture and copy PATTERNS may be studied and adapted freely —
+  that is what §35 Borrow already permits, and what this subsection is a record of.
+- The line: a pattern is an idea about arrangement; a logo or a UI screenshot is someone else's
+  property. §35.1's "treat screenshots as visual references only" governs how they may be *looked at*
+  during design; it is not permission to ship one.
+
+**4. Sleek's "AI Chat — ask questions in plain English" is a live example of what §26 already bans.**
+Cross-referenced so the pattern is recognisable in the wild instead of re-derived from scratch: it is
+LLM-narrated freeform data over the customer's own numbers, i.e. §26's prohibited **LLM analyzer** plus
+CLAUDE.md §6's *"no LLM-narrated freeform revenue/ROAS/attribution numbers… Deterministic,
+cite-the-rows only."* A competitor shipping it is not evidence it is safe for us — our position is that
+a confident narrated number we cannot verify is worse than no number, and that is a positioning choice,
+not a capability gap. Seeing it on a competitor's site is expected; treating that as a reason to
+reconsider is the mistake this note exists to prevent.
 
 
 ---
