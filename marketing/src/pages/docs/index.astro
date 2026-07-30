@@ -1,5 +1,27 @@
 ---
+// NOT a stub, unlike the other three pages in this batch — this hub already carried nine
+// real link cards (4280 B against DocsHome.jsx's 3874 B), so "replace the stub prose
+// wholesale" does not apply here and would have destroyed working content.
+//
+// The port is therefore ADDITIVE: the only real content DocsHome.jsx has that this page
+// lacked is its seven-term glossary, added below verbatim. Its card grid is NOT ported,
+// because DocsHome derives cards from dashboard/src/components/docs/docsManifest.js —
+// porting that would mean either duplicating the manifest here (a second list to drift) or
+// porting the manifest itself, which is outside a four-page content batch.
 import Base from "@/layouts/Base.astro";
+
+// Verbatim from GLOSSARY in dashboard/src/pages/docs/DocsHome.jsx. The source renders two
+// of these bodies as JSX with inline <code>; expressed here as pre-marked HTML strings and
+// rendered with set:html so the code formatting survives the port intact.
+const GLOSSARY = [
+  { term: 'Tracker Script', body: 'The lightweight JS snippet that records visitor sessions and referrers.' },
+  { term: 'Site Key', body: 'The public <code class="text-[#C8F000]">st_</code> identifier that authorizes your script to submit data.' },
+  { term: 'Pageview', body: 'An event recorded automatically each time a visitor loads a page or route.' },
+  { term: 'Conversion', body: 'A tracked action — signup, demo, or purchase — you attribute to a source.' },
+  { term: 'Source & Referrer', body: 'The channel that sent the visitor (e.g. <code class="text-[#C8F000]">google</code> or direct).' },
+  { term: 'UTMs & Click IDs', body: 'URL tags (<code class="text-[#C8F000]">utm_source</code>) and ad click IDs (<code class="text-[#C8F000]">gclid</code>) that map paid campaigns.' },
+  { term: 'Webhook', body: 'A server-to-server message reporting order value from Stripe or Shopify.' }
+];
 ---
 
 <Base
@@ -59,6 +81,24 @@ import Base from "@/layouts/Base.astro";
         <h3 class="text-lg font-bold text-[#C8F000]">🔧 Troubleshooting</h3>
         <p class="text-sm text-gray-400 mt-2">Diagnostic tools, tracking doctor checks, and common installation fixes.</p>
       </a>
+    </div>
+  </section>
+
+  <section class="py-16 bg-[#0E1111] text-white">
+    <div class="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="bg-[#161719] border border-[#2A2C30] rounded-2xl p-6 sm:p-8 space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">
+          Glossary: Key Concepts
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+          {GLOSSARY.map((g) => (
+            <div class="space-y-1">
+              <h3 class="text-sm font-bold text-white">{g.term}</h3>
+              <p class="text-xs text-gray-400 leading-relaxed" set:html={g.body} />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   </section>
 </Base>
