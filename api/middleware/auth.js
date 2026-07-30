@@ -1,7 +1,10 @@
 import NodeCache from 'node-cache'
 import { getSupabase } from '../lib/supabase.js'
 
-const TRIAL_DAYS = 14
+// Must match sites.trial_ends_at's DB default (migration 20260730000000, raised 14 -> 28).
+// Only used as a FALLBACK for rows whose trial_ends_at is NULL — a row that has the column
+// set is always trusted over this constant.
+const TRIAL_DAYS = 28
 
 // In-memory site key cache — 5 min TTL.
 // Eliminates one Supabase round-trip per tracking event. Without this, every

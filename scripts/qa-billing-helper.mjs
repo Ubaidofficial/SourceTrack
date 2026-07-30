@@ -34,18 +34,30 @@ assert.strictEqual(expiredResult.daysLeft, 0)
 assert.strictEqual(expiredResult.expired, true)
 console.log('✅ Test 3 Passed.')
 
-// Test 4: trial with missing trial_ends_at falls back to created_at + 14 days
-console.log('Running Test 4: trial fallback to created_at + 14 days...')
+// Test 4: trial with missing trial_ends_at falls back to created_at + 28 days
+// (raised alongside the DB default — see migration 20260730000000 for the prior value).
+// The 20-days-ago fixture below used to prove EXPIRED; at the new length it is mid-trial,
+// so it now proves the opposite, and a 30-days-ago fixture carries the expiry case.
+console.log('Running Test 4: trial fallback to created_at + 28 days...')
 const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString()
 const fallbackSite = { plan: 'trial', created_at: tenDaysAgo }
 const fallbackResult = getTrialInfo(fallbackSite)
 assert.strictEqual(fallbackResult.isTrial, true)
-// 14 days total, 10 days passed -> 4 days left
-assert.strictEqual(fallbackResult.daysLeft, 4)
+// 28 days total, 10 days passed -> 18 days left
+assert.strictEqual(fallbackResult.daysLeft, 18)
 assert.strictEqual(fallbackResult.expired, false)
 
+// 20 days in is still INSIDE a 28-day trial. This case would have passed as "expired"
+// before the raise, so it is the one that pins the new length rather than just tolerating it.
 const twentyDaysAgo = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString()
-const fallbackExpiredSite = { plan: 'trial', created_at: twentyDaysAgo }
+const midTrialSite = { plan: 'trial', created_at: twentyDaysAgo }
+const midTrialResult = getTrialInfo(midTrialSite)
+assert.strictEqual(midTrialResult.isTrial, true)
+assert.strictEqual(midTrialResult.daysLeft, 8)
+assert.strictEqual(midTrialResult.expired, false)
+
+const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+const fallbackExpiredSite = { plan: 'trial', created_at: thirtyDaysAgo }
 const fallbackExpiredResult = getTrialInfo(fallbackExpiredSite)
 assert.strictEqual(fallbackExpiredResult.isTrial, true)
 assert.strictEqual(fallbackExpiredResult.daysLeft, 0)

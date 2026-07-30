@@ -36,7 +36,7 @@ export async function checkTierLimit(req, res, next) {
             current_plan: 'trial',
             trial_ends_at: req.site.trial_ends_at,
             upgrade_url: '/billing',
-            message: 'Your 14-day trial has ended. Upgrade to continue tracking.'
+            message: 'Your 28-day trial has ended. Upgrade to continue tracking.'
           }
         })
       }

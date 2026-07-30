@@ -16,6 +16,6 @@ banner:
     link: "/docs"
   button_primary:
     enable: true
-    label: "Start 14-day free trial"
+    label: "Start 28-day free trial"
     link: "https://app.sourcetrack.ai/signup"
 ---

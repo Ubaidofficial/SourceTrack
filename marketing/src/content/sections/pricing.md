@@ -28,7 +28,7 @@ pricing_plans:
         include: true
 
     button:
-      label: Start 14-day free trial
+      label: Start 28-day free trial
       link: https://app.sourcetrack.ai/signup
       enable: true
   - name: Growth
@@ -56,7 +56,7 @@ pricing_plans:
         include: true
 
     button:
-      label: Start 14-day free trial
+      label: Start 28-day free trial
       link: https://app.sourcetrack.ai/signup
       enable: true
   - name: Founder Annual

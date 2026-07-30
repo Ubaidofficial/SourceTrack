@@ -72,7 +72,7 @@ faq_list:
   - question: What does it cost, and is there a trial?
     answer: >-
       Starter is $49/month and Growth is $79/month, plus a $99/year Founder rate for early
-      adopters that stays locked at that price. Every new workspace starts on a 14-day trial
+      adopters that stays locked at that price. Every new workspace starts on a 28-day trial
       with no credit card required — the trial is a flag on your account rather than a Stripe
       subscription, so there is nothing to cancel and nothing charges when it ends. When it
       does end, tracking stops and your data stays where it is until you either upgrade or
