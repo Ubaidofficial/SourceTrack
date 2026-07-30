@@ -1,13 +1,233 @@
 ---
+// Faithful port of dashboard/src/pages/docs/DocsTroubleshooting.jsx — same sections in the
+// same order, text verbatim, including the six-item symptom/cause/fix/verify table which is
+// the substance of the page. See quickstart.astro's header for the general port rules.
+//
+// The stub this replaces was a heading and one line of prose — no symptoms, no fixes, no
+// cookieless section. The cookieless trade-offs section is carried across in full because it
+// is a §6 honesty boundary rather than a feature pitch: it states plainly that a blocked
+// visitor-ID request degrades to session-only attribution and that a later conversion may be
+// recorded as direct.
+//
+// ONE DELIBERATE DIFFERENCE: the source's <Link to="/settings"> is an in-app route that does
+// not exist on this site. It is pointed at the app domain (https://app.sourcetrack.ai/settings)
+// rather than copied into a 404 or silently dropped — the sentence only makes sense if the
+// reader can actually get to the setting.
 import Base from "@/layouts/Base.astro";
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.sourcetrack.ai" },
+    { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://www.sourcetrack.ai/docs" },
+    { "@type": "ListItem", "position": 3, "name": "Troubleshooting", "item": "https://www.sourcetrack.ai/docs/troubleshooting" }
+  ]
+};
+
+// Verbatim from TROUBLESHOOTING_ITEMS in the source file.
+const TROUBLESHOOTING_ITEMS = [
+  {
+    symptom: 'No pageviews are showing up in the dashboard',
+    cause: 'The site key is incorrect, the script is not loading, or a browser/network extension may be suppressing the endpoint.',
+    fix: 'Verify that the script tag exists in your HTML source and contains the exact Site Key from settings. Check the browser Console and Network tabs for blocks. We recommend running the Browser Connection Check inside the Setup Doctor.',
+    verify: 'Look for the "track" network request returning a 200 success response.'
+  },
+  {
+    symptom: 'Missing conversion events',
+    cause: 'The conversion script was fired before the window.sourcetrack object finished loading, or the script tag did not fire on the thank-you/success page.',
+    fix: 'Wrap your conversion script in a load event listener or check that it executes after the main script loads. Ensure the tracking script is installed on the checkout confirmation page.',
+    verify: 'Paste a manual conversion call into the browser Console on your checkout page and verify it appears in the Event Debugger.'
+  },
+  {
+    symptom: 'Duplicate conversion counts',
+    cause: 'The conversion script is fired multiple times (e.g., when the user refreshes the thank-you page).',
+    fix: 'Pass a unique, stable order_id parameter (such as the order number or payment intent ID) in your conversion options body. SourceTrack will automatically skip duplicate payloads containing the same order_id.',
+    verify: 'Trigger the event twice in your console. The first should return success, and the second should be logged as deduplicated.'
+  },
+  {
+    symptom: 'Traffic shows as "Direct/None" instead of organic/referral',
+    cause: 'The referrer header was stripped when transitioning from HTTPS to HTTP, or the traffic is coming from a private window/ad-network click without UTM parameters.',
+    fix: 'Ensure your site has HTTPS enabled and uses appropriate Referrer-Policy headers. Ensure you use standard UTM campaign variables for custom acquisition campaigns.',
+    verify: 'Inspect the document.referrer value in the console on initial page entry to verify it is not empty.'
+  },
+  {
+    symptom: 'Shopify order revenue does not stitch to journeys',
+    cause: 'The st_aid attribute was not successfully saved on the Shopify cart object, or the Shopify webhook HMAC check failed.',
+    fix: 'Ensure your theme files update the cart attributes successfully before the customer reaches checkout. Check that your Shopify webhook url is configured with the correct site key.',
+    verify: 'Add items to your cart, fetch the cart JSON (yoursite.com/cart.json), and verify that "st_aid" exists inside the attributes object.'
+  },
+  {
+    symptom: 'Stripe webhook payments do not stitch to journeys',
+    cause: 'The st_aid metadata parameter was not forwarded in the Checkout Session or Customer object creation call.',
+    fix: 'Verify your backend API code is extracting "st_aid" from requests and passing it in the metadata configurations of the Stripe object creation.',
+    verify: 'Inspect the Checkout Session object in your Stripe Dashboard logs to verify that the metadata contains the correct st_aid value.'
+  }
+];
 ---
 
-<Base title="Tracking Troubleshooting & Diagnostics — SourceTrack Docs" description="Troubleshooting pixel verification errors, CORS issues, and missing event logs.">
+<Base
+  title="Troubleshooting Ingestion & Setup Issues | SourceTrack Docs"
+  description="Symptom, cause, and fix checklist for resolving missing pageviews, unstitched conversions, and duplicate revenue counts."
+  structuredData={[breadcrumbSchema]}
+>
   <section class="py-16 bg-[#0E1111] text-white">
-    <div class="max-w-[800px] mx-auto px-4 space-y-6">
-      <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Docs</a>
-      <h1 class="text-4xl font-black text-white">Troubleshooting & Tracking Diagnostics</h1>
-      <p class="text-gray-400 text-lg">Verify script status, inspect network requests, and debug ingestion errors.</p>
+    <div class="max-w-[800px] mx-auto px-4 space-y-8">
+      <div class="space-y-4">
+        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Docs</a>
+        <h1 class="text-4xl font-black text-white tracking-tight">Troubleshooting Guide</h1>
+        <p class="text-gray-400 text-lg leading-relaxed">
+          Resolve common pageview, conversion, and stitching issues.
+        </p>
+      </div>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Who This Is For</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          This guide is for developers, founders, and marketers looking to diagnose issues with missing
+          pageviews, unstitched conversions, or webhook errors.
+        </p>
+      </section>
+
+      <div class="bg-[#101A24] border border-[#1E3A5F] rounded-2xl p-5">
+        <h4 class="font-extrabold text-[#7CC4FF] mb-2 text-sm">Key Terms Defined:</h4>
+        <ul class="list-disc pl-5 space-y-1 text-xs text-[#A8CFF0] leading-relaxed">
+          <li><strong>Developer Tools</strong> &mdash; the inspect panel inside modern browsers used to view console logs and inspect network payloads.</li>
+          <li><strong>Console</strong> &mdash; the command-line interface inside Developer Tools where errors are logged and manual code can be run.</li>
+          <li><strong>Event Debugger</strong> &mdash; the real-time event log inside the SourceTrack dashboard showing raw events as they hit our servers.</li>
+        </ul>
+      </div>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">What You Will Diagnose</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          You will inspect your browser network logs, review dashboard event updates, verify API responses,
+          and run quick browser tests to solve tracking discrepancies.
+        </p>
+      </section>
+
+      <section class="space-y-6">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Symptoms and Solutions</h2>
+
+        <div class="space-y-6">
+          {TROUBLESHOOTING_ITEMS.map((item) => (
+            <div class="p-5 bg-[#161719] border border-[#2A2C30] rounded-xl space-y-3">
+              <h3 class="text-sm font-extrabold text-[#FF6B6B] flex items-start gap-1.5">
+                <span class="mt-0.5 shrink-0">Symptom:</span>
+                <span>{item.symptom}</span>
+              </h3>
+
+              <div class="text-xs space-y-1.5 pl-6 text-gray-400 leading-relaxed">
+                <p><strong class="text-gray-300">Likely Cause:</strong> {item.cause}</p>
+                <p><strong class="text-gray-300">Fix:</strong> {item.fix}</p>
+                <p><strong class="text-gray-300">How to Verify:</strong> {item.verify}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">How to Verify Success</h2>
+        <ol class="list-decimal pl-5 space-y-3 text-sm text-gray-300 leading-relaxed">
+          <li>Make your target changes (updating theme files, clearing caching systems, or adjusting metadata configurations).</li>
+          <li>Clear your browser data or load the site inside an incognito/private tab to bypass local caches.</li>
+          <li>Open your browser Developer Tools (Network Tab) and filter for <code class="text-[#C8F000]">track</code>.</li>
+          <li>Perform the action (loading a page, clicking a button) and verify the request exits successfully.</li>
+        </ol>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Common Troubleshooting Mistakes</h2>
+        <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300 leading-relaxed">
+          <li>
+            <strong>Testing behind active proxy profiles:</strong> VPNs or corporate firewalls can
+            occasionally filter incoming analytic endpoints. Test on standard connections or home networks.
+          </li>
+          <li>
+            <strong>Ignoring CSS/Theme caches:</strong> Caching systems (like WordPress plugins, Shopify
+            edge networks, or Cloudflare proxies) may hold onto outdated tracking scripts. Always clear
+            caches after making script changes.
+          </li>
+        </ul>
+      </section>
+
+      <section id="cookieless" class="space-y-3 scroll-mt-20">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Cookieless Mode: Attribution Trade-offs</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          Cookieless mode is more privacy-friendly but less persistent than the standard tracker. Visitor
+          IDs are derived server-side via a daily-rotating salted hash and are not stored in the browser
+          at all.
+        </p>
+        <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300 leading-relaxed">
+          <li>
+            <strong>Visitor ID request can be blocked.</strong> The cookieless tracker fetches its visitor
+            id from <code class="text-[#C8F000]">/api/tracker/id</code> on every page load. If an
+            ad-blocker, corporate proxy, or transient network failure blocks that request, the tracker
+            falls back to a session-only random id and writes a one-line warning to the browser DevTools
+            console: <code class="text-[#C8F000]">[SourceTrack] Cookieless visitor ID &hellip; using a session-only fallback id</code>.
+          </li>
+          <li>
+            <strong>Same-session only when the fallback fires.</strong> A visitor whose id resets cannot be
+            connected across sessions. Their later conversion may be recorded as <em>direct</em> because no
+            prior pageview is linked to the new id. Attribution may become same-session only or weaker
+            depending on browser and network behavior.
+          </li>
+          <li>
+            <strong>First-touch is in-memory only.</strong> The cookieless tracker holds the first-touch
+            source for the active page session only. It is not preserved across page reloads.
+          </li>
+        </ul>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          If you need full multi-session attribution, switch off cookieless mode in
+          <a href="https://app.sourcetrack.ai/settings" class="text-[#C8F000] font-bold hover:underline">Settings</a>
+          and use the standard tracker, which stores a stable id in <code class="text-[#C8F000]">localStorage</code>.
+        </p>
+      </section>
+
+      <section class="space-y-3">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Using Setup Doctor for Diagnostics</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          The <strong>Setup Doctor</strong> on your Snippet Code settings page helps identify connection and
+          configuration issues.
+        </p>
+        <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300 leading-relaxed">
+          <li>
+            <strong>Browser Connection Check:</strong> If analytics requests are not sending, open the
+            Browser Connection Check disclosure. It tests if your browser can reach the backend liveness
+            ping. If it fails, a browser extension, VPN, or network firewall may be blocking the
+            SourceTrack API.
+          </li>
+          <li>
+            <strong>Live Pageview Verification:</strong> For production sites, use the "Verify a live
+            pageview" test link generation. This adds a temporary
+            <code class="text-[#C8F000]">st_verify</code> token to the URL and checks whether SourceTrack
+            receives a live pageview from your production domain. Note: Test links are blocked for
+            unsafe/local test domains.
+          </li>
+          <li>
+            <strong>Wrong Domain / Test Traffic:</strong> If you receive warnings in the diagnostics panel,
+            verify that the active domain matches your registered production domain. Setup Doctor does not
+            treat localhost/staging traffic as onboarding success.
+          </li>
+        </ul>
+        <div class="bg-[#101A24] border border-[#1E3A5F] rounded-2xl p-5">
+          <p class="text-xs text-[#A8CFF0] leading-relaxed">
+            <strong class="text-[#7CC4FF]">Scope of Verification:</strong> Remember that a healthy Setup
+            Doctor status helps confirm that events are being received from your site, but it does not prove
+            that every page has the script installed. Setup Doctor does not validate attribution accuracy.
+          </p>
+        </div>
+      </section>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Next Step</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          Troubleshooting resolved? Return to the
+          <a href="/docs" class="text-[#C8F000] font-bold hover:underline">User Docs hub</a>
+          to configure additional platform integrations.
+        </p>
+      </section>
     </div>
   </section>
 </Base>

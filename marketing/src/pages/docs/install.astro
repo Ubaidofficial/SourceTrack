@@ -1,19 +1,166 @@
 ---
+// Faithful port of dashboard/src/pages/docs/DocsInstall.jsx — same sections in the same
+// order, text verbatim. See quickstart.astro's header for why this is a port and not a
+// rewrite, and for the DocsCodeBlock/DocsCallout chrome translation.
+//
+// The stub this replaces had a single code block and one line of prose; the source has the
+// "What the Script Captures" list (including the full click-ID set), both verification
+// routes, and the Setup Doctor scope-limits callout — the last of which is a §6 truth
+// boundary, not decoration: it states plainly what a green Setup Doctor does NOT prove.
+//
+// Also carried over from the source: the snippet URL is the ROOT ALIAS
+// https://api.srctk.com/tracker.min.js. The stub said /tracker/tracker.min.js, which serves
+// the same file but is not the canonical customer-facing form (CLAUDE.md §11).
+//
+// The source's <Link to="/developers/conversions"> DOES resolve on this site
+// (marketing/src/pages/developers/conversions.astro exists), so that href is carried across
+// unchanged — verified rather than assumed.
 import Base from "@/layouts/Base.astro";
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.sourcetrack.ai" },
+    { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://www.sourcetrack.ai/docs" },
+    { "@type": "ListItem", "position": 3, "name": "Install Script", "item": "https://www.sourcetrack.ai/docs/install" }
+  ]
+};
+
+const SNIPPET = `<script async src="https://api.srctk.com/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`;
 ---
 
 <Base
-  title="HTML Installation — SourceTrack Docs"
-  description="Manual HTML script tag installation for custom web applications."
+  title="Installing the Tracking Script | SourceTrack Docs"
+  description="Step-by-step instructions for placing the SourceTrack pixel on your site, verifying it loaded, and what data is captured."
+  structuredData={[breadcrumbSchema]}
 >
   <section class="py-16 bg-[#0E1111] text-white">
-    <div class="max-w-[800px] mx-auto px-4 space-y-6">
-      <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Docs</a>
-      <h1 class="text-4xl font-black text-white">Manual HTML Installation</h1>
-      <p class="text-gray-400 text-lg">Add the script tag to your template header file.</p>
-      <div class="bg-[#161719] p-6 rounded-2xl border border-[#2A2C30]">
-        <pre class="bg-[#0F1012] p-4 rounded-xl text-xs text-gray-300 overflow-x-auto"><code>{`<script src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY" async></script>`}</code></pre>
+    <div class="max-w-[800px] mx-auto px-4 space-y-8">
+      <div class="space-y-4">
+        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Docs</a>
+        <h1 class="text-4xl font-black text-white tracking-tight">Install Script</h1>
+        <p class="text-gray-400 text-lg leading-relaxed">
+          Learn how to deploy the tracking pixel on your website and verify data flow.
+        </p>
       </div>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Who This Is For</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          This guide is for website owners, founders, and marketers who want to capture visitor sources
+          (like Google Ads clicks or AI chatbot referrals) and trace them all the way to customer actions.
+          No deep programming experience is required.
+        </p>
+      </section>
+
+      <div class="bg-[#101A24] border border-[#1E3A5F] rounded-2xl p-5">
+        <h4 class="font-extrabold text-[#7CC4FF] mb-2 text-sm">Key Terms Defined:</h4>
+        <ul class="list-disc pl-5 space-y-1 text-xs text-[#A8CFF0] leading-relaxed">
+          <li><strong>Tracker script</strong> &mdash; the small JavaScript code snippet SourceTrack uses to record visits.</li>
+          <li><strong>Site key</strong> &mdash; the public ID that tells SourceTrack which site the event belongs to.</li>
+          <li><strong>Pageview</strong> &mdash; an event recorded when a visitor loads or navigates to a page on your site.</li>
+        </ul>
+      </div>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">What You Will Set Up</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          You will paste our lightweight script into your site's HTML layout. Once installed, it
+          automatically tracks pageviews (including page changes in Single Page Apps), UTM parameters,
+          and ad click identifiers.
+        </p>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Steps: Copy-Paste Installation</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          Paste the tracking script inside the <code class="text-[#C8F000]">&lt;head&gt;</code> element of
+          your website layout so it executes before other scripts:
+        </p>
+        <pre class="bg-[#0F1012] p-4 rounded-xl text-xs text-gray-300 overflow-x-auto border border-[#2A2C30]"><code>{SNIPPET}</code></pre>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">What the Script Captures</h2>
+        <ul class="list-disc pl-5 space-y-1.5 text-sm text-gray-300 leading-relaxed">
+          <li><strong>Pageviews:</strong> Recorded on initial load and during subsequent Single Page App (SPA) route changes automatically.</li>
+          <li><strong>Acquisition parameters:</strong> UTM parameters (<code class="text-[#C8F000]">utm_source</code>, <code class="text-[#C8F000]">utm_medium</code>, <code class="text-[#C8F000]">utm_campaign</code>, etc.).</li>
+          <li><strong>Ad Click IDs:</strong> Google Click ID (<code class="text-[#C8F000]">gclid</code>, <code class="text-[#C8F000]">gbraid</code>, <code class="text-[#C8F000]">wbraid</code>), Facebook Click ID (<code class="text-[#C8F000]">fbclid</code>), Microsoft Click ID (<code class="text-[#C8F000]">msclkid</code>), TikTok Click ID (<code class="text-[#C8F000]">ttclid</code>), LinkedIn Click ID (<code class="text-[#C8F000]">li_fat_id</code>).</li>
+          <li><strong>Referrer information:</strong> Captures the organic search engine, direct entry, or referring site domain.</li>
+          <li><strong>Device metadata:</strong> Browser name, operating system, and country (derived safely on the server from the IP address).</li>
+        </ul>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">How to Verify Setup</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          You can verify your installation either automatically using the <strong>Setup Doctor</strong> in
+          your dashboard, or manually via your browser's Developer Tools.
+        </p>
+
+        <h3 class="text-sm font-extrabold text-white">Option 1: Setup Doctor (Recommended)</h3>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          Go to the <strong>Snippet Code</strong> page in your dashboard to view the Setup Doctor card.
+          The Setup Doctor helps confirm:
+        </p>
+        <ul class="list-disc pl-5 space-y-1.5 text-sm text-gray-300 leading-relaxed">
+          <li><strong>Event Freshness:</strong> Whether SourceTrack received tracking events from your site recently.</li>
+          <li><strong>Domain Match:</strong> Whether the domain sending events matches your registered production domain (or flags "test traffic" / "wrong domain" if misconfigured).</li>
+          <li><strong>Browser Connection Check:</strong> Whether your browser can reach the SourceTrack API successfully without being blocked by network firewalls.</li>
+          <li><strong>Live Pageview Verification:</strong> Generate a temporary test link with a unique <code class="text-[#C8F000]">st_verify</code> token, then open it in a new tab to check whether a live pageview from your production domain is received.</li>
+          <li><strong>Paid Parameters &amp; Conversions:</strong> Checks if UTM parameters or conversion events have been recorded in the last 30 days.</li>
+        </ul>
+
+        <div class="bg-[#231A0A] border border-[#5F4A1E] rounded-2xl p-5">
+          <h4 class="font-extrabold text-[#FFC978] mb-2 text-sm">What Setup Doctor Does Not Prove:</h4>
+          <ul class="list-disc pl-5 space-y-1 text-xs text-[#EBC48A] leading-relaxed">
+            <li>It does not prove every single page on your website has the script installed.</li>
+            <li>It does not prove every custom conversion or event trigger is configured.</li>
+            <li>Setup Doctor does not validate attribution accuracy.</li>
+            <li>It does not prove checkout/revenue attribution is fully configured or running.</li>
+          </ul>
+        </div>
+
+        <h3 class="text-sm font-extrabold text-white mt-4">Option 2: Manual Browser Inspection</h3>
+        <ol class="list-decimal pl-5 space-y-3 text-sm text-gray-300 leading-relaxed">
+          <li>Open your live website in a browser.</li>
+          <li>Right-click and select <strong>Inspect</strong> to open Developer Tools, then go to the <strong>Network</strong> tab.</li>
+          <li>Filter requests by typing <code class="text-[#C8F000]">track</code> in the filter box.</li>
+          <li>Refresh your page. You should see a network request named <code class="text-[#C8F000]">track</code> go to <code class="text-[#C8F000]">POST /api/track</code> (returning a <code class="text-[#C8F000]">{"{ success: true }"}</code> response).</li>
+          <li>Go to the <strong>Event Debugger</strong> in your SourceTrack dashboard to see your visit log update in real-time.</li>
+        </ol>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Common Mistakes</h2>
+        <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300 leading-relaxed">
+          <li>
+            <strong>Incorrect Site Key:</strong> Double-check that your key matches the exact string shown
+            under Settings in your dashboard.
+          </li>
+          <li>
+            <strong>Failing to Replace the Placeholder:</strong> Make sure you have replaced
+            <code class="text-[#C8F000]">YOUR_SITE_KEY</code> with your real key in the script.
+          </li>
+          <li>
+            <strong>Ad Blockers / Privacy Shields:</strong> Strict ad blockers or privacy shields during
+            local development may block network requests to our servers, though they are not the only
+            cause of missing events. We recommend testing in a clean browser profile or temporary
+            incognito tab without blockers active.
+          </li>
+        </ul>
+      </section>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Next Step</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          Now that the basic pageview tracker is installed, you are ready to configure conversion goals.
+          Move on to the
+          <a href="/developers/conversions" class="text-[#C8F000] font-bold hover:underline">Browser Conversions guide</a>
+          to track signups, purchases, and leads.
+        </p>
+      </section>
     </div>
   </section>
 </Base>

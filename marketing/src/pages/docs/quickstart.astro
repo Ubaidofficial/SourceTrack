@@ -1,4 +1,24 @@
 ---
+// Faithful port of dashboard/src/pages/docs/DocsQuickstart.jsx — same sections in the same
+// order (Who this is for -> key terms -> what you will set up -> the 7-step checklist ->
+// how to verify -> common mistakes -> next step), text verbatim. Not reworded: §29.1 puts
+// website voice under docs/SourceTrack_GTM.md, and this is technical documentation that
+// already reads correctly, so a port that rewrote it would be a rewrite wearing a port's name.
+//
+// THREE DELIBERATE DIFFERENCES FROM THE SOURCE, each required for the page to work here:
+//   1. The dashboard's <Link to="/docs/platforms/shopify"> is an in-app route. The
+//      equivalent marketing route is /docs/shopify — there is no /docs/platforms/* on this
+//      site — so the href is corrected rather than copied into a 404.
+//   2. DocsCodeBlock / DocsCallout are React components (copy-to-clipboard, site-key
+//      substitution). No Astro equivalent exists, so their CHROME is re-expressed with the
+//      inline markup the other pages in this directory already use. Text inside is unchanged.
+//   3. The snippet URL is the ROOT ALIAS https://api.srctk.com/tracker.min.js, as the
+//      dashboard source has it. The stub this replaces said /tracker/tracker.min.js, which
+//      serves the same file but is not the canonical customer-facing form (CLAUDE.md §11).
+//
+// Canonical is deliberately NOT set: Base.astro derives
+// `https://www.sourcetrack.ai{pathname}`, which already equals the canonical the dashboard's
+// Helmet declares for this page. Setting it again would be a second copy of one value.
 import Base from "@/layouts/Base.astro";
 
 const breadcrumbSchema = {
@@ -10,24 +30,156 @@ const breadcrumbSchema = {
     { "@type": "ListItem", "position": 3, "name": "Quickstart Guide", "item": "https://www.sourcetrack.ai/docs/quickstart" }
   ]
 };
+
+const SNIPPET = `<script async src="https://api.srctk.com/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`;
+
+const CONVERSION_SNIPPET = `window.sourcetrack.conversion({
+  value: 49.00,
+  type: 'test_conversion',
+  order_id: 'TEST_' + Date.now()
+});`;
 ---
 
 <Base
-  title="Quickstart Guide — SourceTrack Docs"
-  description="Get up and running with SourceTrack tracking snippet in under 5 minutes."
+  title="Quickstart Guide — 5-Minute Setup | SourceTrack Docs"
+  description="Set up SourceTrack in 5 minutes. Learn how to install the script, verify pageviews, and test conversions."
   structuredData={[breadcrumbSchema]}
 >
   <section class="py-16 bg-[#0E1111] text-white">
-    <div class="max-w-[800px] mx-auto px-4 space-y-6">
-      <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Docs</a>
-      <h1 class="text-4xl font-black text-white">Quickstart Installation Guide</h1>
-      <p class="text-gray-400 text-lg">Install the SourceTrack snippet before the closing &lt;/head&gt; tag on your website.</p>
-      <div class="bg-[#161719] p-6 rounded-2xl border border-[#2A2C30] space-y-4">
-        <h3 class="font-bold text-[#C8F000]">1. Copy Tracking Snippet</h3>
-        <pre class="bg-[#0F1012] p-4 rounded-xl text-xs text-gray-300 overflow-x-auto"><code>{`<script src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY" async></script>`}</code></pre>
-        <h3 class="font-bold text-[#C8F000]">2. Verify Installation</h3>
-        <p class="text-sm text-gray-400">Open your website, perform a test visit, and check your SourceTrack dashboard live event stream.</p>
+    <div class="max-w-[800px] mx-auto px-4 space-y-8">
+      <div class="space-y-4">
+        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Docs</a>
+        <h1 class="text-4xl font-black text-white tracking-tight">Quickstart Guide</h1>
+        <p class="text-gray-400 text-lg leading-relaxed">
+          Get up and running with SourceTrack in 5 minutes.
+        </p>
       </div>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Who This Is For</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          This guide is for founders, marketers, ecommerce store owners, and developers who want to set
+          up conversion tracking on their website from scratch in under five minutes.
+        </p>
+      </section>
+
+      <div class="bg-[#101A24] border border-[#1E3A5F] rounded-2xl p-5">
+        <h4 class="font-extrabold text-[#7CC4FF] mb-2 text-sm">Key Terms Defined:</h4>
+        <ul class="list-disc pl-5 space-y-1 text-xs text-[#A8CFF0] leading-relaxed">
+          <li><strong>Site key</strong> &mdash; the public ID that tells SourceTrack which site the event belongs to.</li>
+          <li><strong>Tracker script</strong> &mdash; the small JavaScript snippet SourceTrack uses to record visits.</li>
+          <li><strong>Pageview</strong> &mdash; an event recorded when a visitor loads a page on your site.</li>
+          <li><strong>Conversion</strong> &mdash; a signup, lead, purchase, booked call, or other action you care about.</li>
+        </ul>
+      </div>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">What You Will Set Up</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          You will configure a site profile in the dashboard, retrieve your unique tracking key, install
+          the lightweight snippet on your website, and trigger a test conversion event to ensure
+          attribution works end-to-end.
+        </p>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Steps: The 5-Minute Checklist</h2>
+
+        <ol class="list-decimal pl-5 space-y-6 text-sm text-gray-300 leading-relaxed">
+          <li>
+            <h4 class="font-extrabold text-white inline-block">Create a Site Profile</h4>
+            <p class="mt-1">
+              Log in to the dashboard, click on your site profile selector in the sidebar, and select
+              <strong>Add New Site</strong>. Enter your domain name and choose your primary currency.
+            </p>
+          </li>
+
+          <li>
+            <h4 class="font-extrabold text-white inline-block">Copy your Site Key</h4>
+            <p class="mt-1">
+              Go to the Settings page in your dashboard. Under the Site Settings tab, copy your unique
+              public <strong>Site Key</strong> (which starts with <code class="text-[#C8F000]">st_</code>).
+            </p>
+          </li>
+
+          <li>
+            <h4 class="font-extrabold text-white inline-block">Install the Tracker Script</h4>
+            <p class="mt-1">
+              Paste this code snippet before the closing <code class="text-[#C8F000]">&lt;/head&gt;</code>
+              tag of your website. Replace <code class="text-[#C8F000]">YOUR_SITE_KEY</code> with your real key.
+            </p>
+            <pre class="mt-2 bg-[#0F1012] p-4 rounded-xl text-xs text-gray-300 overflow-x-auto border border-[#2A2C30]"><code>{SNIPPET}</code></pre>
+          </li>
+
+          <li>
+            <h4 class="font-extrabold text-white inline-block">Visit your Website</h4>
+            <p class="mt-1">
+              Open a new browser tab, go to your live website, and click around a few pages to trigger
+              pageview events.
+            </p>
+          </li>
+
+          <li>
+            <h4 class="font-extrabold text-white inline-block">Verify your First Pageview</h4>
+            <p class="mt-1">
+              Return to the SourceTrack dashboard. Use the <strong>Setup Doctor</strong> diagnostic check
+              on the Snippet Code page to check whether your site is connected and sending events, or open
+              the <strong>Event Debugger</strong> to see whether your visit appears.
+            </p>
+          </li>
+
+          <li>
+            <h4 class="font-extrabold text-white inline-block">Trigger a Test Conversion</h4>
+            <p class="mt-1">
+              To test conversion attribution, trigger an action on your website that fires a conversion
+              call. For example, paste this in your browser console:
+            </p>
+            <pre class="mt-2 bg-[#0F1012] p-4 rounded-xl text-xs text-gray-300 overflow-x-auto border border-[#2A2C30]"><code>{CONVERSION_SNIPPET}</code></pre>
+          </li>
+
+          <li>
+            <h4 class="font-extrabold text-white inline-block">Check your Reports</h4>
+            <p class="mt-1">
+              Verify that the test conversion appears in the Event Debugger and Report Builder under your
+              designated conversion type.
+            </p>
+          </li>
+        </ol>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">How to Verify It Worked</h2>
+        <ol class="list-decimal pl-5 space-y-3 text-sm text-gray-300 leading-relaxed">
+          <li>Visit your website with your browser's Developer Tools open (Network tab).</li>
+          <li>Filter the network requests by typing <code class="text-[#C8F000]">track</code>.</li>
+          <li>Verify that a network request to <code class="text-[#C8F000]">POST /api/track</code> executes and returns a success status.</li>
+          <li>Confirm that the event appears in the <strong>Event Debugger</strong> in your SourceTrack dashboard.</li>
+        </ol>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Common Mistakes</h2>
+        <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300 leading-relaxed">
+          <li>
+            <strong>Pasting script in the footer:</strong> The tracking script should go in the
+            <code class="text-[#C8F000]">&lt;head&gt;</code> section so that pageviews and acquisition
+            details are captured before the visitor exits.
+          </li>
+          <li>
+            <strong>Using ad blockers during test:</strong> Strict privacy filters can block requests to
+            our analytical endpoint. Pause ad blockers or use a private window for verification.
+          </li>
+        </ul>
+      </section>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Next Step</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          Setup is complete! Read our
+          <a href="/docs/shopify" class="text-[#C8F000] font-bold hover:underline">Platform integration recipes</a>
+          to connect your content systems and store carts.
+        </p>
+      </section>
     </div>
   </section>
 </Base>
