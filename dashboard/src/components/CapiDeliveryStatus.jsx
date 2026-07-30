@@ -11,14 +11,31 @@ import { fetchApi } from '../lib/api'
 // SourceTrack API (/integrations/capi/deliveries) — no PostHog, no direct
 // Supabase, no external service.
 
-// Platform filter chips (client-side). Values match capi_deliveries.platform.
+// Platform filter chips (client-side). Values match capi_deliveries.platform, which is
+// written by dispatchCapi's fan-out in api/lib/conversion-sync.js.
+//
+// This list had drifted: ga4 and tiktok went live in #498 but were never added here, so
+// two already-forwarding platforms had no filter chip and fell through the label lookup
+// to their raw key ("ga4", "tiktok") in the delivery table. Fixed alongside adding
+// linkedin, because the drift and the addition are the same bug.
+//
+// `microsoft` is deliberately NOT here. Its sender is in the fan-out but never transmits
+// its token (see the CAPI_PLATFORMS note in api/routes/capi.js), so no site can be
+// configured for it and it can never produce a delivery row. A chip that always filters
+// to nothing reads as "working, no activity" rather than "not available".
 const PLATFORMS = [
   { key: 'all', label: 'All' },
   { key: 'meta', label: 'Meta' },
-  { key: 'google', label: 'Google' }
+  { key: 'google', label: 'Google' },
+  { key: 'ga4', label: 'GA4' },
+  { key: 'tiktok', label: 'TikTok' },
+  { key: 'linkedin', label: 'LinkedIn' }
 ]
 
-const PLATFORM_LABEL = { meta: 'Meta', google: 'Google' }
+// Kept in sync with PLATFORMS above. The `|| r.platform` fallback at the call sites means
+// a missing entry degrades to the raw key rather than crashing — which is why the ga4 /
+// tiktok omission went unnoticed.
+const PLATFORM_LABEL = { meta: 'Meta', google: 'Google', ga4: 'GA4', tiktok: 'TikTok', linkedin: 'LinkedIn' }
 
 // Status → badge classes. Covers the prod CHECK values (success/failed/skipped)
 // AND the spec vocabulary (pending/retry/error/rejected) so it renders correctly
