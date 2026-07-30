@@ -10,7 +10,7 @@ export default function DocsWordPress() {
       <Helmet>
         <title>WordPress Setup Guide | SourceTrack Docs</title>
         <meta name="description" content="Add the SourceTrack tracking pixel to WordPress manually or via header injection plugins. Learn how to troubleshoot caching issues." />
-        <link rel="canonical" href="https://www.sourcetrack.ai/docs/platforms/wordpress" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/docs/wordpress" />
       </Helmet>
 
       <div className="space-y-6">

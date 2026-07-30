@@ -1,13 +1,219 @@
 ---
+// Faithful port of dashboard/src/pages/docs/DocsStripe.jsx — same sections in the same order
+// (Who this is for -> key terms -> what you will set up -> API/webhook-recipe notice -> steps 1-2
+// with both callouts -> how to verify -> common mistakes -> next step), text verbatim. Not
+// reworded, for the reason batch 1 recorded: §29.1 puts website voice under
+// docs/SourceTrack_GTM.md, and this is technical documentation that already reads correctly, so a
+// port that rewrote it would be a rewrite wearing a port's name.
+//
+// This is the CUSTOMER-buyer webhook (api/routes/stripe-webhook.js, POST /:site_key — the
+// revenue-by-source rail), NOT SourceTrack's own billing webhook (CLAUDE.md §7). The page's
+// endpoint, event list, metadata key order, and signing-secret instructions all describe that
+// route, and are carried over unchanged rather than restated — restating them is exactly how the
+// two webhooks get conflated.
+//
+// The amber "API and webhook integration recipe" notice, the accepted-metadata-key order, the
+// refunds-as-negative-conversions callout, and all three Common Mistakes are carried over
+// verbatim. They are §6 honesty boundaries, not decoration: they are what stops a reader
+// believing there is a Stripe marketplace plugin, that a custom metadata.st_aid key will be read,
+// or that a missing signing secret fails silently rather than returning 400.
+//
+// DELIBERATE DIFFERENCES FROM THE SOURCE:
+//   1. DocsCodeBlock / DocsCallout are React components (copy-to-clipboard, site-key
+//      substitution). No Astro equivalent exists, so their CHROME is re-expressed with the
+//      inline markup this directory already uses. Text inside is unchanged.
+//   2. <Link to="/developers/offline-conversions"> becomes a plain href — the same path exists on
+//      this site, so the target is unchanged, only the mechanism.
+//
+// The Checkout Session example lives in a frontmatter const: inlined in an .astro template its
+// object braces would be parsed as JS expressions rather than rendered as copyable code.
+//
+// Canonical is deliberately NOT set: Base.astro derives `https://www.sourcetrack.ai{pathname}`,
+// which is exactly the target DocsStripe.jsx's canonical is repointed to in this same change.
 import Base from "@/layouts/Base.astro";
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.sourcetrack.ai" },
+    { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://www.sourcetrack.ai/docs" },
+    { "@type": "ListItem", "position": 3, "name": "Stripe Webhook / API Revenue Attribution Recipe", "item": "https://www.sourcetrack.ai/docs/stripe" }
+  ]
+};
+
+const CHECKOUT_SESSION_SNIPPET = `// Example of passing st_aid in Stripe Checkout Session creation (Node.js backend)
+const session = await stripe.checkout.sessions.create({
+  payment_method_types: ['card'],
+  line_items: [{ price: 'price_H5gg...', quantity: 1 }],
+  mode: 'subscription',
+  success_url: 'https://yoursite.com/success',
+  cancel_url: 'https://yoursite.com/cancel',
+
+  // Method A: Pass directly as client_reference_id (Recommended)
+  client_reference_id: req.body.st_aid,
+
+  // Method B: Pass inside metadata object
+  metadata: {
+    anonymous_id: req.body.st_aid
+  }
+});`;
 ---
 
-<Base title="Stripe Webhook Setup — SourceTrack Docs" description="Connect Stripe webhook events for revenue attribution.">
+<Base
+  title="Stripe Webhook/API Revenue Attribution Recipe | SourceTrack Docs"
+  description="Stitch Stripe billing and subscription events with acquisition sources. Metadata structures and webhook configurations."
+  structuredData={[breadcrumbSchema]}
+>
   <section class="py-16 bg-[#0E1111] text-white">
-    <div class="max-w-[800px] mx-auto px-4 space-y-6">
-      <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Docs</a>
-      <h1 class="text-4xl font-black text-white">Stripe Revenue Webhooks Guide</h1>
-      <p class="text-gray-400 text-lg">Set up customer purchase and recurring charge webhooks for recurring revenue attribution.</p>
+    <div class="max-w-[800px] mx-auto px-4 space-y-8">
+      <div class="space-y-4">
+        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Docs</a>
+        <h1 class="text-4xl font-black text-white tracking-tight">Stripe Webhook / API Revenue Attribution Recipe</h1>
+        <p class="text-gray-400 text-lg leading-relaxed">
+          Stitch subscription and payment events with marketing campaigns using Stripe metadata and webhook
+          listener configurations.
+        </p>
+      </div>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Who This Is For</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          This recipe is for developers and founders running SaaS or subscription-based sites on Stripe who
+          want to link user checkouts, paid subscriptions, and order amounts back to marketing channels
+          (like Google Ads clicks or organic referrers).
+        </p>
+      </section>
+
+      <div class="bg-[#101A24] border border-[#1E3A5F] rounded-2xl p-5">
+        <h4 class="font-extrabold text-[#7CC4FF] mb-2 text-sm">Key Terms Defined:</h4>
+        <ul class="list-disc pl-5 space-y-1 text-xs text-[#A8CFF0] leading-relaxed">
+          <li><strong>Webhook</strong> &mdash; a server-to-server HTTP message sent by Stripe to SourceTrack whenever a billing event occurs.</li>
+          <li><strong>HMAC verification</strong> &mdash; a way to cryptographically confirm that the webhook payload was sent by Stripe and not modified in transit.</li>
+          <li><strong>Checkout Session</strong> &mdash; Stripe's system for collecting payment details and managing customer transactions.</li>
+          <li><strong>Visitor ID (st_aid)</strong> &mdash; the anonymous tracking identifier that maps the customer's click journey.</li>
+        </ul>
+      </div>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">What You Will Set Up</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          You will configure your backend server code to retrieve the visitor ID from local storage (or a
+          browser cookie) and pass it into Stripe's checkout session metadata. You will then set up a
+          webhook endpoint inside Stripe to forward completed checkout session events to SourceTrack.
+        </p>
+      </section>
+
+      <div class="bg-amber-400/5 border border-amber-400/25 rounded-2xl p-5 text-sm text-amber-300 leading-relaxed">
+        <strong>Integration notice:</strong> This setup is an API and webhook integration recipe.
+        SourceTrack does not provide an official Stripe Dashboard extension or marketplace plugin. You must
+        configure metadata forwarding in your billing system code and set up webhooks manually in your
+        Stripe Dashboard.
+      </div>
+
+      <section class="space-y-6">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Steps: Stripe Integration</h2>
+
+        <div class="space-y-4">
+          <h3 class="text-sm font-extrabold text-white">Step 1: Forward Visitor ID in Stripe Metadata</h3>
+          <p class="text-sm text-gray-300 leading-relaxed">
+            When creating a Stripe Checkout Session on your backend, read the visitor ID (stored in the
+            browser as <code class="text-[#C8F000]">st_aid</code>) from the client's request payload and
+            pass it as <code class="text-[#C8F000]">client_reference_id</code> or inside the
+            <code class="text-[#C8F000]">metadata</code> block as
+            <code class="text-[#C8F000]">anonymous_id</code> or <code class="text-[#C8F000]">visitor_id</code>.
+          </p>
+          <pre class="mt-2 bg-[#0F1012] p-4 rounded-xl text-xs text-gray-300 overflow-x-auto border border-[#2A2C30]"><code>{CHECKOUT_SESSION_SNIPPET}</code></pre>
+          <p class="text-xs text-gray-400 leading-relaxed">
+            * Note: The SourceTrack webhook listener checks
+            <code class="text-[#C8F000]">client_reference_id</code>,
+            <code class="text-[#C8F000]">metadata.anonymous_id</code>,
+            <code class="text-[#C8F000]">metadata.visitor_id</code>,
+            <code class="text-[#C8F000]">metadata.sourcetrack_user_id</code>, and
+            <code class="text-[#C8F000]">metadata.site_user_id</code> in that order.
+          </p>
+        </div>
+
+        <div class="space-y-4 pt-4 border-t border-[#2A2C30]">
+          <h3 class="text-sm font-extrabold text-white">Step 2: Configure Stripe Webhook</h3>
+          <p class="text-sm text-gray-300 leading-relaxed">
+            Route event messages from Stripe directly to the SourceTrack ingestion URL:
+          </p>
+          <ol class="list-decimal pl-5 space-y-2 text-sm text-gray-300 leading-relaxed">
+            <li>Log in to your <strong>Stripe Dashboard</strong> and navigate to <strong>Developers &rarr; Webhooks</strong>.</li>
+            <li>Click <strong>Add Endpoint</strong>.</li>
+            <li>
+              Enter your customized webhook endpoint URL:
+              <div class="my-1.5 font-mono text-xs p-2 bg-[#0F1012] border border-[#2A2C30] rounded overflow-x-auto">
+                https://api.srctk.com/api/webhooks/stripe/YOUR_SITE_KEY
+              </div>
+              Replace <code class="text-[#C8F000]">YOUR_SITE_KEY</code> with the Site Key found under
+              settings in your dashboard.
+            </li>
+            <li>
+              Under <strong>Select events to listen to</strong>, add:
+              <ul class="list-disc pl-5 mt-1">
+                <li><code class="text-[#C8F000]">checkout.session.completed</code></li>
+                <li><code class="text-[#C8F000]">refund.created</code></li>
+              </ul>
+            </li>
+            <li>Click <strong>Add Endpoint</strong>.</li>
+          </ol>
+          <div class="bg-[#101A24] border border-[#1E3A5F] rounded-2xl p-5 text-sm text-[#A8CFF0] leading-relaxed">
+            Refunds are recorded as negative conversions and automatically net your revenue by source
+            &mdash; subscribe to <code class="text-[#C8F000]">refund.created</code>.
+          </div>
+          <div class="bg-[#101A24] border border-[#1E3A5F] rounded-2xl p-5 text-sm text-[#A8CFF0] leading-relaxed">
+            To secure your webhook, save the Stripe Webhook signing secret (starts with
+            <code class="text-[#C8F000]">whsec_</code>) in your SourceTrack dashboard under
+            <strong>Integrations &rarr; Stripe settings</strong>. This allows SourceTrack to perform
+            cryptographic HMAC verification of incoming payloads.
+          </div>
+        </div>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">How to Verify It Worked</h2>
+        <ol class="list-decimal pl-5 space-y-3 text-sm text-gray-300 leading-relaxed">
+          <li>Run a payment check through Stripe in <strong>Test Mode</strong>.</li>
+          <li>In your Stripe Dashboard under <strong>Developers &rarr; Webhooks</strong>, inspect the event logs for <code class="text-[#C8F000]">checkout.session.completed</code>.</li>
+          <li>Verify that the webhook request returned a HTTP <code class="text-[#C8F000]">200 OK</code> response.</li>
+          <li>Verify that the transaction data (revenue and site metadata) appears attributed in the <strong>Event Debugger</strong> of your SourceTrack dashboard.</li>
+        </ol>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Common Mistakes</h2>
+        <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300 leading-relaxed">
+          <li>
+            <strong>Incorrect Webhook Event Types:</strong> Stripe triggers a variety of events like
+            <code class="text-[#C8F000]">payment_intent.succeeded</code>. SourceTrack parses
+            <code class="text-[#C8F000]">checkout.session.completed</code>,
+            <code class="text-[#C8F000]">refund.created</code>, and subscription lifecycle events; other
+            events are safely ignored.
+          </li>
+          <li>
+            <strong>Unmatched Metadata Key:</strong> If you use custom names like
+            <code class="text-[#C8F000]">metadata.st_aid</code>, SourceTrack's engine will not process it.
+            Stick to <code class="text-[#C8F000]">client_reference_id</code> or
+            <code class="text-[#C8F000]">metadata.anonymous_id</code>.
+          </li>
+          <li>
+            <strong>Missing Stripe Signing Secret:</strong> If you omit the signing secret under Settings,
+            webhook payload signature checks will fail, returning a
+            <code class="text-[#C8F000]">400 Bad Request</code>.
+          </li>
+        </ul>
+      </section>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Next Step</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          Stripe setup is complete! Go to the
+          <a href="/developers/offline-conversions" class="text-[#C8F000] font-bold hover:underline">Offline Conversions API</a>
+          to learn how to register custom offline sales or updates directly from your server.
+        </p>
+      </section>
     </div>
   </section>
 </Base>

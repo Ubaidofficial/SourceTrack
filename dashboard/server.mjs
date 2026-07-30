@@ -53,6 +53,40 @@ app.use((req, res, next) => {
   next()
 })
 
+// Legacy platform-docs paths → the marketing site, where those seven guides now live.
+// A real 301 rather than a React Router <Navigate>, because <Navigate> only runs once the SPA
+// has booted: it cannot answer a crawler, and it cannot move a request off this origin at all.
+// So this must sit above express.static and the catch-all, or the catch-all would serve the SPA
+// first and the redirect would never fire.
+//
+// Deliberately NOT host-scoped. The docs are environment-neutral content and the target only
+// exists on prod www, so a hit on any host — app, staging, a bare Railway hostname — belongs at
+// the same place; the www↔non-www rule above already funnels unknown hosts to CANONICAL_HOST.
+//
+// Note what this does and does not buy: app.sourcetrack.ai is noindex-everything (above), so
+// these URLs were not competing in search from this origin. The 301 is for humans with old
+// links and bookmarks, for any external backlink, and to make the moved-permanently answer
+// match the canonical the in-app pages now declare — not to de-index anything.
+//
+// The in-app /docs/platforms/* React Router routes still exist and the in-app links still point
+// at them, so an in-app click renders locally and only a hard navigation redirects. Retiring
+// those routes and repointing those links is the final-sweep batch, not this one.
+const LEGACY_PLATFORM_DOCS = {
+  '/docs/platforms/framer': '/docs/framer',
+  '/docs/platforms/google-ads': '/docs/google-ads',
+  // The one slug that is not a straight prefix drop.
+  '/docs/platforms/google-tag-manager': '/docs/gtm',
+  '/docs/platforms/shopify': '/docs/shopify',
+  '/docs/platforms/stripe': '/docs/stripe',
+  '/docs/platforms/webflow': '/docs/webflow',
+  '/docs/platforms/wordpress': '/docs/wordpress'
+}
+app.use((req, res, next) => {
+  const target = LEGACY_PLATFORM_DOCS[req.path]
+  if (target) return res.redirect(301, `https://${CANONICAL_HOST}${target}`)
+  next()
+})
+
 // Explicit XML / text routes so content-type is never ambiguous
 app.get('/sitemap.xml', (_req, res) => {
   res.setHeader('Content-Type', 'application/xml; charset=utf-8')

@@ -10,7 +10,7 @@ export default function DocsShopify() {
       <Helmet>
         <title>Shopify Manual Revenue Attribution Recipe | SourceTrack Docs</title>
         <meta name="description" content="Integrate Shopify manually with SourceTrack. Storefront pixel setup and order conversion webhooks to stitch customer journeys." />
-        <link rel="canonical" href="https://www.sourcetrack.ai/docs/platforms/shopify" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/docs/shopify" />
       </Helmet>
 
       <div className="space-y-6">

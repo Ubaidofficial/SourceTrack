@@ -10,7 +10,7 @@ export default function DocsWebflow() {
       <Helmet>
         <title>Webflow Setup Guide | SourceTrack Docs</title>
         <meta name="description" content="Add the SourceTrack tracking pixel to Webflow sites. Step-by-step custom code integration and page view triggers." />
-        <link rel="canonical" href="https://www.sourcetrack.ai/docs/platforms/webflow" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/docs/webflow" />
       </Helmet>
 
       <div className="space-y-6">

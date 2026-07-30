@@ -1,13 +1,145 @@
 ---
+// Faithful port of dashboard/src/pages/docs/DocsGoogleAds.jsx — same sections in the same order
+// (Who this is for -> the ValueTrack template -> PMax/keywordless callout -> how to install,
+// Option A and Option B -> verifying your setup), text verbatim. Not reworded, for the reason
+// batch 1 recorded: §29.1 puts website voice under docs/SourceTrack_GTM.md, and this is technical
+// documentation that already reads correctly, so a port that rewrote it would be a rewrite
+// wearing a port's name.
+//
+// This page has no "What you will set up", "Common mistakes", or "Next step" section, because the
+// source has none. The template-first shape is the source's shape; inventing the three missing
+// sections here would be writing docs, not porting them.
+//
+// DELIBERATE DIFFERENCES FROM THE SOURCE:
+//   1. DocsCodeBlock / DocsCallout are React components (copy-to-clipboard, site-key
+//      substitution). No Astro equivalent exists, so their CHROME is re-expressed with the
+//      inline markup this directory already uses. Text inside is unchanged.
+//   2. The dashboard's <Link to="/app/integrations"> is an in-app route with no equivalent on
+//      this site, so it points at the app domain (https://app.sourcetrack.ai/app/integrations).
+//      The sentence only works if the reader can reach the page. Same treatment batch 1 gave
+//      troubleshooting.astro's <Link to="/settings">.
+//
+// The ValueTrack template and the bare {keyword} macro live in frontmatter consts: every
+// ValueTrack macro is brace-delimited, and inlined in an .astro template those braces would be
+// parsed as JS expressions rather than rendered as the literal macros the reader must copy.
+//
+// Canonical is deliberately NOT set: Base.astro derives `https://www.sourcetrack.ai{pathname}`,
+// which is exactly the target DocsGoogleAds.jsx's canonical is repointed to in this same change.
 import Base from "@/layouts/Base.astro";
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.sourcetrack.ai" },
+    { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://www.sourcetrack.ai/docs" },
+    { "@type": "ListItem", "position": 3, "name": "Google Ads Setup Guide", "item": "https://www.sourcetrack.ai/docs/google-ads" }
+  ]
+};
+
+const TRACKING_TEMPLATE = `{lpurl}?utm_source=google&utm_medium=cpc&utm_campaign={campaignid}&utm_id={campaignid}&utm_content={creative}&utm_term={keyword}&st_campaign_id={campaignid}&st_adgroup_id={adgroupid}&st_ad_id={creative}&st_target_id={targetid}&st_network={network}&st_device={device}&st_matchtype={matchtype}`;
+
+const KEYWORD_MACRO = `{keyword}`;
+
+const GCLID_TEST_URL = `https://yourdomain.com/?gclid=test_gclid_123`;
 ---
 
-<Base title="Google Ads Tracking — SourceTrack Docs" description="Google Ads auto-tagging GCLID attribution setup guide.">
+<Base
+  title="Google Ads Setup Guide | SourceTrack Docs"
+  description="Learn how to configure Google Ads ValueTrack tracking template and parameters for accurate multi-touch attribution and cost sync."
+  structuredData={[breadcrumbSchema]}
+>
   <section class="py-16 bg-[#0E1111] text-white">
-    <div class="max-w-[800px] mx-auto px-4 space-y-6">
-      <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Docs</a>
-      <h1 class="text-4xl font-black text-white">Google Ads GCLID Attribution</h1>
-      <p class="text-gray-400 text-lg">Auto-capture GCLID parameters and match Google Ads clicks to converted customers.</p>
+    <div class="max-w-[800px] mx-auto px-4 space-y-8">
+      <div class="space-y-4">
+        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Docs</a>
+        <h1 class="text-4xl font-black text-white tracking-tight">Google Ads Setup Guide</h1>
+        <p class="text-gray-400 text-lg leading-relaxed">
+          Configure Google Ads with our tracking template to capture Google Click IDs, ValueTrack
+          parameters, and entity details for accurate attribution.
+        </p>
+      </div>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Who This Is For</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          This guide is for advertisers, agencies, and founders running campaigns on Google Ads. Injecting
+          the SourceTrack ValueTrack template is essential to map campaign names, ad groups, creatives,
+          devices, and networks to conversions.
+        </p>
+      </section>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">The SourceTrack ValueTrack Template</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          Copy and paste this template into your Google Ads Account, Campaign, or Ad Group level tracking
+          settings.
+        </p>
+        <pre class="mt-2 bg-[#0F1012] p-4 rounded-xl text-xs text-gray-300 overflow-x-auto border border-[#2A2C30]"><code>{TRACKING_TEMPLATE}</code></pre>
+      </section>
+
+      <div class="bg-[#101A24] border border-[#1E3A5F] rounded-2xl p-5">
+        <h4 class="font-extrabold text-[#7CC4FF] mb-2 text-sm">Performance Max &amp; Keywordless Traffic:</h4>
+        <p class="text-xs text-[#A8CFF0] leading-relaxed">
+          For modern Google Ads campaigns like <strong>Performance Max (PMax)</strong> or Dynamic Search
+          Ads (DSA), Google does not use keywords. Therefore, the <code class="text-[#C8F000]">{KEYWORD_MACRO}</code>
+          placeholder will often resolve to a blank value. By capturing
+          <code class="text-[#C8F000]">st_campaign_id</code>, <code class="text-[#C8F000]">st_adgroup_id</code>,
+          and <code class="text-[#C8F000]">st_ad_id</code> directly from Google's ValueTrack macro engine,
+          SourceTrack can still attribute conversions to the exact campaign and asset groups without
+          relying on keyword strings.
+        </p>
+      </div>
+
+      <section class="space-y-6">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">How to Install the Tracking Template</h2>
+
+        <div class="space-y-4">
+          <h3 class="text-sm font-extrabold text-white">Option A: Account-Level Setup (Recommended)</h3>
+          <p class="text-sm text-gray-300 leading-relaxed">
+            Applying the template at the Account Level automatically covers all current and future
+            campaigns in your Google Ads account:
+          </p>
+          <ol class="list-decimal pl-5 space-y-2 text-sm text-gray-300 leading-relaxed">
+            <li>Log in to your <strong>Google Ads account</strong>.</li>
+            <li>In the left navigation menu, click <strong>Settings</strong> &rarr; <strong>Account settings</strong>.</li>
+            <li>Expand the <strong>Tracking</strong> section.</li>
+            <li>Paste the SourceTrack tracking template into the <strong>Tracking template</strong> field.</li>
+            <li>Click <strong>Save</strong>.</li>
+          </ol>
+        </div>
+
+        <div class="space-y-4 pt-4 border-t border-[#2A2C30]">
+          <h3 class="text-sm font-extrabold text-white">Option B: Campaign-Level Setup</h3>
+          <p class="text-sm text-gray-300 leading-relaxed">
+            If you only want to track specific campaigns with SourceTrack:
+          </p>
+          <ol class="list-decimal pl-5 space-y-2 text-sm text-gray-300 leading-relaxed">
+            <li>Go to the <strong>Campaigns</strong> list.</li>
+            <li>Select the campaign you want to track, then click <strong>Settings</strong>.</li>
+            <li>Expand <strong>Additional settings</strong> at the bottom.</li>
+            <li>Click on <strong>Campaign URL options</strong>.</li>
+            <li>Paste the template into the <strong>Tracking template</strong> field and click <strong>Save</strong>.</li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Verifying Your Setup</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          You can verify your setup using the Google Ads Setup Checklist in the SourceTrack dashboard:
+        </p>
+        <ol class="list-decimal pl-5 space-y-2 text-sm text-gray-300 leading-relaxed">
+          <li>
+            Open the
+            <a href="https://app.sourcetrack.ai/app/integrations" class="text-[#C8F000] font-bold hover:underline">Integrations</a>
+            page.
+          </li>
+          <li>Look at the <strong>Google Ads Setup Checklist</strong> card.</li>
+          <li>Click your Google Ads links or send test traffic using a GCLID (e.g. <code class="text-[#C8F000]">{GCLID_TEST_URL}</code>).</li>
+          <li>Refresh the checklist or visit the <strong>Event Debugger</strong> to verify that click IDs and parameters are captured.</li>
+        </ol>
+      </section>
     </div>
   </section>
 </Base>

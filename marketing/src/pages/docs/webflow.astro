@@ -1,13 +1,122 @@
 ---
+// Faithful port of dashboard/src/pages/docs/DocsWebflow.jsx — same sections in the same order
+// (Who this is for -> key terms -> what you will set up -> steps -> how to verify -> common
+// mistakes -> next step), text verbatim. Not reworded, for the reason batch 1 recorded: §29.1
+// puts website voice under docs/SourceTrack_GTM.md, and this is technical documentation that
+// already reads correctly, so a port that rewrote it would be a rewrite wearing a port's name.
+//
+// DELIBERATE DIFFERENCES FROM THE SOURCE:
+//   1. DocsCodeBlock / DocsCallout are React components (copy-to-clipboard, site-key
+//      substitution). No Astro equivalent exists, so their CHROME is re-expressed with the
+//      inline markup this directory already uses. Text inside is unchanged.
+//   2. The dashboard's <Link to="/developers/conversions"> becomes a plain href — the same
+//      path exists on this site, so the target is unchanged, only the mechanism.
+//
+// Canonical is deliberately NOT set: Base.astro derives `https://www.sourcetrack.ai{pathname}`,
+// which is exactly the target DocsWebflow.jsx's canonical is repointed to in this same change.
 import Base from "@/layouts/Base.astro";
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.sourcetrack.ai" },
+    { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://www.sourcetrack.ai/docs" },
+    { "@type": "ListItem", "position": 3, "name": "Webflow Setup Recipe", "item": "https://www.sourcetrack.ai/docs/webflow" }
+  ]
+};
+
+const SNIPPET = `<script async src="https://api.srctk.com/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`;
 ---
 
-<Base title="Webflow Integration — SourceTrack Docs" description="Webflow custom head code snippet setup.">
+<Base
+  title="Webflow Setup Guide | SourceTrack Docs"
+  description="Add the SourceTrack tracking pixel to Webflow sites. Step-by-step custom code integration and page view triggers."
+  structuredData={[breadcrumbSchema]}
+>
   <section class="py-16 bg-[#0E1111] text-white">
-    <div class="max-w-[800px] mx-auto px-4 space-y-6">
-      <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Docs</a>
-      <h1 class="text-4xl font-black text-white">Webflow Integration Guide</h1>
-      <p class="text-gray-400 text-lg">Paste your snippet into Site Settings &gt; Custom Code &gt; Head Code.</p>
+    <div class="max-w-[800px] mx-auto px-4 space-y-8">
+      <div class="space-y-4">
+        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Docs</a>
+        <h1 class="text-4xl font-black text-white tracking-tight">Webflow Setup Recipe</h1>
+        <p class="text-gray-400 text-lg leading-relaxed">
+          Integrate the tracking pixel into your Webflow site settings to track visitors site-wide.
+        </p>
+      </div>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Who This Is For</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          This guide is for designers and marketers who build and manage websites using Webflow, and
+          want to quickly add first-party conversion tracking without needing to code.
+        </p>
+      </section>
+
+      <div class="bg-[#101A24] border border-[#1E3A5F] rounded-2xl p-5">
+        <h4 class="font-extrabold text-[#7CC4FF] mb-2 text-sm">Key Terms Defined:</h4>
+        <ul class="list-disc pl-5 space-y-1 text-xs text-[#A8CFF0] leading-relaxed">
+          <li><strong>Head Code</strong> &mdash; a settings panel in Webflow where you can inject custom scripts that run before the webpage's body contents load.</li>
+          <li><strong>Site-wide</strong> &mdash; code that runs on every page of your domain (e.g. landing pages, blog posts, contact pages).</li>
+        </ul>
+      </div>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">What You Will Set Up</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          You will add our base tracking snippet into your Webflow dashboard settings and publish the
+          changes to establish standard pageview and acquisition parameter tracking.
+        </p>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Steps: Webflow Integration</h2>
+
+        <ol class="list-decimal pl-5 space-y-4 text-sm text-gray-300 leading-relaxed">
+          <li>Log in to your <strong>Webflow Dashboard</strong> and open your site settings.</li>
+          <li>Navigate to the <strong>Custom Code</strong> tab in the settings menu.</li>
+          <li>
+            Scroll to the <strong>Head Code</strong> section and paste the following snippet:
+            <pre class="mt-2 bg-[#0F1012] p-4 rounded-xl text-xs text-gray-300 overflow-x-auto border border-[#2A2C30]"><code>{SNIPPET}</code></pre>
+          </li>
+          <li>Click <strong>Save Changes</strong>.</li>
+          <li>Click <strong>Publish</strong> at the top right of your Webflow editor to make the tracking pixel active on your live domain.</li>
+        </ol>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">How to Verify It Worked</h2>
+        <ol class="list-decimal pl-5 space-y-3 text-sm text-gray-300 leading-relaxed">
+          <li>Visit your live Webflow website.</li>
+          <li>Open Developer Tools (right-click &rarr; Inspect), click the <strong>Network</strong> tab, and filter by typing <code class="text-[#C8F000]">track</code>.</li>
+          <li>Refresh the page and check that a successful call to <code class="text-[#C8F000]">POST /api/track</code> executes.</li>
+          <li>Verify incoming pageviews appear instantly in the SourceTrack dashboard <strong>Event Debugger</strong>.</li>
+        </ol>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Common Mistakes</h2>
+        <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300 leading-relaxed">
+          <li>
+            <strong>Forgetting to Publish:</strong> Webflow custom code settings are only deployed when
+            you click the <strong>Publish</strong> button in Webflow.
+          </li>
+          <li>
+            <strong>Pasting in Footer Code instead of Head:</strong> Ensure the script is placed inside
+            the <strong>Head Code</strong> box so acquisition signals are loaded before page view
+            behaviors begin.
+          </li>
+        </ul>
+      </section>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Next Step</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          Now that base tracking is active, set up conversion triggers for forms, button clicks, or demo
+          calendars. Refer to our
+          <a href="/developers/conversions" class="text-[#C8F000] font-bold hover:underline">Browser Conversions guide</a>
+          for recipes.
+        </p>
+      </section>
     </div>
   </section>
 </Base>

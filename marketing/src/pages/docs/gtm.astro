@@ -1,13 +1,157 @@
 ---
+// Faithful port of dashboard/src/pages/docs/DocsGTM.jsx — same sections in the same order
+// (Who this is for -> key terms -> what you will set up -> manual-recipe notice -> steps ->
+// how to verify -> common mistakes -> next step), text verbatim. Not reworded, for the reason
+// batch 1 recorded: §29.1 puts website voice under docs/SourceTrack_GTM.md, and this is technical
+// documentation that already reads correctly, so a port that rewrote it would be a rewrite
+// wearing a port's name.
+//
+// DELIBERATE DIFFERENCES FROM THE SOURCE:
+//   1. DocsCodeBlock / DocsCallout are React components (copy-to-clipboard, site-key
+//      substitution). No Astro equivalent exists, so their CHROME is re-expressed with the
+//      inline markup this directory already uses. Text inside is unchanged.
+//   2. The dashboard's <Link to="/developers/conversions"> becomes a plain href — the same
+//      path exists on this site, so the target is unchanged, only the mechanism.
+//
+// The GTM tag body is held in a frontmatter const, not inlined in the template, because it
+// contains a literal <script> element and an HTML comment. Inlined, Astro would compile the
+// <script> as a real page script instead of rendering it as the code the reader must copy.
+//
+// NOTE ON THE URL: /docs/gtm here vs /docs/platforms/google-tag-manager in the app. This is the
+// one page in the batch whose slug is not a straight prefix drop, so DocsGTM.jsx's canonical is
+// repointed to /docs/gtm — the path that exists — and the 301 maps the long old path to it.
+//
+// Canonical is deliberately NOT set: Base.astro derives `https://www.sourcetrack.ai{pathname}`,
+// which is exactly the target DocsGTM.jsx's canonical is repointed to in this same change.
 import Base from "@/layouts/Base.astro";
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.sourcetrack.ai" },
+    { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://www.sourcetrack.ai/docs" },
+    { "@type": "ListItem", "position": 3, "name": "Google Tag Manager", "item": "https://www.sourcetrack.ai/docs/gtm" }
+  ]
+};
+
+const GTM_TAG = `<!-- Paste this inside a Custom HTML Tag in GTM -->
+<script>
+  (function() {
+    if (document.querySelector('script[data-site-key]')) return;
+    var script = document.createElement('script');
+    script.src = 'https://api.srctk.com/tracker.min.js';
+    script.setAttribute('data-site-key', 'YOUR_SITE_KEY');
+    script.async = true;
+    document.head.appendChild(script);
+  })();
+</script>`;
 ---
 
-<Base title="Google Tag Manager Setup — SourceTrack Docs" description="Google Tag Manager custom HTML tag installation guide.">
+<Base
+  title="Google Tag Manager Setup Guide | SourceTrack Docs"
+  description="Deploy the SourceTrack tracking pixel using Google Tag Manager. Custom HTML tag configurations and triggering rules."
+  structuredData={[breadcrumbSchema]}
+>
   <section class="py-16 bg-[#0E1111] text-white">
-    <div class="max-w-[800px] mx-auto px-4 space-y-6">
-      <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Docs</a>
-      <h1 class="text-4xl font-black text-white">Google Tag Manager (GTM) Setup</h1>
-      <p class="text-gray-400 text-lg">Create a Custom HTML tag firing on All Pages in GTM.</p>
+    <div class="max-w-[800px] mx-auto px-4 space-y-8">
+      <div class="space-y-4">
+        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Docs</a>
+        <h1 class="text-4xl font-black text-white tracking-tight">Google Tag Manager</h1>
+        <p class="text-gray-400 text-lg leading-relaxed">
+          Deploy the SourceTrack tracking pixel site-wide using a Google Tag Manager container.
+        </p>
+      </div>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Who This Is For</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          This guide is for marketers and website managers who use Google Tag Manager (GTM) to deploy and
+          organize marketing pixels across their site without editing theme code directly.
+        </p>
+      </section>
+
+      <div class="bg-[#101A24] border border-[#1E3A5F] rounded-2xl p-5">
+        <h4 class="font-extrabold text-[#7CC4FF] mb-2 text-sm">Key Terms Defined:</h4>
+        <ul class="list-disc pl-5 space-y-1 text-xs text-[#A8CFF0] leading-relaxed">
+          <li><strong>GTM container</strong> &mdash; the master script tag you paste on your site that lets you deploy tags from the GTM interface.</li>
+          <li><strong>Custom HTML Tag</strong> &mdash; a GTM tag type that allows you to copy-paste custom Javascript script code to be injected dynamically.</li>
+          <li><strong>Trigger</strong> &mdash; a condition in GTM (like "All Pages" or a button click) that dictates when a tag fires.</li>
+        </ul>
+      </div>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">What You Will Set Up</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          You will create a Custom HTML tag in GTM, paste our helper script, configure it to fire on
+          initialization, and verify using GTM Preview mode.
+        </p>
+      </section>
+
+      <div class="bg-amber-400/5 border border-amber-400/25 rounded-2xl p-5 text-sm text-amber-300 leading-relaxed">
+        <strong>Manual recipe:</strong> SourceTrack is not distributed as a Google Tag Manager community
+        gallery tag. You paste the tracking snippet into a Custom HTML tag inside your own GTM container
+        &mdash; manual setup required.
+      </div>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Steps: GTM Deployment</h2>
+
+        <ol class="list-decimal pl-5 space-y-4 text-sm text-gray-300 leading-relaxed">
+          <li><strong>Open GTM:</strong> Log in to your GTM workspace.</li>
+          <li><strong>Create Tag:</strong> Go to <strong>Tags</strong> and click <strong>New</strong>.</li>
+          <li><strong>Configure Tag Type:</strong> Click <em>Tag Configuration</em> and choose <strong>Custom HTML</strong>.</li>
+          <li>
+            <strong>Paste Script:</strong> Paste the code below. Remember to change
+            <code class="text-[#C8F000]">YOUR_SITE_KEY</code> to your actual public key.
+            <pre class="mt-2 bg-[#0F1012] p-4 rounded-xl text-xs text-gray-300 overflow-x-auto border border-[#2A2C30]"><code>{GTM_TAG}</code></pre>
+          </li>
+          <li>
+            <strong>Configure Triggering:</strong> Click <em>Triggering</em> and select
+            <strong>Initialization - All Pages</strong> (or <strong>All Pages (Page View)</strong> if
+            Initialization is not available).
+          </li>
+          <li>
+            <strong>Save:</strong> Name your tag (e.g. <code class="text-[#C8F000]">SourceTrack - Base Pixel</code>)
+            and click <strong>Save</strong>.
+          </li>
+        </ol>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">How to Verify It Worked</h2>
+        <ol class="list-decimal pl-5 space-y-3 text-sm text-gray-300 leading-relaxed">
+          <li>Click <strong>Preview</strong> in the GTM interface. Enter your live website URL and connect GTM Tag Assistant.</li>
+          <li>In the Tag Assistant panel, verify that your new <code class="text-[#C8F000]">SourceTrack - Base Pixel</code> tag has successfully fired.</li>
+          <li>Open the browser Developer Tools (Network tab) on your site. Filter for <code class="text-[#C8F000]">track</code>, reload the page, and confirm a call to <code class="text-[#C8F000]">POST /api/track</code> completes successfully.</li>
+          <li>Verify your pageviews start logging in the SourceTrack dashboard <strong>Event Debugger</strong>.</li>
+        </ol>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Common Mistakes</h2>
+        <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300 leading-relaxed">
+          <li>
+            <strong>Forgetting to Publish:</strong> Preview mode only works for you. Make sure you click
+            <strong>Submit &rarr; Publish</strong> in GTM so the tag is deployed for all your users.
+          </li>
+          <li>
+            <strong>Content Security Policy (CSP) Restrictions:</strong> If your server enforces a CSP, it
+            may block GTM from injecting external scripts. Ensure
+            <code class="text-[#C8F000]">https://api.srctk.com</code> is allowlisted in your CSP headers
+            under <code class="text-[#C8F000]">script-src</code> and <code class="text-[#C8F000]">connect-src</code>.
+          </li>
+        </ul>
+      </section>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Next Step</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          You're ready to configure conversions. If you want to track conversion events (like form
+          submissions or button clicks) using GTM triggers, see our
+          <a href="/developers/conversions" class="text-[#C8F000] font-bold hover:underline">Browser Conversions guide</a>.
+        </p>
+      </section>
     </div>
   </section>
 </Base>

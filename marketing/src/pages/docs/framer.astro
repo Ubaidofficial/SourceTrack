@@ -1,13 +1,124 @@
 ---
+// Faithful port of dashboard/src/pages/docs/DocsFramer.jsx — same sections in the same order
+// (Who this is for -> key terms -> what you will set up -> steps -> how to verify -> common
+// mistakes -> next step), text verbatim. Not reworded, for the reason batch 1 recorded: §29.1
+// puts website voice under docs/SourceTrack_GTM.md, and this is technical documentation that
+// already reads correctly, so a port that rewrote it would be a rewrite wearing a port's name.
+//
+// DELIBERATE DIFFERENCES FROM THE SOURCE:
+//   1. DocsCodeBlock / DocsCallout are React components (copy-to-clipboard, site-key
+//      substitution). No Astro equivalent exists, so their CHROME is re-expressed with the
+//      inline markup this directory already uses. Text inside is unchanged.
+//   2. The dashboard's <Link to="/developers/conversions"> becomes a plain href — the same
+//      path exists on this site, so the target is unchanged, only the mechanism.
+//
+// Canonical is deliberately NOT set: Base.astro derives `https://www.sourcetrack.ai{pathname}`,
+// which is exactly the target DocsFramer.jsx's canonical is repointed to in this same change.
 import Base from "@/layouts/Base.astro";
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.sourcetrack.ai" },
+    { "@type": "ListItem", "position": 2, "name": "Docs", "item": "https://www.sourcetrack.ai/docs" },
+    { "@type": "ListItem", "position": 3, "name": "Framer Setup Recipe", "item": "https://www.sourcetrack.ai/docs/framer" }
+  ]
+};
+
+const SNIPPET = `<script async src="https://api.srctk.com/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`;
 ---
 
-<Base title="Framer Integration Guide — SourceTrack Docs" description="Framer custom head code installation guide.">
+<Base
+  title="Framer Setup Guide | SourceTrack Docs"
+  description="Add the SourceTrack tracking pixel to Framer. Learn where to insert custom tracking codes and how to verify page view events."
+  structuredData={[breadcrumbSchema]}
+>
   <section class="py-16 bg-[#0E1111] text-white">
-    <div class="max-w-[800px] mx-auto px-4 space-y-6">
-      <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Docs</a>
-      <h1 class="text-4xl font-black text-white">Framer Integration Guide</h1>
-      <p class="text-gray-400 text-lg">Add custom start-of-head code in Framer Site Settings.</p>
+    <div class="max-w-[800px] mx-auto px-4 space-y-8">
+      <div class="space-y-4">
+        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Docs</a>
+        <h1 class="text-4xl font-black text-white tracking-tight">Framer Setup Recipe</h1>
+        <p class="text-gray-400 text-lg leading-relaxed">
+          Integrate the tracking pixel into your Framer site settings to track landing page visitors.
+        </p>
+      </div>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Who This Is For</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          This guide is for startups, founders, and designers who build their marketing websites or
+          landing pages on Framer, and want campaign attribution set up in minutes.
+        </p>
+      </section>
+
+      <div class="bg-[#101A24] border border-[#1E3A5F] rounded-2xl p-5">
+        <h4 class="font-extrabold text-[#7CC4FF] mb-2 text-sm">Key Terms Defined:</h4>
+        <ul class="list-disc pl-5 space-y-1 text-xs text-[#A8CFF0] leading-relaxed">
+          <li><strong>Start of &lt;head&gt;</strong> &mdash; a settings text field in Framer that inserts custom HTML scripts at the top of your page before it renders in the browser.</li>
+          <li><strong>Single Page Application (SPA)</strong> &mdash; a modern website structure (used by Framer) that changes pages instantly without full browser reloads.</li>
+        </ul>
+      </div>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">What You Will Set Up</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          You will add our pixel script code into the custom code head configuration of your Framer
+          project settings and publish it to launch automatic pageview and referrer tracking.
+        </p>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Steps: Framer Integration</h2>
+
+        <ol class="list-decimal pl-5 space-y-4 text-sm text-gray-300 leading-relaxed">
+          <li>Log in to your <strong>Framer Dashboard</strong> and open your target project.</li>
+          <li>Click the gear icon in the top toolbar to open <strong>Project Settings</strong>.</li>
+          <li>Go to the <strong>Custom Code</strong> section on the left sidebar.</li>
+          <li>Locate the <strong>Start of &lt;head&gt;</strong> field.</li>
+          <li>
+            Paste the tracking code snippet into the box:
+            <pre class="mt-2 bg-[#0F1012] p-4 rounded-xl text-xs text-gray-300 overflow-x-auto border border-[#2A2C30]"><code>{SNIPPET}</code></pre>
+          </li>
+          <li>Click <strong>Save</strong>.</li>
+          <li>Click <strong>Publish</strong> in the top right to deploy the code to your live domain.</li>
+        </ol>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">How to Verify It Worked</h2>
+        <ol class="list-decimal pl-5 space-y-3 text-sm text-gray-300 leading-relaxed">
+          <li>Visit your live published Framer website.</li>
+          <li>Open Developer Tools (right-click &rarr; Inspect), click <strong>Network</strong>, and filter by <code class="text-[#C8F000]">track</code>.</li>
+          <li>Refresh the page. Verify a call to <code class="text-[#C8F000]">POST /api/track</code> completes successfully.</li>
+          <li>Since Framer runs as a Single Page Application (SPA), click a navigation link. You should see another network call to <code class="text-[#C8F000]">POST /api/track</code> trigger instantly without a full page reload.</li>
+          <li>Verify visits are recorded in real-time under the <strong>Event Debugger</strong> in your SourceTrack dashboard.</li>
+        </ol>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Common Mistakes</h2>
+        <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300 leading-relaxed">
+          <li>
+            <strong>Failing to Publish:</strong> Code changes inside Framer Settings do not take effect
+            until you click <strong>Publish</strong>.
+          </li>
+          <li>
+            <strong>Pasting into Page-Specific Code instead of Project Settings:</strong> Ensure the
+            script is placed inside the global <strong>Project Settings &rarr; Custom Code</strong> area
+            so it tracks across all pages.
+          </li>
+        </ul>
+      </section>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Next Step</h2>
+        <p class="text-sm text-gray-300 leading-relaxed">
+          Now that basic pageview tracking is active, configure your conversion triggers for leads or
+          signups by following our
+          <a href="/developers/conversions" class="text-[#C8F000] font-bold hover:underline">Browser Conversions guide</a>.
+        </p>
+      </section>
     </div>
   </section>
 </Base>

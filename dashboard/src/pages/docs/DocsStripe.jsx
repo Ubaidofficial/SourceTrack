@@ -10,7 +10,7 @@ export default function DocsStripe() {
       <Helmet>
         <title>Stripe Webhook/API Revenue Attribution Recipe | SourceTrack Docs</title>
         <meta name="description" content="Stitch Stripe billing and subscription events with acquisition sources. Metadata structures and webhook configurations." />
-        <link rel="canonical" href="https://www.sourcetrack.ai/docs/platforms/stripe" />
+        <link rel="canonical" href="https://www.sourcetrack.ai/docs/stripe" />
       </Helmet>
 
       <div className="space-y-6">
