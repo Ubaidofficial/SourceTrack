@@ -17,4 +17,19 @@ Disallow: /onboarding
 Disallow: /share/
 Disallow: /api/
 
+# Docs live on www, not here. app.sourcetrack.ai/docs and /developers still
+# SERVE a second copy of every doc page (dashboard/src/pages/docs/*.jsx and
+# .../developers/*.jsx), and until that copy is redirected to www it competes
+# with the canonical pages for the same queries. The www copies are the ones in
+# the sitemap (https://www.sourcetrack.ai/docs/...), so these two lines point
+# crawlers at one home instead of two.
+#
+# INTERIM, not the fix. The real fix is the content migration to
+# marketing/src/pages/docs/*.astro plus redirects from these paths; this only
+# stops the ranking split in the meantime. Remove these lines once the
+# dashboard paths 301 to www — a redirect that crawlers are forbidden to fetch
+# cannot pass its signal on.
+Disallow: /docs
+Disallow: /developers
+
 Sitemap: https://www.sourcetrack.ai/sitemap.xml
