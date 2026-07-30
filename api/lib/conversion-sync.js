@@ -1,6 +1,9 @@
 import { createHash } from 'crypto'
 import { encryptSecret, decryptSecret } from './utils.js'
 import { logCapiDelivery } from './capi-deliveries.js'
+// Reused as-is by sendGoogleConversion. The ad-cost sync path already owns the Google
+// OAuth refresh; CAPI shares that one implementation rather than re-deriving it.
+import { refreshAccessToken } from './google-ads.js'
 
 function sha256(str) {
   return createHash('sha256').update(str.trim().toLowerCase()).digest('hex')
@@ -169,26 +172,69 @@ export async function sendMetaCAPI(site, evt) {
 }
 
 // ─── Google Ads Conversion Upload ────────────────────────────────────────────
-// Requires an OAuth2 access token (NOT the developer token).
-// Customers must provide their own token via GOOGLE_ADS_ACCESS_TOKEN env var
-// or per-site google_ads_access_token column.
+// Authenticates from the site's Google Ads OAuth CONNECTION, not from sites columns.
 //
-// How to get an access token:
-//   1. Create OAuth2 credentials in Google Cloud Console
-//   2. Complete OAuth2 flow for the Google Ads account
-//   3. Use the resulting access_token (refresh periodically — 1h TTL)
-//   Reference: https://developers.google.com/google-ads/api/docs/oauth/overview
+// WHAT THIS REPLACED, AND WHY — the previous version could never work, for two
+// independent reasons, and both are fixed here:
+//
+//   1. It sent `developer-token` from the per-site sites.google_ads_developer_token
+//      column. A Google Ads developer token is issued ONCE to the software provider
+//      (SourceTrack), never to an individual advertiser, so no customer could ever
+//      paste a correct value. The developer token is now the shared, app-level
+//      process.env.GOOGLE_ADS_DEVELOPER_TOKEN — the SAME env var the ad-cost sync
+//      worker already reads (api/lib/google-ads.js fetchGoogleAdsPerformance).
+//
+//   2. It read an OAuth2 ACCESS token: `site.google_ads_access_token` with a
+//      GOOGLE_ADS_ACCESS_TOKEN env fallback. That column exists in NO migration and
+//      in NO SELECT list — verified absent from prod `sites` — so the column read was
+//      always undefined and it always fell through to the env var. An access token
+//      lives ~1h and there was no refresh path, so an env-pinned one is expired almost
+//      immediately. Auth is now a refresh-token flow via refreshAccessToken().
+//
+// Ad-cost import (read direction) and this upload (write direction) need the SAME
+// OAuth grant, so both now share one ad_platform_connections row per site.
+//
+// The connection is PRE-LOADED onto `site.google_ads_connection` by the conversion
+// routes before dispatchCapi runs — senders keep their pure (site, evt) signature and
+// do no I/O of their own beyond the platform call.
 export async function sendGoogleConversion(site, evt) {
-  const devToken = safeDecrypt(site.google_ads_developer_token)
-  if (!site.google_ads_customer_id || !devToken) return null  // no/undecryptable token → no-op
+  const conn = site.google_ads_connection
+  // Fail-safe no-op (returns null → no attempt, not logged), same convention as every
+  // other sender. Covers: no connection row, OAuth not finished, revoked/errored
+  // connection, and a connection that imports cost but has no conversion action set.
+  if (!conn || conn.status !== 'connected') return null
+  if (!conn.account_id || !conn.conversion_action_id || !conn.encrypted_refresh_token) return null
   if (!evt.gclid && !evt.gbraid && !evt.wbraid) return null // no click ID = no attribution
 
-  // OAuth2 access token: per-site column (encrypted) takes priority, then global env var
-  const accessToken = safeDecrypt(site.google_ads_access_token) || process.env.GOOGLE_ADS_ACCESS_TOKEN
-  if (!accessToken) {
-    console.warn('[Google Ads CAPI] Skipped — no OAuth2 access token configured. Set GOOGLE_ADS_ACCESS_TOKEN env var or google_ads_access_token on the site.')
-    return null
+  // App-level, shared, single value. Absent in every environment today (the token has
+  // not been issued yet), so this no-ops rather than logging a failed delivery for
+  // every conversion on every site — a missing app-level credential is "not configured",
+  // not "delivery failed".
+  const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN
+  if (!developerToken) return null
+
+  // Short-lived access token, minted per send. This is a live call to Google's token
+  // endpoint on every conversion — the same thing runGoogleSync already does per sync.
+  let accessToken
+  try {
+    const refreshed = await refreshAccessToken(conn.encrypted_refresh_token)
+    accessToken = refreshed?.access_token
+  } catch (err) {
+    // A refresh failure means the grant is broken (revoked/expired), which is a REAL
+    // delivery failure worth surfacing — unlike the not-configured cases above, which
+    // no-op. refreshAccessToken throws bare codes ('google_access_token_refresh_failed',
+    // 'Google OAuth credentials not configured'), never a token value.
+    const msg = String(err?.message || err).slice(0, 500)
+    console.error('[Google Ads CAPI] token refresh failed:', msg)
+    return { ok: false, http_status: null, error_message: msg }
   }
+  if (!accessToken) return { ok: false, http_status: null, error_message: 'google_access_token_missing_after_refresh' }
+
+  // Same normalisation the sync path uses — the API rejects dashed ids.
+  const customerId = String(conn.account_id).replace(/-/g, '').trim()
+  const loginCustomerId = conn.login_customer_id
+    ? String(conn.login_customer_id).replace(/-/g, '').trim()
+    : null
 
   const clickIds = {}
   if (evt.gclid)  clickIds.gclid  = evt.gclid
@@ -198,7 +244,7 @@ export async function sendGoogleConversion(site, evt) {
   const body = {
     conversions: [{
       ...clickIds,
-      conversion_action: `customers/${site.google_ads_customer_id}/conversionActions/${site.google_ads_conversion_action_id}`,
+      conversion_action: `customers/${customerId}/conversionActions/${conn.conversion_action_id}`,
       conversion_date_time: new Date(evt.timestamp ?? Date.now()).toISOString().replace('T', ' ').replace('Z', '+00:00'),
       conversion_value: Number(evt.conversion_value) || 0,
       currency_code: evt.currency ?? 'USD',
@@ -207,17 +253,20 @@ export async function sendGoogleConversion(site, evt) {
     }]
   }
 
+  const headers = {
+    'Authorization':   `Bearer ${accessToken}`,
+    'developer-token': developerToken,
+    'Content-Type':    'application/json'
+  }
+  // Manager (MCC) account header, only when the connection captured one.
+  if (loginCustomerId) headers['login-customer-id'] = loginCustomerId
+
+  // Version comes from the same env var + default as the sync path, so the two Google
+  // Ads callers cannot drift. The old hardcoded v16 had already drifted from v24.
+  const apiVersion = process.env.GOOGLE_ADS_API_VERSION || 'v24'
   const r = await fetchWithRetry(
-    `https://googleads.googleapis.com/v16/customers/${site.google_ads_customer_id}:uploadClickConversions`,
-    {
-      method: 'POST',
-      headers: {
-        'Authorization':   `Bearer ${accessToken}`,       // OAuth2 token
-        'developer-token': devToken,                        // separate header (decrypted)
-        'Content-Type':    'application/json'
-      },
-      body: JSON.stringify(body)
-    },
+    `https://googleads.googleapis.com/${apiVersion}/customers/${customerId}:uploadClickConversions`,
+    { method: 'POST', headers, body: JSON.stringify(body) },
     'Google Ads CAPI'
   )
   let detail = ''
@@ -459,12 +508,51 @@ export async function sendTikTokConversion(site, evt) {
   }
 }
 
+// ─── Google Ads connection pre-load ──────────────────────────────────────────
+// Attaches the tenant's Google Ads OAuth connection to `site` so sendGoogleConversion
+// can stay a pure (site, evt) sender that does no I/O of its own. Called by the
+// conversion routes immediately before dispatchCapi.
+//
+// GUARD — why the click ID and not sites.google_ads_customer_id:
+// the brief specified gating this extra read on `site.google_ads_customer_id` being set.
+// That column is one of the DEAD ones this PR retires: it is populated on ZERO prod sites
+// and the new OAuth flow never writes it, so that guard would be false forever and Google
+// CAPI could never fire — it would defeat the change it is part of. The guard's intent was
+// "don't add a query to every conversion on every site", and the click ID serves that
+// intent strictly better: sendGoogleConversion already returns null without a Google click
+// ID, so a conversion with no gclid/gbraid/wbraid can never produce an upload no matter
+// what the connection says. Most conversions carry no Google click ID, so this skips more
+// reads than the column guard would have, while still firing whenever an upload is
+// actually possible.
+//
+// Never throws: a failed lookup leaves the connection null, which makes Google no-op.
+// The conversion path is never blocked or failed by CAPI setup state.
+export async function attachGoogleAdsConnection(supabase, siteKey, site, evt) {
+  site.google_ads_connection = null
+  if (!siteKey) return site
+  if (!evt?.gclid && !evt?.gbraid && !evt?.wbraid) return site
+  try {
+    const { data } = await supabase
+      .from('ad_platform_connections')
+      .select('status, account_id, login_customer_id, conversion_action_id, encrypted_refresh_token')
+      .eq('site_key', siteKey)          // tenant isolation in code (service-role client bypasses RLS)
+      .eq('platform', 'google_ads')
+      .maybeSingle()
+    if (data?.status === 'connected') site.google_ads_connection = data
+  } catch (_) { /* never block or fail a conversion because of CAPI config state */ }
+  return site
+}
+
 // ─── CAPI fan-out + delivery log ─────────────────────────────────────────────
 // Runs the configured senders for one conversion and writes ONE capi_deliveries
 // row per real send attempt (success/failed). A sender that returns null (no
 // token / undecryptable token / no click id) made no attempt and is NOT logged
 // — keeps the table to genuine attempts. Never throws into the conversion path.
-// `site` must include `id` (selected by the caller) + the CAPI columns.
+// `site` must include `id` (selected by the caller) + the CAPI columns, and — for
+// Google only — `google_ads_connection`, the pre-loaded ad_platform_connections row
+// (or null). Google's credential lives in that table rather than in sites columns, and
+// senders stay pure (site, evt) with no I/O of their own, so the caller loads it. A
+// caller that forgets simply makes Google no-op; it can never send with wrong creds.
 export async function dispatchCapi(supabase, site, evt) {
   const eventRef = evt.external_event_id || evt.order_id || null
   const senders = [

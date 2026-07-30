@@ -3,7 +3,7 @@ import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import NodeCache from 'node-cache'
 import { dispatchWebhook } from '../lib/webhook.js'
-import { dispatchCapi } from '../lib/conversion-sync.js'
+import { dispatchCapi, attachGoogleAdsConnection } from '../lib/conversion-sync.js'
 import { resolveCapiEventId } from '../lib/capi-event-id.js'
 import { getSupabase } from '../lib/supabase.js'
 import { normalizeUtm, getFirstTouchFields, redactPiiFromObject, isPathExcluded, extractCustomParams, sanitizeClientTimestamp, sanitizeValueTrack, sanitizeVerificationToken, normalizeClickIds } from '../lib/utils.js'
@@ -423,12 +423,17 @@ export async function conversion(req, res) {
         .select('id,meta_pixel_id,meta_capi_token,google_ads_customer_id,google_ads_conversion_action_id,google_ads_developer_token,microsoft_tag_id,microsoft_capi_token,linkedin_partner_id,linkedin_capi_token,ga4_measurement_id,ga4_api_secret,tiktok_pixel_code,tiktok_capi_token')
         .eq('id', req.site.id)
         .single()
-        .then(({ data: capiSite }) => {
+        .then(async ({ data: capiSite }) => {
           if (!capiSite) return
+          const capiEvt = { ...props, ip_address: clientIp }
+          // Google's credential lives in ad_platform_connections, not on `sites`.
+          // Pre-loaded here so senders stay pure (site, evt); no-ops without a click ID.
+          await attachGoogleAdsConnection(getCapiSupabase(), req.site.site_key, capiSite, capiEvt)
           // Fan-out + per-platform delivery log (writes capi_deliveries rows).
-          dispatchCapi(getCapiSupabase(), capiSite, { ...props, ip_address: clientIp })
+          dispatchCapi(getCapiSupabase(), capiSite, capiEvt)
             .catch(err => console.error('[CAPI dispatch]', err?.message))
         })
+        .catch(err => console.error('[CAPI preload]', err?.message))
     } catch (_capiErr) { /* never block conversion response */ }
 
     dispatchWebhook('conversion', props)

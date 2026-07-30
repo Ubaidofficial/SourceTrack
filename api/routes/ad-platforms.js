@@ -148,6 +148,27 @@ const requireAdCostSync = (req, res, next) => {
   next()
 }
 
+// CONNECTION SETUP gate — deliberately wider than requireAdCostSync.
+//
+// One Google Ads OAuth connection now serves two features in opposite directions:
+// ad-cost import (read) and CAPI offline-conversion upload (write). Their plan matrices
+// differ on exactly one plan — `ad_cost_sync` is false on trial while `capi_server_side`
+// is true — so gating connection setup on ad_cost_sync alone would leave a trial site
+// holding CAPI with no way to establish the credential CAPI needs.
+//
+// Applied ONLY to the two setup routes (/google/auth-url, /google/save-account).
+// /google/sync stays requireAdCostSync — executing a cost import is the cost feature
+// itself, not connection setup, and widening it would hand trial sites a paid feature.
+const requireGoogleConnectionSetup = (req, res, next) => {
+  const adCostBlock = requireFeature(req.site?.plan, 'ad_cost_sync', 'Ad cost sync')
+  if (!adCostBlock) return next()
+  const capiBlock = requireFeature(req.site?.plan, 'capi_server_side', 'Server-side CAPI')
+  if (!capiBlock) return next()
+  // Neither feature is available on this plan — surface the cost-sync block, the
+  // upgrade prompt this route has always returned.
+  return res.status(402).json(adCostBlock)
+}
+
 
 // 2. GET `/status`: Returns status overview for all ad platform sync accounts
 router.get('/status', async (req, res) => {
@@ -207,7 +228,7 @@ router.get('/sync-history', async (req, res) => {
 })
 
 // 4. GET `/google/auth-url`: Retrieve Google Ads authorization redirect link
-router.get('/google/auth-url', requireAdCostSync, (req, res) => {
+router.get('/google/auth-url', requireGoogleConnectionSetup, (req, res) => {
   try {
     const siteKey = req.site.site_key
     const userId = req.user.id
@@ -225,7 +246,7 @@ router.get('/google/auth-url', requireAdCostSync, (req, res) => {
 })
 
 // 5. POST `/google/save-account`: Connect ad customer ID to Google connection
-router.post('/google/save-account', requireAdCostSync, async (req, res) => {
+router.post('/google/save-account', requireGoogleConnectionSetup, async (req, res) => {
   const { customer_id, login_customer_id } = req.body
   const siteKey = req.site.site_key
 
