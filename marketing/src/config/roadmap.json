@@ -14,7 +14,7 @@
     "Two entries were demoted from 'shipped' to 'building' by that bar — see `verified_note`",
     "on each. Do not promote them back without re-checking the named condition."
   ],
-  "verified_on": "2026-07-30",
+  "verified_on": "2026-07-31",
   "columns": [
     {
       "key": "shipped",
@@ -67,7 +67,14 @@
       "title": "Coming soon",
       "description": "Committed and scoped, not started.",
       "empty_state": "Nothing queued publicly right now. We list work here once it is scoped and committed — not to fill a column.",
-      "items": []
+      "items": [
+        {
+          "title": "Order-source filtering for Shopify",
+          "description": "Count only the orders that came from your storefront. Point-of-sale, draft and test orders arrive on the same webhook as online sales, and today all four are treated the same — so an in-person sale or a checkout test can land in your revenue-by-source report as an unattributed online conversion.",
+          "note": "Not started. The ingestion path reads no order-source field at all today, so this is new filtering rather than a correction to existing logic.",
+          "verified_note": "Verified 2026-07-31: neither Shopify rail inspects source_name or test. api/routes/shopify-webhook.js gates only on topic and financial_status==='paid'; the app rail subscribes to orders/paid and validates id/value/currency only. Repo-wide grep for source_name/source_identifier/shopify_draft_order returns zero hits. Shopify's REST reference does not define these fields inline — confirm exact values against a real POS order and a real Bogus-Gateway order before implementing."
+        }
+      ]
     }
   ]
 }
