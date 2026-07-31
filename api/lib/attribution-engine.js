@@ -6,6 +6,7 @@ import { parsePathname } from './url-normalize.js'
 import { esc, isGoogleSource, isValidTimezone, getLocalDateString, getPaddedUtcDateRange } from './utils.js'
 import { serializeHogQLDateRange, serializeHogQLDateTime, buildHogQLTimestampFilter } from './hogql-date.js'
 import { LEAD_TYPES, classifyConversionType } from './conversion-classifier.js'
+import { collapseCurrencies } from './currency.js'
 import { isSubscriptionCheckoutCarrier } from './stripe-subscription.js'
 import { queryTinybirdPipe } from './tinybird-read.js'
 import { SESSION_REPORT_DIMS } from './report-config-validation.js'
@@ -2616,7 +2617,10 @@ function shapePreAggConversionRow (dim_value, stats) {
     conversions: stats.conversions,
     leads: stats.leads,
     customers: stats.customers,
-    avg_conversion_value: customers > 0 ? parseFloat((stats.revenue / customers).toFixed(2)) : 0
+    avg_conversion_value: customers > 0 ? parseFloat((stats.revenue / customers).toFixed(2)) : 0,
+    // Unit for `revenue` above. Without it the caller has no way to know whether summing these
+    // rows was even legitimate — 'mixed' says it was not.
+    ...collapseCurrencies(stats.currencies || [])
   }
 }
 function shapeMultiTouchRow (dim_value, stats) {
@@ -2626,14 +2630,20 @@ function shapeMultiTouchRow (dim_value, stats) {
     conversions: parseFloat(stats.conversions.toFixed(4))
   }
 }
-// Row keys minus the dimension key = the metrics each reader family can serve. 'all' is a separate
+// Row keys that are NOT metrics: the dimension key, plus the currency descriptors. Currency is a
+// UNIT for `revenue`, not a quantity — leaving it in the derived set would make `metric='currency'`
+// pass the reader's own guard and then sort rows by `b.currency - a.currency` (NaN). Excluded here
+// for the same reason dim_value always was.
+const NON_METRIC_ROW_KEYS = new Set(['dim_value', 'currency', 'currency_status'])
+
+// Row keys minus the non-metric keys = the metrics each reader family can serve. 'all' is a separate
 // full-row sentinel (some internal callers ask getPreAggregatedAttribution for the whole row).
 export const PREAGG_CONVERSION_METRICS = new Set(
   Object.keys(shapePreAggConversionRow(null, { revenue: 0, conversions: 0, leads: 0, customers: 0 }))
-    .filter(k => k !== 'dim_value')
+    .filter(k => !NON_METRIC_ROW_KEYS.has(k))
 )
 export const PREAGG_MULTITOUCH_METRICS = new Set(
-  Object.keys(shapeMultiTouchRow(null, { revenue: 0, conversions: 0 })).filter(k => k !== 'dim_value')
+  Object.keys(shapeMultiTouchRow(null, { revenue: 0, conversions: 0 })).filter(k => !NON_METRIC_ROW_KEYS.has(k))
 )
 
 // Get pre-aggregated attribution from batch job results
@@ -2695,7 +2705,7 @@ export async function getPreAggregatedAttribution({
 
   let query = supabase
     .from('attributed_conversions')
-    .select(`${selectField}, conversion_value, distinct_id, conversion_date, conversion_type, conversion_timestamp`)
+    .select(`${selectField}, conversion_value, currency, distinct_id, conversion_date, conversion_type, conversion_timestamp`)
     .eq('site_id', siteId)
     .gte('conversion_date', padded.from)
     .lte('conversion_date', padded.to)
@@ -2760,9 +2770,15 @@ export async function getPreAggregatedAttribution({
       dimValue = 'google'
     }
     if (!aggregated[dimValue]) {
-      aggregated[dimValue] = { revenue: 0, conversions: 0, leads: 0, customers: 0 }
+      aggregated[dimValue] = { revenue: 0, conversions: 0, leads: 0, customers: 0, currencies: new Set() }
     }
     aggregated[dimValue].revenue += parseFloat(row.conversion_value || 0)   // (A) signed SUM nets — leave unconditional
+    // Unit for the sum above. Only rows that actually MOVE revenue carry a meaningful unit, so a
+    // $0 lead never makes a group look 'mixed'. A revenue-bearing row with no currency leaves the
+    // set short, which surfaces as 'unknown' — never as an assumed USD.
+    if (parseFloat(row.conversion_value || 0) !== 0 && row.currency) {
+      aggregated[dimValue].currencies.add(String(row.currency).toUpperCase())
+    }
     // (A) PR2d: a refund (conversion_type='refund') must NOT add to any conversion count — it nets the
     // revenue above; a refunded order is still a conversion that happened, so counts must not decrement
     // either. #382 fixed the dashboard/analytics/leads-server route handlers; this engine reader was missed.

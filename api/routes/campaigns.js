@@ -3,6 +3,7 @@ import { getFlexibleReport, PREAGG_CONVERSION_METRICS, PREAGG_MULTITOUCH_METRICS
 import { getSupabase } from '../lib/supabase.js'
 import { ALLOWED_MODELS, servedByDeployedBackend, UNAVAILABLE_SUFFIX } from '../lib/report-config-validation.js'
 import { summarizeCurrencyStatus } from '../lib/ad-cost-imports.js'
+import { resolveSiteRevenueCurrency } from '../lib/currency.js'
 import { isValidTimezone, getLocalDateString, getNow } from '../lib/utils.js'
 
 const ALLOWED_DIMS = new Set(['source', 'medium', 'campaign', 'ai_source'])
@@ -117,16 +118,16 @@ async function getCampaignsData(req) {
 
   const supabase = getSupabase()
 
-  // 1. Detect site's tracked revenue currency from recent ingestion success events
-  const { data: revEvents } = await supabase
-    .from('revenue_ingestion_events')
-    .select('currency')
-    .eq('site_key', req.site.site_key)
-    .eq('status', 'success')
-    .limit(100)
-
-  const revCurrencies = [...new Set(revEvents?.map(e => e.currency?.toUpperCase()).filter(Boolean) || [])]
-  const trackedCurrency = revCurrencies.length === 1 ? revCurrencies[0] : (revCurrencies.length > 1 ? 'MIXED' : 'USD')
+  // 1. Detect site's tracked revenue currency from recent ingestion success events.
+  // Shared with the dashboard and leads readers via resolveSiteRevenueCurrency so the three do
+  // not fork. The 'MIXED'/'USD' collapse below is preserved EXACTLY as it was: summarizeCurrencyStatus()
+  // calls trackedCurrency.toUpperCase() and would throw on null, and ROAS suppression is keyed off
+  // these literals. Widening that to a real 'unknown' is a behavior change to the cost rail and
+  // belongs in its own pass.
+  const siteCurrency = await resolveSiteRevenueCurrency(supabase, req.site.site_key)
+  const trackedCurrency = siteCurrency.currency_status === 'mixed'
+    ? 'MIXED'
+    : (siteCurrency.currency || 'USD')
 
   // 2. Fetch PostHog analytics (isolated per-query) and Supabase cost data in parallel
   //    Each HogQL call is wrapped so a single 502 doesn't kill the whole response.

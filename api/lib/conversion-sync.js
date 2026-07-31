@@ -4,6 +4,23 @@ import { logCapiDelivery } from './capi-deliveries.js'
 // Reused as-is by sendGoogleConversion. The ad-cost sync path already owns the Google
 // OAuth refresh; CAPI shares that one implementation rather than re-deriving it.
 import { refreshAccessToken } from './google-ads.js'
+import { normalizeCurrencyCode, hasKnownCurrency } from './currency.js'
+
+// Emit `{ [field]: 'XXX' }` for a known currency, or `{}` — the field is OMITTED — when the unit
+// is unknown. Each platform names the field differently, hence the parameter.
+//
+// This replaces `evt.currency ?? 'USD'`, which stood in all six senders and asserted dollars onto
+// an ad platform's ledger for any event whose unit we never knew. A wrong currency there is not a
+// display bug: the platform books the amount, bids on it, and reports ROAS from it.
+//
+// Omitting beats defaulting because every one of these APIs treats currency as optional when there
+// is no amount to denominate, and revenue-bearing events can no longer arrive here without a unit —
+// dispatchCapi() drops those before any sender runs (see the gate there). So in practice this
+// returns {} only for zero-value events, where there is no money to mislabel.
+function capiCurrency (evt, field) {
+  const code = normalizeCurrencyCode(evt?.currency)
+  return code ? { [field]: code } : {}
+}
 
 function sha256(str) {
   return createHash('sha256').update(str.trim().toLowerCase()).digest('hex')
@@ -150,7 +167,7 @@ export async function sendMetaCAPI(site, evt) {
       user_data:         userData,
       custom_data: {
         value:    Number(evt.conversion_value) || 0,
-        currency: evt.currency ?? 'USD',
+        ...capiCurrency(evt, 'currency'),
         ...(evt.order_id       ? { order_id: evt.order_id }             : {}),
         ...(evt.conversion_type? { content_type: evt.conversion_type }  : {}),
       }
@@ -249,7 +266,7 @@ export async function sendGoogleConversion(site, evt) {
       conversion_action: `customers/${customerId}/conversionActions/${conn.conversion_action_id}`,
       conversion_date_time: new Date(evt.timestamp ?? Date.now()).toISOString().replace('T', ' ').replace('Z', '+00:00'),
       conversion_value: Number(evt.conversion_value) || 0,
-      currency_code: evt.currency ?? 'USD',
+      ...capiCurrency(evt, 'currency_code'),
       order_id: evt.order_id ?? undefined,
       user_identifiers: evt.email ? [{ hashed_email: sha256(evt.email) }] : []
     }]
@@ -294,7 +311,7 @@ export async function sendMicrosoftConversion(site, evt) {
       TagId:    site.microsoft_tag_id,
       MsclkId:  evt.msclkid ?? null,
       Revenue:  Number(evt.conversion_value) || 0,
-      Currency: evt.currency ?? 'USD',
+      ...capiCurrency(evt, 'Currency'),
       EventType: evt.conversion_type ?? 'conversion'
     })
   }, 'Microsoft UET')
@@ -311,7 +328,7 @@ export async function sendLinkedInConversion(site, evt) {
     conversion: `urn:lla:llaPartnerConversion:${site.linkedin_partner_id}`,
     conversionHappenedAt: new Date(evt.timestamp ?? Date.now()).getTime(),
     conversionValue: {
-      currencyCode: evt.currency ?? 'USD',
+      ...capiCurrency(evt, 'currencyCode'),
       amount: String(Number(evt.conversion_value) || 0)
     }
   }
@@ -403,7 +420,7 @@ export async function sendGA4Conversion(site, evt) {
       name: eventName,
       params: {
         value:                 Number(evt.conversion_value) || 0,
-        currency:              evt.currency ?? 'USD',
+        ...capiCurrency(evt, 'currency'),
         engagement_time_msec:  1,           // required for the event to count toward engagement
         ...(evt.order_id ? { transaction_id: evt.order_id } : {}),
         ...(evt.page_url ? { page_location: evt.page_url } : {}),
@@ -485,7 +502,7 @@ export async function sendTikTokConversion(site, evt) {
       user,
       properties: {
         value:    Number(evt.conversion_value) || 0,
-        currency: evt.currency ?? 'USD',
+        ...capiCurrency(evt, 'currency'),
         ...(evt.order_id ? { order_id: evt.order_id } : {}),
       }
     }]
@@ -557,6 +574,27 @@ export async function attachGoogleAdsConnection(supabase, siteKey, site, evt) {
 // caller that forgets simply makes Google no-op; it can never send with wrong creds.
 export async function dispatchCapi(supabase, site, evt) {
   const eventRef = evt.external_event_id || evt.order_id || null
+
+  // MONEY-TRUTH GATE — one place, all six senders. An event that MOVES money but carries no
+  // usable currency has an unknowable amount, so it is not uploaded anywhere. Previously each
+  // sender defaulted it to USD, which posted a made-up unit to six ad ledgers at once.
+  //
+  // Gated on value, not on currency alone, and that distinction is measured rather than assumed:
+  // on prod (2026-07-31) all 106 revenue-bearing ingestion events carry a currency, and all 6
+  // events missing one are exactly $0. So this gate suppresses NOTHING today — it is a guard that
+  // fires the moment a revenue event first arrives without a unit. Gating on currency alone would
+  // instead silently stop CAPI for those 6 zero-value lead conversions, where there is no amount
+  // to denominate and nothing to get wrong.
+  // NOT written to capi_deliveries, deliberately. This is a no-attempt skip, and the loop below
+  // already treats those as "skipped (no attempt) — not logged". Logging six rows here would also
+  // invent a `failed` delivery for every platform the site never configured, which reads in the UI
+  // as five broken integrations. Named on stderr instead, so the drop is visible and greppable
+  // rather than silent.
+  if (Number(evt.conversion_value) !== 0 && !hasKnownCurrency(evt.currency)) {
+    console.warn(`[capi] suppressed all senders for event ${eventRef || '(no ref)'} on site ${site.id}: revenue event has no usable currency code`)
+    return
+  }
+
   const senders = [
     ['meta', sendMetaCAPI],
     ['google', sendGoogleConversion],

@@ -6,6 +6,7 @@ import { esc } from '../lib/utils.js'
 import { requireFeature } from '../lib/plan-features.js'
 import { serializeHogQLDateRange, buildHogQLTimestampFilter } from '../lib/hogql-date.js'
 import { normalizeSource } from '../lib/source-normalizer.js'
+import { collapseCurrencies } from '../lib/currency.js'
 
 const router = Router()
 
@@ -247,10 +248,14 @@ router.get('/', validateSiteKey, async (req, res) => {
     let total = new Set(leads.filter(l => Number(l.conversions) > 0).map(l => l.id)).size
     let totalConversions = leads.reduce((s, l) => s + l.conversions, 0)
     let totalRevenue = leads.reduce((s, l) => s + l.revenue, 0)
+    // Stays 'unknown' on the degraded page-scoped fallback below: that path sums the Tinybird page,
+    // whose pipe does not select `currency`, so no unit is knowable for it. Claiming one there
+    // would be the silent-degradation class this block's own comment warns about.
+    let siteCurrency = { currency: null, currency_status: 'unknown' }
     try {
       let convQ = getSupabase()
         .from('attributed_conversions')
-        .select('distinct_id, conversion_value, conversion_type')   // (A): conversion_type to exclude refunds from COUNTS
+        .select('distinct_id, conversion_value, conversion_type, currency')   // (A): conversion_type to exclude refunds from COUNTS
         .eq('site_id', siteId)
       if (dateFrom && dateTo) convQ = convQ.gte('conversion_date', dateFrom).lte('conversion_date', dateTo)
       const { data: convAgg, error: aggErr } = await convQ
@@ -264,6 +269,13 @@ router.get('/', validateSiteKey, async (req, res) => {
         total = new Set(nonRefund.map(r => r.distinct_id)).size
         totalConversions = nonRefund.length
         totalRevenue = convRows.reduce((s, r) => s + (Number(r.conversion_value) || 0), 0)
+        // Unit for totalRevenue, taken from the SAME rows that produced it rather than from a
+        // separate site-level lookup — so the label can never describe a different set of rows
+        // than the number does. Only revenue-bearing rows carry a meaningful unit, so a $0 lead
+        // never makes the total look 'mixed'.
+        siteCurrency = collapseCurrencies(
+          convRows.filter(r => (Number(r.conversion_value) || 0) !== 0).map(r => r.currency)
+        )
       }
     } catch (e) {
       console.error('[leads] attributed_conversions totals read THREW (keeping page fallback):', e?.message || e)
@@ -275,7 +287,12 @@ router.get('/', validateSiteKey, async (req, res) => {
         leads,
         total,
         total_revenue: totalRevenue,
-        total_conversions: totalConversions
+        total_conversions: totalConversions,
+        // Unit for total_revenue, derived from the same attributed_conversions rows that produced
+        // it. currency_status lets the client suppress rather than render a symbol it cannot
+        // justify: 'mixed' means these amounts are not summable, 'unknown' means no unit is known
+        // (including the degraded page-scoped fallback, where the Tinybird pipe has no currency).
+        ...siteCurrency
       },
       error: null
     })

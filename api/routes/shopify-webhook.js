@@ -8,6 +8,44 @@ import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
 import { SHOPIFY_REFUND_TOPIC, extractShopifyRefundAmount, refundHasAmountSource, buildShopifyRefundIdempotencyKeys, buildShopifyRefundConversion, resolveOriginalDistinctIdByOrderId } from '../lib/shopify-refund.js'
 
 
+/**
+ * Read an order's amount and its unit AS A PAIR, always from one source object.
+ *
+ * Previously these were two independent fallback chains: value took total_price →
+ * current_total_price, while currency took payload.currency → payload.presentment_currency.
+ * Nothing tied them together, so a payload missing `currency` but carrying
+ * `presentment_currency` would have stamped a SHOP-currency amount with the BUYER's currency —
+ * e.g. 753.06 (USD) labelled CAD. Shopify documents total_price as being in the shop currency
+ * and `currency` as the shop currency, so those two belong together and presentment_currency
+ * never belongs with either.
+ *
+ * Order of preference, each a single object that carries its own currency_code:
+ *   1. total_price_set.shop_money          — amount + unit, self-describing
+ *   2. current_total_price_set.shop_money  — same, post-edit totals
+ *   3. total_price          + currency     — flat pair, both shop currency
+ *   4. current_total_price  + currency     — flat pair, both shop currency
+ *
+ * DELIBERATELY SHOP MONEY AT EVERY STEP, never presentment_money. Presentment amounts are
+ * denominated in whatever each individual buyer paid in; summing them across buyers produces a
+ * meaningless total, so revenue-by-source must aggregate one currency. What the buyer actually
+ * paid is a separate, order-level display concern and is not captured here.
+ *
+ * Exported for tests.
+ *
+ * @param {object} payload Shopify order webhook payload
+ * @returns {{ rawValue: unknown, rawCurrency: unknown }}
+ */
+export function readShopifyOrderAmount (payload) {
+  for (const set of [payload?.total_price_set, payload?.current_total_price_set]) {
+    const shopMoney = set?.shop_money
+    if (shopMoney?.amount !== undefined && shopMoney?.amount !== null) {
+      return { rawValue: shopMoney.amount, rawCurrency: shopMoney.currency_code }
+    }
+  }
+  const rawValue = payload?.total_price !== undefined ? payload.total_price : payload?.current_total_price
+  return { rawValue, rawCurrency: payload?.currency }
+}
+
 const router = Router()
 
 router.post('/:site_key', async (req, res) => {
@@ -112,13 +150,13 @@ router.post('/:site_key', async (req, res) => {
   }
 
   // 8. Validate value and currency before claiming idempotency
-  const rawValue = payload.total_price !== undefined ? payload.total_price : payload.current_total_price
+  const { rawValue, rawCurrency } = readShopifyOrderAmount(payload)
   const value = parseFloat(rawValue || 0)
   if (isNaN(value) || value < 0) {
     return res.status(400).json({ error: 'Invalid conversion value' })
   }
 
-  const currency = (payload.currency || payload.presentment_currency || '').trim().toUpperCase()
+  const currency = (rawCurrency || '').trim().toUpperCase()
   if (value > 0) {
     if (!currency || !/^[A-Z]{3}$/.test(currency)) {
       return res.status(400).json({ error: 'Invalid currency code' })

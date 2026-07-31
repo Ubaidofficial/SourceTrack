@@ -51,7 +51,16 @@ const REAL_ATTRIBUTED_CONVERSIONS_COLUMNS = new Set([
   // Verified real jsonb column: baseline_schema.sql:443 + migration 20260519000005.
   // nightly-attribution.js:1025-1041 writes refund_attribution ('unresolved'|'inherited')
   // into this column — the real unresolved-refund marker (see unresolved-refund-not-direct.test.js).
-  'custom_properties'
+  'custom_properties',
+  // ⚠️ APPLY-THEN-MERGE (CLAUDE.md §8). Added by migration
+  // 20260731000000_add_currency_to_attributed_conversions.sql, which as of this commit is NOT yet
+  // applied to staging or prod — verified read-only against prod 2026-07-31, where
+  // attributed_conversions has 44 columns and no `currency`.
+  // That migration MUST be applied to staging → prod BEFORE this code merges. PostgREST rejects
+  // the ENTIRE query for one unknown column, so merging first takes the whole overview endpoint
+  // to zero rows and renders "No conversions" for every site — the exact failure this allowlist
+  // was written to prevent.
+  'currency'
 ])
 const PHANTOM = 'attribution_status'
 
