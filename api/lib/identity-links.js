@@ -1,5 +1,6 @@
 import { createHash, createHmac } from 'crypto'
 import { getSupabase } from './supabase.js'
+import { isErasureSuppressed, logSuppressionBlocked } from './erasure-suppression.js'
 
 // Privacy-safe log hashing — matches existing pattern in ad-platforms.js / gsc.
 function getLogHash(value) {
@@ -50,8 +51,31 @@ export async function storeIdentityLink(siteId, userId, anonymousId, source) {
     const safeSource = validSources.has(source) ? source : 'identify'
 
     const now = new Date().toISOString()
+    const db = getSupabase()
 
-    const { error } = await getSupabase()
+    // ERASURE SUPPRESSION. This row is what resolveSubjectIds() walks to expand an erasure
+    // across every id a subject is known by — so re-creating it after an erasure does more than
+    // restore one link: it silently rebuilds the identity graph the erasure dismantled, and a
+    // FUTURE erasure would then have to rediscover ids that should no longer exist.
+    //
+    // Checked on BOTH ids. The link is a pair, and either half being suppressed means the pair
+    // must not be rebuilt — an erased anonymous_id being re-linked to a live user_id is the same
+    // reintroduction as the reverse.
+    //
+    // No email key here: this table holds no email, so the id keys are the whole check.
+    // Both checked in PARALLEL, not sequentially: on a cache miss the sequential form costs two
+    // round trips before a write that is itself fire-and-forget, doubling the delay on every
+    // cold identity link for no benefit.
+    const [aidSuppressed, uidSuppressed] = await Promise.all([
+      isErasureSuppressed(db, { siteId, subjectId: aid }),
+      isErasureSuppressed(db, { siteId, subjectId: uid })
+    ])
+    if (aidSuppressed || uidSuppressed) {
+      logSuppressionBlocked('site_identity_links', { siteId, subjectId: aid })
+      return { stored: false, suppressed: true }
+    }
+
+    const { error } = await db
       .from('site_identity_links')
       .upsert({
         site_id: siteId,

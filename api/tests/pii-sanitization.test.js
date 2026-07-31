@@ -297,6 +297,16 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
           }
         }
       }
+      if (table === 'erasure_suppression') {
+        // Nobody is suppressed in these fixtures — these tests are about SANITIZATION, not
+        // erasure. The branch is required rather than optional: storeIdentityLink now consults
+        // suppression first, and the generic fallthrough below has no .contains(), so the
+        // lookup would throw and the identity write would fail CLOSED — failing these tests for
+        // a reason that has nothing to do with what they assert.
+        return {
+          select: () => ({ eq: () => ({ contains: () => ({ limit: async () => ({ data: [], error: null }) }) }) })
+        }
+      }
       return {
         select: () => ({ eq: () => ({ single: async () => ({ data: null, error: null }) }) })
       }
@@ -793,6 +803,11 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     }
     const res = makeMockRes()
     await identify(req, res)
+    // identify() fires storeIdentityLink WITHOUT awaiting it, so the upsert lands on a later
+    // tick. That was invisible while the write was the first await inside; it now consults
+    // erasure suppression first, which adds a tick. Flush the microtask queue rather than
+    // depending on how many awaits happen to precede the write.
+    await new Promise(resolve => setImmediate(resolve))
 
     // PostHog person writes decommissioned: neither ph.capture($identify) nor ph.alias fires.
 

@@ -32,7 +32,18 @@
 // live against an empty table.
 
 import { createHash } from 'crypto'
+import NodeCache from 'node-cache'
 import { normalizeVolunteeredEmail } from './volunteered-identity.js'
+
+// 5-minute TTL, matching siteCache / proxyCache / trackerSiteCache — the established figure for
+// "tenant state that changes rarely" in this codebase. Suppression only ever grows within a TTL
+// window (a record is added by an erasure, never removed except by site deletion), so the worst
+// a stale negative can do is let PII through for up to 5 minutes after an erasure. A stale
+// POSITIVE is harmless: it suppresses someone who is genuinely suppressed.
+const suppressionCache = new NodeCache({ stdTTL: 300, checkperiod: 60 })
+
+// Test seam. Not exported into the hot path — callers use isErasureSuppressed().
+export function __resetSuppressionCache () { suppressionCache.flushAll() }
 
 /**
  * Hash an email for the suppression record.
@@ -132,4 +143,108 @@ export async function recordErasureSuppression (supabase, { siteId, subjectIds, 
   }
   console.log(`[erasure-suppression] recorded site=${siteId} ids=${ids.length} email_keys=${emailHashes.length} source=${source}`)
   return { written: true }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENFORCEMENT (PR 2). Everything above writes records; this reads them.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Is this subject suppressed on this site?
+ *
+ * Matches on EITHER key: the id the write is keyed on, or the hash of the email it carries.
+ * Either alone is insufficient — an erased person returning on a new device has a new
+ * anonymous_id (only the email matches), and one who never volunteered an email has no email
+ * key at all (only the id matches).
+ *
+ * ── FAILS CLOSED ────────────────────────────────────────────────────────────
+ * If the lookup errors we return TRUE (suppressed). The alternative — assuming "not suppressed"
+ * when we cannot tell — silently rewrites PII into an erased subject on exactly the read that
+ * was supposed to prevent it, and leaves no trace that anything was skipped. The cost of failing
+ * closed is bounded and cheap here: every caller in PR 2 is a non-blocking identity ENRICHMENT
+ * write (volunteered_identity, site_identity_links) or an operator action that surfaces an
+ * error. None of them is on the visitor-facing critical path, so a Supabase outage degrades
+ * identity enrichment rather than breaking ingestion.
+ *
+ * ── A FAIL-CLOSED RESULT IS NEVER CACHED ────────────────────────────────────
+ * Caching it would let one transient error suppress a whole site for a full TTL. Only real
+ * answers — from a successful query — are cached.
+ *
+ * ── A CACHE MISS IS NOT AN ANSWER ───────────────────────────────────────────
+ * A miss falls through to the database. A cold start therefore behaves exactly like a warm one,
+ * just slower; it must never read as "not suppressed", which would make every deploy a window
+ * where erased subjects are unprotected.
+ *
+ * @param {object} supabase service-role client
+ * @param {object} args
+ * @param {string} args.siteId
+ * @param {string|null} [args.subjectId] distinct_id / anonymous_id the write is keyed on
+ * @param {string|null} [args.email] raw email the write carries; hashed here
+ * @returns {Promise<boolean>} true = suppressed (do not write PII)
+ */
+export async function isErasureSuppressed (supabase, { siteId, subjectId = null, email = null }) {
+  if (!siteId) return false
+  const emailHash = hashSuppressedEmail(email)
+  const id = typeof subjectId === 'string' && subjectId.length > 0 ? subjectId : null
+  // No key to check against — nothing to match, so nothing to suppress. This is NOT a
+  // fail-closed case: a write with neither an id nor a usable email carries no subject.
+  if (!id && !emailHash) return false
+
+  const keys = []
+  if (id) keys.push({ column: 'subject_ids', value: id, cacheKey: `sup:${siteId}:id:${id}` })
+  if (emailHash) keys.push({ column: 'email_hashes', value: emailHash, cacheKey: `sup:${siteId}:em:${emailHash}` })
+
+  // Any cached positive short-circuits: suppression is a logical OR across keys.
+  const uncached = []
+  for (const k of keys) {
+    const hit = suppressionCache.get(k.cacheKey)
+    if (hit === true) return true
+    if (hit === undefined) uncached.push(k)
+  }
+  if (uncached.length === 0) return false   // every key answered false from cache
+
+  const results = await Promise.all(uncached.map(async (k) => {
+    // try/catch, not just an `error` check. A client can THROW rather than return an error —
+    // a broken/partial client, a network layer that rejects, an unexpected shape. Without this
+    // the exception escapes isErasureSuppressed entirely and the fail-closed branch below never
+    // runs, so the guard would be bypassed by exactly the failures it exists to survive.
+    try {
+      const { data, error } = await supabase
+        .from('erasure_suppression')
+        .select('id')
+        .eq('site_id', siteId)
+        .contains(k.column, [k.value])
+        .limit(1)
+      if (error) return { k, error }
+      return { k, suppressed: Array.isArray(data) && data.length > 0 }
+    } catch (e) {
+      return { k, error: { message: e?.message || String(e) } }
+    }
+  }))
+
+  let degraded = false
+  let suppressed = false
+  for (const r of results) {
+    if (r.error) { degraded = true; continue }   // deliberately NOT cached
+    suppressionCache.set(r.k.cacheKey, r.suppressed)
+    if (r.suppressed) suppressed = true
+  }
+
+  if (suppressed) return true
+  if (degraded) {
+    console.error(`[erasure-suppression] check DEGRADED site=${siteId} — failing CLOSED (write skipped); suppression state unknown`)
+    return true
+  }
+  return false
+}
+
+/**
+ * Log that suppression stopped a write. Matches the `[module] action reason=value` shape used by
+ * privacy-suppression.js, so an operator can grep one convention across both guards.
+ *
+ * Guards that fire invisibly cannot be distinguished from guards that never fire — which is how
+ * a broken guard survives.
+ */
+export function logSuppressionBlocked (surface, { siteId, subjectId = null, reason = 'erased_subject' }) {
+  console.warn(`[erasure-suppression] blocked surface=${surface} reason=${reason} site=${siteId}${subjectId ? ` subject=${subjectId}` : ''}`)
 }

@@ -7,6 +7,7 @@ import { requireFeature } from '../lib/plan-features.js'
 import { serializeHogQLDateRange, buildHogQLTimestampFilter } from '../lib/hogql-date.js'
 import { normalizeSource } from '../lib/source-normalizer.js'
 import { collapseCurrencies } from '../lib/currency.js'
+import { isErasureSuppressed, logSuppressionBlocked } from '../lib/erasure-suppression.js'
 
 const router = Router()
 
@@ -457,6 +458,24 @@ router.patch('/:leadId/qualify', validateSiteKey, async (req, res) => {
     }
     // Legacy boolean callers (no explicit status) map to qualified/unqualified.
     const newStatus = VALID.includes(status) ? status : (req.body.qualified !== false ? 'qualified' : 'unqualified')
+
+    // ERASURE SUPPRESSION. This one is an OPERATOR action, not ingestion — reachable from a
+    // stale dashboard tab listing a lead who has since been erased. Re-qualifying would rebuild
+    // a lead_qualifications row (and, below, stamp status onto attributed_conversions) for a
+    // subject who asked to be forgotten.
+    //
+    // SURFACED, NOT SILENTLY SKIPPED — unlike the ingestion paths, which drop the write and
+    // return 200 because no human is watching. A person clicked this button and is waiting for
+    // a result; a silent no-op would leave them re-clicking a control that appears broken. 409
+    // Conflict: the request is well-formed, but conflicts with the subject's erasure.
+    if (await isErasureSuppressed(getSupabase(), { siteId: req.site.id, subjectId: leadId })) {
+      logSuppressionBlocked('lead_qualifications', { siteId: req.site.id, subjectId: leadId })
+      return res.status(409).json({
+        success: false,
+        data: null,
+        error: 'This visitor was erased under a data-deletion request and can no longer be qualified.'
+      })
+    }
 
     const { data, error } = await getSupabase()
       .from('lead_qualifications')

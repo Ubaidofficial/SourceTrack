@@ -11,6 +11,13 @@ import assert from 'node:assert/strict'
 import { redactPiiFromObject } from '../lib/utils.js'
 import { normalizeVolunteeredName, persistVolunteeredIdentity } from '../lib/volunteered-identity.js'
 
+// persistVolunteeredIdentity() now consults erasure suppression before writing, so every fake
+// client here must be able to answer that lookup. Returning no rows = "not suppressed"; omit it
+// and the lookup throws, the write fails CLOSED, and these tests fail for an unrelated reason.
+const notSuppressed = {
+  select: () => ({ eq: () => ({ contains: () => ({ limit: async () => ({ data: [], error: null }) }) }) })
+}
+
 // ── (1) PERSIST: the scrubber does NOT run on the identify channel ───────────
 // The whole capture path depends on email/name reaching the identify handler
 // intact. redactPiiFromObject is NOT imported or called by identify.js; this
@@ -23,7 +30,7 @@ test('identify body is NOT scrubbed here — email/name are preserved for captur
   const body = { site_key: 'sk', anonymous_id: 'v_1', email: 'Heidi@Sunnydale.example', name: '  Heidi Osei  ' }
   // The helper validates + normalizes without a DB by injecting a fake client.
   const writes = []
-  const fakeSupabase = { from: () => ({ upsert: async (row) => { writes.push(row); return { error: null } } }) }
+  const fakeSupabase = { from: () => ({ ...notSuppressed, upsert: async (row) => { writes.push(row); return { error: null } } }) }
   return persistVolunteeredIdentity({
     siteId: 's1', distinctId: body.anonymous_id, email: body.email, name: body.name, supabase: fakeSupabase
   }).then(res => {
@@ -38,7 +45,7 @@ test('identify body is NOT scrubbed here — email/name are preserved for captur
 
 test('persist writes NOTHING when neither field is valid (no empty rows)', async () => {
   let called = false
-  const fakeSupabase = { from: () => ({ upsert: async () => { called = true; return { error: null } } }) }
+  const fakeSupabase = { from: () => ({ ...notSuppressed, upsert: async () => { called = true; return { error: null } } }) }
   const res = await persistVolunteeredIdentity({
     siteId: 's1', distinctId: 'v_1', email: 'not-an-email', name: '   ', supabase: fakeSupabase
   })
@@ -48,7 +55,7 @@ test('persist writes NOTHING when neither field is valid (no empty rows)', async
 
 test('persist is a two-field allowlist — a traits blob or extra keys never reach the row', async () => {
   const writes = []
-  const fakeSupabase = { from: () => ({ upsert: async (row) => { writes.push(row); return { error: null } } }) }
+  const fakeSupabase = { from: () => ({ ...notSuppressed, upsert: async (row) => { writes.push(row); return { error: null } } }) }
   // Even if a caller passed extra fields, the helper only ever forwards email+name.
   await persistVolunteeredIdentity({
     siteId: 's1', distinctId: 'v_1', email: 'a@b.example', name: 'A B',
