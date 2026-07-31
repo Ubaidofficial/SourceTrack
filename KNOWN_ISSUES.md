@@ -451,7 +451,7 @@ three different formats.
 | `api/lib/abuse-guards.js` | zero references | delete |
 | `api/lib/rate-limit.js` `publicDashboardLimit` / `createPublicDashboardLimit` | orphaned by #323; **behaviour tests still assert on it** | delete limiter **and** the three tests together — a suite asserting on dead code will confuse a future CI failure |
 | `api/lib/hogql-date.js` | PostHog-era **name**, ~8 live importers | **rename, do not delete** |
-| `api/lib/url-normalization.js` vs `url-normalize.js` | possible duplicate | audit and merge |
+| `api/lib/url-normalization.js` vs `url-normalize.js` | ✅ **RESOLVED — not a duplicate.** Two normalizers **by design**, different semantics, both load-bearing on persisted output. Reasoning lives in the two file headers (`url-normalize.js:1` · `url-normalization.js:1`) — read those, not a summary here. | **do NOT merge.** Guarded by `api/tests/url-normalizer-drift-guard.test.js` (fails on a **third** normalizer; registered in `qa:identity:unit`) |
 | `supabase/migrations/20260620134500_add_site_support_notes.sql` | dangling — applied to neither DB | decide: apply or remove |
 | `supabase/schema.sql` | 1 KB, stale (see issue 1) | regenerate or delete |
 | `site_annotations` / `annotations` tables | routes deleted in #315, tables remain | DDL — needs explicit founder go-ahead |

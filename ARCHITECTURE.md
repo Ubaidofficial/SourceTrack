@@ -113,7 +113,7 @@ Shared helpers: `dashboard/src/lib/api.js` · `dashboard/src/lib/supabase.js` ·
 - `supabase/schema.sql` — **stale** (migration-driven schema; `KNOWN_ISSUES.md §1`).
 - `api/lib/hogql-date.js` — PostHog-era **name**, still imported by 8 files → **rename, don't delete** (it's live code).
 - `api/lib/abuse-guards.js` — vestigial (free-tier abuse enforcement moved to a Postgres trigger `enforce_free_tier_abuse_guards`); JS has ~zero live refs.
-- `api/lib/url-normalization.js` **and** `api/lib/url-normalize.js` both exist — possible duplicate, audit candidate.
+- ✅ **RESOLVED — not a duplicate.** `api/lib/url-normalization.js` **and** `api/lib/url-normalize.js` are TWO path-normalizers **by design**, with different semantics, both load-bearing on persisted output. **Do NOT merge them.** Reasoning is in the two file headers (`url-normalize.js:1` money-rail, case-PRESERVED · `url-normalization.js:1` GSC join, LOWERCASED) — read those, not a summary here. Enforced by `api/tests/url-normalizer-drift-guard.test.js`, which fails if a **third** normalizer appears.
 - `dashboard/src/components/Layout.jsx` — `/debugger` title-map entry is dead (no route); removed in a separate PR.
 - `supabase/migrations/20260620134500_add_site_support_notes.sql` — dangling migration (applied to neither env; founder apply-or-delete pending, `KNOWN_ISSUES.md §17`).
 - `api/middleware/rate-limit.js` — `publicDashboardLimit` / `createPublicDashboardLimit` orphaned by #323 (no production caller; behaviour tests still exercise them).
