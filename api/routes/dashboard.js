@@ -212,6 +212,8 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       const isUnresolvedRefund = isRefund && r.custom_properties?.refund_attribution === 'unresolved'
 
       totalRevenue += val
+      // Push even when r.currency is null: an undenominated revenue row is exactly what makes
+      // the total 'partial' rather than 'ok'. Skipping it is the bug this replaced.
       if (val !== 0) revenueCurrencies.push(r.currency)
       if (!isRefund) totalConversions++            // (A)
 
@@ -435,9 +437,10 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         kpis: {
           revenue: totalRevenue,
           revenue_prev: prevRevenue,
-          // Unit for every money KPI in this block. 'mixed' means these amounts span currencies
-          // and the total is not meaningful; 'unknown' means no row carried a unit. In both cases
-          // the client must suppress or label rather than pick a symbol.
+          // Unit for every money KPI in this block. 'mixed' = these amounts span currencies and
+          // the total is not meaningful; 'partial' = one currency, but some amount carried no
+          // unit at all; 'unknown' = nothing carried a unit. Only 'ok' may be rendered with a
+          // symbol — the other three must be suppressed or labelled.
           ...collapseCurrencies(revenueCurrencies),
           conversions: totalConversions,
           conversions_prev: prevConversions,

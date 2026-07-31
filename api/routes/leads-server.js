@@ -271,8 +271,9 @@ router.get('/', validateSiteKey, async (req, res) => {
         totalRevenue = convRows.reduce((s, r) => s + (Number(r.conversion_value) || 0), 0)
         // Unit for totalRevenue, taken from the SAME rows that produced it rather than from a
         // separate site-level lookup — so the label can never describe a different set of rows
-        // than the number does. Only revenue-bearing rows carry a meaningful unit, so a $0 lead
-        // never makes the total look 'mixed'.
+        // than the number does. $0 rows are filtered out (no unit to be missing); revenue-bearing
+        // rows are ALL passed through, nulls included, so one undenominated amount reports
+        // 'partial' instead of hiding inside an 'ok'.
         siteCurrency = collapseCurrencies(
           convRows.filter(r => (Number(r.conversion_value) || 0) !== 0).map(r => r.currency)
         )
