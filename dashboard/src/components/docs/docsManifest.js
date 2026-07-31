@@ -9,7 +9,7 @@
 //  - `description` is the ONE-LINE card/search copy — keep it to a single line.
 import {
   BookOpen, Rocket, Code2, LifeBuoy, Terminal, Braces, MousePointerClick,
-  Upload, UserCheck, Webhook, DollarSign, ShieldCheck
+  Upload, UserCheck, Webhook, DollarSign, ShieldCheck, Bot
 } from 'lucide-react'
 
 export const DOCS_MANIFEST = [
@@ -28,6 +28,7 @@ export const DOCS_MANIFEST = [
   { to: '/docs/platforms/stripe', title: 'Stripe (Manual)', description: 'Stitch Stripe checkouts, subscriptions, and refunds to sources.', section: 'platforms', logoDomain: 'stripe.com', keywords: ['stripe', 'checkout', 'subscription', 'refund', 'webhook', 'billing', 'payments'] },
 
   // ── Help & Security ─────────────────────────────────────────────────────────
+  { to: '/docs/mcp', title: 'AI assistants (MCP)', description: 'Connect Claude or ChatGPT to your setup diagnostics, read-only.', section: 'help', icon: Bot, keywords: ['mcp', 'model context protocol', 'ai', 'claude', 'chatgpt', 'assistant', 'agent', 'tools', 'remote server'] },
   { to: '/docs/troubleshooting', title: 'Troubleshooting', description: 'Fix missing conversions, pageviews, or domain mismatches.', section: 'help', icon: LifeBuoy, keywords: ['troubleshooting', 'debug', 'help', 'not working', 'missing', 'no data', 'fix'] },
   { to: '/developers', title: 'Developer Portal', description: 'REST API specs, tracker config, and payload references.', section: 'help', icon: Terminal, keywords: ['developer', 'api', 'portal', 'reference', 'sdk'] },
 

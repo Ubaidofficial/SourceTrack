@@ -7,6 +7,7 @@ import {
   AUTH_NONE, AUTH_USER_JWT, AUTH_API_KEY
 } from './lib/tools.js'
 import { SCOPE_READ_DIAGNOSTICS, SCOPE_READ_VOLUME } from '../api/lib/api-key-scopes.js'
+import { MCP_TOOL_CATALOG, MCP_TOOL_CATALOG_BY_NAME } from '../dashboard/src/lib/mcpTools.js'
 
 // Every tool declares its auth model. The DECLARATION decides which credential the
 // dispatcher hands it — the token is never inspected to guess. See the long note in
@@ -28,11 +29,10 @@ import { SCOPE_READ_DIAGNOSTICS, SCOPE_READ_VOLUME } from '../api/lib/api-key-sc
 // Exported so api/tests/mcp-tool-policy-guard.test.js can assert against the REAL array
 // rather than a copy — the same shape api/routes/capi.js exports CAPI_PLATFORMS for.
 // tools/list is not a substitute: it strips the very fields that guard checks.
-export const TOOLS = [
+const TOOL_PROTOCOL = [
   {
     name: 'detect_platform',
     auth: AUTH_NONE,
-    description: 'Detect the CMS or platform (Shopify, WordPress, Webflow, GTM) of a website domain',
     inputSchema: {
       type: 'object',
       properties: {
@@ -45,7 +45,6 @@ export const TOOLS = [
   {
     name: 'get_install_snippet',
     auth: AUTH_NONE,
-    description: 'Get the tracking script snippet and step-by-step install instructions for a target platform',
     inputSchema: {
       type: 'object',
       properties: {
@@ -59,7 +58,6 @@ export const TOOLS = [
   {
     name: 'verify_installation',
     auth: AUTH_USER_JWT,
-    description: 'Verify if tracking script events are active on a site. Note: Live backend status API requires an authenticated user session Bearer token (auth_token or SOURCETRACK_AUTH_TOKEN env var)',
     inputSchema: {
       type: 'object',
       properties: {
@@ -73,7 +71,6 @@ export const TOOLS = [
     name: 'get_workspace_context',
     auth: AUTH_API_KEY,
     scope: SCOPE_READ_DIAGNOSTICS,
-    description: 'Identify the site this API key reads: site_id, domain, timezone, attribution window, onboarding state. Configuration only, no metrics — call this first so later answers can name which site and timezone they refer to.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -86,7 +83,6 @@ export const TOOLS = [
     name: 'get_site_health',
     auth: AUTH_API_KEY,
     scope: SCOPE_READ_DIAGNOSTICS,
-    description: 'Is the tracker plumbed in? Reports script_detected, last_seen_at, hours since last seen, onboarding state and plan. Answerable without the analytics read store, so it still works when that store is the thing that is broken.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -99,7 +95,6 @@ export const TOOLS = [
     name: 'get_data_quality',
     auth: AUTH_API_KEY,
     scope: SCOPE_READ_DIAGNOSTICS,
-    description: 'Latest result per check from the nightly data-quality job (status, value, threshold, message). Returns has_data:false when the job has never run for this site — never an all-clear it cannot substantiate.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -112,7 +107,6 @@ export const TOOLS = [
     name: 'debug_data_flow',
     auth: AUTH_API_KEY,
     scope: SCOPE_READ_DIAGNOSTICS,
-    description: 'Attribution COVERAGE over a window: how many recorded conversions carry a usable source, and what share arrived UTM/click-id tagged. Pipeline completeness only — it does not say which channel deserves credit and returns no revenue.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -126,7 +120,6 @@ export const TOOLS = [
     name: 'verify_events',
     auth: AUTH_API_KEY,
     scope: SCOPE_READ_DIAGNOSTICS,
-    description: 'Is the ingest rail receiving events? Returns the most recent event timestamp and minutes since. If the analytics read store is unreachable this fails explicitly (READ_STORE_UNAVAILABLE) rather than reporting zero events — a SourceTrack read failure must never be read as broken customer tracking.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -139,7 +132,6 @@ export const TOOLS = [
     name: 'get_leads_volume',
     auth: AUTH_API_KEY,
     scope: SCOPE_READ_VOLUME,
-    description: 'Lead COUNTS over a window, plus a breakdown by one dimension (source, medium or campaign). Volume only: returns no revenue, no cost and no cost-derived metric, and takes no attribution-model argument — dimension values are always the FIRST touch, echoed back as "touch":"first" on every row. The breakdown is a complete partition: untagged traffic is reported as its own "(untagged)" bucket rather than omitted. distinct_leads (unique converting visitors) and breakdown.total (conversion events) are different units and are not expected to match.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -154,7 +146,6 @@ export const TOOLS = [
     name: 'get_campaign_volume',
     auth: AUTH_API_KEY,
     scope: SCOPE_READ_VOLUME,
-    description: 'Per-campaign VOLUME over a window: distinct visitors and lead-type conversions per campaign. Volume only: there is no revenue, cost, ROAS or CPL column, and no attribution-model argument — campaign values are always the FIRST touch, echoed back as "touch":"first" on every row. Untagged traffic is included as the "(untagged)" campaign so the totals are a complete partition. This tool ranks campaigns by volume and says nothing about which campaign caused or deserves credit for anything.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -166,9 +157,79 @@ export const TOOLS = [
   }
 ]
 
+// The tool contract = protocol fields (above) + human-readable copy, which lives in
+// dashboard/src/lib/mcpTools.js because the customer docs page at /docs/mcp needs the same
+// strings and dashboard/src cannot import from here (#252 build-root boundary — see the
+// note in that file). Merging by name rather than duplicating means the docs page and what
+// an MCP client is told are the SAME string, not two that agree today.
+//
+// The two assertions below are the whole point of doing it as an import: a name in one
+// list and not the other throws at MODULE LOAD, so the server refuses to start rather than
+// serving a tool with no description or documenting a tool that does not exist. A sync
+// test could only report the drift afterwards.
+export const TOOLS = TOOL_PROTOCOL.map((tool) => {
+  const copy = MCP_TOOL_CATALOG_BY_NAME[tool.name]
+  if (!copy) {
+    throw new Error(
+      `mcp/server.js: tool '${tool.name}' has no entry in dashboard/src/lib/mcpTools.js. ` +
+      'Add its description there — it is what /docs/mcp renders.'
+    )
+  }
+  return { ...tool, description: copy.description }
+})
+
+for (const { name } of MCP_TOOL_CATALOG) {
+  if (!TOOL_PROTOCOL.some(t => t.name === name)) {
+    throw new Error(
+      `dashboard/src/lib/mcpTools.js documents '${name}', which mcp/server.js does not serve. ` +
+      'Remove it there, or add its protocol entry here.'
+    )
+  }
+}
+
+// ── Protocol versions this server speaks ─────────────────────────────────────────────
+// MODERN is revision 2026-07-28: stateless, per-request `_meta`, no initialize handshake,
+// no sessions, no GET stream. LEGACY are the initialize-handshake revisions; 2024-11-05 is
+// what `initialize` below has always answered with and is what Claude Desktop/Code use
+// today, so it stays exactly as it is.
+export const MODERN_PROTOCOL_VERSION = '2026-07-28'
+export const LEGACY_PROTOCOL_VERSIONS = Object.freeze([
+  '2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'
+])
+export const SUPPORTED_PROTOCOL_VERSIONS = Object.freeze([
+  MODERN_PROTOCOL_VERSION, ...LEGACY_PROTOCOL_VERSIONS
+])
+
+export const SERVER_INFO = Object.freeze({ name: 'sourcetrack-mcp', version: '1.0.0' })
+
 export function processRpcMessage(msg, config = {}) {
   const { id, method, params } = msg
   const apiBaseUrl = config.apiBaseUrl || process.env.SOURCETRACK_API_URL || 'https://api.srctk.com'
+
+  // Modern-era discovery. The spec is unambiguous — "Servers MUST implement it" — and it
+  // is the only way a modern client learns which versions we speak without guessing. It
+  // lives here rather than in the HTTP route so stdio gets it too: a modern stdio client
+  // probes with server/discover and falls back to initialize on any non-modern error, so a
+  // server that answers it on one transport and not the other would be detected as two
+  // different eras depending on how it was reached.
+  if (method === 'server/discover') {
+    return {
+      jsonrpc: '2.0',
+      id,
+      result: {
+        resultType: 'complete',
+        supportedVersions: [...SUPPORTED_PROTOCOL_VERSIONS],
+        capabilities: { tools: {} },
+        _meta: { 'io.modelcontextprotocol/serverInfo': { ...SERVER_INFO } },
+        instructions:
+          'SourceTrack attribution diagnostics. Tools report installation and pipeline ' +
+          'state, plus lead and campaign COUNTS. No revenue, cost, ROAS or attribution-' +
+          'model figures are available through this server by design. Key-authed tools ' +
+          'read exactly one site — the site is resolved from the API key, never from a ' +
+          'caller-supplied id.'
+      }
+    }
+  }
 
   if (method === 'initialize') {
     return {

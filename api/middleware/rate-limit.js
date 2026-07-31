@@ -44,6 +44,14 @@ const TRACKER_ID_GLOBAL_IP_MAX = getEnvInt('ST_RATE_TRACKER_ID_GLOBAL_IP_PER_MIN
 const MARKETING_FORM_IP_MAX     = getEnvInt('ST_RATE_MARKETING_FORM_IP_PER_MIN', process.env.NODE_ENV === 'test' ? 3 : 5)
 const MARKETING_FORM_GLOBAL_MAX = getEnvInt('ST_RATE_MARKETING_FORM_GLOBAL_PER_MIN', process.env.NODE_ENV === 'test' ? 5 : 300)
 
+// POST /api/mcp — public, unauthenticated at the transport layer, and an AI client makes
+// many small calls in a burst (tools/list then several tools/call). So the per-IP ceiling
+// is higher than the marketing form's: this is a working endpoint, not a form submission.
+// The global ceiling exists for the case the per-IP one cannot catch — a distributed
+// scrape of tools/list from many addresses.
+const MCP_IP_MAX     = getEnvInt('ST_RATE_MCP_IP_PER_MIN', process.env.NODE_ENV === 'test' ? 3 : 120)
+const MCP_GLOBAL_MAX = getEnvInt('ST_RATE_MCP_GLOBAL_PER_MIN', process.env.NODE_ENV === 'test' ? 5 : 2000)
+
 const IDENTIFY_VISITOR_MAX = getEnvInt('ST_RATE_IDENTIFY_VISITOR_PER_MIN', process.env.NODE_ENV === 'test' ? 5 : 120)
 const IDENTIFY_IP_MAX      = getEnvInt('ST_RATE_IDENTIFY_IP_PER_MIN', process.env.NODE_ENV === 'test' ? 10 : 1200)
 const IDENTIFY_SITE_MAX    = getEnvInt('ST_RATE_IDENTIFY_SITE_PER_MIN', process.env.NODE_ENV === 'test' ? 15 : 5000)
@@ -457,6 +465,38 @@ export const marketingFormGlobalIpLimit = rateLimit({
   skip: (req) => req.method === 'OPTIONS',
   keyGenerator: (req) => {
     const key = 'marketing:global'
+    req.rateLimitKey = key
+    return key
+  },
+  handler: makeRateLimitHandler('global-ip')
+})
+
+// ── MCP Streamable HTTP transport ────────────────────────────────────────────────────
+// Same per-IP + global-IP pair as the marketing form, for the same reason: a public
+// endpoint with no transport-layer credential needs a ceiling that does not depend on
+// identifying the caller. GET/DELETE are not skipped — they are answered 405 by the route
+// and an attacker hammering them should still meter.
+export const mcpIpLimit = rateLimit({
+  windowMs: 60_000,
+  max: MCP_IP_MAX,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const ip = resolveClientIp(req)
+    const key = `mcp:ip:${hashKeyPart(ip)}`
+    req.rateLimitKey = key
+    return key
+  },
+  handler: makeRateLimitHandler('ip')
+})
+
+export const mcpGlobalIpLimit = rateLimit({
+  windowMs: 60_000,
+  max: MCP_GLOBAL_MAX,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const key = 'mcp:global'
     req.rateLimitKey = key
     return key
   },

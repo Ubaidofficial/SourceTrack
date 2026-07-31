@@ -39,6 +39,7 @@ import DocsFramer from './pages/docs/DocsFramer'
 import DocsShopify from './pages/docs/DocsShopify'
 import DocsStripe from './pages/docs/DocsStripe'
 import DocsTroubleshooting from './pages/docs/DocsTroubleshooting'
+import DocsMCP from './pages/docs/DocsMCP'
 
 // Developer Docs
 import DevelopersHome from './pages/developers/DevelopersHome'
@@ -409,6 +410,7 @@ export default function App() {
               <Route path="/docs/platforms/framer" element={<DocsFramer />} />
               <Route path="/docs/platforms/shopify" element={<DocsShopify />} />
               <Route path="/docs/platforms/stripe" element={<DocsStripe />} />
+              <Route path="/docs/mcp" element={<DocsMCP />} />
               <Route path="/docs/troubleshooting" element={<DocsTroubleshooting />} />
 
               {/* Developer docs — no auth required */}
