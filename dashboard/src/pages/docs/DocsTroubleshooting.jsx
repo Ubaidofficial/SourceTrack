@@ -36,9 +36,9 @@ const TROUBLESHOOTING_ITEMS = [
   },
   {
     symptom: 'Traffic shows as "Direct/None" instead of organic/referral',
-    cause: 'The referrer header was stripped when transitioning from HTTPS to HTTP, or the traffic is coming from a private window/ad-network click without UTM parameters.',
-    fix: 'Ensure your site has HTTPS enabled and uses appropriate Referrer-Policy headers. Ensure you use standard UTM campaign variables for custom acquisition campaigns.',
-    verify: 'Inspect the document.referrer value in the console on initial page entry to verify it is not empty.'
+    cause: 'Not the cause: the site that linked to you needing our script. Referral detection reads document.referrer, which the visitor\'s own browser sets as it follows the link, so the referring site sends us nothing and needs nothing installed. What actually empties it is the hop: a strict Referrer-Policy on the referring site (no-referrer or same-origin, which many large sites and most email providers set deliberately), an HTTPS page linking to an HTTP one (browsers drop the referrer on that downgrade), or a link opened from a native app, chat client or PDF viewer that never sets one. Private windows and untagged ad clicks land the same way.',
+    fix: 'Fix the half you control: serve your own site over HTTPS so inbound HTTPS links keep their referrer, and put UTM parameters on every campaign, email and partner link you own — a UTM survives all of the above because it travels in the URL rather than in a header. The other half is not fixable, and should not be treated as a bug: when a referring site sets no-referrer or a visitor arrives from an app that strips it, that visit is genuinely indistinguishable from someone typing your address in. It belongs in Direct, and no analytics tool can recover it without inventing a source.',
+    verify: 'On the landing page of a fresh visit, read document.referrer in the console — empty means the browser sent nothing, so the gap is upstream of us, not a tracking failure. To tell "legitimately Direct" from "broken", watch the shape rather than the level: a steady share of Direct is normal, while a source that collapses to Direct suddenly, or Direct jumping right after a site or link change, points at a real regression worth chasing.'
   },
   {
     symptom: 'Shopify order revenue does not stitch to journeys',
