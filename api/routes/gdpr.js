@@ -16,6 +16,7 @@ import { getStructuralLimits } from '../lib/plan-features.js'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import { eraseSubjectFromTinybird, eraseSiteFromTinybird } from '../../tinybird/adapter/erase.js'
 import { fetchSubjectEventsFromTinybird } from '../../tinybird/adapter/export.js'
+import { collectSuppressionEmailHashes, recordErasureSuppression } from '../lib/erasure-suppression.js'
 
 export const gdprRouter = Router()
 
@@ -234,6 +235,13 @@ gdprRouter.delete('/visitor', async (req, res) => {
     // identify(). Keyed by distinct_id (the subject key). This is the PII store
     // Named Contacts adds; per CLAUDE.md §6.5 it MUST be erased here in the same
     // PR that creates it.
+    // Capture the email keys for the suppression record BEFORE the delete below removes them.
+    // Erasure is keyed on anonymous_id/distinct_id and NEVER on email; the email exists only in
+    // volunteered_identity. Read after the delete, this returns nothing and the identify()-replay
+    // key is gone for good — the one key that catches a returning subject on a new device (new
+    // anonymous_id, same email). Ordering here is load-bearing, not stylistic.
+    const suppressionEmailHashes = await collectSuppressionEmailHashes(supabase, site.id, subjectIds)
+
     const { count: viCount, error: viErr } = await supabase
       .from('volunteered_identity')
       .delete({ count: 'exact' })
@@ -250,6 +258,27 @@ gdprRouter.delete('/visitor', async (req, res) => {
     const { host, adminToken, readToken } = tinybirdEnv()
     const erase = await _eraseSubject({ host, adminToken, readToken, siteId: site.id, subjectId: anonymous_id, confirm: true })
     await logErasure(supabase, { subjectId: anonymous_id, siteId: site.id, result: erase })
+
+    // Suppression record — written ONLY when PII was genuinely removed. This is the distinction
+    // from erasure_log, which records attempts (dry-runs and failures) and would therefore
+    // suppress people who were never erased.
+    //
+    // The gate is "did anything actually get deleted", NOT "did the Tinybird job report
+    // executed". Both branches below that can legitimately claim a deletion reach here:
+    //   * full success — Supabase rows and/or Tinybird events matched
+    //   * PARTIAL (Tinybird did not erase, Supabase rows did) — the volunteered_identity row IS
+    //     gone, so the subject's PII can be re-entered in the gap before the retry. Not
+    //     suppressing here would leave exactly the hole this mechanism exists to close.
+    // The no-match branch (nothing deleted in either store) deliberately does NOT reach here.
+    const tbMatchedForSuppression = tinybirdMatchedTotal(erase) ?? 0
+    if (supabaseTotal > 0 || tbMatchedForSuppression > 0) {
+      await recordErasureSuppression(supabase, {
+        siteId: site.id,
+        subjectIds,
+        emailHashes: suppressionEmailHashes,
+        source: 'visitor'
+      })
+    }
 
     if (eraseExecuted(erase.status)) {
       const tbMatched = tinybirdMatchedTotal(erase)
@@ -312,6 +341,24 @@ gdprRouter.delete('/visitor', async (req, res) => {
 // 500, a real access failure as 403). Reads the SAME rows the eraser would delete
 // (buildDeleteCondition, reused) using the READ token only.
 // ────────────────────────────────────────────────────────────────────────────
+// TODO(art-15-suppression, opened 2026-07-31 — DO NOT resolve silently either way):
+// Should this endpoint disclose an erasure_suppression record?
+//
+// #538 established the invariant that Art. 15 access must disclose EXACTLY what Art. 17
+// erasure removes. erasure_suppression breaks the symmetry that rule assumed: it is new
+// persistent state about an identifiable subject that deliberately SURVIVES their erasure,
+// and this handler does not currently know it exists.
+//
+// For disclosure: it is retained data about the person, and the accountability argument
+// (Art. 5(2)) used to justify keeping it argues equally for disclosing it.
+// Against, or at least complicating: the record exists solely to enforce the subject's OWN
+// request, which may sit differently under Art. 15 than ordinary processing; and confirming
+// "we hold a suppression record matching this email hash" is itself information about an
+// erased person, even though this endpoint is operator-authenticated and per-site.
+//
+// This is unresolved on purpose and is entangled with the PENDING LEGAL REVIEW recorded in
+// api/lib/erasure-suppression.js and migration 20260731130000. Adding — or omitting — a
+// select here without that review would be silently answering a legal question.
 gdprRouter.get('/subject', async (req, res) => {
   try {
     const userId = req.user?.id
