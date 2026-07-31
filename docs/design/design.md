@@ -32,6 +32,19 @@ This version expands the prior V1.1 design system with the missing product surfa
   them. It also states the competitor logo/icon/screenshot prohibition explicitly as a trademark
   constraint, and cross-references a live competitor example of the §26 LLM-analyzer prohibition.
 
+## 0.3 V1.4 Change Log
+
+- v1.4: adds §36, Agentic Actions — MCP-Driven Setup Workflows. Scope: an agent (internal or
+  external, via MCP) may *recommend* a setup/connection action (e.g. connect CAPI, connect Shopify);
+  the action executes only after explicit owner approval, using the same human-in-the-loop pattern
+  already governing every other write path in this codebase. This does **not** amend §26 — "New
+  Campaign / ad campaign actions" and all ad-platform write actions remain prohibited exactly as
+  written. §36 is additive and deliberately narrow; it is not a general license for agentic write
+  access.
+- v1.4: §23 Feature Flag Map gains two rows for the above — one for the connection-action capability
+  itself, one restating that ad-platform financial actions stay prohibited, so this table remains
+  authoritative on the point rather than requiring a cross-reference to §26 to resolve it.
+
 ---
 
 ## 0. Read First - Scope Gate
@@ -2370,6 +2383,8 @@ This table is authority. If anything conflicts, this table wins.
 | Cross-site Report Builder | V2 | Future component |
 | Agency white-label | V2 | Future component |
 | Live visitor map | V2 | Not active V1 |
+| MCP-driven connection actions (CAPI, Shopify) | V1.1 | Human-approval required per action (§36); no new UI surface — approval happens via the existing tool-call confirmation pattern |
+| Ad platform budget/bid/campaign actions (agentic or otherwise) | Prohibited | Not active V1 UI, not planned — see §26 and §36.3 |
 
 ---
 
@@ -3323,3 +3338,64 @@ reconsider is the mistake this note exists to prevent.
 ---
 
 **Status:** Complete SourceTrack design.md for product design, public website design, Stitch generation, Ops Console design, support preview safety, and implementation planning.
+
+
+---
+
+## 36. Agentic Actions — MCP-Driven Setup Workflows
+
+Scope: V1.1. Governs any action an agent (internal or an external agent connecting via MCP) can
+trigger against a customer's SourceTrack account. This section does not change §26 — it defines a
+narrow, explicitly-scoped exception process for setup/connection actions only.
+
+### 36.1 Principle
+
+An agent may **recommend** an action. An agent may **never execute** an action without the account
+owner's explicit approval, given at the moment of that specific action — not a standing blanket
+permission granted once and reused silently. This mirrors the same discipline already governing every
+write this product's own engineering process uses internally: nothing destructive or state-changing
+happens without an explicit human go-ahead, requested and given per action, not assumed from context.
+
+### 36.2 What's in scope now
+
+Setup and connection actions only:
+
+- Connect Stripe (test mode, per existing §17 rules)
+- Connect Meta CAPI / Google Ads CAPI (OAuth handshake, once each platform's own review status allows it — see §17.4/§17.6-equivalent integration rules)
+- Connect Shopify (native app or manual webhook path)
+- Connect Google Search Console
+
+These are configuration actions with no financial consequence and a trivial undo (disconnect). That
+low-stakes, reversible profile is what makes human-approved agentic execution appropriate for this
+category specifically — it is not a general argument for agentic execution elsewhere.
+
+### 36.3 What's explicitly out of scope — still prohibited, unchanged from §26
+
+- Any ad platform budget, bid, or spend action
+- Pausing, enabling, or scaling a campaign
+- Creating a new campaign
+- Any action with an unbounded or unclear blast radius
+- Any action without a clean reversal path
+
+An agent may **surface information** relevant to these (e.g. "campaign X has had zero conversions in
+14 days") as a factual, non-narrated data point — consistent with §26's existing ban on fake AI
+predictions and fake recommendations. Recommending or executing a change in response to that
+information is not authorized by this section and requires a separate, dedicated policy pass — action
+whitelist, confidence gating tied to §19.2's partial-data-warning pattern, a durable audit and reversal
+trail, and an explicit §26 amendment — before any design or engineering work begins. Until that pass
+happens, this category stays fully governed by §26 as currently written.
+
+### 36.4 UI consequence — none
+
+This section adds no new screen, no chat surface, no notification center. The approval step for an
+agent-recommended connection action uses the same tool-call confirmation pattern already in place for
+every other agent-triggered write in this project — it is a protocol-level gate, not a product
+surface. If a customer-facing approval UI is ever needed beyond what the existing Settings/Integrations
+pages already provide (§17, §18), that is a new design pass, not an extension of this section.
+
+### 36.5 Explicitly not this
+
+Per the same reasoning that ruled out an in-product LLM analyzer (§26) and a chatbot surface: this
+section does not authorize an in-product AI assistant, chat window, or conversational interface of any
+kind. The agent lives outside the product (an external MCP client, or an internal automation acting
+through the same MCP surface) — SourceTrack exposes tools; it does not host the reasoning.
