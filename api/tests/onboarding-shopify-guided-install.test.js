@@ -46,18 +46,66 @@ test('🔴 Shopify is a real install method in the wizard, not a docs link', () 
   assert.match(block, /key:\s*'shopify'/, 'shopify must be a selectable install method (a tab), not only a doc link')
 })
 
-test('🔴 the guided flow walks the Shopify theme editor IN the wizard', () => {
-  const idx = PAGE.indexOf('const SHOPIFY_STEPS')
-  assert.ok(idx !== -1, 'SHOPIFY_STEPS must exist as the single source for the walkthrough')
-  const steps = PAGE.slice(idx, PAGE.indexOf(']', idx))
+// The wizard must not hold its own copy of the step list. It did, and the copy drifted:
+// the local array stopped at "Save" and never mentioned the st_aid cart attribute, so the
+// guided flow taught an install that records revenue against no visitor — while the docs
+// page documented the attribute correctly a click away. One list, imported.
+test('🔴 the wizard IMPORTS the shared step list — it does not keep its own copy', () => {
+  assert.ok(
+    !/const\s+SHOPIFY_STEPS\s*=/.test(PAGE),
+    'Onboarding.jsx must not declare its own SHOPIFY_STEPS — that fork is what drifted'
+  )
+  assert.match(
+    PAGE,
+    /import\s*\{[^}]*\bSHOPIFY_STEPS\b[^}]*\}\s*from\s*'\.\.\/lib\/shopifyWalkthrough'/,
+    'it must import SHOPIFY_STEPS from the shared module'
+  )
+  assert.match(PAGE, /\{SHOPIFY_STEPS\.map\(/, 'and render that imported list')
+})
+
+test('🔴 the shared list walks the theme editor AND covers what makes revenue attributable', async () => {
+  const { SHOPIFY_STEPS, SHOPIFY_CART_ATTRIBUTE_STEP_INDEX } =
+    await import('../../dashboard/src/lib/shopifyWalkthrough.js')
+  const all = SHOPIFY_STEPS.join('\n')
 
   // The navigation path a merchant actually follows. If Shopify moves the menu, this is the
   // assertion that should fail and force the copy to be re-checked.
-  assert.match(steps, /Online Store\s*→\s*Themes/, 'must name the Online Store → Themes path')
-  assert.match(steps, /Edit code/, 'must name the Edit code action')
-  assert.match(steps, /theme\.liquid/, 'must name the theme.liquid layout file')
-  assert.match(steps, /Layout/, 'must name the Layout folder that contains theme.liquid')
-  assert.match(steps, /<\/head>/, 'must say the tag goes before the closing </head>')
+  assert.match(all, /Online Store > Themes/, 'must name the Online Store > Themes path')
+  assert.match(all, /Edit Code/, 'must name the Edit Code action')
+  assert.match(all, /layout\/theme\.liquid/, 'must name the layout/theme.liquid file')
+  assert.match(all, /<\/head>/, 'must say the tag goes before the closing </head>')
+
+  // The gap this PR closes. A list that stops at "Save" is not a working install.
+  const cartStep = SHOPIFY_STEPS[SHOPIFY_CART_ATTRIBUTE_STEP_INDEX]
+  assert.match(cartStep, /st_aid/, 'the cart-attribute step must name st_aid')
+  assert.match(cartStep, /cart/i, 'and say it is stored on the Shopify cart')
+
+  // The webhook step must not imply it alone delivers attribution — that wording is what
+  // sent merchants into silent unattributed revenue.
+  const webhookStep = SHOPIFY_STEPS.find(s => /orders\/paid/.test(s))
+  assert.ok(webhookStep, 'the orders/paid webhook must still be a step')
+  assert.match(webhookStep, /revenue/i, 'it must say what the webhook delivers')
+  assert.match(
+    webhookStep, /attributable|attribution/i,
+    'it must distinguish delivering revenue from making it attributable'
+  )
+  assert.ok(
+    SHOPIFY_STEPS.indexOf(webhookStep) > SHOPIFY_CART_ATTRIBUTE_STEP_INDEX,
+    'the cart attribute must come BEFORE the webhook — the order carries the id, not the reverse'
+  )
+})
+
+// api/lib/platform-guides.js is what MCP get_install_snippet serves to an agent. It must be
+// the same list, not a second one that can rot independently.
+test('🔴 platform-guides.js serves the SAME steps, numbered — not a second copy', async () => {
+  const { SHOPIFY_STEPS: numbered } = await import('../lib/platform-guides.js')
+  const { SHOPIFY_STEPS: shared } = await import('../../dashboard/src/lib/shopifyWalkthrough.js')
+
+  assert.equal(numbered.length, shared.length, 'no step may exist in one and not the other')
+  numbered.forEach((step, i) => {
+    assert.equal(step, `${i + 1}. ${shared[i]}`, `step ${i + 1} must be the shared text, numbered`)
+  })
+  assert.match(numbered.join('\n'), /st_aid/, 'the agent-facing list must include the cart attribute')
 })
 
 test('🔴 the Shopify guide card is marked as having a guided in-wizard flow', () => {

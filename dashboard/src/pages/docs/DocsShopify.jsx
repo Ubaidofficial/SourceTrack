@@ -64,7 +64,30 @@ export default function DocsShopify() {
             Steps: Shopify Integration
           </h2>
 
-          <div className="space-y-4">
+          {/* FULL CHECKLIST — every required step, in order.
+              This is the list api/lib/platform-guides.js serves to MCP's get_install_snippet
+              and the wizard renders, and the sync guard in api/tests/mcp-server.test.js pins
+              it to dashboard/src/lib/shopifyWalkthrough.js item by item. It reads the FIRST
+              <ol> on this page, so this block must stay first — the detailed sections below
+              expand these same steps and must not be promoted above it. */}
+          <div className="space-y-2">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              The complete install, end to end. Steps 6 and 7 are both required: the webhook
+              delivers the order revenue, and the cart attribute is what lets SourceTrack tell
+              you which marketing source earned it.
+            </p>
+            <ol className="list-decimal pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
+              <li>In your Shopify Admin, go to <strong>Online Store &rarr; Themes</strong>.</li>
+              <li>On your current theme, click the action dropdown (the three dots) and select <strong>Edit Code</strong>.</li>
+              <li>Open the <code>layout/theme.liquid</code> file.</li>
+              <li>Paste the tracking script directly before the closing <code>&lt;/head&gt;</code> tag.</li>
+              <li>Save <code>theme.liquid</code>. Shopify publishes the change to your live theme straight away.</li>
+              <li>Still in your theme, add the cart-attribute snippet so the anonymous visitor ID (<code>st_aid</code>) is saved onto the Shopify cart and travels with the order.</li>
+              <li>In Shopify Admin &rarr; Settings &rarr; Notifications, create an <code>orders/paid</code> webhook pointing at <code>/api/webhooks/shopify/YOUR_SITE_KEY</code>. The webhook delivers the order revenue; step 6 is what makes that revenue attributable, so a store with the webhook alone records purchases against no visitor.</li>
+            </ol>
+          </div>
+
+          <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
             <h3 className="text-sm font-extrabold text-gray-900 dark:text-dark-primary">Step 1: Storefront Pixel Tracking</h3>
             <p className="text-sm text-gray-700 dark:text-gray-300">
               Add the standard SourceTrack pixel script to your storefront theme to log UTMs and referrers:

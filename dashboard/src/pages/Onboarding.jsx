@@ -12,6 +12,11 @@ import OnboardingCard from '../components/OnboardingCard'
 import SetupDoctorCard from '../components/SetupDoctorCard'
 import { LogoFull, LogoFullDark } from '../components/Logo'
 import { INSTALL_GUIDES, suggestedGuideFor } from '../lib/installNudge'
+// The wizard renders the SAME step list the docs page and MCP's get_install_snippet serve.
+// It previously kept its own copy, which drifted: the local copy stopped at "Save" and
+// never mentioned the st_aid cart attribute, so the guided flow taught a merchant an
+// install that records revenue against no visitor. See shopifyWalkthrough.js.
+import { SHOPIFY_STEPS } from '../lib/shopifyWalkthrough'
 import {
   STEP_TITLES, STEPPER_LABELS, DISPLAY_STEP_COUNT,
   displayIndexForStep, internalStepForDisplay
@@ -36,14 +41,6 @@ const INSTALL_METHODS = [
 
 // Shopify theme-editor walkthrough. Kept as data rather than inline JSX so the ordered list and
 // the test that pins the navigation path read from one source.
-const SHOPIFY_STEPS = [
-  'In your Shopify admin, go to Online Store → Themes.',
-  'On your current theme, click the ⋯ (Actions) menu → Edit code.',
-  'In the Layout folder, open theme.liquid.',
-  'Paste the script below immediately before the closing </head> tag.',
-  'Click Save. Shopify publishes the change to your live theme straight away.'
-]
-
 const CONVERSIONS = [
   { key: 'purchase', label: 'Purchase', desc: 'Completed checkout or payment' },
   { key: 'trial', label: 'Trial', desc: 'Started a trial' },

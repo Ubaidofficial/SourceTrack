@@ -2,14 +2,19 @@
 // Sourced from dashboard/src/pages/docs/DocsShopify.jsx and platform documentation pages.
 // Kept in sync with frontend DocsShopify.jsx via automated sync guard test.
 
-export const SHOPIFY_STEPS = [
-  '1. In your Shopify Admin, go to Online Store > Themes.',
-  '2. Click the action dropdown (the three dots) and select Edit Code.',
-  '3. Open the layout/theme.liquid file.',
-  '4. Paste the tracking script directly before the closing </head> tag.',
-  '5. Save theme.liquid.',
-  '6. (Coverage Note) SourceTrack uses manual snippet placement. For order revenue attribution, set up an orders/paid webhook in Shopify Admin > Settings > Notifications pointing to /api/webhooks/shopify/:site_key.'
-]
+// Shopify's steps are NOT defined here. They are shared with the in-wizard flow
+// (dashboard/src/pages/Onboarding.jsx), and dashboard/src may not import from api/ —
+// Railway builds the Dashboard service with rootDirectory=/dashboard, so that direction
+// does not resolve at deploy time (#252; guarded by api/tests/dashboard-build-root.test.js).
+// api/ -> dashboard/ is the safe direction and the proven precedent
+// (api/lib/source-normalizer.js does the same), so the constant lives under dashboard/ and
+// this file reaches in. One list, one place to correct it.
+import { SHOPIFY_STEPS as SHOPIFY_WALKTHROUGH_STEPS } from '../../dashboard/src/lib/shopifyWalkthrough.js'
+
+// Numbered here rather than in the shared array: the wizard and docs page render these in
+// an <ol> and would double-number, while MCP's get_install_snippet has always returned
+// "1. …" strings and callers may rely on that shape.
+export const SHOPIFY_STEPS = SHOPIFY_WALKTHROUGH_STEPS.map((step, i) => `${i + 1}. ${step}`)
 
 export const WORDPRESS_STEPS = [
   '1. Log into WordPress Admin.',
