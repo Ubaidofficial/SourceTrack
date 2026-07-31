@@ -89,7 +89,7 @@ test('dispatchCapi: writes one success row for the configured platform, skips no
   const sb = mockSupabase()
   await withFetch(async () => resp(200, {}), async () => {
     await dispatchCapi(sb, { id: 's1', meta_pixel_id: 'px', meta_capi_token: encryptCapiToken('tok') },
-      { conversion_type: 'purchase', conversion_value: 10, email: 'a@b.com', external_event_id: 'evt1' })
+      { conversion_type: 'purchase', conversion_value: 10, currency: 'USD', email: 'a@b.com', external_event_id: 'evt1' })
   })
   // meta configured → 1 row; google/microsoft/linkedin have no tokens → skipped, not logged
   assert.strictEqual(sb.inserts.length, 1)
@@ -103,7 +103,7 @@ test('dispatchCapi: a failed send is logged as failed with http_status', async (
   const sb = mockSupabase()
   await withFetch(async () => resp(400, { error: 'bad' }), async () => {
     await dispatchCapi(sb, { id: 's1', meta_pixel_id: 'px', meta_capi_token: encryptCapiToken('tok') },
-      { conversion_type: 'purchase', conversion_value: 10 })
+      { conversion_type: 'purchase', conversion_value: 10, currency: 'USD' })
   })
   assert.strictEqual(sb.inserts.length, 1)
   assert.strictEqual(sb.inserts[0].status, 'failed')
