@@ -1,25 +1,31 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchApi } from '../lib/api'
+import StatusBadge from './StatusBadge'
+import { MetaLogo, GoogleLogo, GoogleAnalyticsLogo, TikTokLogo, LinkedInLogo } from '../lib/brandLogos'
 
 // Minimal functional CAPI config surface (Phase 2). Per-platform: connect a
 // server-side conversion API token, see connected state + last delivery,
 // disconnect. Tokens are write-only — never returned by the API.
 // Keys MUST match CAPI_PLATFORMS in api/routes/capi.js — the key is the URL segment.
+//
+// `Logo` reuses dashboard/src/lib/brandLogos.jsx — the same registry SourceIcon renders
+// across Analytics and the journey views — rather than introducing a second icon idiom for
+// this one surface. lucide-react stays the generic-icon fallback everywhere else.
 const PLATFORMS = [
-  { key: 'meta',   label: 'Meta CAPI',     tokenLabel: 'Access token',     idFields: [{ name: 'pixel_id', label: 'Pixel ID' }] },
+  { key: 'meta',   label: 'Meta CAPI',     Logo: MetaLogo,            tokenLabel: 'Access token',     idFields: [{ name: 'pixel_id', label: 'Pixel ID' }] },
   // Google is OAuth, not a pasted token. It used to ask for a "Developer token", which no
   // customer can ever supply — Google issues that once to the software provider, not to
   // advertisers. The credential is now the Google Ads OAuth connection that ad-cost import
   // already establishes (ad_platform_connections); this card reuses that same connection
   // and only adds the conversion action to upload against.
-  { key: 'google', label: 'Google Ads',    oauth: true,                    idFields: [] },
-  { key: 'ga4',    label: 'Google Analytics 4', tokenLabel: 'API secret',  idFields: [{ name: 'measurement_id', label: 'Measurement ID' }] },
-  { key: 'tiktok', label: 'TikTok',        tokenLabel: 'Access token',     idFields: [{ name: 'pixel_code', label: 'Pixel Code' }] },
+  { key: 'google', label: 'Google Ads',    Logo: GoogleLogo,          oauth: true,                    idFields: [] },
+  { key: 'ga4',    label: 'Google Analytics 4', Logo: GoogleAnalyticsLogo, tokenLabel: 'API secret',  idFields: [{ name: 'measurement_id', label: 'Measurement ID' }] },
+  { key: 'tiktok', label: 'TikTok',        Logo: TikTokLogo,          tokenLabel: 'Access token',     idFields: [{ name: 'pixel_code', label: 'Pixel Code' }] },
   // Field names must match CAPI_PLATFORMS.linkedin.idCols in api/routes/capi.js —
   // buildCapiUpdate rejects the request by field NAME, so a mismatch here surfaces as
   // "partner_id is required" on a form that appears filled in.
-  { key: 'linkedin', label: 'LinkedIn',    tokenLabel: 'Access token',     idFields: [{ name: 'partner_id', label: 'Partner ID' }] }
+  { key: 'linkedin', label: 'LinkedIn',    Logo: LinkedInLogo,        tokenLabel: 'Access token',     idFields: [{ name: 'partner_id', label: 'Partner ID' }] }
 ]
 
 function timeAgo(iso) {
@@ -30,6 +36,59 @@ function timeAgo(iso) {
   const hrs = Math.floor(mins / 60)
   if (hrs < 24) return `${hrs}h ago`
   return `${Math.floor(hrs / 24)}d ago`
+}
+
+// The second line under the platform name. Promoted out of the body so a connected card
+// answers "is this actually delivering?" at a glance instead of burying it in a stack of
+// grey detail lines.
+//
+// §6 — this NEVER invents a timestamp. Three genuinely distinct states:
+//   · not connected      -> no line at all (there is nothing true to say yet)
+//   · connected, no runs  -> "No deliveries yet" (an honest empty state, not a fake time)
+//   · connected, delivered -> the real status + relative age, with the exact instant on hover
+function LastForwarded({ st }) {
+  if (!st.connected) return null
+
+  if (!st.last_delivery?.at) {
+    return <p className="text-[11px] text-st-gray dark:text-gray-400 mt-0.5">No deliveries yet</p>
+  }
+
+  const failed = st.last_delivery.status && st.last_delivery.status !== 'success'
+  return (
+    <p
+      className="text-[11px] mt-0.5 text-st-gray dark:text-gray-400"
+      title={new Date(st.last_delivery.at).toLocaleString()}
+    >
+      Last forwarded{' '}
+      <span className="font-medium text-st-black dark:text-dark-primary">{timeAgo(st.last_delivery.at)}</span>
+      {failed && <span className="text-red-600 dark:text-red-400"> · {st.last_delivery.status}</span>}
+    </p>
+  )
+}
+
+// One shell for every card, so the OAuth card and the token cards cannot drift apart
+// visually. Google keeps its three real states (they are a truthfulness decision, not a
+// styling one) — what is unified is the frame around them: same icon slot, same title
+// block, same badge position, same body offset. Before this, Google rendered a bare
+// coloured <span> where the others rendered a different bare coloured <span>, and its
+// taller three-state body broke the two-column grid.
+function CapiCard({ platform, st, badge, children }) {
+  const Logo = platform.Logo
+  return (
+    <div className="flex flex-col border border-gray-200 dark:border-dark-border rounded-xl p-4">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-start gap-2.5 min-w-0">
+          <Logo className="h-5 w-5 shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <h4 className="text-sm font-semibold text-st-black dark:text-dark-primary truncate">{platform.label}</h4>
+            <LastForwarded st={st} />
+          </div>
+        </div>
+        <StatusBadge status={badge.status} label={badge.label} className="shrink-0" />
+      </div>
+      {children}
+    </div>
+  )
 }
 
 // Google Ads card — OAuth, not a pasted token. Three honest states, deliberately not
@@ -82,18 +141,17 @@ function GoogleAdsCard({ platform, status, siteKey, onChanged }) {
     } catch (e) { setMsg(e?.message || 'Error') } finally { setBusy(false) }
   }
 
-  const label = st.connected ? 'Forwarding' : st.oauth_connected ? 'Action needed' : 'Not connected'
-  const labelTone = st.connected
-    ? 'text-green-600 dark:text-green-400'
-    : st.oauth_connected ? 'text-amber-600 dark:text-amber-400' : 'text-st-gray dark:text-gray-400'
+  // The three states map onto three DISTINCT badge tones. 'Action needed' stays amber and
+  // stays its own state — collapsing it into success would claim a forwarding path
+  // sendGoogleConversion does not have (it no-ops without a conversion action).
+  const badge = st.connected
+    ? { status: 'success', label: 'Forwarding' }
+    : st.oauth_connected
+      ? { status: 'warning', label: 'Action needed' }
+      : { status: 'pending', label: 'Not connected' }
 
   return (
-    <div className="border border-gray-200 dark:border-dark-border rounded-xl p-4">
-      <div className="flex items-center justify-between mb-2">
-        <h4 className="text-sm font-semibold text-st-black dark:text-dark-primary">{platform.label}</h4>
-        <span className={`text-[11px] font-semibold ${labelTone}`}>{label}</span>
-      </div>
-
+    <CapiCard platform={platform} st={st} badge={badge}>
       {!st.oauth_connected && (
         <div className="space-y-2">
           <p className="text-[11px] text-st-gray dark:text-gray-400">
@@ -127,13 +185,12 @@ function GoogleAdsCard({ platform, status, siteKey, onChanged }) {
         <div className="text-[11px] text-st-gray dark:text-gray-400 space-y-1">
           {st.customer_id ? <div>Customer ID: <span className="font-mono">{st.customer_id}</span></div> : null}
           <div>Conversion action: <span className="font-mono">{st.conversion_action_id}</span></div>
-          <div>Last forwarded: {st.last_delivery ? `${st.last_delivery.status} · ${timeAgo(st.last_delivery.at)}` : 'no deliveries yet'}</div>
           <button onClick={stopForwarding} disabled={busy} className="mt-2 text-[11px] text-red-600 dark:text-red-400 hover:underline disabled:opacity-50">Stop forwarding</button>
         </div>
       )}
 
       {msg && <p className="text-[11px] text-st-gray dark:text-gray-400 mt-2">{msg}</p>}
-    </div>
+    </CapiCard>
   )
 }
 
@@ -165,18 +222,15 @@ function PlatformCard({ platform, status, siteKey, onChanged }) {
     } catch (e) { setMsg(e?.message || 'Error') } finally { setBusy(false) }
   }
 
+  const badge = st.connected
+    ? { status: 'success', label: 'Connected' }
+    : { status: 'pending', label: 'Not connected' }
+
   return (
-    <div className="border border-gray-200 dark:border-dark-border rounded-xl p-4">
-      <div className="flex items-center justify-between mb-2">
-        <h4 className="text-sm font-semibold text-st-black dark:text-dark-primary">{platform.label}</h4>
-        <span className={`text-[11px] font-semibold ${st.connected ? 'text-green-600 dark:text-green-400' : 'text-st-gray dark:text-gray-400'}`}>
-          {st.connected ? 'Connected' : 'Not connected'}
-        </span>
-      </div>
+    <CapiCard platform={platform} st={st} badge={badge}>
       {st.connected ? (
         <div className="text-[11px] text-st-gray dark:text-gray-400 space-y-1">
           {platform.idFields.map(f => st[f.name] ? <div key={f.name}>{f.label}: <span className="font-mono">{st[f.name]}</span></div> : null)}
-          <div>Last forwarded: {st.last_delivery ? `${st.last_delivery.status} · ${timeAgo(st.last_delivery.at)}` : 'no deliveries yet'}</div>
           <button onClick={disconnect} disabled={busy} className="mt-2 text-[11px] text-red-600 dark:text-red-400 hover:underline disabled:opacity-50">Disconnect</button>
         </div>
       ) : (
@@ -195,7 +249,7 @@ function PlatformCard({ platform, status, siteKey, onChanged }) {
         </div>
       )}
       {msg && <p className="text-[11px] text-st-gray dark:text-gray-400 mt-2">{msg}</p>}
-    </div>
+    </CapiCard>
   )
 }
 

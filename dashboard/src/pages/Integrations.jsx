@@ -1697,7 +1697,40 @@ export default function Integrations() {
       {/* ADVANCED TRACKING SECTION */}
       <div className="space-y-3">
         <h3 className="text-xs font-bold text-st-gray dark:text-gray-400 uppercase tracking-wider">Advanced Tracking</h3>
-        {hasFeature(site?.plan, 'capi_server_side') && <CapiSettings site={site} />}
+        {hasFeature(site?.plan, 'capi_server_side') ? (
+          <CapiSettings site={site} />
+        ) : (
+          // Free-plan upsell — same treatment over-reporting detection already gets above,
+          // and capi_server_side has the identical matrix (free off, trial/starter+ on), so
+          // free is the only plan that ever sees this. Previously the whole section was
+          // simply absent, which is the one thing that cannot be true for a paid feature we
+          // want discovered.
+          //
+          // Deliberately a STATIC card rather than <CapiSettings> in a disabled state: the
+          // connect/disconnect routes are the ones behind enforceCapi (api/routes/capi.js),
+          // so a rendered form would let a free user fill in a real access token and submit
+          // it into a 402. An honest lock beats inputs that look live and are not.
+          site?.plan && (
+            <div className="flex items-start gap-3 p-4 bg-st-lime/5 border border-st-lime/20 rounded-xl">
+              <span className="text-st-lime text-lg mt-0.5 leading-none">🔒</span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-st-black dark:text-dark-primary mb-1">
+                  Server-side Conversions (CAPI) · Starter plan
+                </p>
+                <p className="text-sm text-st-gray dark:text-gray-400">
+                  Forward conversions straight to Meta, Google Ads, GA4, TikTok and LinkedIn from
+                  our servers, so they still land when the browser pixel is blocked. Upgrade to
+                  improve match quality on every platform you run.
+                </p>
+              </div>
+              {!isPreview && (
+                <a href="/billing" className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg bg-st-lime text-black hover:bg-st-lime/90">
+                  Upgrade
+                </a>
+              )}
+            </div>
+          )
+        )}
         <DashboardCard
           title="Advanced Domains & Routing"
           subtitle="Managed proxy domains and cross-domain tracking setup"

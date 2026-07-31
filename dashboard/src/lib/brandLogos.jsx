@@ -25,6 +25,17 @@ export const GoogleLogo = ({ className = 'h-6 w-6' }) => (
   </svg>
 )
 
+// Google Analytics 4. Kept distinct from GoogleLogo on purpose: CapiSettings renders
+// Google Ads and GA4 side by side, and reusing the one Google mark for both would make two
+// different destinations look like the same integration.
+export const GoogleAnalyticsLogo = ({ className = 'h-5 w-5' }) => (
+  <svg viewBox="0 0 24 24" className={className}>
+    <rect x="16.5" y="3" width="5" height="18" rx="2.5" fill="#F9AB00"/>
+    <rect x="9.5" y="9" width="5" height="12" rx="2.5" fill="#E37400"/>
+    <circle cx="5" cy="18.5" r="2.5" fill="#E37400"/>
+  </svg>
+)
+
 export const TikTokLogo = ({ className = 'h-5 w-5' }) => (
   <svg viewBox="0 0 24 24" className={className}>
     <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.31 6.31 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.67a8.17 8.17 0 0 0 4.78 1.52V6.74a4.85 4.85 0 0 1-1.01-.05z" fill="currentColor"/>
