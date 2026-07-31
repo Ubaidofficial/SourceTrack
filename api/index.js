@@ -21,6 +21,8 @@ import {
   conversionGlobalIpLimit,
   marketingFormIpLimit,
   marketingFormGlobalIpLimit,
+  mcpIpLimit,
+  mcpGlobalIpLimit,
   identifyVisitorLimit,
   identifyIpLimit,
   identifySiteLimit,
@@ -68,6 +70,7 @@ import { sessionsOverview, visitorSessions } from './routes/sessions.js'
 import liveRouter from './routes/live.js'
 import analyticsRouter from './routes/analytics.js'
 import diagnosticsRouter from './routes/diagnostics.js'
+import mcpRouter from './routes/mcp.js'
 import proxyRouter from './routes/proxy.js'
 import webhookIncomingRouter from './routes/webhook-incoming.js'
 import { trackerIdRouter } from './routes/tracker-id.js'
@@ -384,6 +387,23 @@ app.use('/api/webhooks/shopify', express.raw({ type: 'application/json' }), shop
 
 // 3. express.json
 app.use(express.json())
+
+// ── MCP Streamable HTTP transport ────────────────────────────────────────────────────
+// Mounted HERE, deliberately: after express.json() so the router has a parsed body, and
+// BEFORE the global cors() below so exactly one origin policy applies to /api/mcp.
+//
+// The two policies would otherwise both touch this path and mean different things. The
+// global cors() is permissive-by-omission — its callback answers cb(null, false) for an
+// unknown origin, which only withholds the Access-Control-Allow-Origin header and lets the
+// request through. The MCP spec requires the opposite on this endpoint: an Origin that is
+// present and not allowed MUST be answered 403 Forbidden, as DNS-rebinding defence. Since
+// MCP over HTTP is server-to-server there is no browser preflight to satisfy, so the
+// permissive layer buys nothing here and the strict one is the only one that should run.
+// Placing the mount above cors() makes that ordering explicit rather than incidental.
+//
+// It also sits above `app.use(defaultLimit)`: this router carries its own per-IP and
+// global-IP pair, sized for an AI client's burst of small calls rather than for a browser.
+app.use('/api/mcp', mcpIpLimit, mcpGlobalIpLimit, mcpRouter)
 
 // 4. CORS
 app.use(cors({
