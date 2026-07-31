@@ -12,10 +12,91 @@ process.env.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '0'.repeat(64)
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { normalizeCurrencyCode, hasKnownCurrency } from '../lib/currency.js'
+import { normalizeCurrencyCode, hasKnownCurrency, collapseCurrencies, resolveSiteRevenueCurrency } from '../lib/currency.js'
 import { dispatchCapi, encryptCapiToken } from '../lib/conversion-sync.js'
 import { readShopifyOrderAmount } from '../routes/shopify-webhook.js'
 import { PREAGG_CONVERSION_METRICS, PREAGG_MULTITOUCH_METRICS } from '../lib/attribution-engine.js'
+
+// ── collapseCurrencies: an undenominated amount must not hide inside an 'ok' ──
+
+test('THE PROD CASE: two USD rows plus one null-currency revenue row is NOT ok', () => {
+  // www.techrupt.pk on prod: a 753.06 USD Shopify order alongside a 777.77 row whose
+  // conversion_event_id is a UUID — it never passed through revenue_ingestion_events.order_id,
+  // so there was no unit to backfill. The old code dropped the null BEFORE checking agreement
+  // and reported 'ok'/'USD', confidently labelling a sum containing an amount nobody can
+  // denominate. This is the regression guard for exactly that shape.
+  const r = collapseCurrencies(['USD', 'USD', null])
+  assert.notEqual(r.currency_status, 'ok')
+  assert.equal(r.currency_status, 'partial')
+  // INVARIANT: a code is handed back ONLY for 'ok'. A client doing `if (currency) render(...)`
+  // must not be able to print a symbol over a partially-undenominated total.
+  assert.equal(r.currency, null)
+})
+
+test('collapseCurrencies: every status, and the invariant that only ok carries a code', () => {
+  const cases = [
+    [['USD', 'USD'],            'ok',      'USD'],
+    [['usd', ' USD '],          'ok',      'USD'],   // normalization still applies
+    [['USD', 'EUR'],            'mixed',   null],
+    [['USD', null],             'partial', null],
+    [['USD', ''],               'partial', null],    // empty string is an absent unit, not a code
+    [['USD', 'US'],             'partial', null],    // malformed code is absent, never coerced
+    [[null, null],              'unknown', null],
+    [[],                        'unknown', null],    // no amounts at all
+  ]
+  for (const [input, status, currency] of cases) {
+    const r = collapseCurrencies(input)
+    assert.equal(r.currency_status, status, `${JSON.stringify(input)} → expected ${status}, got ${r.currency_status}`)
+    assert.equal(r.currency, currency, `${JSON.stringify(input)} → expected currency ${currency}`)
+  }
+  // The invariant, stated once more as a property over every case above.
+  for (const [input] of cases) {
+    const r = collapseCurrencies(input)
+    if (r.currency !== null) assert.equal(r.currency_status, 'ok')
+  }
+})
+
+test('collapseCurrencies: mixed outranks partial', () => {
+  // Disagreeing codes make the sum unsummable regardless of what else is missing, and that is
+  // the more actionable fact. Both suppress rendering, so this only decides the message.
+  assert.equal(collapseCurrencies(['USD', 'EUR', null]).currency_status, 'mixed')
+})
+
+test('resolveSiteRevenueCurrency: $0 ingestion rows cannot force partial', () => {
+  // On prod every currency-less ingestion event is exactly $0 (6 of them). A zero has no unit
+  // to be missing, so letting those rows through would suppress the revenue label for a site
+  // that is perfectly healthy. The $0 filter is what prevents that.
+  const rows = [
+    { currency: 'USD', value: '753.06' },
+    { currency: null,  value: '0' },       // $0 lead/trial — no unit to be missing
+    { currency: null,  value: 0 },
+  ]
+  const supabase = { from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ limit: () => Promise.resolve({ data: rows, error: null }) }) }) }) }) }
+  return resolveSiteRevenueCurrency(supabase, 'sk_test').then(r => {
+    assert.equal(r.currency_status, 'ok')
+    assert.equal(r.currency, 'USD')
+  })
+})
+
+test('resolveSiteRevenueCurrency: a revenue-bearing row with no unit DOES report partial', () => {
+  const rows = [
+    { currency: 'USD', value: '753.06' },
+    { currency: null,  value: '777.77' },   // real money, no unit — the prod shape
+  ]
+  const supabase = { from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ limit: () => Promise.resolve({ data: rows, error: null }) }) }) }) }) }
+  return resolveSiteRevenueCurrency(supabase, 'sk_test').then(r => {
+    assert.equal(r.currency_status, 'partial')
+    assert.equal(r.currency, null)
+  })
+})
+
+test('resolveSiteRevenueCurrency: a failed read is unknown, never a guessed USD', () => {
+  const supabase = { from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ limit: () => Promise.resolve({ data: null, error: { message: 'boom' } }) }) }) }) }) }
+  return resolveSiteRevenueCurrency(supabase, 'sk_test').then(r => {
+    assert.equal(r.currency_status, 'unknown')
+    assert.equal(r.currency, null)
+  })
+})
 
 // ── normalizeCurrencyCode ────────────────────────────────────────────────────
 test('normalizeCurrencyCode: canonicalizes real codes, rejects everything else', () => {

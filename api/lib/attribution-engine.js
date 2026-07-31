@@ -2770,14 +2770,21 @@ export async function getPreAggregatedAttribution({
       dimValue = 'google'
     }
     if (!aggregated[dimValue]) {
-      aggregated[dimValue] = { revenue: 0, conversions: 0, leads: 0, customers: 0, currencies: new Set() }
+      // `currencies` is an ARRAY, not a Set: a Set cannot represent "two revenue rows, one of
+      // which has no unit" — it would silently dedupe the absence away. collapseCurrencies()
+      // dedupes the known codes itself.
+      aggregated[dimValue] = { revenue: 0, conversions: 0, leads: 0, customers: 0, currencies: [] }
     }
     aggregated[dimValue].revenue += parseFloat(row.conversion_value || 0)   // (A) signed SUM nets — leave unconditional
     // Unit for the sum above. Only rows that actually MOVE revenue carry a meaningful unit, so a
-    // $0 lead never makes a group look 'mixed'. A revenue-bearing row with no currency leaves the
-    // set short, which surfaces as 'unknown' — never as an assumed USD.
-    if (parseFloat(row.conversion_value || 0) !== 0 && row.currency) {
-      aggregated[dimValue].currencies.add(String(row.currency).toUpperCase())
+    // $0 lead never affects the group's status.
+    //
+    // The null is RECORDED, not skipped. Dropping it here is what let [USD, USD, null] report
+    // 'ok'/'USD' — a confident label over a sum containing an amount nobody can denominate.
+    // collapseCurrencies() needs one entry per revenue-bearing row, absent units included, to
+    // tell 'partial' from 'ok'.
+    if (parseFloat(row.conversion_value || 0) !== 0) {
+      aggregated[dimValue].currencies.push(row.currency)
     }
     // (A) PR2d: a refund (conversion_type='refund') must NOT add to any conversion count — it nets the
     // revenue above; a refunded order is still a conversion that happened, so counts must not decrement
