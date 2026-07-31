@@ -1426,7 +1426,7 @@ export default function Settings() {
         </p>
         <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-lg p-3 text-[11px] text-red-800 dark:text-red-300 space-y-1.5 font-sans">
           <p>• Account/workspace deletion removes SourceTrack workspace and app database records according to current code paths.</p>
-          <p>• <strong>Paid Beta Blocker:</strong> Paid beta remains blocked by PostHog retention/deletion handling and live verification.</p>
+          <p>• Event data in our analytics store is erased at the time of your request. If the same information is submitted again later — for example through a repeat form submission with your email, or a delayed payment-processor webhook — it may be recorded again.</p>
           <p>• If you are the only workspace member, your workspace and sites will be permanently deleted from our app database.</p>
           <p>• If this is a shared workspace, your account and membership will be removed, leaving the shared sites active for other members.</p>
           <p>• If you are the only administrator of a shared workspace, you must transfer ownership or remove other members before deleting your account.</p>
