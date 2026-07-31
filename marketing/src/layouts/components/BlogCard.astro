@@ -64,13 +64,12 @@ const uid = `blogcard-${Math.random().toString(36).slice(2, 8)}`;
 </div>
 
 <script>
-  import { animateMini as animate, inView } from "motion";
+  // revealOnScroll owns the hide so a dead or never-firing IntersectionObserver cannot strand
+  // this content invisible. See marketing/src/lib/revealOnScroll.ts.
+  import { revealOnScroll } from "@/lib/revealOnScroll";
   function initBlogCards() {
     document.querySelectorAll<HTMLElement>('[id^="blogcard-"]').forEach((el) => {
-      el.style.opacity = "0";
-      inView(el, () => {
-        animate(el, { opacity: [0, 1], transform: ["translateY(20px)", "translateY(0)"] }, { duration: 0.5, ease: "easeInOut" });
-      }, { margin: "0px", amount: 0.05 });
+      revealOnScroll(el, { opacity: [0, 1], transform: ["translateY(20px)", "translateY(0)"] }, { duration: 0.5, ease: "easeInOut" });
     });
   }
   document.addEventListener("astro:page-load", initBlogCards);

@@ -2,11 +2,6 @@
 import Counter from "./Counter";
 
 import theme from "@/config/theme.json";
-import { motion } from "motion/react";
-import {
-  staggerContainerVariants,
-  staggerItemVariants,
-} from "@/lib/animations";
 
 interface PageData {
   notFound?: boolean;
@@ -32,17 +27,14 @@ const Statistics = ({ data }: { data: PageData }) => {
     data.frontmatter.enable && (
       <section>
         <div className="main-container"><div className="container">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px", amount: 0.1 }}
-            variants={staggerContainerVariants}
-            className="py-12.5 grid sm:grid-cols-2 lg:grid-cols-4 gap-2.5 container-padding-x"
-          >
+          {/* Same reasoning as Pricing: Framer resolves `initial` during SSR, so these two
+              wrappers shipped style="opacity:0" over every stat figure and label, and only
+              hydration could clear them. The figures are content, not decoration — they do not
+              get to depend on an IntersectionObserver firing. */}
+          <div className="py-12.5 grid sm:grid-cols-2 lg:grid-cols-4 gap-2.5 container-padding-x">
             {data.frontmatter.stats_list.map((item, index) => (
-              <motion.div
+              <div
                 key={index}
-                variants={staggerItemVariants}
                 className="border border-border/6 py-10 px-12 rounded-2xl text-center bg-card relative overflow-hidden"
               >
                 <div className="relative z-1">
@@ -113,9 +105,9 @@ const Statistics = ({ data }: { data: PageData }) => {
                     </linearGradient>
                   </defs>
                 </svg>
-              </motion.div>
+              </div>
             ))}
-          </motion.div>
+          </div>
         </div></div>
       </section>
     )

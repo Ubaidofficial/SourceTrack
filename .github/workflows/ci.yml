@@ -178,6 +178,15 @@ jobs:
       - name: Check marketing content survives without JS
         run: node scripts/qa-marketing-no-js-content.mjs marketing/dist
 
+      # The mirror image of the check above, and NOT redundant with it. That one reads built HTML
+      # and asks "did the server ship this hidden?". This reads source and asks "can the client
+      # strand it hidden?" — a reveal that hides from JS and waits on an IntersectionObserver has
+      # no way back if the observer never fires. CallToAction, Footer and Social failed exactly
+      # that way with working JS while their built HTML was completely clean, so no output scan
+      # could ever have caught it.
+      - name: Check marketing reveals cannot strand content hidden
+        run: node scripts/qa-marketing-reveal-safety.mjs marketing/src
+
       # Same reasoning as build-and-test above: without this, a marketing build that
       # breaks on main is invisible until someone happens to look at the Actions tab.
       - name: Alert on red main

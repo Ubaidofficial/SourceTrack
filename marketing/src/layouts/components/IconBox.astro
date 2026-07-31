@@ -15,13 +15,15 @@ const uid = `iconbox-${Math.random().toString(36).slice(2, 8)}`;
 </div>
 
 <script>
-  import { animateMini as animate, inView } from "motion";
+  // revealOnScroll, not a raw `el.style.opacity = "0"` + inView pair. #530 made this markup
+  // fail open for scripting-disabled visitors, but the runtime hide still had no way back if the
+  // observer never fired: measured with IntersectionObserver stubbed dead, this content stayed at
+  // opacity 0 through a full scroll of the page. The helper keeps the same animation and adds the
+  // viewport-checked sweep that recovers it.
+  import { revealOnScroll } from "@/lib/revealOnScroll";
   function initIconBoxes() {
     document.querySelectorAll<HTMLElement>('[id^="iconbox-"]').forEach((el) => {
-      el.style.opacity = "0";
-      inView(el, () => {
-        animate(el, { opacity: [0, 1], transform: ["scale(0.8)", "scale(1)"] }, { duration: 0.5, ease: "easeInOut" });
-      }, { margin: "0px", amount: 0.05 });
+      revealOnScroll(el, { opacity: [0, 1], transform: ["scale(0.8)", "scale(1)"] }, { duration: 0.5, ease: "easeInOut" });
     });
   }
   document.addEventListener("astro:page-load", initIconBoxes);

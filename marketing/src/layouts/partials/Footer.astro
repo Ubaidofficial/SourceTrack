@@ -78,23 +78,18 @@ const { footer_company, footer_legal, footer_resource } = menu;
 </footer>
 
 <script>
-  import { animateMini as animate, inView } from "motion";
+  // Same JS-only mechanism as CallToAction: nothing here is hidden in the markup, so scripting
+  // being off was never the risk — an IntersectionObserver that never fired was. #footer-bottom
+  // is where <Social> lives, so covering these two wrappers covers the social list too; it is
+  // not a separate target.
+  import { revealOnScroll } from "@/lib/revealOnScroll";
   function initFooter() {
     const smooth = { duration: 0.5, ease: "easeInOut" as const };
+    const fade = { opacity: [0, 1], transform: ["translateY(20px)", "translateY(0)"] };
     const footerMain = document.getElementById("footer-main");
-    if (footerMain) {
-      footerMain.style.opacity = "0";
-      inView(footerMain, () => {
-        animate(footerMain, { opacity: [0, 1], transform: ["translateY(20px)", "translateY(0)"] }, smooth);
-      }, { margin: "0px", amount: 0.05 });
-    }
+    if (footerMain) revealOnScroll(footerMain, fade, smooth);
     const footerBottom = document.getElementById("footer-bottom");
-    if (footerBottom) {
-      footerBottom.style.opacity = "0";
-      inView(footerBottom, () => {
-        animate(footerBottom, { opacity: [0, 1], transform: ["translateY(20px)", "translateY(0)"] }, smooth);
-      }, { margin: "0px", amount: 0.05 });
-    }
+    if (footerBottom) revealOnScroll(footerBottom, fade, smooth);
   }
   document.addEventListener("astro:page-load", initFooter);
 </script>
