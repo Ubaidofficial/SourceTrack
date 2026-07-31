@@ -16,6 +16,8 @@ import { normalizeCurrencyCode, hasKnownCurrency, collapseCurrencies, resolveSit
 import { dispatchCapi, encryptCapiToken } from '../lib/conversion-sync.js'
 import { readShopifyOrderAmount } from '../routes/shopify-webhook.js'
 import { PREAGG_CONVERSION_METRICS, PREAGG_MULTITOUCH_METRICS } from '../lib/attribution-engine.js'
+import { buildRefundConversion } from '../lib/stripe-refund.js'
+import { buildShopifyRefundConversion } from '../lib/shopify-refund.js'
 
 // ── collapseCurrencies: an undenominated amount must not hide inside an 'ok' ──
 
@@ -229,4 +231,79 @@ test('currency and currency_status are not selectable/sortable metrics', () => {
   // The real metrics are still there — the filter must not have over-matched.
   assert.equal(PREAGG_CONVERSION_METRICS.has('revenue'), true)
   assert.equal(PREAGG_CONVERSION_METRICS.has('avg_conversion_value'), true)
+})
+
+// ── refunds: the last two ?? 'USD' defaults ──────────────────────────────────
+// #529 and #532 removed the manufactured-USD default from every money rail EXCEPT the two
+// refund builders — shopify-refund.js (flagged in #529's own PR body) and stripe-refund.js.
+// A refund is a SIGNED NEGATIVE conversion, so a fake unit here is worse than on a purchase:
+// it nets a made-up-denomination amount against a real one.
+const REFUND_SITE = { id: 'site-refund-1', site_key: 'sk_refund_1' }
+
+const stripeRefundEvent = (over = {}) => ({
+  id: 'evt_r_1', type: 'refund.created', created: 1_780_000_000,
+  data: { object: { id: 're_1', object: 'refund', amount: 5000, payment_intent: 'pi_1', ...over } }
+})
+
+const shopifyRefundPayload = (over = {}) => ({
+  id: 999, order_id: 555, processed_at: '2026-07-24T00:00:00Z',
+  transactions: [{ kind: 'refund', status: 'success', amount: '25.00' }], ...over
+})
+
+test('stripe refund: an absent currency is null, never a manufactured USD', () => {
+  // Stripe types `currency` as required and non-nullable on the Refund object, so this
+  // default effectively never fired in production — but a malformed/synthetic payload is
+  // exactly where inventing a unit misleads most. Restoring `: 'USD'` fails this.
+  const { properties, currency } = buildRefundConversion(stripeRefundEvent(), REFUND_SITE)
+  assert.equal(properties.currency, null)
+  assert.notEqual(properties.currency, 'USD')
+  // The RETURNED currency matters independently: stripe-webhook.js hands it to
+  // logIngestionEvent, whose `currency || null` puts it in revenue_ingestion_events.currency.
+  // A fake 'USD' there would make collapseCurrencies() report a confident 'ok' for the site.
+  assert.equal(currency, null)
+})
+
+test('stripe refund: a real currency still normalizes to uppercase ISO', () => {
+  const { properties, currency } = buildRefundConversion(
+    stripeRefundEvent({ currency: 'eur' }), REFUND_SITE
+  )
+  assert.equal(properties.currency, 'EUR')
+  assert.equal(currency, 'EUR')
+})
+
+test('shopify refund: an absent currency is null, never a manufactured USD', () => {
+  const { properties, currency } = buildShopifyRefundConversion(
+    shopifyRefundPayload(), REFUND_SITE, 'visitor-1'
+  )
+  assert.equal(properties.currency, null)
+  assert.notEqual(properties.currency, 'USD')
+  assert.equal(currency, null)
+  // The refund is still WRITTEN — an unknown unit suppresses the label, never the money.
+  assert.equal(properties.conversion_value, -25)
+})
+
+test('shopify refund: a malformed code is unknown, not passed through', () => {
+  // The old `(payload.currency || '').trim().toUpperCase() || 'USD'` chain never checked the
+  // ISO shape, so 'US' rode through as a bogus unit. normalizeCurrencyCode agrees with the
+  // attributed_conversions_currency_format CHECK constraint the nightly writes against.
+  const { properties } = buildShopifyRefundConversion(
+    shopifyRefundPayload({ currency: 'US' }), REFUND_SITE, 'visitor-1'
+  )
+  assert.equal(properties.currency, null)
+})
+
+test('shopify refund: a real currency still normalizes to uppercase ISO', () => {
+  const { properties, currency } = buildShopifyRefundConversion(
+    shopifyRefundPayload({ currency: 'usd' }), REFUND_SITE, 'visitor-1'
+  )
+  assert.equal(properties.currency, 'USD')
+  assert.equal(currency, 'USD')
+})
+
+test('a null-unit refund makes the site partial, not a confident ok', () => {
+  // The end-to-end consequence, using the real collapse: a refund whose unit was invented as
+  // 'USD' silently agreed with the USD purchases around it. As null it surfaces as 'partial' —
+  // the site stops printing a symbol until the unit is real. That is the point of #532.
+  const { currency } = buildShopifyRefundConversion(shopifyRefundPayload(), REFUND_SITE, 'v1')
+  assert.equal(collapseCurrencies(['USD', 'USD', currency]).currency_status, 'partial')
 })

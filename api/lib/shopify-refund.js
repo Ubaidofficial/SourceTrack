@@ -13,6 +13,7 @@
 // payload carries `order_id`, so we resolve the original by `event_id = order_id`.
 
 import { esc } from './utils.js'
+import { normalizeCurrencyCode } from './currency.js'
 
 export const SHOPIFY_REFUND_TOPIC = 'refunds/create'
 
@@ -121,7 +122,16 @@ export function buildShopifyRefundConversion (payload, site, distinctId, { unres
   const amount = extractShopifyRefundAmount(payload)
   if (!(amount > 0)) return null                                   // no money moved → nothing to net
   const value = amount
-  const currency = (payload?.currency || '').trim().toUpperCase() || 'USD'
+  // A refund with no usable unit is UNDENOMINATED, never 'USD' (#529/#532). null is the
+  // honest representation and it is representable end to end: properties.currency lands in
+  // events.currency (LowCardinality(Nullable(String)), not a REQUIRED_COLUMN), and the
+  // returned `currency` reaches revenue_ingestion_events.currency as NULL via
+  // logIngestionEvent's `currency || null`. collapseCurrencies() then reports the site
+  // 'partial' instead of stamping a confident 'USD' over an amount nobody can denominate —
+  // which is exactly the machinery #532 built for this. Matches the sibling ORDER path
+  // (shopify-webhook.js:256 `currency: currency || null`); normalizeCurrencyCode also
+  // rejects malformed codes the old trim/uppercase chain passed through unvalidated.
+  const currency = normalizeCurrencyCode(payload?.currency)
   const occurredAt = payload?.processed_at || payload?.created_at || new Date().toISOString()
   const did = distinctId || shopifyRefundDistinctId(payload)
   // conversion_event_id / event_id are refund-specific (prefixed) so they can NEVER
