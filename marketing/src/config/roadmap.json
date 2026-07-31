@@ -58,7 +58,7 @@
           "title": "MCP diagnostic tools",
           "description": "Ask Claude, Cursor or ChatGPT about your SourceTrack setup — workspace context, site health, data quality, data flow and event verification — over the Model Context Protocol, read-only.",
           "note": "Merged and tested, but no one has run it against a live key yet. It stays here until a real end-to-end call has succeeded.",
-          "verified_note": "First enforcement of the read:analytics scope, and api_keys is 0 rows in prod — so the auth path has never been exercised by a real key. Move to shipped after one successful real-key call."
+          "verified_note": "Only enforcement of the read:diagnostics and read:volume scopes, and api_keys is 0 rows in prod — so the auth path has never been exercised by a real key. Move to shipped after one successful real-key call."
         }
       ]
     },

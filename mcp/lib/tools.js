@@ -142,7 +142,7 @@ async function callDiagnostic(path, { apiKey, apiBaseUrl, query = {} } = {}) {
     return {
       ok: false,
       error: 'MISSING_API_KEY',
-      message: 'api_key is required (pass the api_key argument or set SOURCETRACK_API_KEY). A user auth_token will not work here: diagnostic tools authenticate with a SourceTrack API key holding the read:analytics scope.'
+      message: 'api_key is required (pass the api_key argument or set SOURCETRACK_API_KEY). A user auth_token will not work here: these tools authenticate with a SourceTrack API key holding the scope named in the tool\'s api_key argument description — read:diagnostics for the five pipeline-state tools, read:volume for the two volume tools.'
     }
   }
 

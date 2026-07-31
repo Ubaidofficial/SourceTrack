@@ -2,7 +2,7 @@
 //
 // The four load-bearing cases (all four required; none optional):
 //   1. key with ['write:events']          -> POST /api/server/event succeeds
-//   2. key with ['read:analytics'] only   -> 403 (NOT 200, not silently accepted)
+//   2. key with ['read:diagnostics'] only -> 403 (NOT 200, not silently accepted)
 //   3. key with [] (the DB default '{}', i.e. a non-app INSERT) -> 403
 //   4. create with ['admin:everything']   -> 400 DENIED
 //
@@ -112,9 +112,12 @@ test('1. key with [write:events] succeeds on POST /api/server/event', async (t) 
   assert.strictEqual(res.body.success, true)
 })
 
-// ── 2. read:analytics only -> 403 ─────────────────────────────────────────────
-test('2. key with [read:analytics] only is DENIED 403 on /event', async (t) => {
-  installSupabase({ apiKeyRow: keyRow(['read:analytics']) })
+// ── 2. a read-only key -> 403 ─────────────────────────────────────────────────
+// Was read:analytics; that scope was replaced by read:diagnostics + read:volume. The rule
+// under test is unchanged — a read key never writes — so this uses a scope that still
+// exists rather than pinning the rule to a removed one.
+test('2. key with [read:diagnostics] only is DENIED 403 on /event', async (t) => {
+  installSupabase({ apiKeyRow: keyRow(['read:diagnostics']) })
   t.after(restoreSupabase)
 
   const res = mockRes()
@@ -220,15 +223,43 @@ test('the APP default and the DB default are DIFFERENT on purpose', () => {
   assert.strictEqual(hasScope([], 'write:events'), false, "the DB default '{}' must grant nothing")
 })
 
-// ── the scope vocabulary is exactly three values ──────────────────────────────
-// Was two (KI-43's MVP set). `write:crawler_hits` was added deliberately for
+// ── the scope vocabulary is exactly four values ───────────────────────────────
+// Was two (KI-43's MVP set), then three. `write:crawler_hits` was added deliberately for
 // POST /api/server/crawler-hit — the rationale is in api/lib/api-key-scopes.js, and the
 // enforcement is pinned in api/tests/server-crawler-hit.test.js (3b asserts a
-// write:events key gets 403 there). This assertion is the guard against ACCIDENTAL
-// vocabulary creep, not a prohibition: a fourth value is allowed, but only alongside a
-// stated reason and an enforcing endpoint.
-test('the scope vocabulary is exactly write:events, write:crawler_hits and read:analytics', () => {
-  assert.deepStrictEqual([...VALID_API_KEY_SCOPES], ['write:events', 'write:crawler_hits', 'read:analytics'])
+// write:events key gets 403 there). `read:analytics` was then REPLACED by read:diagnostics
+// + read:volume (docs/mcp_tool_policy.md §5), both enforced on /api/diagnostics/* and
+// pinned in api/tests/mcp-diagnostics-scope.test.js. This assertion is the guard against
+// ACCIDENTAL vocabulary creep, not a prohibition: a fifth value is allowed, but only
+// alongside a stated reason and an enforcing endpoint.
+test('the scope vocabulary is exactly write:events, write:crawler_hits, read:diagnostics and read:volume', () => {
+  assert.deepStrictEqual(
+    [...VALID_API_KEY_SCOPES],
+    ['write:events', 'write:crawler_hits', 'read:diagnostics', 'read:volume']
+  )
+})
+
+// The removed value, asserted as removed. Validation is app-only (no DB CHECK), so the
+// create path is where an unrecognised scope is caught — and read:analytics is now exactly
+// that. Minting one must be a 400, the same as any other unknown string.
+test('read:analytics is GONE from the vocabulary — a create requesting it is denied 400', async (t) => {
+  assert.ok(!VALID_API_KEY_SCOPES.includes('read:analytics'), 'the replaced scope must not be mintable')
+  assert.strictEqual(normalizeRequestedScopes(['read:analytics']).ok, false, 'it is now an unrecognised scope')
+
+  const captured = []
+  installSupabase({ apiKeyRow: null, insertCapture: captured })
+  t.after(restoreSupabase)
+
+  const res = mockRes()
+  await postApiKey({
+    site: { id: 'site-1', plan: 'growth' },
+    user: { id: 'user-1' },
+    body: { name: 'legacy token', scopes: ['read:analytics'] }
+  }, res)
+
+  assert.strictEqual(res.statusCode, 400)
+  assert.match(res.body.error, /read:analytics/, 'the error should name the scope it rejected')
+  assert.strictEqual(captured.length, 0, 'no key may be minted with a removed scope')
 })
 
 test('write:crawler_hits does not imply write:events, and vice versa', () => {
@@ -246,15 +277,24 @@ test('normalizeRequestedScopes rejects non-arrays, empty arrays, and non-strings
   assert.deepStrictEqual(normalizeRequestedScopes(undefined).scopes, ['write:events'], 'omitted -> app default')
   assert.deepStrictEqual(normalizeRequestedScopes(['write:events', 'write:events']).scopes, ['write:events'], 'duplicates collapse')
   assert.deepStrictEqual(
-    normalizeRequestedScopes(['read:analytics', 'write:events']).scopes,
-    ['read:analytics', 'write:events'],
-    'both valid scopes are grantable together'
+    normalizeRequestedScopes(['read:diagnostics', 'write:events']).scopes,
+    ['read:diagnostics', 'write:events'],
+    'valid scopes are grantable together'
   )
 })
 
-// read:analytics is deliberately inert in this PR — it is stored and grantable, but wired
-// to no endpoint. This test documents that and will need updating when the read API lands.
-test('read:analytics is grantable but enforced by nothing in this PR', () => {
-  assert.ok(VALID_API_KEY_SCOPES.includes('read:analytics'), 'it must be grantable')
-  assert.strictEqual(hasScope(['read:analytics'], 'write:events'), false, 'it must not imply write access')
+// Both read scopes are enforced — on /api/diagnostics/*, split by route
+// (api/routes/diagnostics.js; matrix in api/tests/mcp-diagnostics-scope.test.js). What this
+// test pins is the direction that file cannot: neither read scope leaks WRITE access, so a
+// key minted for an MCP agent can never reach the events/revenue rail.
+test('neither read scope implies write access', () => {
+  for (const read of ['read:diagnostics', 'read:volume']) {
+    assert.ok(VALID_API_KEY_SCOPES.includes(read), `${read} must be grantable`)
+    assert.strictEqual(hasScope([read], 'write:events'), false, `${read} must not imply write:events`)
+    assert.strictEqual(hasScope([read], 'write:crawler_hits'), false, `${read} must not imply write:crawler_hits`)
+  }
+  // …and the two reads do not imply each other. The route-level proof is in
+  // mcp-diagnostics-scope.test.js §2b; this is the same rule at the vocabulary layer.
+  assert.strictEqual(hasScope(['read:diagnostics'], 'read:volume'), false)
+  assert.strictEqual(hasScope(['read:volume'], 'read:diagnostics'), false)
 })

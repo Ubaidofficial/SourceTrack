@@ -17,8 +17,8 @@
 // hasScope() (api/lib/api-key-scopes.js) is true only for an array that actually contains
 // the required value, so '{}' (the DB default), null, and a missing column all deny. Scopes
 // are siblings, not a hierarchy: no scope implies another, and holding write:events does not
-// admit a read:analytics endpoint. That is intended, not an oversight — see the rationale in
-// api-key-scopes.js.
+// admit a read:diagnostics endpoint — nor does read:diagnostics admit a read:volume one.
+// That is intended, not an oversight — see the rationale in api-key-scopes.js.
 //
 // ── Revocation ───────────────────────────────────────────────────────────────────────
 // The lookup filters `revoked_at IS NULL`. Today that is a NO-OP: revoke is still a hard
@@ -56,7 +56,7 @@ export function requireApiKeyScope (requiredScope) {
     throw new Error('requireApiKeyScope: a scope is required')
   }
 
-  return async function apiKeyScopeGuard (req, res, next) {
+  const guard = async function apiKeyScopeGuard (req, res, next) {
     try {
       const authHeader = req.headers.authorization
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -130,4 +130,12 @@ export function requireApiKeyScope (requiredScope) {
       return res.status(500).json({ success: false, data: null, error: 'Internal server error' })
     }
   }
+
+  // Every instance this factory returns is the same named function, so two guards built
+  // for two different scopes are indistinguishable to anything walking a router stack.
+  // Stamping the scope on the returned middleware is what lets a test assert WHICH scope
+  // a given route enforces, rather than only that it carries some guard. Without it, a
+  // route silently moved from one read scope to the other still passes a route-list test.
+  guard.requiredScope = requiredScope
+  return guard
 }

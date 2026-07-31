@@ -12,8 +12,9 @@
 //   · the internal evidence field is never the same string as the customer-facing note
 //
 // Two entries were demoted from shipped on 2026-07-30 (AI visibility: crawler pipes not
-// deployed; MCP tools: read:analytics never exercised by a real key). If a future change
-// promotes either, these tests force the evidence to be written down at the same time.
+// deployed; MCP tools: the diagnostic read scopes never exercised by a real key). If a
+// future change promotes either, these tests force the evidence to be written down at the
+// same time.
 
 import test from 'node:test'
 import assert from 'node:assert/strict'

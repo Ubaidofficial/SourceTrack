@@ -145,7 +145,12 @@ _client.from = (table) => {
     range: async () => ({ data: [], error: null }),
     update: () => ({ eq: async () => ({ data: null, error: null }) }),
     maybeSingle: async () => {
-      if (table === 'api_keys') return { data: { id: 'k1', site_id: SITE.id, scopes: ['read:analytics'] }, error: null }
+      // read:volume, NOT read:diagnostics: these two routes moved to the narrower scope
+      // when read:analytics was split (docs/mcp_tool_policy.md §5). The cross-scope 403s
+      // are asserted in api/tests/mcp-diagnostics-scope.test.js §2b; here the fixture just
+      // has to hold the scope these routes actually require, or every assertion below
+      // measures a 403 body instead of a payload.
+      if (table === 'api_keys') return { data: { id: 'k1', site_id: SITE.id, scopes: ['read:volume'] }, error: null }
       if (table === 'sites') return { data: SITE, error: null }
       return { data: null, error: null }
     }

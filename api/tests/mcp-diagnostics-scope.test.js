@@ -1,9 +1,28 @@
-// GET /api/diagnostics/* — read:analytics scope enforcement.
+// GET /api/diagnostics/* — read:diagnostics / read:volume scope enforcement.
 //
-// This is the FIRST endpoint family that enforces read:analytics (api/lib/api-key-scopes.js
-// previously said "Enforced by NOTHING today"), and the mount deliberately has no
-// app-level requireUserAuth — so the per-route guard is the entire trust boundary. Every
-// assertion below is about that boundary, not about the payloads.
+// This is the only endpoint family that enforces either read scope, and the mount
+// deliberately has no app-level requireUserAuth — so the per-route guard is the entire
+// trust boundary. Every assertion below is about that boundary, not about the payloads.
+//
+// ── What changed when read:analytics was split ───────────────────────────────────────
+// The router originally enforced ONE scope, `read:analytics`, across all seven routes.
+// docs/mcp_tool_policy.md §5 split it into read:diagnostics (five pipeline-state routes)
+// and read:volume (two count routes), and removed read:analytics from the vocabulary
+// outright — prod api_keys is 0 rows, so no live key held it. Three things follow, and
+// each is asserted below rather than assumed:
+//
+//   1. The old scope must be GONE, not merely undocumented. A key still holding
+//      ['read:analytics'] has to 403 on both guards (§2's matrix). Without this case the
+//      removal is a rename in the comments and a no-op in the auth layer.
+//   2. The two new scopes are SIBLINGS. read:diagnostics gets 403 on a volume route and
+//      read:volume gets 403 on a diagnostic route (§3). A split whose halves admit each
+//      other is one scope wearing two names.
+//   3. WHICH route carries WHICH scope is itself an assertion (§6). Every guard this
+//      factory returns is the same named function, so a router-stack walk could only ever
+//      prove "some guard is present" — which stays true if a volume route is quietly moved
+//      under the diagnostics guard, silently widening what a diagnostics key can read.
+//      requireApiKeyScope stamps `guard.requiredScope`, and the two route-list assertions
+//      read it.
 //
 // Mirrors api/tests/api-key-scopes.test.js's shape: a fake Supabase installed via the
 // module registry so nothing touches a real project.
@@ -80,11 +99,14 @@ function fakeRes () {
   return res
 }
 
-async function runGuard (authHeader, scopes) {
+const { SCOPE_READ_DIAGNOSTICS, SCOPE_READ_VOLUME } = await import('../lib/api-key-scopes.js')
+
+// `required` is the scope the GUARD demands; `scopes` is what the KEY holds. Keeping them
+// separate arguments is what makes the cross-scope denials in §3 expressible at all.
+async function runGuard (authHeader, scopes, required = SCOPE_READ_DIAGNOSTICS) {
   setKey(scopes)
   const { requireApiKeyScope } = await import('../middleware/api-key-scope.js')
-  const { SCOPE_READ_ANALYTICS } = await import('../lib/api-key-scopes.js')
-  const guard = requireApiKeyScope(SCOPE_READ_ANALYTICS)
+  const guard = requireApiKeyScope(required)
   const req = { headers: authHeader ? { authorization: authHeader } : {} }
   const res = fakeRes()
   let nexted = false
@@ -94,53 +116,96 @@ async function runGuard (authHeader, scopes) {
 
 // ── 1. No credential ─────────────────────────────────────────────────────────────────
 test('🔴 no Authorization header -> 401, guard does not call next()', async () => {
-  const { res, nexted } = await runGuard(null, ['read:analytics'])
+  const { res, nexted } = await runGuard(null, [SCOPE_READ_DIAGNOSTICS])
   assert.strictEqual(res.statusCode, 401)
   assert.strictEqual(nexted, false)
 })
 
 test('🔴 Bearer with an empty token -> 401 (not treated as a valid empty key)', async () => {
-  const { res, nexted } = await runGuard('Bearer    ', ['read:analytics'])
+  const { res, nexted } = await runGuard('Bearer    ', [SCOPE_READ_DIAGNOSTICS])
   assert.strictEqual(res.statusCode, 401)
   assert.strictEqual(nexted, false)
 })
 
 // ── 2. Fail-closed scope matrix — the core of KI-43 ──────────────────────────────────
-for (const [label, scopes] of [
-  ['{} (the DB default)', []],
-  ['null', null],
-  ['write:events only', ['write:events']],
-  // Became testable when #497 landed the third scope. Included because "siblings, not a
-  // hierarchy" has to hold in every direction, not just the two that existed before.
-  ['write:crawler_hits only', ['write:crawler_hits']],
-  ['both write scopes but no read', ['write:events', 'write:crawler_hits']],
-  ['an unrecognised scope', ['read:everything']]
-]) {
-  test(`🔴 a key with ${label} is DENIED 403 on /api/diagnostics/*`, async () => {
-    const { res, nexted } = await runGuard(`Bearer ${RAW_KEY}`, scopes)
-    assert.strictEqual(res.statusCode, 403, `${label} must not be admitted`)
-    assert.match(res.body.error, /read:analytics/)
-    assert.strictEqual(nexted, false)
-  })
+// Run against BOTH read guards. A matrix that only covered one of them would let the other
+// ship fail-OPEN, and the two guards are separate instances of the same factory — sameness
+// is the thing being asserted, not something that can be assumed.
+for (const required of [SCOPE_READ_DIAGNOSTICS, SCOPE_READ_VOLUME]) {
+  for (const [label, scopes] of [
+    ['{} (the DB default)', []],
+    ['null', null],
+    ['write:events only', ['write:events']],
+    // Became testable when #497 landed the third scope. Included because "siblings, not a
+    // hierarchy" has to hold in every direction, not just the two that existed before.
+    ['write:crawler_hits only', ['write:crawler_hits']],
+    ['both write scopes but no read', ['write:events', 'write:crawler_hits']],
+    ['an unrecognised scope', ['read:everything']],
+    // THE REMOVED SCOPE. read:analytics was deleted from VALID_API_KEY_SCOPES, not
+    // deprecated — but validation is app-only on the CREATE path, and this guard reads
+    // whatever `scopes` the row holds. A key row carrying the old value (hand-written SQL,
+    // a restored backup, a fixture that was never updated) must therefore be denied by the
+    // GUARD, not merely rejected at mint time. Without this case, "removed" is a claim
+    // about a constants file rather than a fact about the auth boundary.
+    ['the REMOVED read:analytics scope', ['read:analytics']],
+    // The same key with a write scope alongside it — proves the denial is not an artifact
+    // of the array having exactly one element.
+    ['read:analytics plus write:events', ['read:analytics', 'write:events']]
+  ]) {
+    test(`🔴 [${required}] a key with ${label} is DENIED 403`, async () => {
+      const { res, nexted } = await runGuard(`Bearer ${RAW_KEY}`, scopes, required)
+      assert.strictEqual(res.statusCode, 403, `${label} must not be admitted`)
+      assert.match(res.body.error, new RegExp(required), 'the error must name the scope actually required')
+      assert.doesNotMatch(res.body.error, /read:analytics/, 'the removed scope must not survive in the error copy')
+      assert.strictEqual(nexted, false)
+    })
+  }
 }
 
-test('🔴 write:events does NOT imply read:analytics (siblings, not a hierarchy)', async () => {
-  const { res } = await runGuard(`Bearer ${RAW_KEY}`, ['write:events'])
-  assert.strictEqual(res.statusCode, 403)
+test('🔴 write:events does NOT imply either read scope (siblings, not a hierarchy)', async () => {
+  for (const required of [SCOPE_READ_DIAGNOSTICS, SCOPE_READ_VOLUME]) {
+    const { res } = await runGuard(`Bearer ${RAW_KEY}`, ['write:events'], required)
+    assert.strictEqual(res.statusCode, 403, `write:events must not admit ${required}`)
+  }
+})
+
+// ── 2b. The two read scopes do not admit each other ──────────────────────────────────
+// The whole point of the split. If either direction passes, there is one scope with two
+// spellings and a leaked diagnostics key reads the customer's lead counts.
+test('🔴 read:diagnostics is DENIED on a read:volume route', async () => {
+  const { res, nexted } = await runGuard(`Bearer ${RAW_KEY}`, [SCOPE_READ_DIAGNOSTICS], SCOPE_READ_VOLUME)
+  assert.strictEqual(res.statusCode, 403, 'a diagnostics key must not reach lead/campaign counts')
+  assert.match(res.body.error, /read:volume/)
+  assert.strictEqual(nexted, false)
+})
+
+test('🔴 read:volume is DENIED on a read:diagnostics route', async () => {
+  const { res, nexted } = await runGuard(`Bearer ${RAW_KEY}`, [SCOPE_READ_VOLUME], SCOPE_READ_DIAGNOSTICS)
+  assert.strictEqual(res.statusCode, 403, 'the split is symmetric — neither scope is a superset')
+  assert.match(res.body.error, /read:diagnostics/)
+  assert.strictEqual(nexted, false)
 })
 
 // ── 3. The happy path, and what it puts on req ───────────────────────────────────────
-test('🟢 a key holding read:analytics is admitted, and site_id comes from the KEY', async () => {
-  const { req, res, nexted } = await runGuard(`Bearer ${RAW_KEY}`, ['read:analytics'])
-  assert.strictEqual(nexted, true, `expected next(), got ${res.statusCode}: ${JSON.stringify(res.body)}`)
-  assert.strictEqual(req.site.id, SITE.id)
-  assert.strictEqual(req.apiKeySite.id, SITE.id)
-  assert.strictEqual(req.apiKeyId, 'key-1')
-})
+for (const required of [SCOPE_READ_DIAGNOSTICS, SCOPE_READ_VOLUME]) {
+  test(`🟢 [${required}] a key holding it is admitted, and site_id comes from the KEY`, async () => {
+    const { req, res, nexted } = await runGuard(`Bearer ${RAW_KEY}`, [required], required)
+    assert.strictEqual(nexted, true, `expected next(), got ${res.statusCode}: ${JSON.stringify(res.body)}`)
+    assert.strictEqual(req.site.id, SITE.id)
+    assert.strictEqual(req.apiKeySite.id, SITE.id)
+    assert.strictEqual(req.apiKeyId, 'key-1')
+  })
+}
 
-test('🟢 a key holding both scopes is admitted (extra scopes are not a problem)', async () => {
-  const { nexted } = await runGuard(`Bearer ${RAW_KEY}`, ['write:events', 'read:analytics'])
-  assert.strictEqual(nexted, true)
+test('🟢 extra scopes are not a problem — a key may hold both reads and a write', async () => {
+  for (const required of [SCOPE_READ_DIAGNOSTICS, SCOPE_READ_VOLUME]) {
+    const { nexted } = await runGuard(
+      `Bearer ${RAW_KEY}`,
+      ['write:events', SCOPE_READ_DIAGNOSTICS, SCOPE_READ_VOLUME],
+      required
+    )
+    assert.strictEqual(nexted, true, `${required} must be admitted from a superset key`)
+  }
 })
 
 // ── 4. Unknown / revoked key ─────────────────────────────────────────────────────────
@@ -172,26 +237,63 @@ test('🔴 EVERY registered /api/diagnostics route has more than one handler (i.
   }
 })
 
-test('🔴 the roadmap §1.5 routes plus the two volume routes are all present', async () => {
+// The scope each route actually enforces, read off the middleware itself. Every guard is
+// the same named function (`apiKeyScopeGuard`), so nothing else on the stack distinguishes
+// them — requireApiKeyScope stamps `requiredScope` on what it returns precisely so this
+// walk is possible. Reading it here rather than trusting the route file is the point: it
+// is the only way a MOVE between the two scopes fails a test instead of passing silently.
+async function routesByScope () {
   const { default: router } = await import('../routes/diagnostics.js')
-  const paths = router.stack.filter(l => l.route).map(l => l.route.path).sort()
-  // Exact list. The guard test above proves each of these carries its scope guard; this
-  // one proves the SET is what was decided, so a route cannot appear here without a
-  // deliberate edit to this array.
-  assert.deepStrictEqual(paths, [
-    '/campaign-volume',
+  const out = {}
+  for (const layer of router.stack.filter(l => l.route)) {
+    const guards = layer.route.stack.map(s => s.handle).filter(h => h.requiredScope)
+    assert.strictEqual(
+      guards.length, 1,
+      `${layer.route.path} must carry exactly one scope guard, found ${guards.length}`
+    )
+    const scope = guards[0].requiredScope
+    ;(out[scope] ||= []).push(layer.route.path)
+  }
+  for (const paths of Object.values(out)) paths.sort()
+  return out
+}
+
+test('🔴 the five roadmap §1.5 diagnostic routes are EXACTLY the read:diagnostics set', async () => {
+  const byScope = await routesByScope()
+  // Exact list, per scope. The all-routes-are-guarded test above proves each route carries
+  // a guard; this proves each carries the RIGHT one. A volume route moved under the
+  // diagnostics guard would widen what a leaked diagnostics key reads, and would fail here
+  // rather than anywhere else in the suite.
+  assert.deepStrictEqual(byScope[SCOPE_READ_DIAGNOSTICS], [
     '/data-flow',
     '/data-quality',
-    '/leads-volume',
     '/site-health',
     '/verify-events',
     '/workspace-context'
   ])
 })
 
+test('🔴 the two volume routes are EXACTLY the read:volume set — no diagnostic route among them', async () => {
+  const byScope = await routesByScope()
+  assert.deepStrictEqual(byScope[SCOPE_READ_VOLUME], [
+    '/campaign-volume',
+    '/leads-volume'
+  ])
+})
+
+test('🔴 the router enforces those two scopes and nothing else', async () => {
+  const byScope = await routesByScope()
+  // Catches a third scope arriving on this router without a deliberate edit here — and
+  // catches read:analytics coming back.
+  assert.deepStrictEqual(
+    Object.keys(byScope).sort(),
+    [SCOPE_READ_DIAGNOSTICS, SCOPE_READ_VOLUME].sort()
+  )
+})
+
 // ── 7. §6.5 — no raw site_key may ever leave this surface ─────────────────────────────
 test('🔴 workspace-context response never contains a site_key', async () => {
-  const { req, nexted } = await runGuard(`Bearer ${RAW_KEY}`, ['read:analytics'])
+  const { req, nexted } = await runGuard(`Bearer ${RAW_KEY}`, [SCOPE_READ_DIAGNOSTICS])
   assert.strictEqual(nexted, true)
   // The guard's own site selection is the only place a site_key could enter the handler.
   assert.ok(!('site_key' in req.apiKeySite), 'the guard must not load site_key onto req')
