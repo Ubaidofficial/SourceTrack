@@ -146,33 +146,27 @@ const uid = `kf-${Math.random().toString(36).slice(2, 8)}`;
 </section>
 
 <script>
-  import { animateMini as animate, inView } from "motion";
+  import { animateMini as animate } from "motion";
+  import { revealOnScroll } from "@/lib/revealOnScroll";
 
   function initKeyFeatures() {
     // --- Scroll-reveal for left panel (fadeInUp) ---
+    // The three reveals below go through revealOnScroll so a dead observer cannot strand them.
+    // The sentinel IntersectionObserver further down is NOT a reveal — it tracks which feature is
+    // active — so it keeps its own observer and is left alone.
+    const ease = [0.25, 0.1, 0.25, 1] as const;
+    const fade = { opacity: [0, 1], transform: ["translateY(30px)", "translateY(0)"] };
+
     const leftPanel = document.querySelector<HTMLElement>('[id^="kf-left-"]');
-    if (leftPanel) {
-      leftPanel.style.opacity = "0";
-      inView(leftPanel, () => {
-        animate(leftPanel, { opacity: [0, 1], transform: ["translateY(30px)", "translateY(0)"] }, { duration: 0.5, ease: [0.25, 0.1, 0.25, 1] });
-      }, { margin: "0px", amount: 0.05 });
-    }
+    if (leftPanel) revealOnScroll(leftPanel, fade, { duration: 0.5, ease });
 
     // --- Scroll-reveal for right panel container ---
     const rightPanel = document.querySelector<HTMLElement>('[id^="kf-right-"]');
-    if (rightPanel) {
-      rightPanel.style.opacity = "0";
-      inView(rightPanel, () => {
-        animate(rightPanel, { opacity: [0, 1] }, { duration: 0.3, ease: [0.25, 0.1, 0.25, 1] });
-      }, { margin: "0px", amount: 0.05 });
-    }
+    if (rightPanel) revealOnScroll(rightPanel, { opacity: [0, 1] }, { duration: 0.3, ease });
 
     // --- Stagger-reveal for individual cards ---
     document.querySelectorAll<HTMLElement>(".kf-card").forEach((card, i) => {
-      card.style.opacity = "0";
-      inView(card, () => {
-        animate(card, { opacity: [0, 1], transform: ["translateY(30px)", "translateY(0)"] }, { duration: 0.5, ease: [0.25, 0.1, 0.25, 1], delay: i * 0.1 });
-      }, { margin: "0px", amount: 0.05 });
+      revealOnScroll(card, fade, { duration: 0.5, ease, delay: i * 0.1 });
     });
 
     // --- IntersectionObserver for active feature tracking ---

@@ -42,19 +42,16 @@ const { enable, badge, title, images } = data;
 )}
 
 <script>
-  import { animateMini as animate, inView } from "motion";
+  // revealOnScroll owns the hide so a dead or never-firing IntersectionObserver cannot strand
+  // this content invisible. See marketing/src/lib/revealOnScroll.ts.
+  import { revealOnScroll } from "@/lib/revealOnScroll";
+  const fade = { opacity: [0, 1], transform: ["translateY(20px)", "translateY(0)"] };
   function initGallery() {
     document.querySelectorAll<HTMLElement>('[id^="gallery-header-"]').forEach((el) => {
-      el.style.opacity = "0";
-      inView(el, () => {
-        animate(el, { opacity: [0, 1], transform: ["translateY(20px)", "translateY(0)"] }, { duration: 0.5, ease: "easeInOut" });
-      }, { margin: "0px", amount: 0.05 });
+      revealOnScroll(el, fade, { duration: 0.5, ease: "easeInOut" });
     });
     document.querySelectorAll<HTMLElement>('[id^="gallery-img-"]').forEach((el, i) => {
-      el.style.opacity = "0";
-      inView(el, () => {
-        animate(el, { opacity: [0, 1], transform: ["translateY(20px)", "translateY(0)"] }, { duration: 0.5, ease: "easeInOut", delay: i * 0.08 });
-      }, { margin: "-100px", amount: 0.1 });
+      revealOnScroll(el, fade, { duration: 0.5, ease: "easeInOut", delay: i * 0.08 });
     });
   }
   document.addEventListener("astro:page-load", initGallery);

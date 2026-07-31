@@ -38,18 +38,20 @@ const svgMap: Record<string, string> = {
 </ul>
 
 <script>
-  import { animateMini as animate, inView } from "motion";
+  // Social is NOT covered by fixing Footer's #footer-bottom wrapper, despite sitting inside it:
+  // this script hides the <ul> AND every <li> on its own, so with the observer dead the icons
+  // stayed at opacity 0 while their parent had already recovered. Measured, not assumed.
+  //
+  // Each <li> now registers itself rather than being animated from the <ul>'s callback, so the
+  // sweep can reach the items too. They are inline-block siblings on one row and intersect
+  // together, so the i * 0.1 delay still reads as the same stagger.
+  import { revealOnScroll } from "@/lib/revealOnScroll";
+  const fade = { opacity: [0, 1], transform: ["translateY(20px)", "translateY(0)"] };
   function initSocialIcons() {
     document.querySelectorAll<HTMLElement>('[id^="social-"]').forEach((ul) => {
-      ul.style.opacity = "0";
-      ul.querySelectorAll<HTMLElement>("[data-social-item]").forEach((li) => {
-        li.style.opacity = "0";
-      });
-      inView(ul, () => {
-        animate(ul, { opacity: [0, 1], transform: ["translateY(20px)", "translateY(0)"] }, { duration: 0.5, ease: "easeInOut" });
-        ul.querySelectorAll<HTMLElement>("[data-social-item]").forEach((li, i) => {
-          animate(li, { opacity: [0, 1], transform: ["translateY(20px)", "translateY(0)"] }, { duration: 0.3, ease: "easeInOut", delay: i * 0.1 });
-        });
+      revealOnScroll(ul, fade, { duration: 0.5, ease: "easeInOut" });
+      ul.querySelectorAll<HTMLElement>("[data-social-item]").forEach((li, i) => {
+        revealOnScroll(li, fade, { duration: 0.3, ease: "easeInOut", delay: i * 0.1 });
       });
     });
   }

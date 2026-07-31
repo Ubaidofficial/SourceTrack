@@ -22,10 +22,15 @@
 // This gate covers BOTH mechanisms, which is the point: they are edited in different files by
 // different reasoning, and only the built HTML shows whether the content actually survives.
 //
-// SCOPE: deliberately narrow. It guards the elements that were fixed, NOT every opacity:0 in the
-// output. Counter, CallToAction (cta-*), the footer and the social list still carry the same
-// fail-closed pattern and are knowingly out of scope here — widening this check without fixing
-// them first would just ship a red pipeline. Add a target below when you fix one.
+// WHAT THIS GATE CANNOT SEE — read before extending it. It reads static HTML, so it only catches
+// hiding that is IN the static HTML. CallToAction, Footer and Social never wrote opacity into
+// their markup at all: their scripts hid the element at runtime and handed un-hiding to an
+// IntersectionObserver. Nothing about that failure is visible here — the built HTML for those
+// sections is, and always was, completely clean. Adding a target for them would be theatre.
+//
+// That mechanism is guarded by qa-marketing-reveal-safety.mjs instead, which reads the SOURCE and
+// bans the raw hide. The two checks are not redundant and neither subsumes the other: this one
+// asks "did the server ship it hidden?", that one asks "can the client strand it hidden?".
 //
 // Usage:  node scripts/qa-marketing-no-js-content.mjs [dist-dir]   (default: marketing/dist)
 //         Exit 0 = clean.  Exit 1 = primary content hidden behind JS.  Exit 2 = self-test failed.
@@ -47,6 +52,7 @@ const TARGETS = [
   { label: 'section badge', test: a => /\bid="badge-/.test(a) },
   { label: 'KeyFeatures panel', test: a => /\bid="kf-(left|right)-/.test(a) },
   { label: 'KeyFeatures card', test: a => /\bclass="[^"]*\bkf-card\b/.test(a) },
+  { label: 'statistics figure', test: a => /\bclass="[^"]*\bcounter\b/.test(a) },
 ]
 
 // `data-price-tag-yearly` is legitimately opacity:0 — it is the billing period NOT currently
@@ -110,13 +116,15 @@ function scan (html, file, findings) {
   const bad = []
   scan('<div style="opacity:0"><h3 data-price-tag-monthly>$49</h3></div>', 'synthetic', bad)
   scan('<div id="wcu-abc123" style="opacity:0"><p>x</p></div>', 'synthetic', bad)
+  scanCounters('<span class="counter" data-target="100">0<!-- -->%</span>', 'synthetic', bad)
   const good = []
+  scanCounters('<span class="counter" data-target="100">100<!-- -->%</span>', 'synthetic', good)
   scan('<div><h3 data-price-tag-monthly>$49</h3></div>', 'synthetic', good)
   scan('<div style="opacity:0"><h3 data-price-tag-yearly>$470</h3></div>', 'synthetic', good)
   // closing an opacity:0 wrapper must restore visibility for later siblings
   scan('<div style="opacity:0"><span>a</span></div><div id="wcu-zzz"><p>y</p></div>', 'synthetic', good)
-  if (bad.length !== 2 || good.length !== 0) {
-    console.error(`[qa-marketing-no-js-content] SELF-TEST FAILED — expected 2 detections and 0 false positives, got ${bad.length} and ${good.length}`)
+  if (bad.length !== 3 || good.length !== 0) {
+    console.error(`[qa-marketing-no-js-content] SELF-TEST FAILED — expected 3 detections and 0 false positives, got ${bad.length} and ${good.length}`)
     process.exit(2)
   }
 }
@@ -135,9 +143,39 @@ function walk (dir, out = []) {
   return out
 }
 
+// A stat figure must ship its REAL number, not a placeholder it counts up from. Counter.tsx used
+// to render `{prefix}0{suffix}` server-side and only reach the true value once its observer fired,
+// so the static HTML claimed "0%" for a 100% figure and "0 Min" for a 5 Min one. That was merely
+// wrong-and-invisible until #530's <noscript> net started forcing inline-hidden elements visible,
+// at which point scripting-disabled visitors began READING the zeros. A rendered 0 standing in for
+// a real number is the fake zero CLAUDE.md section 6 forbids, so it is fatal here.
+function scanCounters (html, file, findings) {
+  const re = /<span\b([^>]*\bclass="[^"]*\bcounter\b[^"]*"[^>]*)>([\s\S]*?)<\/span>/g
+  let m
+  while ((m = re.exec(html))) {
+    const target = /\bdata-target="([^"]*)"/.exec(m[1])?.[1]
+    if (target === undefined) continue
+    // React separates interpolated children with <!-- --> comments; strip them to get the text.
+    const text = m[2].replace(/<!--[\s\S]*?-->/g, '').trim()
+    if (!text.includes(target)) {
+      findings.push({
+        file,
+        label: 'statistics figure renders a placeholder, not its real value',
+        why: `server HTML says "${text}" but data-target is "${target}"`,
+        line: html.slice(0, m.index).split('\n').length,
+        snip: m[0].slice(0, 150),
+      })
+    }
+  }
+}
+
 const files = walk(ROOT)
 const findings = []
-for (const f of files) scan(readFileSync(f, 'utf8'), relative(ROOT, f), findings)
+for (const f of files) {
+  const html = readFileSync(f, 'utf8')
+  scan(html, relative(ROOT, f), findings)
+  scanCounters(html, relative(ROOT, f), findings)
+}
 
 console.log(`[qa-marketing-no-js-content] ${files.length} pages under ${ROOT}`)
 if (!findings.length) {

@@ -57,13 +57,15 @@ const { badge, title, feature_list, enable } = data.frontmatter;
 )}
 
 <script>
-  import { animateMini as animate, inView } from "motion";
+  // revealOnScroll, not a raw `el.style.opacity = "0"` + inView pair. #530 made this markup
+  // fail open for scripting-disabled visitors, but the runtime hide still had no way back if the
+  // observer never fired: measured with IntersectionObserver stubbed dead, this content stayed at
+  // opacity 0 through a full scroll of the page. The helper keeps the same animation and adds the
+  // viewport-checked sweep that recovers it.
+  import { revealOnScroll } from "@/lib/revealOnScroll";
   function initWhyChooseUs() {
     document.querySelectorAll<HTMLElement>('[id^="wcu-"]').forEach((el, i) => {
-      el.style.opacity = "0";
-      inView(el, () => {
-        animate(el, { opacity: [0, 1], transform: ["translateY(20px)", "translateY(0)"] }, { duration: 0.5, ease: "easeInOut", delay: i * 0.1 });
-      }, { margin: "0px", amount: 0.05 });
+      revealOnScroll(el, { opacity: [0, 1], transform: ["translateY(20px)", "translateY(0)"] }, { duration: 0.5, ease: "easeInOut", delay: i * 0.1 });
     });
   }
   document.addEventListener("astro:page-load", initWhyChooseUs);

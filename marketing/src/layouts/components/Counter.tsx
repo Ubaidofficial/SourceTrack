@@ -1,7 +1,5 @@
 
 import React, { useEffect, useRef } from "react";
-import { motion } from "motion/react";
-import { fadeInUpVariants } from "@/lib/animations";
 import usePrefersReducedMotion from "@/hooks/usePrefersReducedMotion";
 
 export interface CounterProps {
@@ -95,12 +93,18 @@ const Counter: React.FC<CounterProps> = ({
   }, [target, duration, prefix, suffix, startDelay, reducedMotion]);
 
   return (
-    <motion.span
+    // No initial="hidden"/whileInView: Framer serialises `initial` into the server HTML, so this
+    // span shipped style="opacity:0" and only hydration could clear it.
+    //
+    // The text is the more serious half. It used to render `{prefix}0{suffix}` on the server and
+    // reach the real figure only once the IntersectionObserver fired, so the static HTML said
+    // "0%" for "Privacy-First & Cookieless Model" and "0 Min" for setup time. While the numbers
+    // were also invisible that was merely wrong-and-unseen; once #530's <noscript> net started
+    // forcing inline-hidden elements visible, a scripting-disabled visitor began READING those
+    // zeros. A rendered 0 standing in for a real 100 is exactly the fake zero CLAUDE.md section 6
+    // forbids, so the server now renders the true value and the count-up animates down from it.
+    <span
       ref={spanRef}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, margin: "0px", amount: 0.05 }}
-      variants={fadeInUpVariants}
       className={className}
       data-target={target}
       data-duration={duration}
@@ -108,8 +112,8 @@ const Counter: React.FC<CounterProps> = ({
       data-suffix={suffix}
       data-delay={startDelay}
     >
-      {prefix}0{suffix}
-    </motion.span>
+      {prefix}{target}{suffix}
+    </span>
   );
 };
 

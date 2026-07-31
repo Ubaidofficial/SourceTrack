@@ -32,13 +32,15 @@ const uid = `cta-${Math.random().toString(36).slice(2, 8)}`;
 )}
 
 <script>
-  import { animateMini as animate, inView } from "motion";
+  // The hide here is JS-only — nothing in the markup above is styled invisible — so scripting
+  // being OFF was never the risk. Working JS was: `el.style.opacity = "0"` ran immediately and
+  // only an IntersectionObserver callback could undo it, so an observer that never fired left
+  // this CTA permanently invisible on a page where everything else worked. revealOnScroll keeps
+  // the animation and adds a viewport-checked sweep that cannot leave it stranded.
+  import { revealOnScroll } from "@/lib/revealOnScroll";
   function initCTAs() {
     document.querySelectorAll<HTMLElement>('[id^="cta-"]').forEach((el) => {
-      el.style.opacity = "0";
-      inView(el, () => {
-        animate(el, { opacity: [0, 1], transform: ["translateY(20px)", "translateY(0)"] }, { duration: 0.5, ease: "easeInOut" });
-      }, { margin: "0px", amount: 0.05 });
+      revealOnScroll(el, { opacity: [0, 1], transform: ["translateY(20px)", "translateY(0)"] }, { duration: 0.5, ease: "easeInOut" });
     });
   }
   document.addEventListener("astro:page-load", initCTAs);
