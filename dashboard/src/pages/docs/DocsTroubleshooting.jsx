@@ -19,7 +19,7 @@ const TROUBLESHOOTING_ITEMS = [
   {
     symptom: 'Duplicate conversion counts',
     cause: 'The conversion script is fired multiple times (e.g., when the user refreshes the thank-you page).',
-    fix: 'Pass a unique, stable order_id parameter (such as the order number or payment intent ID) in your conversion options body. SourceTrack will automatically skip duplicate payloads containing the same order_id.',
+    fix: 'Pass a unique, stable order_id parameter (such as the order number or payment intent ID) in your conversion options body. SourceTrack automatically skips duplicate payloads carrying the same order_id within a single integration. If you run both the manual Shopify webhook and the native Shopify app on the same store, use only one — running both can report the same order twice for up to 24 hours, until the nightly job reconciles it.',
     verify: 'Trigger the event twice in your console. The first should return success, and the second should be logged as deduplicated.'
   },
   {
