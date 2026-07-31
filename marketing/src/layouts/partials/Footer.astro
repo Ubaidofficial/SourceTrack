@@ -11,7 +11,7 @@ const { footer_company, footer_legal, footer_resource } = menu;
 
 <footer class="pt-25">
   <div class="container">
-    <div id="footer-main" style="opacity:0" class="grid md:grid-cols-6 gap-y-12 relative z-1">
+    <div id="footer-main" class="grid md:grid-cols-6 gap-y-12 relative z-1">
       <div class="md:col-span-3">
         <Logo />
         <p class="text-gray mb-10 mt-3 md:w-2/5">{config.params.footer_text}</p>
@@ -60,7 +60,7 @@ const { footer_company, footer_legal, footer_resource } = menu;
     </div>
 
     <!-- Bottom footer -->
-    <div id="footer-bottom" style="opacity:0" class="lg:sticky bottom-0 z-0 relative">
+    <div id="footer-bottom" class="lg:sticky bottom-0 z-0 relative">
       {/* The wordmark, NOT config.site.title. site.title is the 60-character SEO string
           ("SourceTrack — Know which sources bring your leads and revenue"); rendered here it
           overflowed .footer-title's whitespace-nowrap/overflow-hidden and was clipped

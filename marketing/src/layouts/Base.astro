@@ -196,6 +196,46 @@ const allSchemas = [orgSchema, ...structuredData];
       sync();
       query.addEventListener("change", sync);
     </script>
+
+    <noscript>
+      <style>
+        /*
+         * Scroll-reveal safety net for the React motion islands.
+         *
+         * The .astro reveals no longer ship a hidden state: their SSR markup renders fully
+         * visible and their own scripts apply opacity:0 before observing. The React islands
+         * cannot do that — `motion`'s `initial="hidden"` / `initial={{opacity:0}}` is
+         * serialised INTO the server HTML, so FAQ/Accordion, Statistics, Pricing, Integration
+         * and OpenPositions ship as style="opacity:0;transform:translateY(20px)" and stay that
+         * way until the island hydrates and IntersectionObserver fires.
+         *
+         * With scripting off that never happens, so the copy is permanently invisible while its
+         * container, borders and buttons render normally — the exact symptom that started this.
+         * Nothing animates without JS anyway, so forcing every inline-hidden element visible
+         * here costs no motion and recovers the content.
+         *
+         * SCOPE, deliberately narrow:
+         *   - opacity only. `transform` is NOT reset: Tailwind positions several of these with
+         *     class-based transforms (-translate-x-1/2 and friends) and a blanket
+         *     `transform:none !important` would drag them out of place.
+         *   - .price-tag is excluded. Pricing's monthly/yearly tags are absolutely stacked and
+         *     the inactive one is hidden ON PURPOSE; revealing it prints both prices on top of
+         *     each other, which on a pricing page is worse than the thing being fixed.
+         *   - .kf-arrow needs no exclusion: it is width:0 inside overflow-hidden, so opacity
+         *     alone cannot expose it.
+         *
+         * LIMIT, stated rather than implied: this covers scripting-disabled only. A page where
+         * JS runs but `motion` fails to load, or which is captured without a scroll event, keeps
+         * the React islands hidden — <noscript> does not apply there. Closing that needs the
+         * reveal state moved out of `initial` and behind a script-added marker class across the
+         * six React components; that changes how those animations are authored and is not folded
+         * in here.
+         */
+        [style*="opacity:0"]:not(.price-tag) {
+          opacity: 1 !important;
+        }
+      </style>
+    </noscript>
   </head>
   <body>
     <!-- Google Tag Manager (noscript) -->
