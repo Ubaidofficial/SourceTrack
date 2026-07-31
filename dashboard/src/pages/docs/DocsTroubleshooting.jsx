@@ -23,6 +23,18 @@ const TROUBLESHOOTING_ITEMS = [
     verify: 'Trigger the event twice in your console. The first should return success, and the second should be logged as deduplicated.'
   },
   {
+    symptom: 'Conversions counted twice in Meta or TikTok ads reporting',
+    cause: 'Your browser pixel and the CAPI forwarding in SourceTrack each report the same conversion to the ad platform. Meta and TikTok reliably merge the two into one only when both carry the same event ID, and that does not happen by default.',
+    fix: 'Generate one stable ID per conversion and send it in both places: as the eventID on your pixel call, and as the event_id field in your window.sourcetrack.conversion() options body. Any stable string works so long as it is byte-identical on both sides — the order number is a common choice. If you do not supply event_id, SourceTrack falls back to an internal identifier that a standard pixel install will not reproduce, so the two reports stay separate and the conversion is counted twice. This applies to Meta and TikTok, which share the same event-ID model. Google Ads and GA4 deduplicate on a different mechanism and are not covered by it.',
+    verify: 'Send one test conversion, then open that event in Meta Events Manager or TikTok Events Manager. A correctly shared ID shows the browser and server events merged into a single deduplicated event rather than two separate ones.'
+  },
+  {
+    symptom: 'Shopify orders counted twice in Meta ads reporting',
+    cause: 'The built-in Facebook & Instagram sales channel in Shopify reports purchases to Meta over its own connection. Those events never reach SourceTrack, so no deduplication performed by SourceTrack can apply to them.',
+    fix: 'Report each order to Meta from one place only. Either turn off customer data sharing in the Shopify sales channel and let SourceTrack forward the order, or keep the sales channel as your reporting source and leave Meta forwarding switched off for that store. Sharing an event_id does not help here: the sales channel has no knowledge of the ID SourceTrack uses, and the two connections operate independently.',
+    verify: 'Compare purchase counts in Meta Events Manager against the actual order count in your Shopify admin for the same date range. Roughly double the orders means two connections are reporting, and the source breakdown in Events Manager will name both.'
+  },
+  {
     symptom: 'Traffic shows as "Direct/None" instead of organic/referral',
     cause: 'The referrer header was stripped when transitioning from HTTPS to HTTP, or the traffic is coming from a private window/ad-network click without UTM parameters.',
     fix: 'Ensure your site has HTTPS enabled and uses appropriate Referrer-Policy headers. Ensure you use standard UTM campaign variables for custom acquisition campaigns.',
