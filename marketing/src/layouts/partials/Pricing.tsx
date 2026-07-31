@@ -4,12 +4,19 @@
 import type { PricingType } from "@/types/index";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import {
-  cardVariants,
-  fadeInUpVariants,
-  staggerContainerVariants,
-  staggerItemVariants,
-} from "@/lib/animations";
+import { cardVariants } from "@/lib/animations";
+
+// NO `initial="hidden"` / `whileInView` on the plan grid, the plan cards or the billing
+// toggle. Framer Motion resolves `initial` during SSR and writes it into the static HTML, so
+// those props shipped `style="opacity:0"` on the grid, on every plan wrapper and on every card
+// — three nested layers over the price figures and the feature lists. The reveal only ever ran
+// after the island hydrated, so with JS off (or hydration failed, or a crawler) the whole
+// pricing section rendered as blank page background. Verified in a real browser with JS
+// disabled before and after this change.
+//
+// `cardVariants` is kept for the hover lift only, with `initial={false}` so Framer applies no
+// mount-time state. The prices keep an entrance animation regardless: `.price-tag.active` in
+// components.css is a pure-CSS `text-reveal` that runs with no JS at all.
 
 interface PageData {
   notFound?: boolean;
@@ -125,10 +132,6 @@ const Pricing = ({
 
               <div className="flex flex-col gap-y-14">
                 <motion.div
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true, margin: "0px", amount: 0.05 }}
-                  variants={fadeInUpVariants}
                   ref={toggleRef}
                   className="relative bg-lighter border border-border/30 px-1.5 py-1.25 rounded-full inline-flex w-max mx-auto gap-2"
                   role="tablist"
@@ -169,19 +172,11 @@ const Pricing = ({
                   </motion.button>
                 </motion.div>
 
-                <motion.div
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true, margin: "0px", amount: 0.05 }}
-                  variants={staggerContainerVariants}
-                  className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
-                >
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {pricing_plans.map((plan, index) => (
-                    <motion.div key={index} variants={staggerItemVariants}>
+                    <div key={index}>
                       <motion.div
-                        initial="initial"
-                        whileInView="visible"
-                        viewport={{ once: true, margin: "0px", amount: 0.05 }}
+                        initial={false}
                         whileHover="hover"
                         variants={cardVariants}
                         className="bg-card border border-border rounded-3xl p-2.5"
@@ -233,19 +228,15 @@ const Pricing = ({
                           )}
                         </div>
                       </motion.div>
-                    </motion.div>
+                    </div>
                   ))}
-                </motion.div>
+                </div>
               </div>
             </div>
           </div></div>
         ) : (
           <div className="flex flex-col gap-y-14">
             <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "0px", amount: 0.05 }}
-              variants={fadeInUpVariants}
               ref={toggleRef}
               className="relative bg-lighter border border-border/30 px-1.5 py-1.25 rounded-full inline-flex w-max mx-auto gap-2 mt-8"
               role="tablist"
@@ -284,19 +275,11 @@ const Pricing = ({
               </motion.button>
             </motion.div>
 
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "0px", amount: 0.05 }}
-              variants={staggerContainerVariants}
-              className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
-            >
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {pricing_plans.map((plan, index) => (
-                <motion.div key={index} variants={staggerItemVariants}>
+                <div key={index}>
                   <motion.div
-                    initial="initial"
-                    whileInView="visible"
-                    viewport={{ once: true, margin: "0px", amount: 0.05 }}
+                    initial={false}
                     whileHover="hover"
                     variants={cardVariants}
                     className="bg-card border border-border rounded-3xl p-2.5"
@@ -348,9 +331,9 @@ const Pricing = ({
                       )}
                     </div>
                   </motion.div>
-                </motion.div>
+                </div>
               ))}
-            </motion.div>
+            </div>
           </div>
         )}
       </section>

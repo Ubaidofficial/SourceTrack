@@ -169,6 +169,15 @@ jobs:
       - name: Check built marketing HTML
         run: node scripts/qa-marketing-html.mjs marketing/dist
 
+      # A third gate on the same output, asking a different question: is the content actually
+      # VISIBLE? qa-marketing-html.mjs checks that markup is well-formed and styled; it has
+      # nothing to say about a perfectly-formed element that ships style="opacity:0" and waits
+      # for a scroll animation that may never run. Three sections shipped exactly that — with
+      # JS disabled the homepage painted the WhyChooseUs dividers with no feature cards, and the
+      # pricing section as bare background with no plan names, prices, features or CTAs.
+      - name: Check marketing content survives without JS
+        run: node scripts/qa-marketing-no-js-content.mjs marketing/dist
+
       # Same reasoning as build-and-test above: without this, a marketing build that
       # breaks on main is invisible until someone happens to look at the Actions tab.
       - name: Alert on red main
