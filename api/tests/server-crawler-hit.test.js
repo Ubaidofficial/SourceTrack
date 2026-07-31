@@ -292,8 +292,8 @@ test('3f. write:crawler_hits is grantable but is NOT in the app default', () => 
   )
   assert.deepStrictEqual(
     [...VALID_API_KEY_SCOPES],
-    ['write:events', 'write:crawler_hits', 'read:analytics'],
-    'the vocabulary is pinned — a fourth value is a design decision, not a detail'
+    ['write:events', 'write:crawler_hits', 'read:diagnostics', 'read:volume'],
+    'the vocabulary is pinned — a fifth value is a design decision, not a detail'
   )
 })
 

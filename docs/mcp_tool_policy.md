@@ -21,9 +21,13 @@ did not happen.
 
 `mcp/server.js` ships 7 `AUTH_API_KEY` tools today — 5 diagnostic
 (`get_workspace_context`, `get_site_health`, `get_data_quality`, `debug_data_flow`,
-`verify_events`) and 2 volume (`get_leads_volume`, `get_campaign_volume`) — and
-**all 7 declare the same scope string, `read:analytics`**, verified in
-`mcp/lib/tools.js` and `api/lib/api-key-scopes.js`. Diagnostics report pipeline
+`verify_events`) and 2 volume (`get_leads_volume`, `get_campaign_volume`). When this
+document was drafted **all 7 declared the same scope string, `read:analytics`** (in
+`mcp/server.js`'s `TOOLS` array and `api/lib/api-key-scopes.js`). §5's split has since
+landed: the 5 diagnostics declare `read:diagnostics`, the 2 volume tools declare
+`read:volume`, `read:analytics` was removed from the vocabulary outright, and §6's guard
+test is `api/tests/mcp-tool-policy-guard.test.js`. The rationale below is kept in the
+present tense as the decision record. Diagnostics report pipeline
 state that cannot be confidently wrong (`post_verdict_roadmap.md` §1.5's own
 rationale); volume tools report real business metrics. Nothing but the tool
 author's care distinguishes them today. Fine for 7 hand-reviewed tools. Not fine

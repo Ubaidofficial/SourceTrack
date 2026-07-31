@@ -6,16 +6,29 @@ import {
   handleGetLeadsVolume, handleGetCampaignVolume,
   AUTH_NONE, AUTH_USER_JWT, AUTH_API_KEY
 } from './lib/tools.js'
+import { SCOPE_READ_DIAGNOSTICS, SCOPE_READ_VOLUME } from '../api/lib/api-key-scopes.js'
 
 // Every tool declares its auth model. The DECLARATION decides which credential the
 // dispatcher hands it — the token is never inspected to guess. See the long note in
 // lib/tools.js: install-support tools use a Supabase user JWT (a person, many sites),
-// diagnostic tools use a SourceTrack API key (exactly one site, read:analytics scope),
-// and the two never share an argument name or an env var.
+// key-authed tools use a SourceTrack API key (exactly one site), and the two never share
+// an argument name or an env var.
 //
-// `auth` is stripped from tools/list output: it is server-side routing metadata, not part
-// of the MCP tool contract a client consumes.
-const TOOLS = [
+// Every AUTH_API_KEY tool ALSO declares the exact scope its key must hold — read:diagnostics
+// for pipeline state, read:volume for lead/campaign counts (docs/mcp_tool_policy.md §5).
+// The values are imported from api/lib/api-key-scopes.js rather than written as literals
+// here: that file is the single source of truth and says "do not fork this list", and a
+// forked copy would let this array drift out of agreement with the routes that actually
+// enforce it — the declaration would then describe a scope no endpoint checks.
+//
+// `auth` and `scope` are both stripped from tools/list output: they are server-side
+// routing metadata, not part of the MCP tool contract a client consumes. The scope a
+// caller needs is stated in the api_key argument description, which IS part of the
+// contract.
+// Exported so api/tests/mcp-tool-policy-guard.test.js can assert against the REAL array
+// rather than a copy — the same shape api/routes/capi.js exports CAPI_PLATFORMS for.
+// tools/list is not a substitute: it strips the very fields that guard checks.
+export const TOOLS = [
   {
     name: 'detect_platform',
     auth: AUTH_NONE,
@@ -59,11 +72,12 @@ const TOOLS = [
   {
     name: 'get_workspace_context',
     auth: AUTH_API_KEY,
+    scope: SCOPE_READ_DIAGNOSTICS,
     description: 'Identify the site this API key reads: site_id, domain, timezone, attribution window, onboarding state. Configuration only, no metrics — call this first so later answers can name which site and timezone they refer to.',
     inputSchema: {
       type: 'object',
       properties: {
-        api_key: { type: 'string', description: 'SourceTrack API key with the read:analytics scope (or set SOURCETRACK_API_KEY). The key determines which site is read — no site_id/site_key is accepted.' }
+        api_key: { type: 'string', description: 'SourceTrack API key with the read:diagnostics scope (or set SOURCETRACK_API_KEY). The key determines which site is read — no site_id/site_key is accepted.' }
       },
       required: []
     }
@@ -71,11 +85,12 @@ const TOOLS = [
   {
     name: 'get_site_health',
     auth: AUTH_API_KEY,
+    scope: SCOPE_READ_DIAGNOSTICS,
     description: 'Is the tracker plumbed in? Reports script_detected, last_seen_at, hours since last seen, onboarding state and plan. Answerable without the analytics read store, so it still works when that store is the thing that is broken.',
     inputSchema: {
       type: 'object',
       properties: {
-        api_key: { type: 'string', description: 'SourceTrack API key with the read:analytics scope (or set SOURCETRACK_API_KEY). The key determines which site is read — no site_id/site_key is accepted.' }
+        api_key: { type: 'string', description: 'SourceTrack API key with the read:diagnostics scope (or set SOURCETRACK_API_KEY). The key determines which site is read — no site_id/site_key is accepted.' }
       },
       required: []
     }
@@ -83,11 +98,12 @@ const TOOLS = [
   {
     name: 'get_data_quality',
     auth: AUTH_API_KEY,
+    scope: SCOPE_READ_DIAGNOSTICS,
     description: 'Latest result per check from the nightly data-quality job (status, value, threshold, message). Returns has_data:false when the job has never run for this site — never an all-clear it cannot substantiate.',
     inputSchema: {
       type: 'object',
       properties: {
-        api_key: { type: 'string', description: 'SourceTrack API key with the read:analytics scope (or set SOURCETRACK_API_KEY). The key determines which site is read — no site_id/site_key is accepted.' }
+        api_key: { type: 'string', description: 'SourceTrack API key with the read:diagnostics scope (or set SOURCETRACK_API_KEY). The key determines which site is read — no site_id/site_key is accepted.' }
       },
       required: []
     }
@@ -95,12 +111,13 @@ const TOOLS = [
   {
     name: 'debug_data_flow',
     auth: AUTH_API_KEY,
+    scope: SCOPE_READ_DIAGNOSTICS,
     description: 'Attribution COVERAGE over a window: how many recorded conversions carry a usable source, and what share arrived UTM/click-id tagged. Pipeline completeness only — it does not say which channel deserves credit and returns no revenue.',
     inputSchema: {
       type: 'object',
       properties: {
         days: { type: 'number', description: 'Window in days, 1-90 (default 30)' },
-        api_key: { type: 'string', description: 'SourceTrack API key with the read:analytics scope (or set SOURCETRACK_API_KEY). The key determines which site is read — no site_id/site_key is accepted.' }
+        api_key: { type: 'string', description: 'SourceTrack API key with the read:diagnostics scope (or set SOURCETRACK_API_KEY). The key determines which site is read — no site_id/site_key is accepted.' }
       },
       required: []
     }
@@ -108,11 +125,12 @@ const TOOLS = [
   {
     name: 'verify_events',
     auth: AUTH_API_KEY,
+    scope: SCOPE_READ_DIAGNOSTICS,
     description: 'Is the ingest rail receiving events? Returns the most recent event timestamp and minutes since. If the analytics read store is unreachable this fails explicitly (READ_STORE_UNAVAILABLE) rather than reporting zero events — a SourceTrack read failure must never be read as broken customer tracking.',
     inputSchema: {
       type: 'object',
       properties: {
-        api_key: { type: 'string', description: 'SourceTrack API key with the read:analytics scope (or set SOURCETRACK_API_KEY). The key determines which site is read — no site_id/site_key is accepted.' }
+        api_key: { type: 'string', description: 'SourceTrack API key with the read:diagnostics scope (or set SOURCETRACK_API_KEY). The key determines which site is read — no site_id/site_key is accepted.' }
       },
       required: []
     }
@@ -120,13 +138,14 @@ const TOOLS = [
   {
     name: 'get_leads_volume',
     auth: AUTH_API_KEY,
+    scope: SCOPE_READ_VOLUME,
     description: 'Lead COUNTS over a window, plus a breakdown by one dimension (source, medium or campaign). Volume only: returns no revenue, no cost and no cost-derived metric, and takes no attribution-model argument — dimension values are always the FIRST touch, echoed back as "touch":"first" on every row. The breakdown is a complete partition: untagged traffic is reported as its own "(untagged)" bucket rather than omitted. distinct_leads (unique converting visitors) and breakdown.total (conversion events) are different units and are not expected to match.',
     inputSchema: {
       type: 'object',
       properties: {
         days: { type: 'number', description: 'Window in days, 1-90 (default 30)' },
         dimension: { type: 'string', description: 'Breakdown dimension: source (default), medium, or campaign' },
-        api_key: { type: 'string', description: 'SourceTrack API key with the read:analytics scope (or set SOURCETRACK_API_KEY). The key determines which site is read — no site_id/site_key is accepted.' }
+        api_key: { type: 'string', description: 'SourceTrack API key with the read:volume scope (or set SOURCETRACK_API_KEY). A read:diagnostics key is NOT accepted here — the two are siblings, not a hierarchy. The key determines which site is read — no site_id/site_key is accepted.' }
       },
       required: []
     }
@@ -134,12 +153,13 @@ const TOOLS = [
   {
     name: 'get_campaign_volume',
     auth: AUTH_API_KEY,
+    scope: SCOPE_READ_VOLUME,
     description: 'Per-campaign VOLUME over a window: distinct visitors and lead-type conversions per campaign. Volume only: there is no revenue, cost, ROAS or CPL column, and no attribution-model argument — campaign values are always the FIRST touch, echoed back as "touch":"first" on every row. Untagged traffic is included as the "(untagged)" campaign so the totals are a complete partition. This tool ranks campaigns by volume and says nothing about which campaign caused or deserves credit for anything.',
     inputSchema: {
       type: 'object',
       properties: {
         days: { type: 'number', description: 'Window in days, 1-90 (default 30)' },
-        api_key: { type: 'string', description: 'SourceTrack API key with the read:analytics scope (or set SOURCETRACK_API_KEY). The key determines which site is read — no site_id/site_key is accepted.' }
+        api_key: { type: 'string', description: 'SourceTrack API key with the read:volume scope (or set SOURCETRACK_API_KEY). A read:diagnostics key is NOT accepted here — the two are siblings, not a hierarchy. The key determines which site is read — no site_id/site_key is accepted.' }
       },
       required: []
     }
@@ -170,9 +190,9 @@ export function processRpcMessage(msg, config = {}) {
     return {
       jsonrpc: '2.0',
       id,
-      // `auth` is internal routing metadata, not part of the tool contract — strip it so
-      // clients see the same shape they always have.
-      result: { tools: TOOLS.map(({ auth, ...tool }) => tool) }
+      // `auth` and `scope` are internal routing metadata, not part of the tool contract —
+      // strip both so clients see the same shape they always have.
+      result: { tools: TOOLS.map(({ auth, scope, ...tool }) => tool) }
     }
   }
 

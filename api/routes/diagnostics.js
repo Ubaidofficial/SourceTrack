@@ -19,9 +19,18 @@
 // requireApiKeyScope(...) guard, and a route added without one is unauthenticated. The
 // test suite asserts that every registered route on this router denies an unscoped key.
 //
-// ── read:analytics is enforced HERE, for the first time ──────────────────────────────
-// api/lib/api-key-scopes.js described read:analytics as "grantable and stored… Enforced by
-// NOTHING today." This router is what changes that; the comment there is updated to match.
+// ── TWO read scopes, split by what a leaked key would expose ─────────────────────────
+// This router is the only enforcement point for both read scopes. It originally enforced a
+// single `read:analytics` across all seven routes; docs/mcp_tool_policy.md §5 split that
+// into read:diagnostics (the five pipeline-state routes) and read:volume (the two that
+// report real business counts), and `read:analytics` was removed from the vocabulary
+// outright rather than deprecated — prod api_keys is 0 rows, so nothing held it.
+//
+// The split is a route-level trust boundary, not a label: a read:diagnostics key gets 403
+// on /leads-volume and /campaign-volume, and a read:volume key gets 403 on the five
+// diagnostic routes. Adding a route to the wrong group silently widens whichever scope it
+// lands under, which is exactly what the per-scope route-list assertions in
+// api/tests/mcp-diagnostics-scope.test.js exist to catch.
 //
 // ── Truth rules (§6, CLAUDE.md) ─────────────────────────────────────────────────────
 // Diagnostics report OBSERVABLE PIPELINE STATE, never narrated attribution. That is the
@@ -36,23 +45,26 @@
 import express from 'express'
 import { getSupabase } from '../lib/supabase.js'
 import { requireApiKeyScope } from '../middleware/api-key-scope.js'
-import { SCOPE_READ_ANALYTICS } from '../lib/api-key-scopes.js'
+import { SCOPE_READ_DIAGNOSTICS, SCOPE_READ_VOLUME } from '../lib/api-key-scopes.js'
 import { queryTinybirdPipe, isTinybirdReadEnabled } from '../lib/tinybird-read.js'
 import { volumeOnly } from '../lib/volume-only-guard.js'
 
 const router = express.Router()
 
-// One guard instance, applied per-route below. Applying it with router.use() would work
-// today but would silently un-guard nothing while making a future unguarded route look
-// guarded — per-route is explicit and is what the test asserts against.
-const requireReadAnalytics = requireApiKeyScope(SCOPE_READ_ANALYTICS)
+// Two guard instances, each applied per-route below. Applying either with router.use()
+// would work today but would silently un-guard nothing while making a future unguarded
+// route look guarded — per-route is explicit and is what the test asserts against. With
+// two scopes on one router that reasoning gets stronger, not weaker: a mount-level guard
+// would have to be the LOOSER of the two, and every route it covered would inherit it.
+const requireReadDiagnostics = requireApiKeyScope(SCOPE_READ_DIAGNOSTICS)
+const requireReadVolume = requireApiKeyScope(SCOPE_READ_VOLUME)
 
 const ok = (res, data) => res.json({ success: true, data, error: null })
 
 // ── 1. get_workspace_context ─────────────────────────────────────────────────────────
 // What the agent is looking at. No metrics — identity and configuration only, so an agent
 // can state which site/timezone/window its later answers refer to instead of guessing.
-router.get('/workspace-context', requireReadAnalytics, (req, res) => {
+router.get('/workspace-context', requireReadDiagnostics, (req, res) => {
   const s = req.apiKeySite
   return ok(res, {
     site_id: s.id,
@@ -72,7 +84,7 @@ router.get('/workspace-context', requireReadAnalytics, (req, res) => {
 // ── 2. get_site_health ───────────────────────────────────────────────────────────────
 // Is this site plumbed in at all? Deliberately answerable without the read store, so it
 // still works when Tinybird is the thing that is broken.
-router.get('/site-health', requireReadAnalytics, (req, res) => {
+router.get('/site-health', requireReadDiagnostics, (req, res) => {
   const s = req.apiKeySite
   const lastSeen = s.last_seen_at ? new Date(s.last_seen_at) : null
   const validLastSeen = lastSeen && !Number.isNaN(lastSeen.getTime()) ? lastSeen : null
@@ -96,7 +108,7 @@ router.get('/site-health', requireReadAnalytics, (req, res) => {
 // ── 3. get_data_quality ──────────────────────────────────────────────────────────────
 // The latest row per check_name from the nightly data-quality job. Same reduction as
 // GET /api/analytics/data-quality/latest, which is the user-authed twin of this read.
-router.get('/data-quality', requireReadAnalytics, async (req, res) => {
+router.get('/data-quality', requireReadDiagnostics, async (req, res) => {
   try {
     const { data, error } = await getSupabase()
       .from('data_quality_reports')
@@ -131,7 +143,7 @@ router.get('/data-quality', requireReadAnalytics, async (req, res) => {
 // window, how many carry a usable source, and how many arrived with UTM/click-id tagging.
 // These are pipeline-completeness percentages — they say nothing about which channel
 // deserves credit, which is what keeps this on the §26-safe side of the line.
-router.get('/data-flow', requireReadAnalytics, async (req, res) => {
+router.get('/data-flow', requireReadDiagnostics, async (req, res) => {
   try {
     const days = Math.min(Math.max(parseInt(req.query.days, 10) || 30, 1), 90)
     const fromDate = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
@@ -190,7 +202,7 @@ router.get('/data-flow', requireReadAnalytics, async (req, res) => {
 // ── 5. verify_events ─────────────────────────────────────────────────────────────────
 // Is the ingest rail actually receiving events? This is the one read that must reach
 // Tinybird, and therefore the one that has to fail closed.
-router.get('/verify-events', requireReadAnalytics, async (req, res) => {
+router.get('/verify-events', requireReadDiagnostics, async (req, res) => {
   // Flag off is a KNOWN state, not a failure: say which it is rather than returning a
   // shape that reads like "no events".
   if (!isTinybirdReadEnabled()) {
@@ -287,7 +299,7 @@ function readStoreUnavailable (res, what) {
 
 // ── 6. get_leads_volume ──────────────────────────────────────────────────────────────
 // How many leads, and how they split by one dimension. Counts only.
-router.get('/leads-volume', requireReadAnalytics, async (req, res) => {
+router.get('/leads-volume', requireReadVolume, async (req, res) => {
   if (!isTinybirdReadEnabled()) {
     return res.status(503).json({
       success: false, data: null,
@@ -365,7 +377,7 @@ router.get('/leads-volume', requireReadAnalytics, async (req, res) => {
 
 // ── 7. get_campaign_volume ───────────────────────────────────────────────────────────
 // Visitors and leads per campaign. No revenue column exists on either read.
-router.get('/campaign-volume', requireReadAnalytics, async (req, res) => {
+router.get('/campaign-volume', requireReadVolume, async (req, res) => {
   if (!isTinybirdReadEnabled()) {
     return res.status(503).json({
       success: false, data: null,

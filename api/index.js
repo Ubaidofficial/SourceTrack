@@ -530,8 +530,10 @@ app.use("/api/analytics", analyticsRouter)
 
 // API-key-authed diagnostic reads for MCP v1. Intentionally NO requireUserAuth at the
 // mount — this surface takes API keys, not user sessions, and every route inside carries
-// its own requireApiKeyScope(read:analytics). See api/routes/diagnostics.js on why the two
-// auth models are separated by route rather than by inspecting the bearer token.
+// its own requireApiKeyScope(...) — read:diagnostics on the five pipeline-state routes,
+// read:volume on the two count routes. See api/routes/diagnostics.js on why the two auth
+// models are separated by route rather than by inspecting the bearer token, and why the
+// two read scopes are not one.
 app.use('/api/diagnostics', diagnosticsRouter)
 app.use("/sp", proxyRouter)
 app.use("/api/webhooks/incoming", trackLimit, webhookIncomingRouter)
