@@ -1,4 +1,4 @@
-import { safeNumber } from '../utils/numbers'
+import { safeNumber, normalizeCurrency } from '../utils/numbers'
 import { useCountUp } from '../utils/useCountUp'
 
 const MetricTile = ({
@@ -26,8 +26,13 @@ const MetricTile = ({
   sub = null,
   // Why this tile has no value. A bare "—" reads as broken; the reason is what makes it read as
   // "not applicable". Defaults to the generic caption so every existing call site is unchanged.
-  emptyReason = 'Not yet tracked'
+  emptyReason = 'Not yet tracked',
+  // ISO code for the `currency` format only. Defaults to USD, so every existing call site —
+  // none of which passes this today — renders exactly as before. Nothing supplies a real
+  // currency yet: attributed_conversions has no currency column (separate dispatch).
+  currency = 'USD'
 }) => {
+  const currencyCode = normalizeCurrency(currency)
   const shouldAnimate = typeof value === 'number' && !Number.isNaN(value) && !isEmpty && value != null && format !== 'text'
 
   const animated = useCountUp(shouldAnimate ? value : null)
@@ -38,7 +43,7 @@ const MetricTile = ({
     if (Number.isNaN(n)) return String(val)
 
     switch (fmt) {
-      case 'currency': return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: n >= 10000 ? 0 : 2 }).format(n)
+      case 'currency': return new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode, maximumFractionDigits: n >= 10000 ? 0 : 2 }).format(n)
       case 'percent':  return `${n >= 0 ? '+' : ''}${safeNumber(n, 0).toFixed(1)}%`
       case 'number':   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Math.round(safeNumber(n, 0)))
       case 'text':     return String(val)
