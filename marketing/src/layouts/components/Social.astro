@@ -20,9 +20,9 @@ const svgMap: Record<string, string> = {
 };
 ---
 
-<ul id={`social-${Math.random().toString(36).slice(2,8)}`} style="opacity:0" class={className}>
+<ul id={`social-${Math.random().toString(36).slice(2,8)}`} class={className}>
   {source.map((social) => (
-    <li class="inline-block" style="opacity:0" data-social-item>
+    <li class="inline-block" data-social-item>
       <a
         aria-label={social.name}
         href={social.link}
