@@ -41,8 +41,13 @@ ALTER TABLE public.erasure_log
 -- The sweep's eligibility query: rows that ran a delete, are old enough for the requeue window to
 -- have drained, and have not yet been re-swept. Partial index so it stays small — a completed
 -- re-sweep leaves the index forever after.
+--
+-- INDEXED ON requested_at, NOT executed_at. gdpr.js writes executed_at as NULL for every status
+-- except 'executed', so an executed_at index cannot serve the half of the eligibility predicate
+-- that finds FAILED erasures — which are precisely the rows most in need of a re-sweep. requested_at
+-- is NOT NULL on every row and is written in the same insert, so it orders the whole set.
 CREATE INDEX IF NOT EXISTS erasure_log_pending_resweep_idx
-  ON public.erasure_log (executed_at)
+  ON public.erasure_log (requested_at)
   WHERE resweep_completed_at IS NULL;
 
 COMMENT ON COLUMN public.erasure_log.resweep_completed_at IS

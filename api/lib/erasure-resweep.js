@@ -57,13 +57,28 @@ export function __resetResweepEraseFn () { _eraseSubject = eraseSubjectFromTinyb
  */
 export async function findPendingResweeps (supabase, { now = Date.now(), limit = 100 } = {}) {
   const cutoff = new Date(now - RESWEEP_ELIGIBLE_AFTER_MS).toISOString()
+  // AGE IS COALESCE(executed_at, requested_at) — NOT executed_at alone.
+  //
+  // gdpr.js's logErasure writes `executed_at: eraseExecuted(status) ? now : null`, so it is NULL
+  // for EVERY status except 'executed' — including 'failed'. In Postgres `NULL < anything` is NULL,
+  // never true, so filtering on executed_at alone silently excluded every failed erasure from this
+  // set FOREVER: the exact rows RESWEEPABLE_STATUSES says must "retry the erasure itself" were the
+  // ones that could never be selected. Silent because a failed erasure simply never reappeared —
+  // no error, no log line, and the sweep kept reporting a clean run.
+  //
+  // requested_at is NOT NULL on every row (column default now()), and for an 'executed' row it is
+  // written in the same insert as executed_at, so the two are equal in practice. It is the correct
+  // fallback rather than a convenient one.
+  //
+  // Expressed as an OR because PostgREST cannot filter on COALESCE(). Values are quoted so the
+  // dots and colons in an ISO timestamp are not parsed as PostgREST syntax.
   const { data, error } = await supabase
     .from('erasure_log')
-    .select('id, subject_id, site_id, status, executed_at, resweep_attempts')
+    .select('id, subject_id, site_id, status, executed_at, requested_at, resweep_attempts')
     .in('status', RESWEEPABLE_STATUSES)
     .is('resweep_completed_at', null)
-    .lt('executed_at', cutoff)
-    .order('executed_at', { ascending: true })
+    .or(`executed_at.lt."${cutoff}",and(executed_at.is.null,requested_at.lt."${cutoff}")`)
+    .order('requested_at', { ascending: true })
     .limit(limit)
   if (error) return { rows: null, error: error.message }
   return { rows: data || [], error: null }

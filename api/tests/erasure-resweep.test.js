@@ -29,11 +29,39 @@ import {
 import { requireInternalJobSecret } from '../routes/internal-jobs.js'
 
 const NOW = Date.UTC(2026, 7, 1, 12, 0, 0)
+// Every real erasure_log row has requested_at (column default now()). Fixtures carry it so the
+// stub's age filter is exercised rather than bypassed.
+const ELIGIBLE = new Date(NOW - 60 * 60 * 1000).toISOString()
 
 // Supabase stub covering the eligibility SELECT and the two ledger UPDATEs.
+//
+// The stub EVALUATES the age filter rather than echoing back whatever it was handed, so these
+// tests discriminate the real predicate instead of asserting a string. Concretely:
+//   * if the code calls .lt('executed_at', cutoff)  -> only executed_at is compared (the OLD,
+//     buggy behaviour, which drops every NULL-executed_at row)
+//   * if the code calls .or(...) with the null-fallback branch -> COALESCE semantics
+// A revert to `.lt('executed_at', …)` therefore FAILS the failed-status test below rather than
+// quietly passing it.
 function ledger ({ rows = [], readError = null } = {}) {
   const updates = []
   const captured = { filters: {} }
+  const applyAgeFilter = (all) => {
+    const { orExpr, ltCol, cutoff } = captured.filters
+    if (orExpr) {
+      const m = orExpr.match(/"([^"]+)"/)
+      const c = m ? m[1] : cutoff
+      const hasNullFallback = /executed_at\.is\.null/.test(orExpr)
+      return all.filter(r =>
+        (r.executed_at != null && r.executed_at < c) ||
+        (hasNullFallback && r.executed_at == null && r.requested_at != null && r.requested_at < c)
+      )
+    }
+    if (ltCol === 'executed_at') {
+      // NULL < anything is never true in Postgres — model that faithfully.
+      return all.filter(r => r.executed_at != null && r.executed_at < cutoff)
+    }
+    return all
+  }
   const api = {
     updates,
     captured,
@@ -42,9 +70,10 @@ function ledger ({ rows = [], readError = null } = {}) {
         select: () => b,
         in: (col, vals) => { captured.filters.statuses = vals; return b },
         is: (col, v) => { captured.filters.isNull = col; return b },
-        lt: (col, v) => { captured.filters.cutoff = v; return b },
+        lt: (col, v) => { captured.filters.ltCol = col; captured.filters.cutoff = v; return b },
+        or: (expr) => { captured.filters.orExpr = expr; return b },
         order: () => b,
-        limit: () => Promise.resolve(readError ? { data: null, error: { message: readError } } : { data: rows, error: null }),
+        limit: () => Promise.resolve(readError ? { data: null, error: { message: readError } } : { data: applyAgeFilter(rows), error: null }),
         update (patch) {
           const u = { patch }
           return {
@@ -70,7 +99,42 @@ test('eligibility: only attempted erasures, only un-swept, only past the anti-co
   // 'skipped_*' and 'dry_run' attempted no delete — there is nothing to finish.
   assert.deepEqual(db.captured.filters.statuses, ['executed', 'failed'])
   assert.equal(db.captured.filters.isNull, 'resweep_completed_at')
-  assert.equal(db.captured.filters.cutoff, new Date(NOW - RESWEEP_ELIGIBLE_AFTER_MS).toISOString())
+  const cutoff = new Date(NOW - RESWEEP_ELIGIBLE_AFTER_MS).toISOString()
+  assert.ok(db.captured.filters.orExpr?.includes(cutoff), 'the cutoff must be applied')
+})
+
+test('🔴 a FAILED erasure (executed_at NULL) is eligible — it must not be excluded forever', async () => {
+  // THE BUG THIS GUARDS. gdpr.js writes `executed_at: eraseExecuted(status) ? now : null`, so it
+  // is NULL for every status except 'executed' — including 'failed'. `NULL < cutoff` is NULL in
+  // Postgres, never true, so filtering on executed_at ALONE silently excluded every failed
+  // erasure from the sweep forever: exactly the rows RESWEEPABLE_STATUSES says must "retry the
+  // erasure itself". Silent, because a failed erasure simply never reappeared — no error, no log,
+  // and the sweep kept reporting clean runs.
+  //
+  // No pre-existing test constructed a row this shape, which is why it stayed green.
+  const old = new Date(NOW - 60 * 60 * 1000).toISOString()   // an hour ago, well past eligibility
+  const db = ledger({
+    rows: [
+      { id: 'failed-1', subject_id: 'a', site_id: 's', status: 'failed', executed_at: null, requested_at: old, resweep_attempts: 0 },
+      { id: 'exec-1', subject_id: 'b', site_id: 's', status: 'executed', executed_at: old, requested_at: old, resweep_attempts: 0 }
+    ]
+  })
+  const { rows } = await findPendingResweeps(db, { now: NOW })
+  const ids = rows.map(r => r.id)
+  assert.ok(ids.includes('failed-1'), 'a failed erasure with executed_at NULL MUST be swept')
+  assert.ok(ids.includes('exec-1'), 'and executed rows are still selected')
+  // The fallback branch must be present, not merely a wider filter that happens to pass.
+  assert.match(db.captured.filters.orExpr, /executed_at\.is\.null/)
+  assert.match(db.captured.filters.orExpr, /requested_at\.lt/)
+})
+
+test('a not-yet-eligible failed erasure is still excluded — the fallback widens the column, not the window', async () => {
+  const recent = new Date(NOW - 30 * 1000).toISOString()   // 30s ago: inside the anti-collision window
+  const db = ledger({
+    rows: [{ id: 'failed-recent', subject_id: 'a', site_id: 's', status: 'failed', executed_at: null, requested_at: recent, resweep_attempts: 0 }]
+  })
+  const { rows } = await findPendingResweeps(db, { now: NOW })
+  assert.equal(rows.length, 0, 'requested_at must still be compared against the cutoff')
 })
 
 test('the eligibility window comfortably clears the ~20s requeue exposure', () => {
@@ -97,7 +161,7 @@ test('🔴 a failed READ reports readFailed — never "0 pending"', async () => 
 test('🔴 a missing admin token fails the sweep — it does not mark rows attempted', async () => {
   // Without the token nothing can be deleted. Incrementing attempts would burn the escalation
   // budget on work that never happened.
-  const db = ledger({ rows: [{ id: 'e1', subject_id: 's', site_id: 'site', resweep_attempts: 0 }] })
+  const db = ledger({ rows: [{ id: 'e1', subject_id: 's', site_id: 'site', requested_at: ELIGIBLE, resweep_attempts: 0 }] })
   const s = await runErasureResweep(db, { host: 'h', adminToken: null, now: NOW })
   assert.equal(s.readFailed, true)
   assert.equal(db.updates.length, 0, 'no ledger write when nothing was attempted')
@@ -106,7 +170,7 @@ test('🔴 a missing admin token fails the sweep — it does not mark rows attem
 
 test('a successful re-sweep marks the erasure complete and stops retrying it', async () => {
   __setResweepEraseFn(erased('executed'))
-  const db = ledger({ rows: [{ id: 'e1', subject_id: 'anon-1', site_id: 'site-1', resweep_attempts: 0 }] })
+  const db = ledger({ rows: [{ id: 'e1', subject_id: 'anon-1', site_id: 'site-1', requested_at: ELIGIBLE, resweep_attempts: 0 }] })
   const s = await runErasureResweep(db, { host: 'h', adminToken: 'admin', now: NOW })
   assert.equal(s.swept, 1)
   assert.equal(s.failed, 0)
@@ -118,7 +182,7 @@ test('🔴 a FAILED re-sweep stays eligible — there is no give-up state', asyn
   // resweep_completed_at must remain NULL so the next cron run retries. Marking it done on
   // failure would leave the subject unprotected with the ledger claiming otherwise.
   __setResweepEraseFn(erased('failed'))
-  const db = ledger({ rows: [{ id: 'e1', subject_id: 'anon-1', site_id: 'site-1', resweep_attempts: 0 }] })
+  const db = ledger({ rows: [{ id: 'e1', subject_id: 'anon-1', site_id: 'site-1', requested_at: ELIGIBLE, resweep_attempts: 0 }] })
   const s = await runErasureResweep(db, { host: 'h', adminToken: 'admin', now: NOW })
   assert.equal(s.failed, 1)
   assert.equal(s.swept, 0)
@@ -132,13 +196,13 @@ test('🔴 escalation fires at the 3rd failure, not the 1st', async () => {
   // Alerting on it would train everyone to ignore the alert.
   __setResweepEraseFn(erased('failed'))
 
-  const first = ledger({ rows: [{ id: 'e1', subject_id: 'a', site_id: 's', resweep_attempts: 0 }] })
+  const first = ledger({ rows: [{ id: 'e1', subject_id: 'a', site_id: 's', requested_at: ELIGIBLE, resweep_attempts: 0 }] })
   assert.equal((await runErasureResweep(first, { host: 'h', adminToken: 'admin', now: NOW })).alerting, 0)
 
-  const second = ledger({ rows: [{ id: 'e1', subject_id: 'a', site_id: 's', resweep_attempts: 1 }] })
+  const second = ledger({ rows: [{ id: 'e1', subject_id: 'a', site_id: 's', requested_at: ELIGIBLE, resweep_attempts: 1 }] })
   assert.equal((await runErasureResweep(second, { host: 'h', adminToken: 'admin', now: NOW })).alerting, 0)
 
-  const third = ledger({ rows: [{ id: 'e1', subject_id: 'a', site_id: 's', resweep_attempts: RESWEEP_ALERT_AFTER_ATTEMPTS - 1 }] })
+  const third = ledger({ rows: [{ id: 'e1', subject_id: 'a', site_id: 's', requested_at: ELIGIBLE, resweep_attempts: RESWEEP_ALERT_AFTER_ATTEMPTS - 1 }] })
   assert.equal((await runErasureResweep(third, { host: 'h', adminToken: 'admin', now: NOW })).alerting, 1)
 })
 
@@ -149,8 +213,8 @@ test('a delete that succeeded but could not be recorded is counted as FAILED, no
   const db = {
     from () {
       const b = {
-        select: () => b, in: () => b, is: () => b, lt: () => b, order: () => b,
-        limit: () => Promise.resolve({ data: [{ id: 'e1', subject_id: 'a', site_id: 's', resweep_attempts: 0 }], error: null }),
+        select: () => b, in: () => b, is: () => b, lt: () => b, or: () => b, order: () => b,
+        limit: () => Promise.resolve({ data: [{ id: 'e1', subject_id: 'a', site_id: 's', requested_at: ELIGIBLE, resweep_attempts: 0 }], error: null }),
         update: () => ({ eq: () => Promise.resolve({ error: { message: 'write failed' } }) })
       }
       return b
