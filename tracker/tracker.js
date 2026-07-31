@@ -533,13 +533,17 @@
       }
     },
 
-    // sourcetrack.conversion({ value: 99, type: 'purchase', order_id: '123', properties: { plan: 'pro' } })
+    // sourcetrack.conversion({ value: 99, currency: 'EUR', type: 'purchase', order_id: '123', properties: { plan: 'pro' } })
+    // `currency` is OPTIONAL and additive: omit it and the call behaves exactly as it always
+    // has. Supplying it is the only way this rail can denominate a value — without it the
+    // amount is recorded with no unit and reported as 'partial' rather than assumed to be USD.
     conversion: function (opts) {
       opts = opts || {}
       var p = params(), ref = document.referrer || null
       send('/api/conversion', Object.assign(
         { site_key: K, anonymous_id: AID, session_id: SID, page_url: location.href, referrer: ref,
           conversion_value: opts.value || opts.conversion_value || 0,
+          currency:         opts.currency || null,            // optional; server ignores absent/malformed
           conversion_type:  opts.type  || opts.conversion_type  || 'conversion',
           order_id:         opts.order_id || opts.orderId        || null,
           event_id:         opts.event_id || null,            // shared browser↔server dedup id

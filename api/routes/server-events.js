@@ -12,6 +12,7 @@ import { trackGlobalIpLimit } from '../middleware/rate-limit.js'
 import { dualWriteEvent, isDualWriteEnabled } from '../../tinybird/adapter/dual-write.js'
 import { resolveClientIp } from '../lib/ip-resolver.js'
 import { hasScope, SCOPE_WRITE_EVENTS } from '../lib/api-key-scopes.js'
+import { normalizeCurrencyCode } from '../lib/currency.js'
 
 const router = Router()
 
@@ -213,6 +214,12 @@ router.post('/event', trackGlobalIpLimit, async (req, res) => {
       utm_content: req.body.utm_content || null,
       utm_term: req.body.utm_term || null,
       conversion_value: req.body.conversion_value || null,
+      // OPTIONAL unit for conversion_value — same contract as /api/conversion: additive, never
+      // validated, never a new 400. A missing or malformed code omits the key, so every existing
+      // SDK caller is unaffected. Absent → NULL → 'partial' (#532), not a false 'ok'/USD.
+      ...(normalizeCurrencyCode(req.body.currency)
+        ? { currency: normalizeCurrencyCode(req.body.currency) }
+        : {}),
       conversion_type: req.body.conversion_type || null,
       device_type: parser.getDevice().type || 'desktop',
       country,
