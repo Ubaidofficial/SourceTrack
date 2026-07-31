@@ -6,6 +6,7 @@ import { esc, isValidTimezone, getLocalDateString, getPaddedUtcDateRange, getNow
 import { channelFromEvent } from '../lib/channel-classifier.js'
 import { getSetupDiagnostics } from '../lib/setup-doctor.js'
 import { classifyConversionType } from '../lib/conversion-classifier.js'
+import { collapseCurrencies } from '../lib/currency.js'
 import { normalizeSource } from '../lib/source-normalizer.js'
 
 // PR2 refund-aware reads. (A) A refund (conversion_type='refund') is a NEGATIVE-value
@@ -89,7 +90,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     ] = await Promise.all([
       supabase
         .from('attributed_conversions')
-        .select('first_touch_source, first_touch_channel, last_touch_channel, first_touch_campaign, conversion_value, conversion_type, conversion_date, status, touchpoint_count, conversion_timestamp, distinct_id, anonymous_id, custom_properties')
+        .select('first_touch_source, first_touch_channel, last_touch_channel, first_touch_campaign, conversion_value, currency, conversion_type, conversion_date, status, touchpoint_count, conversion_timestamp, distinct_id, anonymous_id, custom_properties')
         .eq('site_id', req.site.id)
         .gte('conversion_date', currentPadded.from)
         .lte('conversion_date', currentPadded.to),
@@ -188,6 +189,9 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     const converters = new Set()
     const leadConverters = new Set()
     const customerConverters = new Set()
+    // Units seen among the rows that actually build totalRevenue — collected inside the same
+    // window filter as the sum, so the label always describes exactly the rows the number does.
+    const revenueCurrencies = []
 
     for (const r of rows) {
       const localDate = getLocalDateString(new Date(r.conversion_timestamp || r.conversion_date), tz)
@@ -208,6 +212,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       const isUnresolvedRefund = isRefund && r.custom_properties?.refund_attribution === 'unresolved'
 
       totalRevenue += val
+      if (val !== 0) revenueCurrencies.push(r.currency)
       if (!isRefund) totalConversions++            // (A)
 
       const typeClass = classifyConversionType(r.conversion_type)
@@ -430,6 +435,10 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         kpis: {
           revenue: totalRevenue,
           revenue_prev: prevRevenue,
+          // Unit for every money KPI in this block. 'mixed' means these amounts span currencies
+          // and the total is not meaningful; 'unknown' means no row carried a unit. In both cases
+          // the client must suppress or label rather than pick a symbol.
+          ...collapseCurrencies(revenueCurrencies),
           conversions: totalConversions,
           conversions_prev: prevConversions,
           sessions: totalSessions,

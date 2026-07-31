@@ -9,6 +9,7 @@ import { purgeSiteRetention } from '../lib/retention-purge.js'
 import { runGscDailySync } from '../lib/gsc-daily-sync.js'
 import { refreshAccessToken, fetchGscPerformance } from '../lib/google-search-console.js'
 import { normalizePath } from '../lib/url-normalization.js'
+import { normalizeCurrencyCode } from '../lib/currency.js'
 
 const isReprocess = process.argv.includes('--reprocess-all') || process.argv.some(arg => arg.startsWith('--reprocess-site='));
 const confirmDestructive = process.argv.includes('--confirm-destructive');
@@ -958,6 +959,13 @@ export async function processConversion(site, conversion, { dryRun = false } = {
     conversion_timestamp: conversion.timestamp,
     conversion_type: conversion.conversion_type || null,
     conversion_value: convValue,
+    // Unit for conversion_value. The pipe already returns currency (nightly_conversions_by_site
+    // selects it) and conversionRowToObject already parses it — it was simply never persisted, so
+    // the dashboard had a value with no unit. Normalized, and anything that is not a well-formed
+    // ISO 4217 code becomes NULL rather than being written through: attributed_conversions_currency_format
+    // would otherwise reject the row and fail the whole conversion on the money rail. NULL means
+    // "unit unknown" and readers suppress or label it — it is never defaulted to USD.
+    currency: normalizeCurrencyCode(conversion.currency),
     external_event_id: conversion.external_event_id || null,
 
     first_touch_source: firstTouchSource,
