@@ -8,16 +8,11 @@ import { Copy, Check, ExternalLink, Globe, CreditCard, Link, ShieldCheck, Trash2
 import UTMBuilder from '../components/UTMBuilder'
 import { getTrialInfo, getPlanLabel, isPaidPlan } from '../lib/billing'
 import { hasFeature } from '../lib/planFeatures'
-
-// KI-43 — must stay in sync with VALID_API_KEY_SCOPES in api/lib/api-key-scopes.js (the
-// server rejects anything else with a 400). Descriptions are deliberately literal about
-// what each scope does TODAY: read:analytics is stored and grantable but enforced by no
-// endpoint yet, and must not be described as if it unlocks something.
-const API_TOKEN_SCOPES = [
-  { value: 'write:events', description: 'Send server-side events to POST /api/server/event.' },
-  { value: 'write:crawler_hits', description: 'Report AI/search crawler fetches to POST /api/server/crawler-hit. Does not grant event access.' },
-  { value: 'read:analytics', description: 'Reserved for the upcoming read API. Grants no access today.' }
-]
+// KI-43 — the scope checkboxes. Kept in its own module (and pinned to the server's
+// VALID_API_KEY_SCOPES by api/tests/api-token-scopes-sync.test.js) because an inline array
+// in this JSX file is unimportable by a test, and the "must stay in sync" comment it used
+// to carry already failed once as enforcement — see apiTokenScopes.js.
+import { API_TOKEN_SCOPES } from '../lib/apiTokenScopes'
 
 // The 4 Settings tabs. `general` is the default and is represented by the ABSENCE of
 // ?tab= — so /settings stays the canonical URL rather than redirecting to ?tab=general.
