@@ -11,14 +11,13 @@ interface AccordionProps {
 
 const Accordion = ({ question, answer, isOpen, onToggle }: AccordionProps) => {
   return (
-    <motion.div
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, margin: "0px", amount: 0.05 }}
-      variants={{
-        hidden: { opacity: 0, y: 20 },
-        visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-      }}
+    // Plain div, not motion.div. The scroll-reveal that used to live here resolved during SSR
+    // and baked style="opacity:0;transform:translateY(20px)" onto every FAQ row in the static
+    // HTML, so with JS off the questions were invisible — the section rendered as bare page
+    // background. The question text is primary content and does not get to depend on
+    // hydration. The two animations below are kept: both are driven by `isOpen`, which only
+    // ever changes after hydration anyway, so neither can hide anything on a no-JS render.
+    <div
       className="bg-card border border-border/5 py-6 px-7 rounded-3xl cursor-pointer"
       onClick={onToggle}
       onKeyDown={(event) => {
@@ -56,7 +55,7 @@ const Accordion = ({ question, answer, isOpen, onToggle }: AccordionProps) => {
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 };
 
