@@ -29,6 +29,7 @@
 //      the collision guard. (Locked by derive-event-id.test.js.)
 
 import { esc } from './utils.js'
+import { normalizeCurrencyCode } from './currency.js'
 
 export const REFUND_EVENT_TYPE = 'refund.created'
 
@@ -196,7 +197,16 @@ export function buildRefundConversion (event, site, distinctId, { unresolved = f
   // Partial refunds: refund.amount is the partial amount, so this is the
   // negative of exactly what was refunded this event.
   const value = amount / 100
-  const currency = refund.currency ? String(refund.currency).toUpperCase() : 'USD'
+  // CONSISTENCY, not a live gap: Stripe types `currency` as REQUIRED and non-nullable on the
+  // Refund object (node_modules/stripe/types/Refunds.d.ts:46 `currency: string`), so a
+  // well-formed Stripe payload always carries one and this default effectively never fired.
+  // It is removed anyway because the money rails must have ONE rule — unknown is never 'USD'
+  // (#529/#532) — and the only payloads that would have hit it are malformed/synthetic ones,
+  // exactly the case where inventing a unit is most misleading. null is representable end to
+  // end: events.currency is Nullable and not a REQUIRED_COLUMN, and the returned `currency`
+  // reaches revenue_ingestion_events.currency as NULL via logIngestionEvent's `currency ||
+  // null`, so collapseCurrencies() reports 'partial' rather than a confident fake unit.
+  const currency = normalizeCurrencyCode(refund.currency)
   const occurredAt = event.created ? new Date(event.created * 1000).toISOString() : new Date().toISOString()
   const did = distinctId || refundDistinctId(refund)
 
