@@ -88,6 +88,7 @@ export default function DevelopersConversions() {
             { name: 'value', type: 'number', required: false, desc: 'Financial value attributed to the conversion event. Defaults to 0.' },
             { name: 'type', type: 'string', required: false, desc: 'Conversion classification label (e.g. purchase, signup, lead). Defaults to "conversion".' },
             { name: 'order_id', type: 'string', required: false, desc: 'Unique transaction reference to prevent duplicate conversion records on page reload.' },
+            { name: 'event_id', type: 'string', required: false, desc: 'Shared deduplication ID for Meta and TikTok reporting. Must be byte-identical to the eventID on your browser pixel call, or the ad platform counts the conversion twice. Truncated to the first 200 characters, and any character outside A-Z a-z 0-9 : . _ - is removed.' },
             { name: 'properties', type: 'object', required: false, desc: 'Key-value object for custom metadata. Do not include raw email addresses or plaintext passwords.' }
           ]} />
         </section>
