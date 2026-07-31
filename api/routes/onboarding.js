@@ -6,7 +6,12 @@ const router = Router()
 
 const MAX_STEP = 6
 const VALID_BUSINESS_TYPES = ['ecommerce', 'saas', 'leadgen']
-const VALID_INSTALL_METHODS = ['gtm', 'standard']
+// 'shopify' is a guided variant of 'standard' — same tracker snippet, same detection, but the
+// wizard walks the theme-editor path instead of "paste it in your <head>". It is a distinct
+// stored value so we can tell how many installs came through the guided flow; it is NOT a
+// different install mechanism. onboarding_state is jsonb with no CHECK constraint, so widening
+// this list is a code change only — no migration.
+const VALID_INSTALL_METHODS = ['gtm', 'standard', 'shopify']
 const VALID_CONVERSIONS = ['purchase', 'trial', 'lead', 'signup', 'meeting']
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
