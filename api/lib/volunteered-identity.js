@@ -11,6 +11,18 @@
 // store whatever the caller sent. Keep this narrow.
 
 import { getSupabase } from './supabase.js'
+// CIRCULAR BY DESIGN, and safe only because of how both sides are written: this module imports
+// isErasureSuppressed from erasure-suppression.js, which imports normalizeVolunteeredEmail back
+// from here. Both are `export function` DECLARATIONS, so ESM hoists them and each side resolves
+// regardless of which loads first. Converting either to `export const fn = () => …` would turn
+// this into a temporal-dead-zone crash at require time — there is a test that loads both orders
+// to catch exactly that.
+//
+// The cycle is deliberate rather than incidental: the suppression hash MUST be taken over the
+// same normalisation this module applies before writing, or the check silently never matches.
+// Duplicating the normaliser to break the cycle would trade a visible import edge for an
+// invisible drift bug.
+import { isErasureSuppressed, logSuppressionBlocked } from './erasure-suppression.js'
 
 const MAX_NAME_LEN = 128
 
@@ -53,6 +65,23 @@ export async function persistVolunteeredIdentity({ siteId, distinctId, email, na
   if (!cleanEmail && !cleanName) return { written: false, email: null, name: null }
 
   const db = supabase || getSupabase()
+
+  // ERASURE SUPPRESSION — the identify()-replay case, and the reason this mechanism exists.
+  // An erased subject calling identify() again with the same email would silently rewrite their
+  // name and address straight back into the store the erasure just cleared.
+  //
+  // ACCEPT-BUT-DON'T-ATTACH, not reject. The caller still gets its 200 and analytics continues;
+  // only the PII write is dropped. Rejecting was considered and turned down: a 400 keyed on
+  // "this email was erased" is an ORACLE — anyone could probe which addresses have been erased
+  // by watching for the error. Building that disclosure into a privacy feature would be a poor
+  // trade. It also means a genuine returning customer is not barred from using the product.
+  //
+  // Checked on BOTH keys: the distinct_id, and the email itself. A returning subject on a new
+  // device arrives with a brand-new anonymous_id, so the id alone would miss them entirely.
+  if (await isErasureSuppressed(db, { siteId, subjectId: distinctId, email: cleanEmail })) {
+    logSuppressionBlocked('volunteered_identity', { siteId, subjectId: distinctId })
+    return { written: false, suppressed: true, email: null, name: null }
+  }
   const nowIso = new Date().toISOString()
   const { error } = await db
     .from('volunteered_identity')
