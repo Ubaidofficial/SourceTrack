@@ -12,6 +12,7 @@ import { resolveClientIp } from '../lib/ip-resolver.js'
 import { claimIdempotencyKeys, rollbackIdempotencyKeys } from '../lib/idempotency.js'
 import { storeIdentityLink } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
+import { normalizeCurrencyCode } from '../lib/currency.js'
 import { checkIsDuplicate, registerConversion } from '../lib/shared-dedupe-cache.js'
 import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
 import { logWouldDropBot } from '../lib/bot-filter.js'
@@ -225,6 +226,21 @@ export async function conversion(req, res) {
       user_id: userId || null,
       is_conversion: true,
       conversion_value: req.body.conversion_value,
+      // OPTIONAL unit for conversion_value. Purely additive: this rail has never offered a
+      // currency, so every existing caller omits it and must keep working byte-for-byte.
+      //
+      // Deliberately NOT validated the way /api/conversion/offline validates it. That rail
+      // REJECTS with 400 when value > 0 and currency is missing; applying the same rule here
+      // would start 400-ing every customer already calling sourcetrack.conversion({ value: X }),
+      // which is a breaking change on a live ingestion endpoint. Here a missing OR malformed
+      // code simply omits the key, exactly as today.
+      //
+      // Absent → NULL on the event → NULL in attributed_conversions → collapseCurrencies()
+      // reports 'partial' rather than a false 'ok'/USD (#532). That is the intended honest
+      // outcome for a caller who sends no unit, not a regression.
+      ...(normalizeCurrencyCode(req.body.currency)
+        ? { currency: normalizeCurrencyCode(req.body.currency) }
+        : {}),
       ...getFirstTouchFields(req.body),
       page_url: req.body.page_url,
       referrer: req.body.referrer,

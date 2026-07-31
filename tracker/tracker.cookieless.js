@@ -409,6 +409,9 @@
       var data = Object.assign(
         { site_key: K, anonymous_id: AID, session_id: SID, page_url: location.href, referrer: ref, cookieless: true,
           conversion_value: opts.value || opts.conversion_value || 0,
+          // Optional unit, mirroring the cookie build. Reads nothing from the device, so it is
+          // safe in the cookieless build: it is a caller-supplied literal, never derived.
+          currency:         opts.currency || null,
           conversion_type:  opts.type  || opts.conversion_type  || 'conversion',
           order_id:         opts.order_id || opts.orderId        || null,
           event_id:         opts.event_id || null },           // dedup id (no _fbp/_fbc: cookieless reads no cookies)
