@@ -212,9 +212,9 @@ There must be one SourceTrack design system. Do not create alternate palettes, a
 | Primary text, dark | `#F6F3EB` |
 | Border, light | `#E7E0D2` |
 | Border, dark | `#302B22` |
-| Body font | **Unresolved.** App ships Switzer (`dashboard/tailwind.config.js`); marketing ships Inter (`marketing/src/config/theme.json`). Must be reconciled before any typography work. |
-| Display font | Pending the body-font decision. Headings use tracking −0.03em regardless. |
-| Mono font | JetBrains Mono |
+| Body font | Geist, self-hosted (SIL OFL 1.1). Single family across app, marketing and docs. |
+| Display font | Geist, headings at −0.03em tracking. |
+| Mono font | Geist Mono |
 | Sidebar | Fixed 210px in V1 |
 
 **The warmth lives in the neutrals, not the accent.** Cool black plus acid green is the most-copied AI-startup theme in circulation. Warming the body, card, border and muted-text values is what makes the same lime read as expensive rather than cheap. Do not "warm up" the accents to compensate — warm the surround.
@@ -252,9 +252,9 @@ There must be one SourceTrack design system. Do not create alternate palettes, a
 
   --radius-sm:5px; --radius-md:9px; --radius-lg:13px; --radius-full:999px;
 
-  --font-body:'Inter',system-ui,sans-serif;
-  --font-display:'Inter Tight','Inter',system-ui,sans-serif;
-  --font-mono:'JetBrains Mono','Fira Code',monospace;
+  --font-body:'Geist','Inter',system-ui,sans-serif;
+  --font-display:'Geist','Inter',system-ui,sans-serif;
+  --font-mono:'Geist Mono','JetBrains Mono',monospace;
 
   --text-xs: 0.6875rem;
   --text-sm: 0.75rem;
@@ -382,6 +382,9 @@ The mark is a first touch and a last touch. Extend that geometry rather than dec
 - Purple gradients, glassmorphism, decorative blobs, multiple palettes
 - Manrope as the product font, 260px sidebar, "Attribution Cockpit" or any other product name
 - Gradient applied to text
+- Case sensitivity: any mechanical colour or token replacement must be
+  case-insensitive. `#1a1d1d` and `#1A1D1D` are the same colour and a
+  case-sensitive pass silently misses the lowercase sites.
 
 ---
 
@@ -2737,6 +2740,8 @@ Website positioning, hero copy, and voice are owned by `docs/SourceTrack_GTM.md`
 
 ### 29.2 Website visual direction
 
+> The marketing site is **light-first with a dark toggle**, defaulting to the visitor's OS preference. Both themes share the same warm neutrals; only the canvas inverts. The product band and the final CTA render on warm ink in **both** themes — that is what gives the light theme its structure and keeps the product frame reading as a lit object rather than a flat screenshot.
+
 Borrow the premium lightweight SaaS feel from modern lime-glow landing pages:
 
 - product-first hero
@@ -3514,5 +3519,5 @@ Most SourceTrack accounts will spend their first weeks with very little data. A 
 - §38 Data-poor mode added.
 - §23: heatmap and notification bell flagged as shipping against their gate; dark mode confirmed V1.
 - §33: test-data labelling made explicit.
-- §3.1 body/display font rows record the unresolved Switzer-vs-Inter split rather than asserting a font the code does not ship.
-- §29.2 is **deliberately not applied in this pass** — see the PR discussion. The patch instructs replacing its first paragraph, but that paragraph is the `Borrow…:` header of a list the same patch says must stay unchanged. Pending a decision.
+- §29.2: marketing site set to light-first with dark toggle and theme-independent ink bands.
+- Typography standardised on Geist across app and marketing; Switzer removed.
