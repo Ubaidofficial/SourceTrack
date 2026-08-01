@@ -2108,3 +2108,62 @@ deliberate block.
 **Residual, stated rather than implied:** this stops FUTURE sends. Anything already delivered to an
 ad platform before the erasure remains out of reach — that is a property of CAPI, not a gap here,
 and no suppression list can change it.
+
+### Account deletion records NO erasure suppression — open product decision, not a filed bug (2026-08-01, found during PR 5/5 of the GDPR arc, #554)
+
+**The fact, re-verified at `fbec966`.** `recordErasureSuppression` has exactly one production call site:
+`api/routes/gdpr.js:275`, inside `DELETE /visitor` (handler spans :168–:361). `DELETE /account`
+(:477–:628) never calls it — confirmed by scanning that handler's whole range, not by reading the
+happy path.
+
+**Why that reaches further than it looks.** All five suppression-enforcement points added by PR 2 and
+PR 4 gate on `isErasureSuppressed`, which reads one table, `erasure_suppression`:
+`identity-links.js:70-71` (identity mappings), `volunteered-identity.js:81` (volunteered name/email),
+`leads-server.js:471` (lead records), and `conversion-sync.js:623` (CAPI egress to all six ad
+platforms). A subject whose PII was removed by account deletion is in none of those rows, so **not one
+of those five guards fires for them.** The equivalent per-visitor erasure blocks all five.
+
+**The gap is NARROWER than that sounds, and the shape matters more than the headline.** Both account
+paths were traced rather than assumed:
+
+- **Sole member** (`shouldDeleteSites = true`): `attributed_conversions` is deleted explicitly, the
+  sibling PII tables cascade off `sites`, `eraseSiteFromTinybird` runs per site, and then
+  `supabase.from('sites').delete()` removes the sites. Their tracking keys stop resolving, so ingest
+  answers `401 Invalid site_key` (`api/middleware/auth.js:79`) and **nothing new can arrive for those
+  sites at all.** Suppression would be redundant for the steady state; the exposure is confined to
+  what is already in flight when the deletion runs.
+- **Shared workspace** (`shouldDeleteSites = false`): only `company_members`, possibly `companies`,
+  and the auth user are deleted. **No visitor PII is touched and no site is erased** — so there is no
+  erased subject to suppress in the first place. The remaining members' sites keep running, correctly.
+- **Cross-tenant, either way:** `erasure_suppression` is scoped by `site_id`, so suppression could
+  never have protected the same person on a different tenant's site. That is a property of the design,
+  not a regression, and it bounds what any fix here could buy.
+
+**⚠️ Secondary finding, recorded so it is not mistaken for coverage.** `/account` DOES write
+`erasure_log` (`gdpr.js:541`) — but with a synthetic subject id, `` `account:${userId}` ``. The PR 3
+re-sweep reads `erasure_log` and re-runs `eraseSubjectFromTinybird` (`erasure-resweep.js:25`, :127),
+which is a SUBJECT-scoped delete-by-condition on `distinct_id`/`visitor_id`. Against
+`account:<uuid>` that matches **zero rows**, and the row is then stamped `resweep_completed_at`
+having removed nothing. Harmless while the sites are deleted — nothing can have arrived — but it means
+**"the re-sweep covers account deletion" is not a true statement**, and the health check counts those
+rows as swept. Anyone extending the re-sweep should start here.
+
+**THE OPEN QUESTION — a founder call, deliberately not answered here.** Should account deletion also
+write suppression rows for the subjects whose PII it removes?
+
+- **For:** it closes the in-flight window on the one path that currently has no guard at all, and it
+  makes the two erasure routes behave alike, which is the kind of asymmetry that later gets discovered
+  the hard way. `recordErasureSuppression` already takes a `source` parameter defaulting to `'visitor'`
+  (`erasure-suppression.js:123`), and `source` is a real column with the same default
+  (`20260731130000_create_erasure_suppression.sql:70`) — the plumbing anticipated more than one origin.
+- **Against:** account deletion is infrequent, high-stakes and already the longest write path in the
+  codebase — it gates on Tinybird returning `'executed'` before it deletes anything, so every step
+  added is a step that can block a deletion a customer is entitled to. Enumerating every subject on
+  every site to suppress them is unbounded work on a request that must complete, and for the sole-member
+  case it protects a site that is about to stop accepting traffic anyway.
+
+Not filed as a defect and deliberately not fixed on an engineering default: the honest reading is that
+the protection gap is real but mostly theoretical today, and the cost lands on the one code path where
+a new failure mode is least acceptable. Revisit if account deletion ever stops deleting the sites, or
+if shared-workspace deletion starts removing visitor PII — either change turns this from theoretical
+into live.
