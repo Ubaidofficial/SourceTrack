@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SourceTrack — Know which sources actually make you money</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ═════ tokens — light default, dark via [data-theme] ═════ */
+:root{
+  --bg:#F7F4ED; --bg-2:#F1EDE3; --surface:#FFFDF8;
+  --line:#E7E0D2; --line-2:#F0EADC;
+  --text:#161310; --mute:#6E675C; --faint:#A39B8C;
+  --shadow:0 1px 2px rgba(30,24,12,.04),0 22px 48px -28px rgba(30,24,12,.24);
+  --navbg:rgba(247,244,237,.82);
+}
+[data-theme="dark"]{
+  --bg:#12100C; --bg-2:#1B1811; --surface:#1B1811;
+  --line:#302B22; --line-2:#241F17;
+  --text:#F6F3EB; --mute:#A79E8C; --faint:#6E6656;
+  --shadow:0 24px 60px -30px rgba(0,0,0,.7);
+  --navbg:rgba(18,16,12,.82);
+}
+:root{
+  /* structural ink + light app interior — identical in both themes */
+  --ink:#12100C; --ink-2:#1B1811; --ink-line:#302B22;
+  --ink-text:#F6F3EB; --ink-mute:#A79E8C; --ink-faint:#6E6656;
+  --bone:#F7F4ED; --bone-2:#F1EDE3; --paper:#FFFDF8;
+  --bline:#E7E0D2; --bline-2:#F0EADC; --btext:#161310; --bmute:#6E675C; --bfaint:#A39B8C;
+
+  --lime:#D2EC2A; --lime-deep:#BCD41C; --lime-wash:rgba(210,236,42,.13);
+  --amber:#F2A93B; --orange:#FF7A33; --orange-ink:#B4420E;
+
+  --disp:'Inter Tight','Inter',system-ui,sans-serif;
+  --body:'Inter',system-ui,-apple-system,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --r:8px; --r-lg:14px; --r-xl:20px;
+  --ease:cubic-bezier(.22,.72,.28,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:14px;line-height:1.6;
+  transition:background .35s var(--ease),color .35s var(--ease)}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
+.wrap{max-width:1140px;margin:0 auto;padding:0 32px}
+h1,h2,h3{font-family:var(--disp);letter-spacing:-.038em;font-weight:600;line-height:1.03}
+h1{font-size:clamp(40px,6vw,72px)}
+h2{font-size:clamp(28px,3.6vw,44px);letter-spacing:-.033em}
+h3{font-size:18px;letter-spacing:-.02em;line-height:1.25}
+.eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--orange-ink)}
+[data-theme="dark"] .eyebrow{color:var(--lime);opacity:.85}
+.lede{color:var(--mute);font-size:16px;max-width:56ch;line-height:1.65}
+img.ico{border-radius:4px;flex:none;object-fit:contain}
+
+/* ═════ MOTION ═════ */
+@media (prefers-reduced-motion: no-preference){
+  .rv{opacity:0;transform:translateY(16px);
+    transition:opacity .62s var(--ease),transform .62s var(--ease);
+    transition-delay:var(--d,0ms)}
+  .rv.in{opacity:1;transform:none}
+  .abar{transform:scaleY(.02);transform-origin:bottom;
+    transition:transform .7s var(--ease);transition-delay:var(--d,0ms)}
+  .in .abar{transform:none}
+  .ameter i,.meter i{width:0;transition:width .8s var(--ease);transition-delay:var(--d,120ms)}
+  .in .ameter i,.in .meter i{width:var(--w)}
+  .dot,.tstep .dot{transform:scale(.2);transition:transform .45s var(--ease);transition-delay:var(--d,0ms)}
+  .in .dot{transform:none}
+  .btn{transition:background .18s var(--ease),transform .18s var(--ease),border-color .18s var(--ease)}
+  .btn:hover{transform:translateY(-1px)}
+  .step,.price,.shot{transition:transform .3s var(--ease),box-shadow .3s var(--ease)}
+  .price:hover,.shot:hover{transform:translateY(-3px)}
+  .loader .d1{animation:drift 1.6s ease-in-out infinite}
+}
+@keyframes drift{0%,100%{transform:translateX(0);opacity:.45}50%{transform:translateX(6px);opacity:1}}
+
+/* ── hero background: ambient light that breathes, plus travelling touchpoints ── */
+.herobg{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:var(--o,.5)}
+.blob.a{width:52vw;height:44vw;left:-6vw;top:-24vw;background:rgba(210,236,42,.30)}
+.blob.b{width:46vw;height:40vw;left:34vw;top:-28vw;background:rgba(242,169,59,.22)}
+.blob.c{width:44vw;height:38vw;right:-8vw;top:-22vw;background:rgba(255,122,51,.20)}
+[data-theme="dark"] .blob.a{background:rgba(210,236,42,.24)}
+[data-theme="dark"] .blob.b{background:rgba(242,169,59,.17)}
+[data-theme="dark"] .blob.c{background:rgba(255,122,51,.15)}
+.constellation{position:absolute;inset:0;width:100%;height:100%}
+.constellation line{stroke:var(--line);stroke-width:1}
+.constellation .node{fill:var(--lime);opacity:.5}
+.constellation .trav{fill:var(--lime)}
+
+@media (prefers-reduced-motion: no-preference){
+  .blob.a{animation:float-a 34s var(--ease) infinite}
+  .blob.b{animation:float-b 42s var(--ease) infinite}
+  .blob.c{animation:float-c 38s var(--ease) infinite}
+  .constellation .trav{animation:travel 9s linear infinite}
+  .constellation .node{animation:pulse 6s ease-in-out infinite}
+  .constellation .path-2 .trav{animation-delay:-3s}
+  .constellation .path-3 .trav{animation-delay:-6s}
+  .constellation .path-2 .node{animation-delay:-2s}
+  .constellation .path-3 .node{animation-delay:-4s}
+}
+@keyframes float-a{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(4vw,3vw,0) scale(1.08)}}
+@keyframes float-b{0%,100%{transform:translate3d(0,0,0) scale(1.04)}50%{transform:translate3d(-5vw,2vw,0) scale(.94)}}
+@keyframes float-c{0%,100%{transform:translate3d(0,0,0) scale(.96)}50%{transform:translate3d(-3vw,4vw,0) scale(1.06)}}
+@keyframes travel{0%{offset-distance:0%;opacity:0}
+  8%{opacity:.85} 82%{opacity:.85} 100%{offset-distance:100%;opacity:0}}
+@keyframes pulse{0%,100%{opacity:.28}50%{opacity:.6}}
+
+/* ── section hairline draws in as the section arrives ── */
+section{border-top:0 !important;position:relative}
+section::after{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:var(--line);
+  transform:scaleX(0);transform-origin:left;transition:transform 1s var(--ease)}
+@media (prefers-reduced-motion: no-preference){ section.in::after{transform:none} }
+@media (prefers-reduced-motion: reduce){ section::after{transform:none} }
+
+/* ── feature rows arrive from the side they sit on ── */
+@media (prefers-reduced-motion: no-preference){
+  .feat .txt.rv{transform:translateY(16px) translateX(-16px)}
+  .feat .shot.rv{transform:translateY(16px) translateX(16px)}
+  .feat.flip .txt.rv{transform:translateY(16px) translateX(16px)}
+  .feat.flip .shot.rv{transform:translateY(16px) translateX(-16px)}
+  .feat .txt.rv.in,.feat .shot.rv.in{transform:none}
+
+  /* table rows land one after another */
+  .shot-b tbody tr{opacity:0;transform:translateY(7px);
+    transition:opacity .42s var(--ease),transform .42s var(--ease)}
+  .shot.in .shot-b tbody tr{opacity:1;transform:none}
+  .shot.in tbody tr:nth-child(1){transition-delay:.20s}
+  .shot.in tbody tr:nth-child(2){transition-delay:.27s}
+  .shot.in tbody tr:nth-child(3){transition-delay:.34s}
+  .shot.in tbody tr:nth-child(4){transition-delay:.41s}
+  .shot.in tbody tr:nth-child(5){transition-delay:.48s}
+
+  /* FAQ rows */
+  .faq details{opacity:0;transform:translateY(9px);
+    transition:opacity .45s var(--ease),transform .45s var(--ease)}
+  .faq.in details{opacity:1;transform:none}
+  .faq.in details:nth-of-type(1){transition-delay:.05s}
+  .faq.in details:nth-of-type(2){transition-delay:.12s}
+  .faq.in details:nth-of-type(3){transition-delay:.19s}
+  .faq.in details:nth-of-type(4){transition-delay:.26s}
+  .faq.in details:nth-of-type(5){transition-delay:.33s}
+}
+
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  .ameter i{width:var(--w)} .meter i{width:var(--w)}
+  .blob{animation:none}
+  .constellation .trav{display:none}
+}
+
+/* ═════ buttons ═════ */
+.btn{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;
+  padding:12px 22px;border-radius:var(--r);border:1px solid transparent}
+.btn-1{background:var(--lime);color:var(--ink)}
+.btn-1:hover{background:var(--lime-deep)}
+.btn-2{border-color:var(--line);color:var(--text)}
+.btn-2:hover{background:var(--bg-2)}
+.btn-sm{padding:8px 16px;font-size:13px}
+.btn:focus-visible,.tgl:focus-visible{outline:2px solid var(--lime);outline-offset:3px}
+
+/* ═════ nav ═════ */
+nav{position:sticky;top:0;z-index:60;background:var(--navbg);backdrop-filter:blur(16px);
+  border-bottom:1px solid transparent;transition:border-color .3s var(--ease),background .35s var(--ease)}
+nav.stuck{border-bottom-color:var(--line)}
+nav .wrap{display:flex;align-items:center;gap:34px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--disp);font-weight:600;
+  font-size:16.5px;letter-spacing:-.03em}
+.brand svg rect{transition:fill .35s var(--ease)}
+.nlinks{display:flex;gap:26px;font-size:13.5px;color:var(--mute)}
+.nlinks a{position:relative;padding:2px 0}
+.nlinks a::after{content:"";position:absolute;left:0;right:100%;bottom:-2px;height:1.5px;
+  background:var(--lime);transition:right .28s var(--ease)}
+.nlinks a:hover{color:var(--text)}
+.nlinks a:hover::after{right:0}
+.nright{margin-left:auto;display:flex;align-items:center;gap:14px;font-size:13.5px}
+.tgl{width:34px;height:34px;border-radius:999px;border:1px solid var(--line);
+  display:grid;place-items:center;color:var(--mute);font-size:14px;
+  transition:background .2s var(--ease),color .2s var(--ease)}
+.tgl:hover{background:var(--bg-2);color:var(--text)}
+
+/* ═════ hero ═════ */
+.hero{padding:92px 0 0;position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:-25% -12% auto -12%;height:160%;pointer-events:none;
+  opacity:var(--glow,.55);transition:opacity .4s var(--ease);
+  background:
+   radial-gradient(44% 42% at 17% 0%, rgba(210,236,42,.30) 0%, rgba(210,236,42,0) 65%),
+   radial-gradient(42% 40% at 48% -6%, rgba(242,169,59,.20) 0%, rgba(242,169,59,0) 69%),
+   radial-gradient(40% 40% at 79% 3%, rgba(255,122,51,.17) 0%, rgba(255,122,51,0) 71%)}
+[data-theme="dark"] .hero::before{--glow:1}
+.hero .wrap{position:relative;text-align:center}
+.hero h1{max-width:17ch;margin:20px auto 22px}
+.hero .lede{margin:0 auto}
+.hcta{display:flex;gap:12px;justify-content:center;margin:34px 0 14px;flex-wrap:wrap}
+.hfine{font-size:12.5px;color:var(--faint)}
+.hlogos{display:flex;gap:22px;justify-content:center;align-items:center;margin-top:42px;
+  padding-top:26px;border-top:1px solid var(--line);flex-wrap:wrap}
+.hlogos span{font-family:var(--mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
+.hlogos img{width:19px;height:19px;opacity:.7;border-radius:4px;
+  transition:opacity .25s var(--ease),transform .25s var(--ease)}
+.hlogos img:hover{opacity:1;transform:translateY(-2px)}
+
+/* ═════ the ink band — identical in both themes ═════ */
+.inkband{background:var(--ink);position:relative;overflow:hidden}
+.inkband.glow::before{content:"";position:absolute;inset:-30% -10% auto -10%;height:170%;pointer-events:none;
+  background:
+   radial-gradient(42% 44% at 20% 0%, rgba(210,236,42,.20) 0%, rgba(210,236,42,0) 66%),
+   radial-gradient(40% 42% at 52% -8%, rgba(242,169,59,.14) 0%, rgba(242,169,59,0) 70%),
+   radial-gradient(38% 40% at 82% 2%, rgba(255,122,51,.12) 0%, rgba(255,122,51,0) 72%)}
+.inkband .wrap{position:relative}
+.framewrap{padding:56px 0 88px}
+.frame{border-radius:var(--r-xl);overflow:hidden;background:var(--bone);
+  border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 60px 120px -40px rgba(0,0,0,.72),0 1px 0 rgba(255,255,255,.06) inset}
+.chrome{display:flex;align-items:center;gap:7px;padding:10px 14px;background:var(--ink-2);
+  border-bottom:1px solid var(--ink-line)}
+.chrome i{width:9px;height:9px;border-radius:999px;background:#39332A;display:block}
+.chrome span{margin-left:12px;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)}
+
+/* ═════ light app interior ═════ */
+.app{display:grid;grid-template-columns:180px 1fr;min-height:452px;color:var(--btext)}
+.aside{background:var(--bone-2);border-right:1px solid var(--bline);padding:14px 10px}
+.abrand{display:flex;align-items:center;gap:8px;padding:2px 8px 12px;font-family:var(--disp);
+  font-weight:600;font-size:13px;letter-spacing:-.02em}
+.apick{background:var(--paper);border:1px solid var(--bline);border-radius:5px;padding:6px 9px;
+  font-size:11.5px;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.apick i{width:5px;height:5px;border-radius:999px;background:var(--lime);display:block}
+.agrp{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:var(--bfaint);
+  padding:10px 9px 5px;text-transform:uppercase}
+.anav{display:flex;align-items:center;gap:9px;padding:6px 9px;border-radius:5px;font-size:12px;
+  color:var(--bmute);position:relative}
+.anav.on{background:var(--paper);color:var(--btext);font-weight:500;box-shadow:0 1px 2px rgba(30,24,12,.05)}
+.anav.on::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:2px;
+  background:var(--lime);border-radius:0 2px 2px 0}
+.anav i{width:4px;height:4px;border-radius:999px;background:var(--bfaint);display:block}
+.anav.on i{background:var(--lime)}
+.amain{padding:14px 17px 20px;background:var(--bone)}
+.ahead{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.ahead h4{font-family:var(--disp);font-size:15px;font-weight:600;letter-spacing:-.025em}
+.seg{margin-left:auto;display:flex;border:1px solid var(--bline);border-radius:5px;
+  overflow:hidden;background:var(--paper)}
+.seg span{padding:4px 9px;font-size:10.5px;color:var(--bmute);border-right:1px solid var(--bline)}
+.seg span:last-child{border-right:0}
+.seg span.on{background:var(--bone-2);color:var(--btext);font-weight:500}
+.akpis{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:9px;margin-bottom:9px}
+.acard{background:var(--paper);border:1px solid var(--bline);border-radius:8px;padding:12px 14px}
+.akpi small{display:block;font-size:10.5px;color:var(--bmute);margin-bottom:6px}
+.akpi b{font-family:var(--disp);font-size:22px;font-weight:600;letter-spacing:-.035em;display:block;
+  line-height:1;font-variant-numeric:tabular-nums}
+.akpi.lead b{font-size:29px}
+.akpi u{text-decoration:none;font-size:10.5px;color:var(--bmute);display:block;margin-top:6px}
+.a2{display:grid;grid-template-columns:1.5fr 1fr;gap:9px}
+.acard h5{font-size:11.5px;font-weight:600}
+.acard .sub{font-size:10.5px;color:var(--bfaint);margin:2px 0 11px}
+.arow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--bline-2)}
+.arow:first-of-type{border-top:0}
+.arow .nm{display:flex;align-items:center;gap:7px;flex:1;min-width:0;font-size:11.5px}
+.arow img{width:13px;height:13px;border-radius:3px}
+.ameter{width:52px;height:3px;background:var(--bline-2);border-radius:999px;overflow:hidden;flex:none}
+.ameter i{display:block;height:100%;background:var(--lime);border-radius:999px}
+.arow em{font-style:normal;font-size:10px;color:var(--bfaint);min-width:56px;text-align:right;
+  font-variant-numeric:tabular-nums}
+.arow b{font-size:11.5px;font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
+.abars{display:flex;align-items:flex-end;gap:5px;height:104px}
+.abar{flex:1;background:var(--lime);border-radius:2px 2px 0 0;min-height:2px}
+.abar.o{background:var(--orange)}
+.axl{display:flex;justify-content:space-between;margin-top:7px;padding-top:6px;
+  border-top:1px solid var(--bline-2);font-family:var(--mono);font-size:9px;color:var(--bfaint)}
+
+/* ═════ sections ═════ */
+section{padding:96px 0;border-top:1px solid var(--line)}
+.shead{margin-bottom:44px;max-width:60ch}
+.shead h2{margin:16px 0 16px}
+.center{text-align:center;margin-left:auto;margin-right:auto}
+.center .lede{margin-left:auto;margin-right:auto}
+
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.step{background:var(--surface);padding:28px 26px 30px}
+.step .n{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;color:var(--orange-ink)}
+[data-theme="dark"] .step .n{color:var(--lime);opacity:.75}
+.step h3{margin:16px 0 10px}
+.step p{font-size:13.5px;color:var(--mute);line-height:1.65}
+.step .art{margin-top:22px}
+
+.feat{display:grid;grid-template-columns:.9fr 1.1fr;gap:56px;align-items:center;padding:44px 0}
+.feat.flip .txt{order:2}
+.feat h3{font-family:var(--disp);font-size:29px;letter-spacing:-.033em;margin:14px 0 16px;max-width:16ch}
+.feat p{font-size:14.5px;color:var(--mute);line-height:1.7}
+.feat ul{list-style:none;margin-top:20px}
+.feat li{font-size:13.5px;color:var(--mute);padding:9px 0 9px 22px;position:relative;
+  border-top:1px solid var(--line)}
+.feat li:first-child{border-top:0}
+.feat li::before{content:"";position:absolute;left:0;top:16px;width:7px;height:7px;
+  border-radius:999px;background:var(--lime)}
+
+/* shot — always light, so it reads as the product in both themes */
+.shot{background:var(--paper);border-radius:var(--r-lg);overflow:hidden;color:var(--btext);
+  border:1px solid var(--bline);box-shadow:var(--shadow)}
+.shot-h{display:flex;align-items:center;gap:9px;padding:11px 15px;background:var(--bone-2);
+  border-bottom:1px solid var(--bline);font-size:11.5px;color:var(--bmute)}
+.shot-h b{font-weight:600;color:var(--btext);font-size:12.5px}
+.shot-b{padding:15px 17px 17px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--bfaint);font-weight:400;padding:0 10px 8px 0;border-bottom:1px solid var(--bline)}
+td{padding:9px 10px 9px 0;border-bottom:1px solid var(--bline-2);font-size:12px}
+tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;padding-right:0;font-variant-numeric:tabular-nums}
+.chip{display:inline-flex;align-items:center;gap:7px;font-weight:500}
+.chip img{width:14px;height:14px;border-radius:3px}
+.tag{font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:5px;
+  border:1px solid var(--bline);color:var(--bmute);white-space:nowrap}
+.tag.ai{border-color:rgba(210,236,42,.55);color:#54650B;background:var(--lime-wash)}
+.tag.paid{border-color:rgba(255,122,51,.4);color:var(--orange-ink);background:rgba(255,122,51,.09)}
+.meter{width:74px;height:3px;background:var(--bline-2);border-radius:999px;overflow:hidden;display:inline-block;vertical-align:middle}
+.meter i{display:block;height:100%;background:var(--lime);border-radius:999px}
+
+.trail{display:flex;flex-direction:column}
+.tstep{display:flex;gap:12px}
+.rail{display:flex;flex-direction:column;align-items:center;width:16px;flex:none}
+.dot{border-radius:999px;flex:none}
+.stem{width:1px;flex:1;background:var(--bline);min-height:18px}
+.tb{padding-bottom:14px;flex:1}
+.tb b{display:block;font-size:12px;font-weight:500}
+.tb em{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--bfaint)}
+.tstep.final .tb{padding-bottom:0}
+.story{font-size:12.5px;background:var(--lime-wash);border-left:2px solid var(--lime);
+  padding:11px 13px;border-radius:0 5px 5px 0;margin-bottom:16px;line-height:1.55}
+.loader{display:flex;align-items:center;gap:9px}
+.loader .d1{width:8px;height:8px;background:var(--lime);border-radius:999px}
+.loader .d2{width:15px;height:15px;background:var(--lime);border-radius:999px}
+
+/* pricing */
+.prices{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:36px}
+.price{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:26px}
+.price.mid{border-color:var(--lime);box-shadow:0 0 0 1px var(--lime),var(--shadow)}
+.price .pt{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.price .amt{font-family:var(--disp);font-size:38px;font-weight:600;letter-spacing:-.045em;margin:16px 0 4px}
+.price .amt s{text-decoration:none;font-size:14px;color:var(--faint);font-weight:400;letter-spacing:0}
+.price p{font-size:13px;color:var(--mute);margin-bottom:20px;min-height:40px}
+.price ul{list-style:none;margin-top:20px}
+.price li{font-size:12.5px;color:var(--mute);padding:7px 0 7px 18px;position:relative}
+.price li::before{content:"";position:absolute;left:0;top:13px;width:6px;height:6px;border-radius:999px;background:var(--line)}
+.price.mid li::before{background:var(--lime)}
+.badge{font-family:var(--mono);font-size:10px;letter-spacing:.06em;background:var(--lime);
+  color:var(--ink);padding:2px 8px;border-radius:999px;margin-left:8px}
+
+/* faq */
+.faq details{border-bottom:1px solid var(--line)}
+.faq details:first-of-type{border-top:1px solid var(--line)}
+.faq summary{padding:21px 0;font-size:15.5px;font-weight:500;cursor:pointer;list-style:none;
+  display:flex;justify-content:space-between;gap:20px;font-family:var(--disp);letter-spacing:-.02em}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-family:var(--mono);color:var(--faint);font-size:18px;
+  transition:transform .25s var(--ease)}
+.faq details[open] summary::after{content:"–"}
+.faq p{padding:0 0 22px;color:var(--mute);font-size:14px;max-width:74ch;line-height:1.7}
+
+.cta .wrap{text-align:center;padding:100px 32px 108px}
+.cta h2{color:var(--ink-text)}
+.cta .lede{color:var(--ink-mute)}
+.cta .eyebrow{color:var(--lime);opacity:.85}
+.cta .btn-2{border-color:var(--ink-line);color:var(--ink-text)}
+
+footer{background:var(--ink);color:var(--ink-mute);padding:56px 0 30px;font-size:13px}
+.fg{display:grid;grid-template-columns:1.6fr repeat(3,1fr);gap:32px;padding-bottom:34px;
+  border-bottom:1px solid var(--ink-line)}
+footer .brand{color:var(--ink-text)}
+footer h6{font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-faint);font-weight:400;margin-bottom:15px}
+footer li{list-style:none;padding:5px 0}
+footer a:hover{color:var(--ink-text)}
+.fnote{font-size:12.5px;color:var(--ink-faint);max-width:34ch;margin-top:15px;line-height:1.65}
+.fbot{display:flex;justify-content:space-between;padding-top:24px;font-size:12px;
+  color:var(--ink-faint);flex-wrap:wrap;gap:12px}
+
+@media(max-width:960px){
+  .feat,.feat.flip{grid-template-columns:1fr;gap:36px}.feat.flip .txt{order:0}
+  .steps,.prices,.akpis,.a2{grid-template-columns:1fr}
+  .nlinks{display:none}.app{grid-template-columns:1fr}.aside{display:none}
+  .fg{grid-template-columns:1fr 1fr}section{padding:64px 0}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ NAV ═══ -->
+<nav id="nav"><div class="wrap">
+  <a class="brand" href="#">
+    <svg width="27" height="27" viewBox="0 0 100 100"><rect id="mrk" width="100" height="100" rx="24" fill="#12100C"/><circle cx="62" cy="40" r="23" fill="#D2EC2A"/><circle cx="35" cy="66" r="13" fill="#D2EC2A"/></svg>
+    SourceTrack
+  </a>
+  <div class="nlinks">
+    <a href="#how">How it works</a><a href="#attribution">Attribution</a>
+    <a href="#ai">AI referrals</a><a href="#pricing">Pricing</a><a href="#faq">Docs</a>
+  </div>
+  <div class="nright">
+    <button class="tgl" id="tgl" aria-label="Switch to dark theme" title="Switch theme">◐</button>
+    <a href="#" style="color:var(--mute)">Log in</a>
+    <a class="btn btn-1 btn-sm" href="#">Start tracking</a>
+  </div>
+</div></nav>
+
+<!-- ═══ HERO ═══ -->
+<div class="hero">
+  <!-- ambient light + three touchpoints travelling toward their conversion -->
+  <div class="herobg" aria-hidden="true">
+    <span class="blob a"></span><span class="blob b"></span><span class="blob c"></span>
+    <svg class="constellation" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid slice">
+      <g class="path-1">
+        <line x1="90" y1="430" x2="480" y2="180"/>
+        <circle class="node" cx="90" cy="430" r="3"/>
+        <circle class="node" cx="480" cy="180" r="5"/>
+        <circle class="trav" cx="90" cy="430" r="2.6" style="offset-path:path('M90,430 L480,180')"/>
+      </g>
+      <g class="path-2">
+        <line x1="1130" y1="400" x2="760" y2="150"/>
+        <circle class="node" cx="1130" cy="400" r="3"/>
+        <circle class="node" cx="760" cy="150" r="5"/>
+        <circle class="trav" cx="1130" cy="400" r="2.6" style="offset-path:path('M1130,400 L760,150')"/>
+      </g>
+      <g class="path-3">
+        <line x1="300" y1="500" x2="920" y2="450"/>
+        <circle class="node" cx="300" cy="500" r="2.5"/>
+        <circle class="node" cx="920" cy="450" r="4.5"/>
+        <circle class="trav" cx="300" cy="500" r="2.4" style="offset-path:path('M300,500 L920,450')"/>
+      </g>
+    </svg>
+  </div>
+  <div class="wrap">
+  <span class="eyebrow rv" style="--d:0ms">Attribution &amp; lightweight analytics</span>
+  <h1 class="rv" style="--d:80ms">Know which sources actually make you money.</h1>
+  <p class="lede rv" style="--d:160ms">Every conversion carries its full path — first touch to purchase, including the AI tools that sent it. One script tag, no tag-manager archaeology, no GA4 exploration reports.</p>
+  <div class="hcta rv" style="--d:240ms">
+    <a class="btn btn-1" href="#">Start tracking free</a>
+    <a class="btn btn-2" href="#how">See how it works</a>
+  </div>
+  <p class="hfine rv" style="--d:300ms">Works without cookies · installs in under five minutes</p>
+  <div class="hlogos rv" style="--d:380ms">
+    <span>Attributes traffic from</span>
+    <img src="https://www.google.com/s2/favicons?domain=google.com&sz=64" alt="Google">
+    <img src="https://www.google.com/s2/favicons?domain=chatgpt.com&sz=64" alt="ChatGPT">
+    <img src="https://www.google.com/s2/favicons?domain=perplexity.ai&sz=64" alt="Perplexity">
+    <img src="https://www.google.com/s2/favicons?domain=claude.ai&sz=64" alt="Claude">
+    <img src="https://www.google.com/s2/favicons?domain=gemini.google.com&sz=64" alt="Gemini">
+    <img src="https://www.google.com/s2/favicons?domain=facebook.com&sz=64" alt="Meta">
+    <img src="https://www.google.com/s2/favicons?domain=linkedin.com&sz=64" alt="LinkedIn">
+    <img src="https://www.google.com/s2/favicons?domain=tiktok.com&sz=64" alt="TikTok">
+    <img src="https://www.google.com/s2/favicons?domain=bing.com&sz=64" alt="Bing">
+    <img src="https://www.google.com/s2/favicons?domain=stripe.com&sz=64" alt="Stripe">
+    <img src="https://www.google.com/s2/favicons?domain=shopify.com&sz=64" alt="Shopify">
+  </div>
+</div></div>
+
+<!-- ═══ PRODUCT BAND (ink in both themes) ═══ -->
+<div class="inkband glow"><div class="wrap framewrap">
+  <div class="frame rv" style="--d:60ms">
+    <div class="chrome"><i></i><i></i><i></i><span>app.sourcetrack.ai/dashboard</span></div>
+    <div class="app">
+      <aside class="aside">
+        <div class="abrand">
+          <svg width="17" height="17" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#12100C"/><circle cx="62" cy="40" r="23" fill="#D2EC2A"/><circle cx="35" cy="66" r="13" fill="#D2EC2A"/></svg>
+          SourceTrack
+        </div>
+        <div class="apick"><i></i>northwind.co</div>
+        <div class="agrp">Setup</div><div class="anav"><i></i>Setup &amp; Health</div>
+        <div class="agrp">Insights</div>
+        <div class="anav on"><i></i>Dashboard</div><div class="anav"><i></i>Analytics</div>
+        <div class="anav"><i></i>Attribution</div><div class="anav"><i></i>All Leads</div>
+        <div class="anav"><i></i>Campaigns</div><div class="anav"><i></i>Report Builder</div>
+        <div class="agrp">Connect</div>
+        <div class="anav"><i></i>Integrations</div><div class="anav"><i></i>Settings</div>
+      </aside>
+      <div class="amain">
+        <div class="ahead"><h4>Dashboard</h4>
+          <div class="seg"><span>24h</span><span>7d</span><span class="on">30d</span><span>90d</span></div></div>
+        <div class="akpis">
+          <div class="acard akpi lead"><small>Revenue</small><b data-count="48240" data-pre="$">$48,240</b><u>164 conversions · up 18.4%</u></div>
+          <div class="acard akpi"><small>Leads</small><b data-count="412">412</b><u>1.3% of visitors</u></div>
+          <div class="acard akpi"><small>AI-sourced revenue</small><b data-count="11905" data-pre="$">$11,905</b><u>24.7% of total</u></div>
+        </div>
+        <div class="a2">
+          <div class="acard">
+            <h5>Revenue over time</h5>
+            <p class="sub">Revenue rose 18% this month, mostly from Google and ChatGPT.</p>
+            <div class="abars">
+              <div class="abar" style="height:22%;--d:0ms"></div><div class="abar" style="height:31%;--d:35ms"></div>
+              <div class="abar" style="height:26%;--d:70ms"></div><div class="abar" style="height:38%;--d:105ms"></div>
+              <div class="abar" style="height:34%;--d:140ms"></div><div class="abar" style="height:47%;--d:175ms"></div>
+              <div class="abar" style="height:41%;--d:210ms"></div><div class="abar o" style="height:52%;--d:245ms"></div>
+              <div class="abar" style="height:58%;--d:280ms"></div><div class="abar" style="height:49%;--d:315ms"></div>
+              <div class="abar" style="height:66%;--d:350ms"></div><div class="abar" style="height:61%;--d:385ms"></div>
+              <div class="abar" style="height:78%;--d:420ms"></div><div class="abar o" style="height:71%;--d:455ms"></div>
+              <div class="abar" style="height:88%;--d:490ms"></div><div class="abar" style="height:96%;--d:525ms"></div>
+            </div>
+            <div class="axl"><span>Jun 1</span><span>Jun 14</span><span>Jun 28</span></div>
+          </div>
+          <div class="acard">
+            <h5>Top sources</h5>
+            <p class="sub">By attributed revenue</p>
+            <div class="arow"><div class="nm"><img src="https://www.google.com/s2/favicons?domain=google.com&sz=64" alt="">Google</div><span class="ameter"><i style="--w:100%;--d:150ms"></i></span><em>$16.4k</em></div>
+            <div class="arow"><div class="nm"><img src="https://www.google.com/s2/favicons?domain=chatgpt.com&sz=64" alt="">ChatGPT</div><span class="ameter"><i style="--w:59%;--d:210ms"></i></span><em>$9.7k</em></div>
+            <div class="arow"><div class="nm"><img src="https://www.google.com/s2/favicons?domain=linkedin.com&sz=64" alt="">LinkedIn</div><span class="ameter"><i style="--w:46%;--d:270ms"></i></span><em>$7.6k</em></div>
+            <div class="arow"><div class="nm"><img src="https://www.google.com/s2/favicons?domain=perplexity.ai&sz=64" alt="">Perplexity</div><span class="ameter"><i style="--w:27%;--d:330ms"></i></span><em>$4.5k</em></div>
+            <div class="arow"><div class="nm"><img src="https://www.google.com/s2/favicons?domain=bing.com&sz=64" alt="">Bing</div><span class="ameter"><i style="--w:20%;--d:390ms"></i></span><em>$3.4k</em></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- ═══ HOW ═══ -->
+<section id="how"><div class="wrap">
+  <div class="shead center rv">
+    <span class="eyebrow">How it works</span>
+    <h2>Track, connect, know.</h2>
+    <p class="lede">Three steps in order, because each depends on the last. Most teams see their first attributed conversion the same afternoon.</p>
+  </div>
+  <div class="steps">
+    <div class="step rv" style="--d:0ms">
+      <span class="n">01 — TRACK</span>
+      <h3>Drop in one script</h3>
+      <p>A single tag captures pageviews, referrers, UTMs, click IDs and AI referrers. No cookie-banner dependency.</p>
+      <div class="art"><code style="font-family:var(--mono);font-size:11px;background:var(--ink);
+        color:var(--lime);padding:11px 13px;border-radius:7px;display:block;overflow:hidden;
+        white-space:nowrap">&lt;script src="tracker.min.js" data-site-key="…"&gt;</code></div>
+    </div>
+    <div class="step rv" style="--d:110ms">
+      <span class="n">02 — CONNECT</span>
+      <h3>Point conversions at us</h3>
+      <p>Forms, bookings and payments arrive by webhook or API. Stripe and Shopify have ready-made recipes.</p>
+      <div class="art" style="display:flex;gap:10px;align-items:center">
+        <img class="ico" style="width:26px;height:26px" src="https://www.google.com/s2/favicons?domain=stripe.com&sz=64" alt="Stripe">
+        <img class="ico" style="width:26px;height:26px" src="https://www.google.com/s2/favicons?domain=shopify.com&sz=64" alt="Shopify">
+        <img class="ico" style="width:26px;height:26px" src="https://www.google.com/s2/favicons?domain=wordpress.org&sz=64" alt="WordPress">
+        <img class="ico" style="width:26px;height:26px" src="https://www.google.com/s2/favicons?domain=webflow.com&sz=64" alt="Webflow">
+        <img class="ico" style="width:26px;height:26px" src="https://www.google.com/s2/favicons?domain=framer.com&sz=64" alt="Framer">
+      </div>
+    </div>
+    <div class="step rv" style="--d:220ms">
+      <span class="n">03 — KNOW</span>
+      <h3>Read the path, not the guess</h3>
+      <p>Every conversion gets a full touchpoint trail. Compare first touch, last touch and multi-touch side by side.</p>
+      <div class="art" style="display:flex;align-items:center;gap:0">
+        <img class="ico" style="width:16px;height:16px" src="https://www.google.com/s2/favicons?domain=chatgpt.com&sz=64" alt="">
+        <span style="flex:1;height:1px;background:var(--line)"></span>
+        <img class="ico" style="width:16px;height:16px" src="https://www.google.com/s2/favicons?domain=google.com&sz=64" alt="">
+        <span style="flex:1;height:1px;background:var(--line)"></span>
+        <span class="dot" style="width:16px;height:16px;background:var(--lime);--d:300ms"></span>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<!-- ═══ FEATURES ═══ -->
+<section id="attribution" style="padding-top:30px"><div class="wrap">
+  <div class="feat">
+    <div class="txt rv">
+      <span class="eyebrow">Attribution</span>
+      <h3>Five models, one table, no arguing</h3>
+      <p>Switch between first touch, last touch, linear, time decay and multi-touch on the same data. When two models disagree, that disagreement is the insight.</p>
+      <ul>
+        <li>Source, medium, campaign and landing page</li>
+        <li>Click IDs from Google, Meta, LinkedIn and TikTok</li>
+        <li>Cost columns appear only once you import spend</li>
+      </ul>
+    </div>
+    <div class="shot rv" style="--d:120ms">
+      <div class="shot-h"><b>Attribution</b> · Source performance <span class="tag" style="margin-left:auto">Last touch</span></div>
+      <div class="shot-b">
+        <table>
+          <thead><tr><th>Source</th><th>Type</th><th class="n">Visitors</th><th class="n">Conv.</th><th class="n">Share</th><th class="n">Revenue</th></tr></thead>
+          <tbody>
+            <tr><td><span class="chip"><img src="https://www.google.com/s2/favicons?domain=google.com&sz=64" alt="">Google</span></td><td><span class="tag">Organic</span></td><td class="n">8,412</td><td class="n">54</td><td class="n"><span class="meter"><i style="--w:100%;--d:200ms"></i></span></td><td class="n"><b>$16,420</b></td></tr>
+            <tr><td><span class="chip"><img src="https://www.google.com/s2/favicons?domain=chatgpt.com&sz=64" alt="">ChatGPT</span></td><td><span class="tag ai">AI</span></td><td class="n">2,109</td><td class="n">31</td><td class="n"><span class="meter"><i style="--w:59%;--d:260ms"></i></span></td><td class="n"><b>$9,740</b></td></tr>
+            <tr><td><span class="chip"><img src="https://www.google.com/s2/favicons?domain=linkedin.com&sz=64" alt="">LinkedIn</span></td><td><span class="tag paid">Paid</span></td><td class="n">3,860</td><td class="n">26</td><td class="n"><span class="meter"><i style="--w:46%;--d:320ms"></i></span></td><td class="n"><b>$7,610</b></td></tr>
+            <tr><td><span class="chip"><img src="https://www.google.com/s2/favicons?domain=perplexity.ai&sz=64" alt="">Perplexity</span></td><td><span class="tag ai">AI</span></td><td class="n">944</td><td class="n">14</td><td class="n"><span class="meter"><i style="--w:27%;--d:380ms"></i></span></td><td class="n"><b>$4,520</b></td></tr>
+            <tr><td><span class="chip"><img src="https://www.google.com/s2/favicons?domain=bing.com&sz=64" alt="">Bing</span></td><td><span class="tag">Organic</span></td><td class="n">1,204</td><td class="n">8</td><td class="n"><span class="meter"><i style="--w:20%;--d:440ms"></i></span></td><td class="n"><b>$2,180</b></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="feat flip" id="ai">
+    <div class="shot rv">
+      <div class="shot-h"><b>AI Sources</b> · Referral detection <span class="tag" style="margin-left:auto">30 days</span></div>
+      <div class="shot-b">
+        <div style="display:flex;gap:9px;margin-bottom:14px">
+          <div style="flex:1;padding:11px 13px;border:1px solid var(--bline);border-radius:8px;background:var(--bone)">
+            <small style="font-size:10.5px;color:var(--bmute);display:block;margin-bottom:5px">AI visitors</small>
+            <b style="font-family:var(--disp);font-size:21px;letter-spacing:-.035em;font-variant-numeric:tabular-nums">4,183</b></div>
+          <div style="flex:1;padding:11px 13px;border:1px solid var(--bline);border-radius:8px;background:var(--bone)">
+            <small style="font-size:10.5px;color:var(--bmute);display:block;margin-bottom:5px">AI revenue</small>
+            <b style="font-family:var(--disp);font-size:21px;letter-spacing:-.035em;font-variant-numeric:tabular-nums">$11,905</b></div>
+          <div style="flex:1;padding:11px 13px;border:1px solid var(--bline);border-radius:8px;background:var(--bone)">
+            <small style="font-size:10.5px;color:var(--bmute);display:block;margin-bottom:5px">Share of revenue</small>
+            <b style="font-family:var(--disp);font-size:21px;letter-spacing:-.035em;font-variant-numeric:tabular-nums">24.7%</b></div>
+        </div>
+        <div class="arow"><div class="nm"><img src="https://www.google.com/s2/favicons?domain=chatgpt.com&sz=64" alt="">ChatGPT</div><span class="ameter" style="width:110px"><i style="--w:100%;--d:200ms"></i></span><b>2,411</b></div>
+        <div class="arow"><div class="nm"><img src="https://www.google.com/s2/favicons?domain=perplexity.ai&sz=64" alt="">Perplexity</div><span class="ameter" style="width:110px"><i style="--w:39%;--d:250ms"></i></span><b>944</b></div>
+        <div class="arow"><div class="nm"><img src="https://www.google.com/s2/favicons?domain=gemini.google.com&sz=64" alt="">Gemini</div><span class="ameter" style="width:110px"><i style="--w:21%;--d:300ms"></i></span><b>498</b></div>
+        <div class="arow"><div class="nm"><img src="https://www.google.com/s2/favicons?domain=claude.ai&sz=64" alt="">Claude</div><span class="ameter" style="width:110px"><i style="--w:9%;--d:350ms"></i></span><b>214</b></div>
+        <div class="arow"><div class="nm"><img src="https://www.google.com/s2/favicons?domain=kagi.com&sz=64" alt="">Kagi</div><span class="ameter" style="width:110px"><i style="--w:5%;--d:400ms"></i></span><b>116</b></div>
+      </div>
+    </div>
+    <div class="txt rv" style="--d:120ms">
+      <span class="eyebrow">AI referrals</span>
+      <h3>The channel your analytics files under “direct”</h3>
+      <p>SourceTrack recognises referrals from 22 AI domains and keeps them as their own channel — with the same revenue attribution as any other source, not a footnote.</p>
+      <ul>
+        <li>ChatGPT, Gemini, Claude, Perplexity, Copilot, Grok, Kagi and more</li>
+        <li>AI referrals tie to leads and revenue, not just sessions</li>
+        <li>Crawler traffic separated from genuine human referrals</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="feat">
+    <div class="txt rv">
+      <span class="eyebrow">Journeys</span>
+      <h3>Open any lead and read the story</h3>
+      <p>Found you via Perplexity, read the comparison page, came back from Google nine days later, booked a demo. Written in plain English above the timeline, not buried in an event log.</p>
+      <ul>
+        <li>Full timeline with referrer, campaign and page detail</li>
+        <li>Mark leads Qualified, MQL or SQL without needing revenue</li>
+        <li>Works for cookieless and returning visitors</li>
+      </ul>
+    </div>
+    <div class="shot rv" style="--d:120ms">
+      <div class="shot-h"><b>Journey</b> · maya@northwind.co <span class="tag" style="margin-left:auto">SQL</span></div>
+      <div class="shot-b">
+        <p class="story">Found you through ChatGPT, read the attribution guide, returned twice, then booked a demo from branded search.</p>
+        <div class="trail">
+          <div class="tstep"><div class="rail"><span class="dot" style="width:8px;height:8px;background:#10A37F;--d:150ms"></span><span class="stem"></span></div>
+            <div class="tb"><b>ChatGPT → /blog/attribution-guide</b><em>JUN 14 · 09:12 · FIRST TOUCH</em></div></div>
+          <div class="tstep"><div class="rail"><span class="dot" style="width:9px;height:9px;background:#A39B8C;--d:250ms"></span><span class="stem"></span></div>
+            <div class="tb"><b>Direct → /pricing</b><em>JUN 18 · 20:41</em></div></div>
+          <div class="tstep"><div class="rail"><span class="dot" style="width:11px;height:11px;background:#4285F4;--d:350ms"></span><span class="stem"></span></div>
+            <div class="tb"><b>Google → /pricing</b><em>JUN 23 · 11:05 · BRANDED</em></div></div>
+          <div class="tstep final"><div class="rail"><span class="dot" style="width:16px;height:16px;background:var(--lime);--d:450ms"></span></div>
+            <div class="tb"><b>Booked a demo · $2,400</b><em>JUN 25 · 16:30</em></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<!-- ═══ PRICING ═══ -->
+<section id="pricing"><div class="wrap">
+  <div class="shead center rv">
+    <span class="eyebrow">Pricing</span>
+    <h2>One price, all the attribution.</h2>
+    <p class="lede">No attribution model locked behind a higher tier. No per-seat pricing.</p>
+  </div>
+  <!-- PLACEHOLDER — replace from the live Stripe catalogue before publishing -->
+  <div class="prices">
+    <div class="price rv" style="--d:0ms">
+      <span class="pt">Starter</span>
+      <div class="amt">$00<s> / month</s></div>
+      <p>One site, for founders validating where traffic actually comes from.</p>
+      <a class="btn btn-2" href="#" style="width:100%;justify-content:center">Start free</a>
+      <ul><li>1 site</li><li>All attribution models</li><li>AI referral detection</li><li>Journey explorer</li></ul>
+    </div>
+    <div class="price mid rv" style="--d:110ms">
+      <span class="pt">Growth<span class="badge">Most picked</span></span>
+      <div class="amt">$00<s> / month</s></div>
+      <p>For teams running paid campaigns and tracking revenue by source.</p>
+      <a class="btn btn-1" href="#" style="width:100%;justify-content:center">Start free trial</a>
+      <ul><li>3 sites</li><li>Revenue attribution</li><li>Report Builder &amp; saved reports</li><li>Search Console SEO revenue</li></ul>
+    </div>
+    <div class="price rv" style="--d:220ms">
+      <span class="pt">Scale</span>
+      <div class="amt">$00<s> / month</s></div>
+      <p>Portfolio view for agencies and operators running several properties.</p>
+      <a class="btn btn-2" href="#" style="width:100%;justify-content:center">Talk to us</a>
+      <ul><li>Unlimited sites</li><li>All Sites portfolio view</li><li>Priority support</li><li>Data export &amp; API</li></ul>
+    </div>
+  </div>
+  <p style="font-family:var(--mono);font-size:11.5px;color:var(--faint);margin-top:22px;text-align:center">
+    Figures are placeholders — replace from the live Stripe catalogue before publishing.</p>
+</div></section>
+
+<!-- ═══ FAQ ═══ -->
+<section id="faq"><div class="wrap">
+  <div class="shead rv"><span class="eyebrow">Questions</span><h2>Before you install anything.</h2></div>
+  <div class="faq rv" style="--d:80ms">
+    <details open><summary>Does this replace Google Analytics?</summary>
+      <p>For most founders, yes — SourceTrack covers visitors, sessions, pages, devices, countries and conversion events. It is not built for exhaustive event exploration or raw analytics debugging. If you need those, keep GA4 alongside it.</p></details>
+    <details><summary>How do you detect AI referrals?</summary>
+      <p>By referrer domain. When someone clicks through from ChatGPT, Perplexity, Gemini, Claude, Copilot or Kagi, that referrer is recognised and kept as its own channel rather than collapsing into direct traffic. We cannot see the prompt someone typed, and we don't claim to.</p></details>
+    <details><summary>Do I need a cookie banner?</summary>
+      <p>SourceTrack uses a cookieless visitor identifier by default — a server-derived daily-rotating hash rather than localStorage or cookies. Your own legal obligations depend on your jurisdiction and what else runs on your site, so check with your counsel rather than taking a vendor's word for it.</p></details>
+    <details><summary>What counts as revenue?</summary>
+      <p>Conversion values arriving from Stripe, a webhook, the manual conversion API, or a Shopify order. If none of those are connected, revenue columns are hidden rather than showing zeros.</p></details>
+    <details><summary>How long does setup take?</summary>
+      <p>One script tag, then point your conversion events at a webhook. Attribution starts building from the first pageview; journeys get more useful as touchpoints accumulate over the following days.</p></details>
+  </div>
+</div></section>
+
+<!-- ═══ CTA — ink in both themes ═══ -->
+<div class="inkband glow cta"><div class="wrap">
+  <span class="eyebrow rv">Get started</span>
+  <h2 class="rv" style="--d:80ms;max-width:17ch;margin:18px auto 18px">Stop guessing which channel paid for itself.</h2>
+  <p class="lede rv" style="--d:160ms;margin:0 auto 34px;max-width:46ch">Install the script, connect one conversion, and watch the first attributed lead land.</p>
+  <div class="rv" style="--d:240ms;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <a class="btn btn-1" href="#">Start tracking free</a>
+    <a class="btn btn-2" href="#">Read the docs</a>
+  </div>
+</div></div>
+
+<!-- ═══ FOOTER ═══ -->
+<footer><div class="wrap">
+  <div class="fg">
+    <div>
+      <div class="brand">
+        <svg width="24" height="24" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#1B1811"/><circle cx="62" cy="40" r="23" fill="#D2EC2A"/><circle cx="35" cy="66" r="13" fill="#D2EC2A"/></svg>
+        SourceTrack
+      </div>
+      <p class="fnote">Privacy-conscious attribution and lightweight analytics for people who need to know what worked.</p>
+    </div>
+    <div><h6>Product</h6><ul><li><a href="#attribution">Attribution</a></li><li><a href="#ai">AI referrals</a></li><li><a href="#">Journeys</a></li><li><a href="#">Report Builder</a></li><li><a href="#pricing">Pricing</a></li></ul></div>
+    <div><h6>Resources</h6><ul><li><a href="#">Docs</a></li><li><a href="#">Install guide</a></li><li><a href="#">Comparisons</a></li><li><a href="#">Status</a></li></ul></div>
+    <div><h6>Company</h6><ul><li><a href="#">About</a></li><li><a href="#">Contact</a></li><li><a href="#">Privacy</a></li><li><a href="#">Terms</a></li></ul></div>
+  </div>
+  <div class="fbot"><span>© 2026 SourceTrack</span><span>Figures shown on this page are fixture data.</span></div>
+</div></footer>
+
+<script>
+(function(){
+  var root=document.documentElement, tgl=document.getElementById('tgl'), mrk=document.getElementById('mrk');
+  var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* theme — in-memory only, respects OS preference on first load */
+  if(window.matchMedia('(prefers-color-scheme: dark)').matches) setTheme('dark');
+  function setTheme(t){
+    root.setAttribute('data-theme',t);
+    if(mrk) mrk.setAttribute('fill', t==='dark' ? '#1B1811' : '#12100C');
+    tgl.setAttribute('aria-label', t==='dark' ? 'Switch to light theme' : 'Switch to dark theme');
+    tgl.textContent = t==='dark' ? '☀' : '◐';
+  }
+  tgl.addEventListener('click',function(){
+    setTheme(root.getAttribute('data-theme')==='dark' ? 'light' : 'dark');
+  });
+
+  /* nav hairline appears only once scrolled */
+  var nav=document.getElementById('nav');
+  addEventListener('scroll',function(){ nav.classList.toggle('stuck', scrollY>8); },{passive:true});
+
+  /* scroll reveal — fires once per element */
+  var targets=document.querySelectorAll('.rv, .abars, .a2, .shot-b, .trail, section, .faq, .prices');
+  if(reduce || !('IntersectionObserver' in window)){
+    targets.forEach(function(el){el.classList.add('in');});
+  } else {
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
+    },{rootMargin:'0px 0px -8% 0px',threshold:.12});
+    targets.forEach(function(el){io.observe(el);});
+    /* hero is above the fold — reveal immediately */
+    requestAnimationFrame(function(){
+      document.querySelectorAll('.hero .rv').forEach(function(el){el.classList.add('in');});
+    });
+  }
+
+  /* KPI count-up, once, only when the frame is in view */
+  var nums=document.querySelectorAll('[data-count]');
+  function countUp(el){
+    var end=+el.dataset.count, pre=el.dataset.pre||'', t0=null, dur=900;
+    if(reduce){ return; }
+    function tick(ts){
+      if(!t0) t0=ts;
+      var p=Math.min((ts-t0)/dur,1), eased=1-Math.pow(1-p,3);
+      el.textContent=pre+Math.round(end*eased).toLocaleString('en-US');
+      if(p<1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  if(!reduce && 'IntersectionObserver' in window){
+    var io2=new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting){ countUp(e.target); io2.unobserve(e.target);} });
+    },{threshold:.5});
+    nums.forEach(function(el){io2.observe(el);});
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # SourceTrack - Complete Design & Product Spec
 
-**Version:** 1.2 Complete Product, Website, Ops, and Support Preview Expansion
+**Version:** 1.3 Four-hue palette, chart honesty, motion, and data-poor mode
 **Base spec:** V1 Final, June 2026 + V1.1 design expansion
 **Status:** Source of truth for product design, Stitch generation, implementation planning, public website direction, internal Ops Console design, and support-preview safety rules.
 
@@ -201,59 +201,60 @@ There must be one SourceTrack design system. Do not create alternate palettes, a
 | Token | Value |
 |---|---|
 | Product name | SourceTrack |
-| Light background | `#F5F4F0` |
-| Surface/card | `#FFFFFF` |
-| Accent | `#C8F000` |
-| Accent hover | `#B8DD00` |
-| Accent subtle | `rgba(200,240,0,0.09)` |
-| Primary text | `#111827` |
-| Muted text | `#6B7280` |
-| Faint text | `#9CA3AF` |
-| Border | `#E5E7EB` or `1px oklch(0 0 0 / 0.08)` |
-| Font | Inter or equivalent premium sans-serif |
-| Mono font | JetBrains Mono or equivalent |
+| Mark | Two lime discs on a warm-ink rounded square. Large disc upper-right, small disc lower-left. |
+| Ink (structure / dark canvas) | `#12100C` |
+| Bone (light canvas) | `#F7F4ED` |
+| Paper (card surface, light) | `#FFFDF8` |
+| Accent — signal | `#D2EC2A` |
+| Accent — counterweight | `#FF7A33` |
+| Bridge (gradient only) | `#F2A93B` |
+| Primary text, light | `#161310` |
+| Primary text, dark | `#F6F3EB` |
+| Border, light | `#E7E0D2` |
+| Border, dark | `#302B22` |
+| Body font | Geist, self-hosted (SIL OFL 1.1). Single family across app, marketing and docs. |
+| Display font | Geist, headings at −0.03em tracking. |
+| Mono font | Geist Mono |
 | Sidebar | Fixed 210px in V1 |
 
-### 3.2 Light mode CSS tokens
+**The warmth lives in the neutrals, not the accent.** Cool black plus acid green is the most-copied AI-startup theme in circulation. Warming the body, card, border and muted-text values is what makes the same lime read as expensive rather than cheap. Do not "warm up" the accents to compensate — warm the surround.
+
+### 3.2 Light mode tokens
 
 ```css
-:root {
-  --color-bg: #F5F4F0;
-  --color-surface: #FFFFFF;
-  --color-surface-2: #F9FAFB;
-  --color-border: #E5E7EB;
-  --color-divider: #F3F4F6;
+:root{
+  --color-bg:#F7F4ED;
+  --color-bg-2:#F1EDE3;
+  --color-surface:#FFFDF8;
+  --color-border:#E7E0D2;
+  --color-divider:#F0EADC;
 
-  --color-text: #111827;
-  --color-text-muted: #6B7280;
-  --color-text-faint: #9CA3AF;
+  --color-text:#161310;
+  --color-text-muted:#6E675C;
+  --color-text-faint:#A39B8C;
 
-  --color-accent: #C8F000;
-  --color-accent-hover: #B8DD00;
-  --color-accent-text: #0F1012;
-  --color-accent-subtle: rgba(200,240,0,0.09);
+  --color-accent:#D2EC2A;
+  --color-accent-hover:#BCD41C;
+  --color-accent-text:#12100C;      /* only legal text colour on a lime fill */
+  --color-accent-subtle:rgba(210,236,42,.13);
 
-  --color-success: #16A34A;
-  --color-success-bg: #F0FDF4;
-  --color-danger: #DC2626;
-  --color-danger-bg: #FEF2F2;
-  --color-warning: #D97706;
-  --color-warning-bg: #FFFBEB;
-  --color-info: #2563EB;
-  --color-info-bg: #EFF6FF;
+  --color-spend:#FF7A33;            /* cost, paid media, caution */
+  --color-spend-text:#B4420E;       /* orange as TEXT, light backgrounds only */
+  --color-spend-subtle:rgba(255,122,51,.10);
+  --color-bridge:#F2A93B;           /* gradient midpoint only — never a solid */
 
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
-  --shadow-lg: 0 12px 32px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06);
+  --color-danger:#C4381C;
+  --color-danger-subtle:rgba(196,56,28,.08);
 
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
-  --radius-full: 999px;
+  --shadow-sm:0 1px 2px rgba(30,24,12,.04);
+  --shadow-md:0 8px 20px -10px rgba(30,24,12,.18);
+  --shadow-lg:0 22px 48px -28px rgba(30,24,12,.26);
 
-  --font-body: 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --radius-sm:5px; --radius-md:9px; --radius-lg:13px; --radius-full:999px;
+
+  --font-body:'Geist','Inter',system-ui,sans-serif;
+  --font-display:'Geist','Inter',system-ui,sans-serif;
+  --font-mono:'Geist Mono','JetBrains Mono',monospace;
 
   --text-xs: 0.6875rem;
   --text-sm: 0.75rem;
@@ -277,79 +278,113 @@ There must be one SourceTrack design system. Do not create alternate palettes, a
 }
 ```
 
-### 3.3 Dark mode CSS tokens
+Type scale and spacing scale from v1.2 §3.2 are unchanged and carry over.
+
+### 3.3 Dark mode tokens
 
 ```css
-[data-theme="dark"] {
-  --color-bg: #0F1012;
-  --color-surface: #161719;
-  --color-surface-2: #1C1D20;
-  --color-border: #2A2C30;
-  --color-divider: #232527;
+[data-theme="dark"]{
+  --color-bg:#12100C;
+  --color-bg-2:#1B1811;
+  --color-surface:#1B1811;
+  --color-border:#302B22;
+  --color-divider:#241F17;
 
-  --color-text: #E8E9EB;
-  --color-text-muted: #8A8C91;
-  --color-text-faint: #52545A;
+  --color-text:#F6F3EB;             /* never #FFFFFF over warm ink */
+  --color-text-muted:#A79E8C;
+  --color-text-faint:#6E6656;
 
-  --color-accent: #C8F000;
-  --color-accent-hover: #B8DD00;
-  --color-accent-text: #0F1012;
-  --color-accent-subtle: rgba(200,240,0,0.07);
+  --color-accent:#D2EC2A;
+  --color-accent-hover:#BCD41C;
+  --color-accent-text:#12100C;
+  --color-accent-subtle:rgba(210,236,42,.12);
 
-  --color-success: #4ADE80;
-  --color-success-bg: rgba(74,222,128,0.08);
-  --color-danger: #F87171;
-  --color-danger-bg: rgba(248,113,113,0.08);
-  --color-warning: #FBBF24;
-  --color-warning-bg: rgba(251,191,36,0.08);
+  --color-spend:#FF7A33;
+  --color-spend-text:#FF7A33;       /* orange IS legal as text on ink */
+  --color-danger:#F0563A;
 
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.5);
-  --shadow-lg: 0 12px 32px rgba(0,0,0,0.6);
+  --shadow-sm:0 1px 3px rgba(0,0,0,.45);
+  --shadow-md:0 10px 26px -12px rgba(0,0,0,.6);
+  --shadow-lg:0 28px 64px -32px rgba(0,0,0,.7);
 }
 ```
 
-### 3.4 Source and channel color tokens
+### 3.4 Four hues, and only four
+
+This supersedes the source/channel colour block in v1.2 §3.4.
+
+| Meaning | Token | Applies to |
+|---|---|---|
+| Revenue, earned, organic, positive, brand | `--color-accent` | KPI emphasis, revenue series, primary buttons, active-nav rule |
+| Spend, cost, paid media, caution, negative delta | `--color-spend` | Spend series, paid chips, cost-metric labels, warning states |
+| Destructive only | `--color-danger` | Delete, erase, danger zone. Nothing else. |
+| Everything else | warm neutrals | All structure, text, borders, and volume metrics |
+
+**Success is lime, not green.** You already own a colour that means "good"; a second one is pure noise. There must be no separate success green, no terminal green, no info blue, no purple, and no slate in the shipped app.
+
+Third-party **brand** colours are the one exception and are not part of this palette: source rows and integration cards use the real logo of the service (Google, ChatGPT, Stripe, Shopify, LinkedIn, and so on). Those are identity, not styling.
+
+> **Implementation note.** Bundle third-party logos as local SVG or PNG assets. Do not hot-link a favicon service. A privacy-conscious product making a third-party request per table row is a contradiction a competitor will point at.
+
+### 3.5 Gradient
+
+The gradient is ambient light, not a colour ramp. It is the highest-risk element in the system.
+
+**Correct:** three overlapping radial gradients, lime → amber → orange, peak opacity ≈ 22%, long falloff, bleeding off the top edge of a warm-ink band.
+
+**Wrong:** a two-stop `linear-gradient(lime, orange)`. It crosses the muddy zone between the two hues, has a visible direction, and reads as a sports drink.
 
 ```css
-:root {
-  --chan-google: #4285F4;
-  --chan-facebook: #1877F2;
-  --chan-instagram: #E1306C;
-  --chan-linkedin: #0A66C2;
-  --chan-tiktok: #010101;
-  --chan-bing: #008373;
-  --chan-email: #8B5CF6;
-  --chan-direct: #6B7280;
-  --chan-referral: #64748B;
-  --chan-organic: #16A34A;
-  --chan-paid: #2563EB;
-
-  --ai-chatgpt: #10A37F;
-  --ai-gemini: #8B5CF6;
-  --ai-claude: #D97706;
-  --ai-perplexity: #20B2AA;
-  --ai-copilot: #0078D4;
-  --ai-deepseek: #1D4ED8;
-  --ai-grok: #374151;
-}
+--gradient-ambient:
+  radial-gradient(44% 42% at 17% 0%, rgba(210,236,42,.22) 0%, rgba(210,236,42,0) 65%),
+  radial-gradient(42% 40% at 48% -6%, rgba(242,169,59,.15) 0%, rgba(242,169,59,0) 69%),
+  radial-gradient(40% 40% at 79% 3%, rgba(255,122,51,.13) 0%, rgba(255,122,51,0) 71%);
 ```
 
-### 3.5 Do not use
+Rules:
 
-- Attribution Cockpit as product name
-- Cockpit AI
-- Attribution AI
-- Analytics Engine
-- SourceTrack Management
-- Manrope as the canonical product font
-- 260px sidebar
-- cool-gray generic admin palette
-- purple gradients
-- glassmorphism
-- decorative blobs
-- multiple palettes
-- multiple design systems
+- **Warm ink only.** On bone it reads as a stain.
+- **One instance per viewport.** Two visible at once is clutter.
+- Permitted: marketing hero, one product band, the final CTA, the in-app AI attribution card, OG images.
+- Forbidden: behind body text, inside cards, on buttons, on charts, or as a text fill.
+- Never a hard edge, never a visible angle.
+
+### 3.6 Contrast rules
+
+Lime and orange are surfaces you place dark text on, or inks you use on warm ink. **They are never text colours on a light canvas.**
+
+| Pair | Ratio | Verdict | Use |
+|---|---|---|---|
+| ink on lime | ~14.4:1 | AAA | Primary button, KPI emphasis |
+| lime on ink | ~14.4:1 | AAA | Eyebrows, accents on dark |
+| lime on paper | ~1.3:1 | **Fail** | Never — fills only |
+| orange on paper | ~2.6:1 | **Fail as text** | Bars, dots, marks only |
+| orange on ink | ~6.7:1 | AA | Orange text is legal here |
+| `#B4420E` on paper | ~5.2:1 | AA | Orange text on light |
+
+Ratios are WCAG 2.1 relative-luminance calculations, not output from an audit tool. Re-run them before they inform an accessibility statement.
+
+### 3.7 The dot system
+
+The mark is a first touch and a last touch. Extend that geometry rather than decorating around it.
+
+- **Attribution trail** — touchpoints render as dots on a hairline. First touch small, last touch large. Only the converting touchpoint takes lime; earlier touchpoints keep their channel identity.
+- **Source chip** — a dot prefix where no brand logo exists. Paid sources take orange, matching the chart rule.
+- **Loader** — two dots, the small one settling toward the large. Suppressed under `prefers-reduced-motion`.
+- **Empty state** — one dot on a hairline: one touchpoint, no path yet.
+
+### 3.8 Do not use
+
+- `#C8F000` (superseded by `#D2EC2A`), `#C5E838` (stale), `#8F2FFE`, `#DF53FE`, `#0E0912`
+- Pure `#FFFFFF` text or pure `#000000` surfaces
+- Cool greys (`#E5E7EB`, `#B9B7BA` and similar) anywhere
+- White-alpha borders (`rgba(255,255,255,.06)`) over warm ink — they read blue
+- Purple gradients, glassmorphism, decorative blobs, multiple palettes
+- Manrope as the product font, 260px sidebar, "Attribution Cockpit" or any other product name
+- Gradient applied to text
+- Case sensitivity: any mechanical colour or token replacement must be
+  case-insensitive. `#1a1d1d` and `#1A1D1D` are the same colour and a
+  case-sensitive pass silently misses the lowercase sites.
 
 ---
 
@@ -1096,23 +1131,16 @@ Example insight:
 
 ### 9.2 Line charts
 
-Use for:
+Use for visitors, sessions, revenue, conversions, AI traffic, and page trends over time.
 
-- Visitors over time
-- Sessions over time
-- Revenue over time
-- Conversions over time
-- AI traffic over time
-- Page trend over time
+**A chart must never draw a shape that needs more data than it has.** This rule outranks every aesthetic consideration in this document; a chart that implies readings it doesn't have makes an analyst distrust every other number on the page.
 
-Rules:
-
-- One primary line by default
-- Soft lime primary line
-- Horizontal gridlines only
-- Subtle area fill only when helpful
-- Tooltip includes date, metric, and short context
-- No unnecessary legends for one-line charts
+- **Fewer than 3 points:** do not draw a chart. Render the numbers.
+- **3 to 6 points:** straight segments only, with a visible marker at every real reading, and a caption naming what the points are.
+- **7 or more points:** smoothing is permitted. Area fill is permitted.
+- **Never** interpolate a curve between sparse points.
+- Days with no reading are not zero. Say so in the caption where it could be misread.
+- One primary line by default. Soft lime. Horizontal gridlines only. Custom tooltip.
 
 ### 9.3 Bar charts
 
@@ -1133,6 +1161,12 @@ Rules:
 - Visible values
 - Use channel colors selectively
 - Avoid rainbow charts unless comparing channel groups
+
+Sparse-data rules:
+
+- Fewer than 3 non-zero series: render a ranked list with inline bars, not a chart.
+  A single-bar bar chart is a stat, not a visualisation.
+- Do not draw empty slots for zero-value series — it draws the eye to the emptiness.
 
 ### 9.4 Segmented bars
 
@@ -1192,6 +1226,17 @@ V1.1/future only:
 - Journey activity heatmap
 
 Do not place heatmaps in active V1 UI unless feature-flagged.
+
+### 9.9 Combination charts
+
+Dual-axis combination charts are not permitted in V1. Two units on one plot is
+enterprise-BI clutter, and the reader cannot honestly compare the series.
+
+Instead:
+
+- Split into two stacked charts sharing an x-axis, or
+- Mark the secondary event on the primary series — an orange bar among lime bars
+  for conversion days — rather than adding a second axis.
 
 ---
 
@@ -2351,6 +2396,7 @@ This table is authority. If anything conflicts, this table wins.
 | Landing page performance | V1 verified | Full |
 | Cookieless visitor ID | V1 verified | Full |
 | Privacy-minimized tracking | V1 verified | Full |
+| Dark mode | V1 | Full, both app and marketing. Toggle in top bar. |
 | Manual lead qualification | V1 verified | Full |
 | Lead quality metrics | V1 | No revenue required |
 | Manual conversion webhook | V1 verified | Full |
@@ -2367,13 +2413,13 @@ This table is authority. If anything conflicts, this table wins.
 | Slack digest | V1.1 | Locked card only |
 | HubSpot sync | V1.1 | Locked card only |
 | PDF export | V1.1 | Locked state only |
-| Activity heatmap | V1.1 | Future/locked |
+| Activity heatmap | V1.1 | Locked. Currently shipping in the journey panel and must be gated. |
 | Google Ads cost import | V2 | Not active V1 UI |
 | Meta Ads cost import | V2 | Not active V1 UI |
 | TikTok cost import | V2 | Not active V1 UI |
 | Team roles | V2 | Future component |
 | API playground | V2 | Future component |
-| Alerts/notification bell | V2 | Not V1 top bar |
+| Alerts/notification bell | V2 | Not V1 top bar. Currently shipping and must be removed. |
 | Cross-domain tracking | V2 | Future component |
 | Command palette | V2 | Not active V1 |
 | Auto-hide sidebar rail | V2 | Not active V1 |
@@ -2693,6 +2739,8 @@ Website positioning, hero copy, and voice are owned by `docs/SourceTrack_GTM.md`
 `docs/marketing/website_seo_plan.md`. Do not maintain a competing hero here.
 
 ### 29.2 Website visual direction
+
+> The marketing site is **light-first with a dark toggle**, defaulting to the visitor's OS preference. Both themes share the same warm neutrals; only the canvas inverts. The product band and the final CTA render on warm ink in **both** themes — that is what gives the light theme its structure and keeps the product frame reading as a lit object rather than a flat screenshot.
 
 Borrow the premium lightweight SaaS feel from modern lime-glow landing pages:
 
@@ -3207,6 +3255,8 @@ Allowed badges:
 - Ops Console may show test data only if clearly labeled.
 - Paid-beta screenshots should avoid test pollution unless the purpose is internal QA.
 
+> Test and internal data is **labelled, not hidden**. Any source, campaign or lead originating from a verification run carries a `TEST` chip in the spend colour, in every surface where it appears. Removing it from customer-facing views would make the totals disagree with the underlying data.
+
 ---
 
 ## 34. Status / Incident / Support UI
@@ -3399,3 +3449,75 @@ Per the same reasoning that ruled out an in-product LLM analyzer (§26) and a ch
 section does not authorize an in-product AI assistant, chat window, or conversational interface of any
 kind. The agent lives outside the product (an external MCP client, or an internal automation acting
 through the same MCP surface) — SourceTrack exposes tools; it does not host the reasoning.
+
+---
+
+## 37. Motion
+
+Motion signals quality when it is restrained and signals AI-generated filler when it is not. The distinction is whether the motion tells you something.
+
+### 37.1 Permitted
+
+| Where | Motion | Duration |
+|---|---|---|
+| Page or section entry | Fade up 16px, stagger 60–110ms between siblings | 600ms |
+| Bar chart entering view | Grow from baseline, staggered left to right | 700ms |
+| Meters and contribution bars | Fill from 0 to value | 800ms |
+| KPI value on first paint | Count up, cubic ease-out | 900ms |
+| Attribution trail | Dots scale in sequentially along the path | 450ms each |
+| Buttons and cards | 1–3px lift on hover | 180–300ms |
+| Theme switch | Background and text colour transition | 350ms |
+| Nav hairline | Appears only once scrolled past 8px | 300ms |
+| Loader | The two-dot drift — the only permitted loop | 1.6s loop |
+
+Standard easing: `cubic-bezier(.22,.72,.28,1)`.
+
+### 37.2 Forbidden
+
+- Any looping animation other than the loader
+- Parallax, scroll-jacking, marquees, auto-rotating carousels
+- Motion that repeats when an element re-enters the viewport — reveals fire **once**
+- Animating anything other than `transform` and `opacity` in a list or table
+- Motion on a data value that is still loading, which implies a reading that isn't there yet
+- Entrance animation on the app shell. Chrome appears instantly; only content animates.
+
+### 37.3 Accessibility
+
+Every animation above must sit inside `@media (prefers-reduced-motion: no-preference)`. Under `reduce`, elements render in their final state immediately — including meters at full width and KPIs at their final value. Reduced motion must never mean missing data.
+
+---
+
+## 38. Data-poor mode
+
+Most SourceTrack accounts will spend their first weeks with very little data. A dashboard designed for 50,000 visitors rendered over 5 conversions looks broken, and that first impression sets the customer's opinion of the product's quality.
+
+### 38.1 Thresholds
+
+| Condition | Behaviour |
+|---|---|
+| 0 events ever | Full install-guide state. No dashboard chrome at all. |
+| Events but 0 conversions | Traffic surfaces render. Revenue, attribution and journey surfaces collapse to a single explanatory line with one action. |
+| Fewer than 3 conversions | Charts become ranked lists. Deltas and percentages are suppressed rather than shown against a base of 1. |
+| Fewer than 10 conversions in range | Show the §19.2 partial-data notice above the primary table. |
+
+### 38.2 Rules
+
+- An empty module is **one line with a link**, never a full-height card. Multiple empty full-height cards on one page is the single clearest signal that a product is not being used.
+- Empty and populated states on the same screen must not appear to contradict each other. "No conversions in the recent window" beside a table showing four conversions reads as a bug — name the window explicitly ("Nothing in the last 30 minutes").
+- Never render a percentage whose denominator is under 10 without a caveat.
+- Suppress a delta entirely if it has no value. A `vs prior` label with nothing beneath it reads as broken, not as empty.
+
+---
+
+## Change log — v1.3
+
+- §3 rewritten: warm neutral system, four-hue palette, gradient specification, contrast table, dot system.
+- Accent updated `#C8F000` → `#D2EC2A`; `#FF7A33` added as the spend counterweight; `#F2A93B` added as a gradient-only bridge.
+- Purple, all secondary greens, info blue and slate removed from the system.
+- §9.2 rewritten, §9.3 amended and §9.9 added: charts may not draw shapes their data cannot support; dual-axis charts prohibited in V1.
+- §37 Motion added.
+- §38 Data-poor mode added.
+- §23: heatmap and notification bell flagged as shipping against their gate; dark mode confirmed V1.
+- §33: test-data labelling made explicit.
+- §29.2: marketing site set to light-first with dark toggle and theme-independent ink bands.
+- Typography standardised on Geist across app and marketing; Switzer removed.
