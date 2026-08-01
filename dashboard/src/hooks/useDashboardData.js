@@ -10,6 +10,7 @@ import { LIVE_FEED_POLL_MS } from '../lib/liveFeed'
 import { safeNumber } from '../utils/numbers'
 import { limeAreaGradient } from '../utils/limeAreaGradient'
 import { tooltipPlugin, CHART_COLORS } from '../utils/chartTooltip'
+import { densifyDailySeries, countReadings, honestLineStyle, readingsCaption, hasEnoughPointsForChart, formatShortDay } from '../utils/chartHonesty'
 import { deriveTrafficState } from '../lib/trafficState.js'
 import { normalizeSource } from '../components/SourceIcon'
 
@@ -253,39 +254,88 @@ export function useDashboardData() {
     .filter(m => canMultiTouch || !MULTI_TOUCH.has(m.key))
     .map(m => ({ model: m.key, label: m.label, total: models[m.key] || 0 }))
 
+  const channelTrendResults = overview?.channel_trend || []
+
+  // §9.2 x-axis honesty, applied to BOTH trend series here so /dashboard and
+  // /app/attribution cannot drift.
+  //
+  // revenue_trend and channel_trend carry only the dates that actually had rows —
+  // api/routes/dashboard.js:325-326 build them from a keyed map with no zero-fill. On a
+  // Chart.js CATEGORY axis, slots are spaced by array index, so conversions on the 1st,
+  // 9th and 27th drew as three evenly spaced points: a fabricated timeline, and a worse
+  // lie than the smoothing §9.2 names. densifyDailySeries gives every calendar day in
+  // between its own slot so horizontal distance is elapsed time again. Gap days hold
+  // null, never 0 — §9.2: "Days with no reading are not zero."
+  const revTrend = densifyDailySeries(
+    timeResults.map(r => r.dim_value || ''),
+    [timeResults.map(r => safeNumber(r.revenue, 0))]
+  )
+  const revTrendValues = revTrend.series[0] || []
+  // Tier on REAL readings, never on labels.length — densifying inflates the slot count,
+  // and a tier read off the axis would grant smoothing to a 2-reading series.
+  const revTrendReadings = countReadings(revTrendValues)
+  const revTrendCaption = readingsCaption(revTrend.labels, revTrendValues)
+
   const revTrendData = {
-    labels: timeResults.map(r => r.dim_value || ''),
+    labels: revTrend.labels,
     datasets: [{
-      label: 'Revenue', data: timeResults.map(r => r.revenue || 0),
+      label: 'Revenue', data: revTrendValues,
       borderColor: 'rgba(17, 24, 39, 1)', backgroundColor: limeAreaGradient,
-      fill: true, tension: 0.3, pointRadius: 2,
-      pointHoverRadius: 5, pointHoverBackgroundColor: CHART_COLORS.lime, pointHoverBorderColor: CHART_COLORS.lime
+      pointHoverBackgroundColor: CHART_COLORS.lime, pointHoverBorderColor: CHART_COLORS.lime,
+      ...honestLineStyle(revTrendReadings, { fill: true, tension: 0.3, pointRadius: 2, pointHoverRadius: 5 })
     }]
   }
 
-  const channelTrendResults = overview?.channel_trend || []
+  const convTrend = densifyDailySeries(
+    channelTrendResults.map(r => r.dim_value || ''),
+    [channelTrendResults.map(r => safeNumber(r.conversions, 0))]
+  )
+  const convTrendValues = convTrend.series[0] || []
+  const convTrendReadings = countReadings(convTrendValues)
+  const convTrendCaption = readingsCaption(convTrend.labels, convTrendValues)
+
   const channelTrendData = {
-    labels: channelTrendResults.map(r => r.dim_value || ''),
+    labels: convTrend.labels,
     datasets: [{
       label: 'Conversions',
-      data: channelTrendResults.map(r => r.conversions || 0),
+      data: convTrendValues,
       borderColor: 'rgba(17,24,39,0.85)',
       backgroundColor: limeAreaGradient,
       borderWidth: 2,
-      pointRadius: 3,
-      pointHoverRadius: 5, pointHoverBackgroundColor: CHART_COLORS.lime, pointHoverBorderColor: CHART_COLORS.lime,
-      tension: 0.3,
-      fill: true
+      pointHoverBackgroundColor: CHART_COLORS.lime, pointHoverBorderColor: CHART_COLORS.lime,
+      ...honestLineStyle(convTrendReadings, { fill: true, tension: 0.3, pointRadius: 3, pointHoverRadius: 5 })
     }]
   }
 
+  // Tooltips read the DENSE arrays, not the raw results — after densifying, a Chart.js
+  // dataIndex addresses a calendar day, and indexing timeResults/channelTrendResults with
+  // it would report the wrong day's number.
   const revTooltipRows = (i) => {
-    const rev = timeResults[i]?.revenue
+    const rev = revTrendValues[i]
     return rev > 0 ? [{ label: 'Revenue', value: `$${safeNumber(rev, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`, accent: true }] : []
   }
-  const convTooltipRows = (i) => [
-    { label: 'Conversions', value: safeNumber(channelTrendResults[i]?.conversions, 0).toLocaleString(), accent: true }
-  ]
+  const convTooltipRows = (i) => {
+    const conv = convTrendValues[i]
+    // A gap day has no reading, so it gets no tooltip. Returning a row here would have
+    // the chart assert "0 conversions" on a day it simply has no data for (§9.2/§6).
+    if (conv == null) return []
+    return [{ label: 'Conversions', value: safeNumber(conv, 0).toLocaleString(), accent: true }]
+  }
+
+  // Under 3 readings §9.2 forbids a chart entirely and asks for the numbers instead, so
+  // the readings themselves are derived here — same place as everything else the two
+  // pages share, so neither can invent its own version of "too sparse to plot".
+  const readingRows = (labels, values, fmt) => labels
+    .map((l, i) => (values[i] == null ? null : { label: formatShortDay(l), value: fmt(values[i]) }))
+    .filter(Boolean)
+
+  const revTrendReadingRows = readingRows(revTrend.labels, revTrendValues,
+    v => `$${safeNumber(v, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`)
+  const convTrendReadingRows = readingRows(convTrend.labels, convTrendValues,
+    v => safeNumber(v, 0).toLocaleString())
+
+  const revTrendPlottable = hasEnoughPointsForChart(revTrendReadings)
+  const convTrendPlottable = hasEnoughPointsForChart(convTrendReadings)
 
   const chartOpts = (prefix = '$', getRows = revTooltipRows) => {
     const isDark = document.documentElement.classList.contains('dark')
@@ -362,6 +412,9 @@ export function useDashboardData() {
     aiRevResults, aiSourceRows, activeResults, topPagesResults, timeResults,
     models, modelRevenues, revTrendData, channelTrendResults, channelTrendData,
     revTooltipRows, convTooltipRows, chartOpts, hasRevenue, isGscConnected,
+    // §9.2 trend honesty — reading counts, captions and the under-3 fallback rows.
+    revTrendReadings, convTrendReadings, revTrendCaption, convTrendCaption,
+    revTrendReadingRows, convTrendReadingRows, revTrendPlottable, convTrendPlottable,
     trafficKpis, trafficVisitors, trafficPageviews, trafficSources, trafficTopPages,
     hasConversions, hasTraffic, setupIncomplete,
     // Read-failure surfaces. An empty result and a failed fetch are different facts;

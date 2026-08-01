@@ -6,7 +6,7 @@ import { prefersReducedMotion } from './prefersReducedMotion'
 export const CHART_COLORS = {
   grid:  { light: '#f3f4f6', dark: 'rgba(255,255,255,0.06)' },
   tick:  { light: '#6b7280', dark: '#9CA3AF' },
-  lime:  '#C8F000'
+  lime:  '#D2EC2A'
 }
 
 // Token class strings are LITERAL here so Tailwind's content scanner generates
