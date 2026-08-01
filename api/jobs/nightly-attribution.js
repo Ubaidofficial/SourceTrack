@@ -548,17 +548,71 @@ export async function processSite(site) {
   let failed = 0
   const records = []
   
-  for (const row of rows) {
-    try {
-      const conversion = conversionRowToObject(row)
+  // ── TWO PHASES. The split exists for ONE reason: the per-conversion touchpoints fetch is a
+  // Tinybird round-trip, and the old single loop made them strictly sequentially — a 200-conversion
+  // site paid 200 serialized round-trips. Phase 1 parallelizes ONLY that read+compute work, which
+  // writes nothing. Phase 2 keeps every write sequential and in ORIGINAL ROW ORDER.
+  //
+  // WHY PHASE 2 MUST NOT BE PARALLELIZED: writeConversionSideEffects' subscription_identity upsert
+  // is ignoreDuplicates on (site_id, stripe_customer_id) — first write wins. The pipe returns rows
+  // ORDER BY timestamp ASC and the intended semantics are "the chronologically-first stitched event
+  // wins". Nothing but call order enforces that, so driving these writes off compute-COMPLETION
+  // order would let network jitter hand the lock to a later conversion. See
+  // api/tests/nightly-conversion-concurrency.test.js, which proves it with a delayed mock.
 
-      // processConversion() ALWAYS runs in full — the subscription_identity seed
-      // (and, when gated, subscription_revenue insert) must still happen off this
-      // exact event, since the checkout carrier is the only one with the
-      // client_reference_id stitch. Only the attributed_conversions write below is
-      // conditionally skipped — this is a COUNT-only exclusion (Phase 7), not a
-      // change to the money-rail write path.
-      const record = await processConversion(site, conversion)
+  // Phase 1 — bounded-concurrency read+compute. Same worker-pool shape main() already uses across
+  // sites (shared cursor, N workers), so there is one concurrency idiom in this file, not two.
+  const CONV_CONCURRENCY = Math.max(1, Math.min(8, parseInt(process.env.NIGHTLY_CONVERSION_CONCURRENCY || '4', 10)))
+  // Results are written to a FIXED INDEX, never pushed — a worker pool completes out of order, and
+  // Phase 2's ordering guarantee depends on this array matching `rows` positionally.
+  const computed = new Array(rows.length)
+  let convCursor = 0
+
+  async function computeWorker () {
+    while (convCursor < rows.length) {
+      const i = convCursor++
+      const row = rows[i]
+      try {
+        const conversion = conversionRowToObject(row)
+        // undefined here = an INVALID conversion that computeConversionRecord skipped with a bare
+        // return. That is NOT a failure today (the old code fell through to the carrier/upsert
+        // logic below with record===undefined and still counted processed++), so it is carried
+        // through as a success with record undefined. Phase 2 reproduces that exactly.
+        const res = await computeConversionRecord(site, conversion)
+        computed[i] = { ok: true, conversion, record: res?.record, touchpoints: res?.touchpoints, computedOk: !!res }
+      } catch (error) {
+        // Identical message and bookkeeping to the old single loop's catch.
+        logWarn(`Failed to process conversion ${row[0]}: ${error.message}`)
+        failed++
+        computed[i] = { ok: false }
+      }
+      // Throttle carried over from the old loop's per-conversion sleep(200). It now lives HERE
+      // because Phase 1 is the only phase that touches Tinybird — Phase 2 is Supabase-only. See the
+      // PR body: the original sleep had no stated rationale and predates the Tinybird cutover.
+      await sleep(200)
+    }
+  }
+
+  const convWorkers = Math.min(CONV_CONCURRENCY, rows.length)
+  await Promise.all(Array.from({ length: convWorkers }, computeWorker))
+
+  // Phase 2 — STRICTLY SEQUENTIAL, STRICTLY IN ORIGINAL ROW ORDER. Do not parallelize.
+  for (let i = 0; i < rows.length; i++) {
+    const c = computed[i]
+    if (!c || !c.ok) continue   // Phase-1 failure: already logged and counted, and it must not
+                                // abort or skip any OTHER conversion in the batch.
+    try {
+      const { conversion, record, touchpoints, computedOk } = c
+
+      // The side-effect writes ALWAYS run in full — the subscription_identity seed (and, when
+      // gated, the subscription_revenue insert) must still happen off this exact event, since the
+      // checkout carrier is the only one with the client_reference_id stitch. Only the
+      // attributed_conversions write below is conditionally skipped — a COUNT-only exclusion
+      // (Phase 7), not a change to the money-rail write path.
+      // computedOk===false means the old code returned early BEFORE both write blocks, so they are
+      // skipped here too.
+      if (computedOk) await writeConversionSideEffects(site, conversion, record, touchpoints)
+
       const isCarrier = isSubscriptionCheckoutCarrier(conversion)
       if (isCarrier) {
         log(`Skipping attributed_conversions write for subscription-checkout $0 carrier ${conversion.uuid} (site ${site.site_key})`)
@@ -571,10 +625,9 @@ export async function processSite(site) {
         if (error) throw new Error(`Supabase upsert failed: ${error.message}`)
       }
       processed++
-      await sleep(200)
-      
+
     } catch (error) {
-      logWarn(`Failed to process conversion ${row[0]}: ${error.message}`)
+      logWarn(`Failed to process conversion ${rows[i][0]}: ${error.message}`)
       failed++
     }
   }
@@ -730,11 +783,19 @@ export const ATTRIBUTION_DESCRIPTOR_FIELDS = [
   'first_touch_browser', 'last_touch_browser', 'first_touch_landing_page', 'last_touch_landing_page'
 ]
 
-// `dryRun` (D2 B1 --validate) computes and RETURNS the exact attributed_conversions `record` with
-// ZERO side effects — it skips the subscription_identity / subscription_revenue writes below. The
-// record itself is unaffected (it is built purely from the conversion + touchpoints + attribution),
-// so the byte-diff harness compares the true production record shape without mutating any store.
-export async function processConversion(site, conversion, { dryRun = false } = {}) {
+// READ + COMPUTE half of the old processConversion. ZERO writes: one Tinybird touchpoints
+// round-trip, then pure computation (clamp/sort/slice, calculateAttribution, channel derivation,
+// confidence, dark-traffic AI stitching, refund descriptor-clearing, record assembly).
+//
+// WHY IT IS SPLIT OUT: processSite runs this half with BOUNDED CONCURRENCY (the network round-trip
+// is the bottleneck — a 200-conversion site made 200 sequential Tinybird calls). It is safe to
+// parallelize *only* because it writes nothing: the write half below is ordering-sensitive and
+// stays strictly sequential. Do NOT move a write into this function — see
+// writeConversionSideEffects' header for exactly what that would break.
+//
+// Returns { record, touchpoints }, or undefined for an invalid conversion (the same bare `return`
+// the old function used — processConversion's wrapper propagates it unchanged).
+export async function computeConversionRecord(site, conversion) {
   const convValue = parseFloat(conversion.conversion_value || 0)
 
   // A refund is a LEGITIMATE negative $conversion (Phase 2): it MUST persist to
@@ -1037,6 +1098,21 @@ export async function processConversion(site, conversion, { dryRun = false } = {
     }
   }
 
+  return { record, touchpoints }
+}
+
+// WRITE half of the old processConversion — exactly the two blocks that were gated on `if (!dryRun)`,
+// in the same order, with the same conditions. Nothing else.
+//
+// ⚠️ THIS MUST STAY SEQUENTIAL AND IN ORIGINAL ROW ORDER. The subscription_identity upsert below is
+// `ignoreDuplicates: true` on (site_id, stripe_customer_id), so the FIRST write for a given customer
+// wins and every later one is silently discarded. nightly_conversions_by_site returns rows ORDER BY
+// timestamp ASC, and the comment above the upsert states the intended semantics: "the
+// chronologically-first (ORDER BY timestamp ASC) stitched event wins". That guarantee is enforced by
+// NOTHING except call order — so if these writes were parallelized, or driven by compute-completion
+// order instead of row order, network jitter alone would let a LATER conversion win the lock and
+// silently mis-attribute the subscription. processSite calls this strictly in `rows` order.
+async function writeConversionSideEffects (site, conversion, record, touchpoints) {
   // Step 2: acquisition-locked subscription→source link. Phase 5c: SEED on stripe
   // customer_id ALONE, so a subscription-mode checkout ($0 carrier — customer_id +
   // client_reference_id stitch) seeds and lets the surviving invoice.paid
@@ -1049,11 +1125,9 @@ export async function processConversion(site, conversion, { dryRun = false } = {
   // conversion, so it never locks an 'unknown' row that would block a later
   // self-stitching invoice.paid. Write-once: the chronologically-first
   // (ORDER BY timestamp ASC) stitched event wins via the ignoreDuplicates upsert.
-  if (!dryRun) {
-    const seedRow = buildSubscriptionIdentitySeed({ conversion, touchpoints, record })
-    if (seedRow) {
-      await upsertSubscriptionIdentity(site, seedRow)
-    }
+  const seedRow = buildSubscriptionIdentitySeed({ conversion, touchpoints, record })
+  if (seedRow) {
+    await upsertSubscriptionIdentity(site, seedRow)
   }
 
   // Step 3: write the lifecycle/revenue row — gated on a subscription id PLUS an
@@ -1072,13 +1146,29 @@ export async function processConversion(site, conversion, { dryRun = false } = {
   // exclusion or swap it for a stripe_invoice_id check: trial_start/
   // trial_converted/churn funnel events legitimately have stripe_subscription_id
   // but no stripe_invoice_id, and must still reach this insert.
-  if (!dryRun && conversion.webhook_customer_id && conversion.stripe_subscription_id && !isSubscriptionCheckoutCarrier(conversion)) {
+  if (conversion.webhook_customer_id && conversion.stripe_subscription_id && !isSubscriptionCheckoutCarrier(conversion)) {
     await insertSubscriptionRevenue(site, conversion)
   }
+}
 
-  // dryRun (B1 --validate) also returns the touchpoints it computed from, so the harness can tally
-  // real same-timestamp ties (the pipe (timestamp,event_id) vs HogQL (timestamp) order divergence).
-  // The normal path (dryRun=false) returns the bare record, unchanged.
+// UNCHANGED PUBLIC CONTRACT. This is now a thin wrapper over the two halves above, kept so
+// runBackfill() and validateSite() (dryRun:true) keep working with ZERO changes to either.
+//
+// `dryRun` (D2 B1 --validate) computes and RETURNS the exact attributed_conversions `record` with
+// ZERO side effects — it skips the subscription_identity / subscription_revenue writes. The record
+// itself is unaffected (it is built purely from the conversion + touchpoints + attribution), so the
+// byte-diff harness compares the true production record shape without mutating any store.
+//
+// dryRun ALSO returns the touchpoints it computed from, so the harness can tally real
+// same-timestamp ties (the pipe (timestamp,event_id) vs HogQL (timestamp) order divergence). The
+// normal path (dryRun=false) returns the bare record. An invalid conversion returns undefined from
+// computeConversionRecord and that undefined is propagated verbatim — identical to the old bare
+// `return`, in BOTH modes, since the old early-return also preceded every dryRun branch.
+export async function processConversion(site, conversion, { dryRun = false } = {}) {
+  const computed = await computeConversionRecord(site, conversion)
+  if (!computed) return
+  const { record, touchpoints } = computed
+  if (!dryRun) await writeConversionSideEffects(site, conversion, record, touchpoints)
   return dryRun ? { record, touchpoints } : record
 }
 
