@@ -30,12 +30,12 @@ const breadcrumbSchema = {
 >
   <section class="py-16 bg-[#0E1111] text-white">
     <div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-      <span class="inline-block px-3 py-1 text-xs font-black uppercase tracking-widest text-[#0F1012] bg-[#C8F000] rounded-full">
+      <span class="inline-block px-3 py-1 text-xs font-black uppercase tracking-widest text-[#0F1012] bg-[#D2EC2A] rounded-full">
         {badge}
       </span>
       <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight text-white">
         {heading} <br />
-        <span class="text-[#C8F000]">{heading_accent}</span>
+        <span class="text-[#D2EC2A]">{heading_accent}</span>
       </h1>
       <p class="max-w-2xl mx-auto text-gray-400 text-base sm:text-lg leading-relaxed">
         {paragraph}
@@ -50,12 +50,12 @@ const breadcrumbSchema = {
     </div>
   </section>
 
-  <section class="py-16 bg-[#161719] text-white">
+  <section class="py-16 bg-[#1B1811] text-white">
     <div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       {comparison_cards.map((card: any) => (
-        <div class={`bg-[#1C1D20] p-6 rounded-2xl border space-y-2 ${card.highlight ? "border-[#C8F000]" : "border-[#2A2C30]"}`}>
-          <h3 class={`text-xl font-bold ${card.highlight ? "text-[#C8F000]" : "text-white"}`}>{card.title}</h3>
-          <span class={`text-xs font-extrabold block ${card.highlight ? "text-[#C8F000]" : "text-gray-400"}`}>{card.subtitle}</span>
+        <div class={`bg-[#1C1D20] p-6 rounded-2xl border space-y-2 ${card.highlight ? "border-[#D2EC2A]" : "border-[#2A2C30]"}`}>
+          <h3 class={`text-xl font-bold ${card.highlight ? "text-[#D2EC2A]" : "text-white"}`}>{card.title}</h3>
+          <span class={`text-xs font-extrabold block ${card.highlight ? "text-[#D2EC2A]" : "text-gray-400"}`}>{card.subtitle}</span>
           <p class={`text-sm leading-relaxed ${card.highlight ? "text-gray-300" : "text-gray-400"}`}>
             {card.description}
           </p>

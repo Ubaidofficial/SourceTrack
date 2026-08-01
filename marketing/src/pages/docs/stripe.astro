@@ -68,7 +68,7 @@ const session = await stripe.checkout.sessions.create({
   <section class="py-16 bg-[#0E1111] text-white">
     <div class="max-w-[800px] mx-auto px-4 space-y-8">
       <div class="space-y-4">
-        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Docs</a>
+        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#D2EC2A]">&larr; Back to Docs</a>
         <h1 class="text-4xl font-black text-white tracking-tight">Stripe Webhook / API Revenue Attribution Recipe</h1>
         <p class="text-gray-400 text-lg leading-relaxed">
           Stitch subscription and payment events with marketing campaigns using Stripe metadata and webhook
@@ -118,19 +118,19 @@ const session = await stripe.checkout.sessions.create({
           <h3 class="text-sm font-extrabold text-white">Step 1: Forward Visitor ID in Stripe Metadata</h3>
           <p class="text-sm text-gray-300 leading-relaxed">
             When creating a Stripe Checkout Session on your backend, read the visitor ID (stored in the
-            browser as <code class="text-[#C8F000]">st_aid</code>) from the client's request payload and
-            pass it as <code class="text-[#C8F000]">client_reference_id</code> or inside the
-            <code class="text-[#C8F000]">metadata</code> block as
-            <code class="text-[#C8F000]">anonymous_id</code> or <code class="text-[#C8F000]">visitor_id</code>.
+            browser as <code class="text-[#D2EC2A]">st_aid</code>) from the client's request payload and
+            pass it as <code class="text-[#D2EC2A]">client_reference_id</code> or inside the
+            <code class="text-[#D2EC2A]">metadata</code> block as
+            <code class="text-[#D2EC2A]">anonymous_id</code> or <code class="text-[#D2EC2A]">visitor_id</code>.
           </p>
           <pre class="mt-2 bg-[#0F1012] p-4 rounded-xl text-xs text-gray-300 overflow-x-auto border border-[#2A2C30]"><code>{CHECKOUT_SESSION_SNIPPET}</code></pre>
           <p class="text-xs text-gray-400 leading-relaxed">
             * Note: The SourceTrack webhook listener checks
-            <code class="text-[#C8F000]">client_reference_id</code>,
-            <code class="text-[#C8F000]">metadata.anonymous_id</code>,
-            <code class="text-[#C8F000]">metadata.visitor_id</code>,
-            <code class="text-[#C8F000]">metadata.sourcetrack_user_id</code>, and
-            <code class="text-[#C8F000]">metadata.site_user_id</code> in that order.
+            <code class="text-[#D2EC2A]">client_reference_id</code>,
+            <code class="text-[#D2EC2A]">metadata.anonymous_id</code>,
+            <code class="text-[#D2EC2A]">metadata.visitor_id</code>,
+            <code class="text-[#D2EC2A]">metadata.sourcetrack_user_id</code>, and
+            <code class="text-[#D2EC2A]">metadata.site_user_id</code> in that order.
           </p>
         </div>
 
@@ -147,25 +147,25 @@ const session = await stripe.checkout.sessions.create({
               <div class="my-1.5 font-mono text-xs p-2 bg-[#0F1012] border border-[#2A2C30] rounded overflow-x-auto">
                 https://api.srctk.com/api/webhooks/stripe/YOUR_SITE_KEY
               </div>
-              Replace <code class="text-[#C8F000]">YOUR_SITE_KEY</code> with the Site Key found under
+              Replace <code class="text-[#D2EC2A]">YOUR_SITE_KEY</code> with the Site Key found under
               settings in your dashboard.
             </li>
             <li>
               Under <strong>Select events to listen to</strong>, add:
               <ul class="list-disc pl-5 mt-1">
-                <li><code class="text-[#C8F000]">checkout.session.completed</code></li>
-                <li><code class="text-[#C8F000]">refund.created</code></li>
+                <li><code class="text-[#D2EC2A]">checkout.session.completed</code></li>
+                <li><code class="text-[#D2EC2A]">refund.created</code></li>
               </ul>
             </li>
             <li>Click <strong>Add Endpoint</strong>.</li>
           </ol>
           <div class="bg-[#101A24] border border-[#1E3A5F] rounded-2xl p-5 text-sm text-[#A8CFF0] leading-relaxed">
             Refunds are recorded as negative conversions and automatically net your revenue by source
-            &mdash; subscribe to <code class="text-[#C8F000]">refund.created</code>.
+            &mdash; subscribe to <code class="text-[#D2EC2A]">refund.created</code>.
           </div>
           <div class="bg-[#101A24] border border-[#1E3A5F] rounded-2xl p-5 text-sm text-[#A8CFF0] leading-relaxed">
             To secure your webhook, save the Stripe Webhook signing secret (starts with
-            <code class="text-[#C8F000]">whsec_</code>) in your SourceTrack dashboard under
+            <code class="text-[#D2EC2A]">whsec_</code>) in your SourceTrack dashboard under
             <strong>Integrations &rarr; Stripe settings</strong>. This allows SourceTrack to perform
             cryptographic HMAC verification of incoming payloads.
           </div>
@@ -176,8 +176,8 @@ const session = await stripe.checkout.sessions.create({
         <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">How to Verify It Worked</h2>
         <ol class="list-decimal pl-5 space-y-3 text-sm text-gray-300 leading-relaxed">
           <li>Run a payment check through Stripe in <strong>Test Mode</strong>.</li>
-          <li>In your Stripe Dashboard under <strong>Developers &rarr; Webhooks</strong>, inspect the event logs for <code class="text-[#C8F000]">checkout.session.completed</code>.</li>
-          <li>Verify that the webhook request returned a HTTP <code class="text-[#C8F000]">200 OK</code> response.</li>
+          <li>In your Stripe Dashboard under <strong>Developers &rarr; Webhooks</strong>, inspect the event logs for <code class="text-[#D2EC2A]">checkout.session.completed</code>.</li>
+          <li>Verify that the webhook request returned a HTTP <code class="text-[#D2EC2A]">200 OK</code> response.</li>
           <li>Verify that the transaction data (revenue and site metadata) appears attributed in the <strong>Event Debugger</strong> of your SourceTrack dashboard.</li>
         </ol>
       </section>
@@ -187,21 +187,21 @@ const session = await stripe.checkout.sessions.create({
         <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300 leading-relaxed">
           <li>
             <strong>Incorrect Webhook Event Types:</strong> Stripe triggers a variety of events like
-            <code class="text-[#C8F000]">payment_intent.succeeded</code>. SourceTrack parses
-            <code class="text-[#C8F000]">checkout.session.completed</code>,
-            <code class="text-[#C8F000]">refund.created</code>, and subscription lifecycle events; other
+            <code class="text-[#D2EC2A]">payment_intent.succeeded</code>. SourceTrack parses
+            <code class="text-[#D2EC2A]">checkout.session.completed</code>,
+            <code class="text-[#D2EC2A]">refund.created</code>, and subscription lifecycle events; other
             events are safely ignored.
           </li>
           <li>
             <strong>Unmatched Metadata Key:</strong> If you use custom names like
-            <code class="text-[#C8F000]">metadata.st_aid</code>, SourceTrack's engine will not process it.
-            Stick to <code class="text-[#C8F000]">client_reference_id</code> or
-            <code class="text-[#C8F000]">metadata.anonymous_id</code>.
+            <code class="text-[#D2EC2A]">metadata.st_aid</code>, SourceTrack's engine will not process it.
+            Stick to <code class="text-[#D2EC2A]">client_reference_id</code> or
+            <code class="text-[#D2EC2A]">metadata.anonymous_id</code>.
           </li>
           <li>
             <strong>Missing Stripe Signing Secret:</strong> If you omit the signing secret under Settings,
             webhook payload signature checks will fail, returning a
-            <code class="text-[#C8F000]">400 Bad Request</code>.
+            <code class="text-[#D2EC2A]">400 Bad Request</code>.
           </li>
         </ul>
       </section>
@@ -210,7 +210,7 @@ const session = await stripe.checkout.sessions.create({
         <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Next Step</h2>
         <p class="text-sm text-gray-300 leading-relaxed">
           Stripe setup is complete! Go to the
-          <a href="/developers/offline-conversions" class="text-[#C8F000] font-bold hover:underline">Offline Conversions API</a>
+          <a href="/developers/offline-conversions" class="text-[#D2EC2A] font-bold hover:underline">Offline Conversions API</a>
           to learn how to register custom offline sales or updates directly from your server.
         </p>
       </section>

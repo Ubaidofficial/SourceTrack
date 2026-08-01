@@ -10,7 +10,7 @@ import { getListPage } from "@/lib/contentParser";
 const data = await getListPage("changelog/-index.md");
 const { title, description, meta_title, image, page_header, changelog_list } = data.frontmatter;
 const callToAction = await getListPage("sections/call-to-action.md");
-const primaryColor = theme?.colors?.default?.theme_color?.primary || "#C8F000";
+const primaryColor = theme?.colors?.default?.theme_color?.primary || "#D2EC2A";
 ---
 
 <Base title={title} meta_title={meta_title} description={description} image={image}>

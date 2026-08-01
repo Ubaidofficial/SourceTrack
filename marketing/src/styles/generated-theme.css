@@ -6,22 +6,24 @@
 
 @theme {
   /* === Colors === */
-  --color-primary: #C8F000;
-  --color-secondary: #B8DD00;
-  --color-primary-dark: #161719;
-  --color-body: #F5F4F0;
-  --color-border: #E5E7EB;
-  --color-light: #FFFFFF;
-  --color-gray: #6B7280;
-  --color-dark: #111827;
-  --color-dark-gray: #232527;
-  --color-card: #FFFFFF;
-  --color-text: #111827;
-  --color-text-dark: #111827;
-  --color-text-light: #6B7280;
+  --color-primary: #D2EC2A;
+  --color-secondary: #BCD41C;
+  --color-accent-warm: #F2A93B;
+  --color-spend: #FF7A33;
+  --color-primary-dark: #1B1811;
+  --color-body: #F7F4ED;
+  --color-border: #E7E0D2;
+  --color-light: #FFFDF8;
+  --color-gray: #6E675C;
+  --color-dark: #12100C;
+  --color-dark-gray: #302B22;
+  --color-card: #FFFDF8;
+  --color-text: #161310;
+  --color-text-dark: #161310;
+  --color-text-light: #6E675C;
 
   /* === Font Families === */
-  --font-primary: Inter, sans-serif;
+  --font-primary: Geist, sans-serif;
 
   /* === Font Sizes === */
   --text-base: 16px;

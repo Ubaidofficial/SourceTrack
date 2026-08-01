@@ -65,7 +65,7 @@
 @utility bg-radial-accent-dark {
   background: radial-gradient(
     163.24% 100% at 50% 100%,
-    rgba(200, 240, 0, 0.3) 0%,
+    rgba(210, 236, 42, 0.3) 0%,
     rgba(25, 20, 29, 0.3) 42.49%
   );
 }
