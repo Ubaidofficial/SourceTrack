@@ -1229,10 +1229,12 @@ export default function Settings() {
               Enter the Visitor ID (the ID shown in Leads and on a visitor's journey) to erase matching SourceTrack app database records. This action is immediate for app database records and cannot be undone.
             </p>
             <div className="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg p-3 text-[11px] text-amber-800 dark:text-amber-300 space-y-1.5 font-sans">
-              <p>• Database attribution records and stitched identity mappings will be permanently deleted from our app database.</p>
-              <p>• <strong>Event Store Deletion Limitation:</strong> Visitor erasure sends a best-effort deletion request to our event store (Tinybird) where supported. However, this is not independently verified and full raw-event purge verification is still pending.</p>
+              <p>• Database attribution records and stitched identity mappings are permanently deleted from our app database. The response reports how many rows were actually removed — if nothing matched, it tells you that instead of reporting success.</p>
+              <p>• Event data is deleted from our event store, and every attempt is recorded so it can be verified and retried rather than assumed. A second automatic pass runs afterwards to catch anything that was still in flight when you made the request — usually within about half an hour, not instantly.</p>
+              <p>• From then on this visitor is suppressed: new identity mappings, volunteered names or emails, and lead records for them are refused rather than written, and their conversions are no longer forwarded to any advertising platform.</p>
+              <p>• <strong>What erasure cannot undo:</strong> anything already forwarded to an advertising platform (Meta, Google, GA4, TikTok, LinkedIn) before you made the request sits in that platform's systems under their retention, and we cannot recall it. That has to be raised with the platform directly.</p>
+              <p>• <strong>Also out of scope:</strong> the automatic second pass covers the event store only — it does not re-run the app database deletions. Third-party Stripe customer and billing records are not affected or queried.</p>
               <p>• <strong>Sanitization Note:</strong> Ingestion-side PII sanitization is locally implemented to filter sensitive keys, but live staging/production verification remains pending.</p>
-              <p>• Third-party Stripe customer and billing records are not affected or queried during visitor data deletion.</p>
             </div>
             <form onSubmit={handleVisitorDelete} className="flex items-center gap-3">
               <input
@@ -1426,7 +1428,8 @@ export default function Settings() {
         </p>
         <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-lg p-3 text-[11px] text-red-800 dark:text-red-300 space-y-1.5 font-sans">
           <p>• Account/workspace deletion removes SourceTrack workspace and app database records according to current code paths.</p>
-          <p>• Event data in our analytics store is erased at the time of your request. If the same information is submitted again later — for example through a repeat form submission with your email, or a delayed payment-processor webhook — it may be recorded again.</p>
+          <p>• Event data in our analytics store is erased for every site being deleted, and the deletion is only treated as complete once the event store confirms it. Because the sites go with the account, their tracking keys stop being accepted — so nothing further can arrive for them afterwards.</p>
+          <p>• This is account deletion, not per-visitor erasure. It does not add your visitors to the suppression list, and it does not affect sites that stay active for other members. To erase one person's data from a site that is still running, use <strong>Erase Visitor Data</strong> above.</p>
           <p>• If you are the only workspace member, your workspace and sites will be permanently deleted from our app database.</p>
           <p>• If this is a shared workspace, your account and membership will be removed, leaving the shared sites active for other members.</p>
           <p>• If you are the only administrator of a shared workspace, you must transfer ownership or remove other members before deleting your account.</p>
