@@ -464,8 +464,15 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     // Per-source revenue map
     const revenueBySource = revenueUnavailable ? null : {}
     if (!revenueUnavailable) {
+      // A refund is never attributed to a source (founder decision 2026-08-01; the nightly
+      // clears its descriptor columns). Without this branch a refund's NULL first_touch_source
+      // would fall through the `|| 'Direct'` default and debit Direct — the one source it
+      // certainly did not come from — which is the exact misattribution the decision removes.
+      // Bucketed to the same explicit line dashboard.js uses, so the two surfaces agree.
       conversions.forEach(r => {
-        const src = r.first_touch_source || 'Direct'
+        const src = r.conversion_type === 'refund'
+          ? 'Unattributed refunds'
+          : (r.first_touch_source || 'Direct')
         revenueBySource[src] = (revenueBySource[src] || 0) + (Number(r.conversion_value) || 0)
       })
     }

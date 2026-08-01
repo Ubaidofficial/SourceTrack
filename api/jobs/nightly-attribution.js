@@ -100,20 +100,13 @@ const supabase = _supabase
 // (queryTinybirdPipe logs `served pipe … rows=N`), never the absence of a fallback warning.
 let _queryPipe = queryTinybirdPipe
 let _tbReadEnabled = isTinybirdReadEnabled
-// KI-62 Step C — refund attribution inheritance resolver seam (swappable for tests).
-// Reads the ORIGINAL conversion's persisted attribution from attributed_conversions,
-// keyed by the refund's original_conversion_event_id pointer. Injected so the
-// inheritance tests stay token-free / network-free like the rest of the nightly suite.
-let _resolveOriginalAttribution = defaultResolveOriginalAttribution
-export function __setNightlyReadDeps ({ queryPipe, tbReadEnabled, resolveOriginal } = {}) {
+export function __setNightlyReadDeps ({ queryPipe, tbReadEnabled } = {}) {
   if (queryPipe) _queryPipe = queryPipe
   if (tbReadEnabled) _tbReadEnabled = tbReadEnabled
-  if (resolveOriginal) _resolveOriginalAttribution = resolveOriginal
 }
 export function __resetNightlyReadDeps () {
   _queryPipe = queryTinybirdPipe
   _tbReadEnabled = isTinybirdReadEnabled
-  _resolveOriginalAttribution = defaultResolveOriginalAttribution
 }
 
 // Map a nightly_conversions_by_site pipe row (named) to the EXACT positional array the
@@ -723,7 +716,11 @@ function calculateConfidence(touchpoints, channel) {
 // the refund keeps its OWN id + negative value + refund date (revenue nets on the refund's
 // date, against the ORIGINAL's source). This is the exact set of source-bearing columns in
 // the record built below — keep the two in lockstep.
-export const REFUND_INHERITED_FIELDS = [
+// The attribution DESCRIPTOR columns. Formerly REFUND_INHERITED_FIELDS — the set a refund copied
+// from its original. Refunds no longer inherit (founder decision 2026-08-01, see processConversion),
+// so the same set is now the set CLEARED on a refund: exactly the columns that would otherwise
+// assert a source for a reversal we deliberately do not attribute.
+export const ATTRIBUTION_DESCRIPTOR_FIELDS = [
   'first_touch_source', 'first_touch_medium', 'first_touch_campaign', 'first_touch_timestamp',
   'last_touch_source', 'last_touch_medium', 'last_touch_campaign', 'last_touch_timestamp',
   'linear_attribution', 'u_shaped_attribution', 'time_decay_attribution', 'w_shaped_attribution',
@@ -732,25 +729,6 @@ export const REFUND_INHERITED_FIELDS = [
   'first_touch_country', 'last_touch_country', 'first_touch_device', 'last_touch_device',
   'first_touch_browser', 'last_touch_browser', 'first_touch_landing_page', 'last_touch_landing_page'
 ]
-
-// KI-62 Step C — resolve the ORIGINAL conversion's persisted attribution by the refund's
-// pointer. Read-only, tenant-scoped (site_id). A DB error or a miss both return null → the
-// caller marks the refund refund_unresolved (never a guessed/Direct source). NOT fail-closed
-// by throwing: skipping the refund would drop its negative value and OVER-report revenue —
-// worse than persisting it unresolved (the value still nets at the site level).
-async function defaultResolveOriginalAttribution (site, originalEventId) {
-  const { data, error } = await supabase
-    .from('attributed_conversions')
-    .select(REFUND_INHERITED_FIELDS.join(', '))
-    .eq('site_id', site.id)
-    .eq('conversion_event_id', originalEventId)
-    .maybeSingle()
-  if (error) {
-    logWarn(`refund-inheritance: original lookup failed for site ${site.site_key} (pointer ${originalEventId}): ${error.message}`)
-    return null
-  }
-  return data || null
-}
 
 // `dryRun` (D2 B1 --validate) computes and RETURNS the exact attributed_conversions `record` with
 // ZERO side effects — it skips the subscription_identity / subscription_revenue writes below. The
@@ -1012,40 +990,50 @@ export async function processConversion(site, conversion, { dryRun = false } = {
     last_touch_landing_page: lastTp.landing_page || 'unknown'
   }
 
-  // KI-62 Step C — refund attribution inheritance. For a refund, the record above was
-  // derived from the REFUND's own (later) window, which rarely reaches the acquiring
-  // touch → it collapses to Direct/null, silently misattributing the reversal away from
-  // the source that earned the sale. Instead COPY the original conversion's attribution
-  // VERBATIM, resolved via the original_conversion_event_id pointer the write-path stamps
-  // into the event's custom_properties bag (Step B). The pointer is READ from that bag
-  // (projected by nightly_conversions_by_site as original_conversion_event_id) — NEVER
-  // external_event_id, whose partial unique (site_id, external_event_id) index would drop
-  // the refund row. This is a READ, so it runs in dryRun too (the --validate record must
-  // reflect the true written shape). Marks are written to custom_properties:
-  //   resolved   → refund_attribution:'inherited' + original_conversion_event_id
-  //   unresolved → refund_attribution:'unresolved' (never guessed, never silent Direct)
-  // Subscription-mode refunds (no payment_intent) carry NO pointer (Step B stamps none) →
-  // pointer null → no lookup attempted → refund_unresolved (founder-confirmed v1 boundary).
-  // LIMITATION: resolution reads the original from attributed_conversions, so an original
-  // first materialized in the SAME batched run (reprocess/backfill) that has not yet been
-  // written is not yet visible → that refund degrades to refund_unresolved. The 24h cron
-  // path is unaffected (originals are from prior runs, or upserted earlier in ASC order).
+  // REFUNDS ARE NEVER ATTRIBUTED TO A SOURCE (founder decision, 2026-08-01). This REPLACES
+  // KI-62 Step C's inheritance, which copied the original conversion's attribution onto the
+  // refund so the reversal debited the source that earned the sale.
+  //
+  // WHY THE REVERSAL: attribution on the original is a MODEL OUTPUT, not an observation. The
+  // refund itself is a certain fact — the money came back — but which channel should absorb it
+  // is exactly as uncertain as the original attribution was. Inheriting compounds one uncertain
+  // credit into an equal-and-opposite uncertain DEBIT against the same channel, so a
+  // mis-attributed sale becomes a mis-attributed sale AND a mis-attributed refund, and the error
+  // doubles instead of cancelling. Bucketing the refund on its own line keeps the certain part
+  // (site revenue nets exactly) and stops asserting the uncertain part.
+  //
+  // The refund's own derived attribution is discarded rather than kept, for the reason Step C
+  // originally identified and which still holds: the record above was derived from the REFUND's
+  // (later) window, which rarely reaches the acquiring touch, so it collapses to Direct/null.
+  // Keeping it would debit 'Direct' — a source that certainly did not earn the sale. Neither
+  // inheriting nor deriving is honest here; not attributing is.
+  //
+  // 'unattributed' is a DISTINCT marker from 'unresolved', deliberately, and they must not be
+  // merged: 'unresolved' means the original could not be identified (a real data gap worth
+  // chasing — no payment_intent, a subscription-mode refund, a failed lookup), while
+  // 'unattributed' means the original IS known and we are choosing not to attribute against it.
+  // Collapsing them would erase the diagnosable case, the same reasoning that kept 'partial'
+  // separate from 'unknown' in collapseCurrencies() (#532). Read paths bucket BOTH to the
+  // "Unattributed refunds" line; only the marker differs.
+  //
+  // The original_conversion_event_id pointer is still stamped when present — it is the audit
+  // trail linking a refund to what it reverses, and stays useful even though nothing is now
+  // copied across it. No lookup is performed: the pointer rides in the event's own
+  // custom_properties bag (Step B), so this branch does ZERO reads.
+  // The descriptor columns are CLEARED, not merely ignored. A marker in custom_properties only
+  // protects readers that know to check it; every other reader — analytics.js, the Report
+  // Builder, exports — sums first_touch_source directly and would have believed whatever the
+  // refund's own window derived. Nulling makes the row honest at the DATA layer, so a reader
+  // that has never heard of refund_attribution cannot silently debit a source. The two readers
+  // that DO break revenue down by source (dashboard.js, analytics.js) route these rows to an
+  // explicit "Unattributed refunds" line rather than letting a null collapse to 'Direct'.
   if (conversion.conversion_type === 'refund') {
     const pointer = conversion.original_conversion_event_id || null
-    const inherited = pointer ? await _resolveOriginalAttribution(site, pointer) : null
-    if (inherited) {
-      for (const field of REFUND_INHERITED_FIELDS) record[field] = inherited[field]
-      record.custom_properties = {
-        ...(record.custom_properties || {}),
-        refund_attribution: 'inherited',
-        original_conversion_event_id: pointer
-      }
-    } else {
-      record.custom_properties = {
-        ...(record.custom_properties || {}),
-        refund_attribution: 'unresolved',
-        ...(pointer ? { original_conversion_event_id: pointer } : {})
-      }
+    for (const field of ATTRIBUTION_DESCRIPTOR_FIELDS) record[field] = null
+    record.custom_properties = {
+      ...(record.custom_properties || {}),
+      refund_attribution: pointer ? 'unattributed' : 'unresolved',
+      ...(pointer ? { original_conversion_event_id: pointer } : {})
     }
   }
 
