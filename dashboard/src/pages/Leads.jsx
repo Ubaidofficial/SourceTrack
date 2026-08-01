@@ -320,11 +320,18 @@ export default function Leads() {
 
       {/* `sub` names what each number counts. "TOTAL LEADS 35" beside a table saying "46 shown"
           read as a contradiction; it is not one — 35 is distinct CONVERTERS, 46 is every visitor
-          the range returned. Saying so is the fix. */}
+          the range returned. Saying so is the fix.
+
+          `primary` mirrors overviewKpis.js's slot-1 rule (design.md §2.4, "when available,
+          revenue and conversions visually dominate"): exactly ONE headline tile, chosen by what
+          the site actually is. There it is Revenue for saas/ecommerce and the COUNT for leadgen;
+          here `hasRevenue` is the same discriminator, since this page has no businessType.
+          Revenue is already omitted — not zeroed — when it isn't real, so promoting Converters in
+          that state is the leadgen branch, not a new rule. */}
       <div className={`grid gap-4 ${hasRevenue ? 'grid-cols-3' : 'grid-cols-2'}`}>
-        <MetricTile label="Converters" value={totalLeads} sub="distinct visitors who converted" />
+        <MetricTile label="Converters" value={totalLeads} sub="distinct visitors who converted" primary={!hasRevenue} />
         <MetricTile label="Total Conversions" value={totalConversions} sub="conversion events" />
-        {hasRevenue && <MetricTile label="Total Revenue" value={totalRevenue} format="currency" />}
+        {hasRevenue && <MetricTile label="Total Revenue" value={totalRevenue} format="currency" primary />}
       </div>
 
       <div className="flex items-center gap-3">
