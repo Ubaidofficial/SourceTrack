@@ -11,6 +11,7 @@ import FilterBar from '../components/FilterBar'
 import JourneyModal from '../components/JourneyModal'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
 import { SourceChip } from '../components/SourceIcon'
+import SparseReadings from '../components/SparseReadings'
 import { safeNumber } from '../utils/numbers'
 import { useDashboardData, TIME_RANGES } from '../hooks/useDashboardData'
 
@@ -31,8 +32,9 @@ export default function AttributionPage() {
     site, navigate, previewMode, timeRange, setTimeRange, liveCount, freshnessLabel, handleExport,
     isLoading, isError, error, refetch,
     hasRevenue, isGscConnected, activeResults, topPagesResults, aiSourceRows, analyticsUnavailable,
-    channelTrendResults, channelTrendData, chartOpts, convTooltipRows, recentConversions,
+    channelTrendData, chartOpts, convTooltipRows, recentConversions,
     totalConversions, setupIncomplete,
+    convTrendPlottable, convTrendCaption, convTrendReadingRows,
   } = useDashboardData()
 
   // §9.1 one-sentence insight — deterministic, cite-the-rows only (NO LLM narration, §26).
@@ -51,7 +53,9 @@ export default function AttributionPage() {
     ? `AI engines sent ${aiVisits.toLocaleString()} visit${aiVisits === 1 ? '' : 's'} this period${aiTopNames.length ? `, led by ${aiTopNames.join(' and ')}.` : '.'}`
     : null
 
-  const trendHasData = channelTrendResults.filter(r => safeNumber(r.conversions, 0) > 0).length >= 2
+  // The local `trendHasData` gate that stood here allowed a chart at 2 readings. §9.2 puts the
+  // floor at 3, and the decision now comes from the hook (convTrendPlottable) so this page and
+  // /dashboard cannot disagree about when a series is too sparse to plot.
   // Already conversions-only and newest-first from the endpoint; no client-side filter or re-sort.
   const conversionEvents = (recentConversions || []).slice(0, 5)
 
@@ -162,10 +166,20 @@ export default function AttributionPage() {
 
           {/* ── b. Source Performance Trend — §8.10 empty/1-point state, not a bare axis ── */}
           <DashboardCard title="Source Performance Trend" subtitle="Conversions by source over time">
-            {trendHasData ? (
-              <div className="h-64">
-                <Line data={channelTrendData} options={chartOpts('', convTooltipRows)} />
-              </div>
+            {convTrendPlottable ? (
+              <>
+                <div className="h-64">
+                  <Line data={channelTrendData} options={chartOpts('', convTooltipRows)} />
+                </div>
+                {/* §9.2 caption for the 3-6 tier — names which days are real readings. */}
+                {convTrendCaption && (
+                  <p className="mt-2 text-[10px] text-st-gray dark:text-gray-400">{convTrendCaption}</p>
+                )}
+              </>
+            ) : convTrendReadingRows.length > 0 ? (
+              /* 1-2 readings: §9.2 says render the numbers rather than a chart. They are real
+                 conversions, so they are shown — not swallowed by the no-data state below. */
+              <SparseReadings readings={convTrendReadingRows} unit="conversions" />
             ) : (
               <div className="h-64 flex flex-col items-center justify-center text-center">
                 <LineChart className="w-8 h-8 text-gray-200 dark:text-gray-700 mb-2" />

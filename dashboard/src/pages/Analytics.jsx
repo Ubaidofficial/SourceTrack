@@ -19,6 +19,8 @@ import { LIVE_FEED_POLL_MS } from '../lib/liveFeed'
 import { useCountUp } from '../utils/useCountUp'
 import QueryError from '../components/QueryError'
 import FunnelChart from '../components/FunnelChart'
+import SparseReadings from '../components/SparseReadings'
+import { honestLineStyle, hasEnoughPointsForChart, readingsCaption, formatShortDay } from '../utils/chartHonesty'
 import { hasFeature } from '../lib/planFeatures'
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Filler)
 
@@ -437,20 +439,42 @@ export default function Analytics() {
   function isActive(type, value) { return filters.some(f => f.type === type && f.value === value) }
 
   // ─── Dual-axis chart: dark visitors LINE (left) + lime revenue BARS (right) ──
+  //
+  // §9.2 point count. Unlike the /dashboard trend series, this axis is already zero-padded
+  // to the full window server-side (api/routes/analytics.js:441-456), so every slot IS a
+  // real reading — a day with 0 visitors was measured, not missing — and the x-axis already
+  // reflects true elapsed time. No densifying needed here; the count is the label count.
+  //
+  // The presets are 24h/7d/30d/90d, which pad to 2/8/31/91 slots. The 24h preset therefore
+  // lands under the 3-point floor and must not draw a chart at all.
+  const tsPoints = (ts.labels || []).length
+  const tsPlottable = hasEnoughPointsForChart(tsPoints)
+  const tsCaption = readingsCaption(ts.labels || [], ts.visitors || [])
+
   const chartData = useMemo(() => {
     const datasets = [{
       type: 'line', label: 'Visitors', data: ts.visitors || [],
-      borderColor: 'rgba(17,24,39,1)', backgroundColor: visitorAreaGradient, fill: true,
-      tension: 0.4, pointRadius: 2, pointBackgroundColor: '#111827', pointHoverRadius: 5, yAxisID: 'y', order: 2
+      borderColor: 'rgba(17,24,39,1)', backgroundColor: visitorAreaGradient,
+      pointBackgroundColor: '#111827', yAxisID: 'y', order: 2,
+      ...honestLineStyle((ts.labels || []).length, { fill: true, tension: 0.4, pointRadius: 2, pointHoverRadius: 5 })
     }]
     if (hasRevenue) {
       datasets.push({
         type: 'bar', label: 'Revenue', data: ts.revenue || [],
-        backgroundColor: '#C8F000', hoverBackgroundColor: '#B8DE00', borderRadius: 4, yAxisID: 'y1', order: 1
+        backgroundColor: '#D2EC2A', hoverBackgroundColor: '#BCD41C', borderRadius: 4, yAxisID: 'y1', order: 1
       })
     }
     return { labels: ts.labels || [], datasets }
   }, [ts, hasRevenue])
+
+  // §9.2 under-3 fallback: the readings themselves, for the 24h preset.
+  const tsReadingRows = (ts.labels || []).map((l, i) => ({
+    label: formatShortDay(l),
+    value: safeNumber(ts.visitors?.[i], 0).toLocaleString(),
+    // Revenue rides along only when a real revenue source exists (§6) — the same
+    // hasRevenue gate the bar dataset uses.
+    sub: hasRevenue && ts.revenue ? fmtMoney(safeNumber(ts.revenue[i], 0)) : null
+  }))
 
   const visitorsTooltipRows = (i) => {
     const vis = safeNumber(ts.visitors?.[i], 0)
@@ -652,9 +676,21 @@ export default function Analytics() {
           {/* ─── Dual-axis chart ─────────────────────────────────────────── */}
           <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-4 shadow-sm">
             <p className="text-[11px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wide mb-3">{hasRevenue ? 'Traffic & Revenue over time' : 'Visitors over time'}</p>
-            <div style={{ height: 220 }}>
-              {ts.labels && ts.labels.length > 0 ? <Chart type="line" data={chartData} options={chartOptions} /> : <p className="text-xs text-st-gray dark:text-gray-400 text-center py-12">No time-series data yet</p>}
-            </div>
+            {/* §9.2: the 24h preset pads to 2 days, which is under the 3-point floor — the two
+                numbers are rendered instead of a two-point curve. Gate sits OUTSIDE the fixed
+                220px box so the fallback isn't squeezed into a chart-shaped hole. */}
+            {tsPlottable ? (
+              <>
+                <div style={{ height: 220 }}>
+                  <Chart type="line" data={chartData} options={chartOptions} />
+                </div>
+                {tsCaption && <p className="mt-2 text-[10px] text-st-gray dark:text-gray-400">{tsCaption}</p>}
+              </>
+            ) : tsReadingRows.length > 0 ? (
+              <SparseReadings readings={tsReadingRows} unit={hasRevenue ? 'traffic' : 'visitors'} />
+            ) : (
+              <p className="text-xs text-st-gray dark:text-gray-400 text-center py-12">No time-series data yet</p>
+            )}
           </div>
 
           {/* ─── Contextual handoff (only when revenue exists) ───────────── */}

@@ -30,6 +30,8 @@ import { hasFeature } from '../lib/planFeatures'
 import { useActiveSite } from '../hooks/useActiveSite'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
 import { SourceIcon, SourceChip } from '../components/SourceIcon'
+import SparseReadings from '../components/SparseReadings'
+import { densifyDailySeries, honestLineStyle, hasEnoughPointsForChart, readingsCaption, formatShortDay } from '../utils/chartHonesty'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend)
 
@@ -1009,32 +1011,72 @@ export default function ReportBuilder() {
   const hiddenDateCount = canHideEmptyDates ? results.length - results.filter(rowHasValue).length : 0
 
   const chartLabels = chartRows.map(r => groupBy2 ? `${r.dim_value} / ${r.dim_value2}` : r.dim_value)
+
+  // ─── design.md §9.2 chart honesty ──────────────────────────────────────────
+  // Only line/area draw a shape between points; bar and pie are unaffected and keep
+  // their existing config byte-for-byte.
+  const isLineLike = chartType === 'line' || chartType === 'area'
+  const chartMetricKeys = isMultiMetric ? selectedMetrics : [metric]
+  const rawSeries = chartMetricKeys.map(mk => chartRows.map(r => getMetricValue(r, mk)))
+
+  // Give every calendar day its own slot on a date series, so the x-axis measures elapsed
+  // time instead of row position. Skipped in three cases, each for a reason:
+  //   - not line/area — a bar/pie slot is a bucket, not a moment;
+  //   - groupBy2 — labels are composite ("2026-07-02 / google"), not dates;
+  //   - hideEmptyDates ON — the reader explicitly asked for only the dates with data, and
+  //     that toggle already states how many it removed. Re-adding them would override an
+  //     express choice.
+  // densifyDailySeries itself no-ops on labels that aren't all YYYY-MM-DD, so a categorical
+  // dimension passes through untouched even if it reaches here.
+  const canDensify = isLineLike && !groupBy2 && !(canHideEmptyDates && hideEmptyDates)
+  const dense = canDensify
+    ? densifyDailySeries(chartLabels, rawSeries)
+    : { labels: chartLabels, series: rawSeries, densified: false }
+
+  // Tier on the number of RESULT ROWS, not dense.labels.length — densifying adds slots,
+  // never readings, and tiering off the axis would hand smoothing to a 2-row report.
+  const chartReadings = chartRows.length
+  const chartPlottable = !isLineLike || hasEnoughPointsForChart(chartReadings)
+  // Caption only where it would be true: it talks about days, so it is limited to a series
+  // that actually is one.
+  const chartCaption = dense.densified ? readingsCaption(dense.labels, dense.series[0] || []) : null
+
   const chartData = {
-    labels: chartLabels,
+    labels: dense.labels,
     datasets: isMultiMetric
       ? selectedMetrics.map((mk, mi) => {
           const mDef = METRICS.find(x => x.key === mk)
           return {
             label: mDef?.label || mk,
-            data: chartRows.map(r => getMetricValue(r, mk)),
+            data: dense.series[mi] || [],
             backgroundColor: chartType === 'area' ? MULTI_COLORS[mi % MULTI_COLORS.length].replace('0.85)', '0.15)') : MULTI_COLORS[mi % MULTI_COLORS.length],
             borderColor: chartType === 'line' || chartType === 'area' ? MULTI_COLORS[mi % MULTI_COLORS.length] : undefined,
             borderRadius: chartType === 'bar' ? 4 : 0,
-            tension: 0.3,
-            fill: chartType === 'area',
             stack: chartType === 'bar' ? 'stack0' : undefined,
+            ...(isLineLike
+              ? honestLineStyle(chartReadings, { tension: 0.3, fill: chartType === 'area' })
+              : { tension: 0.3, fill: chartType === 'area' })
           }
         })
       : [{
           label: metricLabel,
-          data: chartRows.map(r => getMetricValue(r)),
-          backgroundColor: chartRows.map((_, i) => COLORS[i % COLORS.length]),
+          data: dense.series[0] || [],
+          // Mapped over the rendered slots rather than chartRows so the per-point color array
+          // still lines up after densifying. Identical output when nothing was densified.
+          backgroundColor: dense.labels.map((_, i) => COLORS[i % COLORS.length]),
           borderColor: chartType === 'line' || chartType === 'area' ? 'rgba(17, 24, 39, 1)' : undefined,
           borderRadius: chartType === 'bar' ? 4 : 0,
-          tension: 0.3,
-          fill: chartType === 'area'
+          ...(isLineLike
+            ? honestLineStyle(chartReadings, { tension: 0.3, fill: chartType === 'area' })
+            : { tension: 0.3, fill: chartType === 'area' })
         }]
   }
+
+  // §9.2 under-3 fallback rows for a line/area report.
+  const chartReadingRows = chartRows.map((r) => ({
+    label: dense.densified ? formatShortDay(r.dim_value) : String(r.dim_value ?? ''),
+    value: (METRICS.find(m => m.key === metric)?.format || String)(getMetricValue(r))
+  }))
 
   const chartOptions = {
     responsive: true,
@@ -2269,13 +2311,24 @@ export default function ReportBuilder() {
                       <div className="h-72 flex items-center justify-center text-st-gray dark:text-gray-400 text-sm">
                         {nightlyNotice ? 'No data yet — nightly calculation pending.' : 'No data for this selection. Try a different date range or dimension.'}
                       </div>
+                    ) : !chartPlottable ? (
+                      /* §9.2: a line/area report with fewer than 3 rows renders its numbers.
+                         The 15-row cap makes small result sets ordinary here, so this is a
+                         common path, not an edge case. Bar and pie never reach it. */
+                      <SparseReadings readings={chartReadingRows} unit={metricLabel.toLowerCase()} />
                     ) : (
-                      <div className="h-72">
-                        {chartType === 'bar' && <Bar data={chartData} options={chartOptions} />}
-                        {chartType === 'line' && <Line data={chartData} options={chartOptions} />}
-                        {chartType === 'area' && <Line data={chartData} options={chartOptions} />}
-                        {chartType === 'pie' && <Pie data={chartData} options={chartOptions} />}
-                      </div>
+                      <>
+                        <div className="h-72">
+                          {chartType === 'bar' && <Bar data={chartData} options={chartOptions} />}
+                          {chartType === 'line' && <Line data={chartData} options={chartOptions} />}
+                          {chartType === 'area' && <Line data={chartData} options={chartOptions} />}
+                          {chartType === 'pie' && <Pie data={chartData} options={chartOptions} />}
+                        </div>
+                        {/* §9.2 caption for the 3-6 tier — names the days that carry readings. */}
+                        {chartCaption && (
+                          <p className="mt-2 text-[10px] text-st-gray dark:text-gray-400">{chartCaption}</p>
+                        )}
+                      </>
                     )}
                   </div>
                 )

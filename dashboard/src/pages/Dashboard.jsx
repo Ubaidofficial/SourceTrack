@@ -31,6 +31,7 @@ import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
 import { SourceChip, SourceIcon, normalizeSource } from '../components/SourceIcon'
 import DataRow from '../components/DataRow'
 import RealtimeVisitors from '../components/RealtimeVisitors'
+import SparseReadings from '../components/SparseReadings'
 import { safeNumber } from '../utils/numbers'
 import { useDashboardData, MODELS, TIME_RANGES } from '../hooks/useDashboardData'
 import { selectOverviewKpis } from '../lib/overviewKpis'
@@ -76,6 +77,8 @@ export default function Dashboard() {
     aiRevResults, aiSourceRows, activeResults, topPagesResults, timeResults,
     models, modelRevenues, revTrendData, channelTrendResults, channelTrendData,
     revTooltipRows, convTooltipRows, chartOpts, hasRevenue, isGscConnected,
+    revTrendCaption, convTrendCaption, revTrendReadingRows, convTrendReadingRows,
+    revTrendPlottable, convTrendPlottable,
     trafficKpis, trafficVisitors, trafficPageviews, trafficSources, trafficTopPages,
     hasConversions, hasTraffic, setupIncomplete, analyticsUnavailable,
     trafficUnavailable, showEmptyState, summaryIsError, summaryError,
@@ -121,6 +124,11 @@ export default function Dashboard() {
   // at 20 server-side, so it would leave real events unmarked).
   const trendBase = hasRevenue ? revTrendData : channelTrendData
   const trendBaseRows = hasRevenue ? revTooltipRows : convTooltipRows
+  // §9.2 tier for whichever series is on screen. All four come from the hook so this page
+  // and /app/attribution answer "is this plottable?" identically.
+  const trendPlottable = hasRevenue ? revTrendPlottable : convTrendPlottable
+  const trendCaption = hasRevenue ? revTrendCaption : convTrendCaption
+  const trendReadingRows = hasRevenue ? revTrendReadingRows : convTrendReadingRows
   const trendMarkers = buildTrendMarkers({
     labels: trendBase.labels,
     values: trendBase.datasets[0]?.data || [],
@@ -470,14 +478,29 @@ export default function Dashboard() {
                   </div>
                 )}
               >
-                <div className="h-64">
-                  <Line data={trendData} options={chartOpts(hasRevenue ? '$' : '', trendTooltipRows)} />
-                </div>
-                {trendMarkers.total > 0 && (
-                  <p className="mt-2 text-[10px] text-st-gray dark:text-gray-400 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-st-lime border border-st-black/70 dark:border-white/70 flex-shrink-0" />
-                    Markers show days with conversions — hover for detail.
-                  </p>
+                {/* §9.2: under 3 readings there is no chart at all — the numbers are rendered
+                    instead. A two-point line here would draw a trend out of two measurements,
+                    which is the shape the spec singles out as making an analyst distrust every
+                    other number on the page. */}
+                {trendPlottable ? (
+                  <>
+                    <div className="h-64">
+                      <Line data={trendData} options={chartOpts(hasRevenue ? '$' : '', trendTooltipRows)} />
+                    </div>
+                    {/* §9.2 caption for the 3-6 tier: names the days that are real readings, so a
+                        densified axis can't be misread as a reading per slot. Null at 7+. */}
+                    {trendCaption && (
+                      <p className="mt-2 text-[10px] text-st-gray dark:text-gray-400">{trendCaption}</p>
+                    )}
+                    {trendMarkers.total > 0 && (
+                      <p className="mt-2 text-[10px] text-st-gray dark:text-gray-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-st-lime border border-st-black/70 dark:border-white/70 flex-shrink-0" />
+                        Markers show days with conversions — hover for detail.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <SparseReadings readings={trendReadingRows} unit={hasRevenue ? 'revenue' : 'conversions'} />
                 )}
               </DashboardCard>
 
