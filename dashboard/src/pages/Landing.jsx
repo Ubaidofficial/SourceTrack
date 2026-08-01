@@ -82,16 +82,16 @@ export default function Landing() {
     >
 
       {/* Interactive Demo Section — fixture product preview (attribution story) */}
-      <section className="py-[72px] border-b border-[rgba(31,35,35,.06)] bg-[#F7FAFA]">
+      <section className="py-[72px] border-b border-[rgba(18,16,12,.06)] bg-[#F7FAFA]">
         <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8">
           <MarketingInteractiveDemo />
         </div>
       </section>
 
       {/* Social proof — PLACEHOLDER (visible TODO; no fabricated logos/quotes/counts) */}
-      <section className="py-[56px] border-b border-[rgba(31,35,35,.06)] bg-white">
+      <section className="py-[56px] border-b border-[rgba(18,16,12,.06)] bg-white">
         <div className="max-w-[860px] mx-auto px-8">
-          <div className="rounded-2xl border border-dashed border-[rgba(31,35,35,.22)] bg-[#F7FAFA] p-6 text-center">
+          <div className="rounded-2xl border border-dashed border-[rgba(18,16,12,.22)] bg-[#F7FAFA] p-6 text-center">
             <strong className="block text-st-black text-sm font-extrabold tracking-[-0.02em]">[ TODO — social proof ]</strong>
             <p className="mt-1.5 text-[#586464] text-sm leading-[1.55]">
               No fabricated logos, quotes, or user counts. Before publishing, add a real beta quote, a single honest line
@@ -102,7 +102,7 @@ export default function Landing() {
       </section>
 
       {/* The problem */}
-      <section className="py-[96px] bg-[#F7FAFA] border-b border-[rgba(31,35,35,.06)]">
+      <section className="py-[96px] bg-[#F7FAFA] border-b border-[rgba(18,16,12,.06)]">
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-7">
             <div>
@@ -181,7 +181,7 @@ export default function Landing() {
       </section>
 
       {/* Showcase — AI sources */}
-      <section className="py-[96px] bg-[#F7FAFA] border-y border-[rgba(31,35,35,.06)]">
+      <section className="py-[96px] bg-[#F7FAFA] border-y border-[rgba(18,16,12,.06)]">
         <div className="max-w-[1320px] mx-auto px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
             <SectionKicker label="AI sources" />
@@ -217,7 +217,7 @@ export default function Landing() {
       </section>
 
       {/* Showcase — Journeys */}
-      <section className="py-[96px] bg-[#F7FAFA] border-y border-[rgba(31,35,35,.06)]">
+      <section className="py-[96px] bg-[#F7FAFA] border-y border-[rgba(18,16,12,.06)]">
         <div className="max-w-[1320px] mx-auto px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
             <SectionKicker label="Journeys" />
@@ -253,7 +253,7 @@ export default function Landing() {
       </section>
 
       {/* Things you won't say anymore */}
-      <section className="py-[96px] bg-[#F7FAFA] border-y border-[rgba(31,35,35,.06)]">
+      <section className="py-[96px] bg-[#F7FAFA] border-y border-[rgba(18,16,12,.06)]">
         <div className="max-w-[900px] mx-auto px-8 text-center">
           <SectionKicker label="Before & after" />
           <h2 className="mt-5 text-[clamp(28px,4vw,48px)] leading-[0.96] tracking-[-0.06em] font-black text-st-black">
@@ -267,7 +267,7 @@ export default function Landing() {
               '“I’ll figure out attribution once we’re bigger.”',
               '“Let me export four tools into a spreadsheet.”',
             ].map((line, i) => (
-              <li key={i} className="px-5 py-3.5 rounded-2xl bg-white border border-[rgba(31,35,35,.08)] text-[#586464] text-base font-semibold tracking-[-0.01em] line-through decoration-[rgba(31,35,35,.25)]">
+              <li key={i} className="px-5 py-3.5 rounded-2xl bg-white border border-[rgba(18,16,12,.08)] text-[#586464] text-base font-semibold tracking-[-0.01em] line-through decoration-[rgba(18,16,12,.25)]">
                 {line}
               </li>
             ))}
@@ -282,7 +282,7 @@ export default function Landing() {
       <section className="py-[96px] bg-white">
         <div className="max-w-[820px] mx-auto px-8">
           <SectionKicker label="A note from the founder" />
-          <div className="mt-6 rounded-[28px] border border-dashed border-[rgba(31,35,35,.22)] bg-[#F7FAFA] p-7">
+          <div className="mt-6 rounded-[28px] border border-dashed border-[rgba(18,16,12,.22)] bg-[#F7FAFA] p-7">
             <strong className="block text-st-black text-sm font-extrabold tracking-[-0.02em]">[ TODO — founder note ]</strong>
             <p className="mt-2 text-[#586464] text-base leading-[1.6]">
               Write this in your own voice, with real detail — why you built SourceTrack, what you needed that other tools
@@ -294,7 +294,7 @@ export default function Landing() {
       </section>
 
       {/* Works with your stack */}
-      <section className="py-[96px] bg-[#F7FAFA] border-b border-[rgba(31,35,35,.06)]">
+      <section className="py-[96px] bg-[#F7FAFA] border-b border-[rgba(18,16,12,.06)]">
         <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-[54px]">
             <SectionKicker label="Works with your stack" />
@@ -317,7 +317,7 @@ export default function Landing() {
               { title: 'Google Search Console', desc: 'Connect for SEO query attribution' },
               { title: 'Stripe / webhook revenue', desc: 'Stripe (beta) or manual webhook import' },
             ].map((item) => (
-              <div key={item.title} className="p-4 rounded-xl bg-white border border-[rgba(31,35,35,.08)] shadow-[0_4px_12px_rgba(31,35,35,.015)]">
+              <div key={item.title} className="p-4 rounded-xl bg-white border border-[rgba(18,16,12,.08)] shadow-[0_4px_12px_rgba(18,16,12,.015)]">
                 <strong className="block text-st-black text-sm tracking-tight">{item.title}</strong>
                 <p className="mt-1 text-[#586464] text-xs leading-relaxed">{item.desc}</p>
               </div>
@@ -357,7 +357,7 @@ export default function Landing() {
       </section>
 
       {/* Simple pricing — summary */}
-      <section className="py-[96px] bg-[#F7FAFA] border-y border-[rgba(31,35,35,.06)]">
+      <section className="py-[96px] bg-[#F7FAFA] border-y border-[rgba(18,16,12,.06)]">
         <div className="max-w-[1320px] mx-auto px-8 text-center">
           <SectionKicker label="Simple pricing" />
           <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
@@ -369,7 +369,7 @@ export default function Landing() {
               ['Growth', '$79/mo', 'The full toolkit: Report Builder, Search Console SEO, Stripe revenue (beta).'],
               ['Founder', '$99/yr', 'Early-bird annual. 25 seats, one per customer, Growth-level features, locked forever.'],
             ].map(([name, price, desc]) => (
-              <div key={name} className="lift p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.10)] shadow-[0_12px_38px_rgba(31,35,35,.055)] text-left">
+              <div key={name} className="lift p-6 rounded-[26px] bg-white border border-[rgba(18,16,12,.10)] shadow-[0_12px_38px_rgba(18,16,12,.055)] text-left">
                 <strong className="block text-st-black text-lg tracking-[-0.04em]">{name}</strong>
                 <span className="block mt-1 text-[28px] font-black tracking-[-0.05em] text-st-black">{price}</span>
                 <p className="mt-2 text-[#586464] text-sm leading-[1.5]">{desc}</p>

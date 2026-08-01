@@ -26,7 +26,7 @@ export default function Demo() {
   return (
     <MarketingPage seo={SEO} hero={HERO} heroChildren={null}>
       {/* Full-Width Interactive Demo Container */}
-      <section className="py-[72px] border-b border-[rgba(31,35,35,.06)] bg-[#F7FAFA]">
+      <section className="py-[72px] border-b border-[rgba(18,16,12,.06)] bg-[#F7FAFA]">
         <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8">
           <MarketingInteractiveDemo />
         </div>

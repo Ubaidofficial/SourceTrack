@@ -73,7 +73,7 @@ export default function Product() {
               { title: 'Developer API', desc: 'Use our HTTP ingestion endpoints to report offline conversions, backend trial updates, and database actions.' },
               { title: 'Spreadsheet Export', desc: 'Download clean, unbranded CSV reports of campaigns, referrers, and conversion parameters for client reports.' },
             ].map((f, i) => (
-              <div key={i} className="p-6 rounded-2xl bg-[#F7FAFA] border border-[rgba(31,35,35,.08)] shadow-[0_12px_38px_rgba(31,35,35,.01)]">
+              <div key={i} className="p-6 rounded-2xl bg-[#F7FAFA] border border-[rgba(18,16,12,.08)] shadow-[0_12px_38px_rgba(18,16,12,.01)]">
                 <strong className="text-lg tracking-[-0.04em] text-st-black block mb-2">{f.title}</strong>
                 <p className="text-[#586464] text-sm leading-relaxed">{f.desc}</p>
               </div>

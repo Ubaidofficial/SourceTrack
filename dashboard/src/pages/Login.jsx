@@ -76,11 +76,11 @@ export default function Login() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <LogoMark className="w-12 h-12 mx-auto mb-4" />
-          <h1 className="text-3xl font-extrabold tracking-[-0.06em] text-[#1F2323] dark:text-dark-primary">SourceTrack</h1>
+          <h1 className="text-3xl font-extrabold tracking-[-0.06em] text-[#12100C] dark:text-dark-primary">SourceTrack</h1>
           <p className="text-st-gray dark:text-gray-400 mt-2">Sign in to your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white dark:bg-[#1A1F1F] shadow-[0_18px_50px_rgba(31,35,35,0.10)] border border-[#DDE4E4] dark:border-white/10 rounded-2xl p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-[#1A1F1F] shadow-[0_18px_50px_rgba(18,16,12,0.10)] border border-[#DDE4E4] dark:border-white/10 rounded-2xl p-6 space-y-4">
           {error && (
             <div className="bg-red-50 dark:bg-red-900/20 text-red-600 text-sm p-3 rounded">{error}</div>
           )}
@@ -111,14 +111,14 @@ export default function Login() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2.5 bg-white dark:bg-[#252A29] text-[#1F2323] dark:text-dark-primary border border-gray-300 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-st-lime focus:border-st-lime outline-none"
+              className="w-full px-3 py-2.5 bg-white dark:bg-[#252A29] text-[#12100C] dark:text-dark-primary border border-gray-300 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-st-lime focus:border-st-lime outline-none"
             />
           </div>
 
           <div>
             <div className="flex justify-between items-center mb-1">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Password</label>
-              <Link to="/forgot-password" className="text-xs text-st-gray hover:text-[#1F2323] dark:hover:text-dark-text hover:underline">
+              <Link to="/forgot-password" className="text-xs text-st-gray hover:text-[#12100C] dark:hover:text-dark-text hover:underline">
                 Forgot password?
               </Link>
             </div>
@@ -127,14 +127,14 @@ export default function Login() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2.5 bg-white dark:bg-[#252A29] text-[#1F2323] dark:text-dark-primary border border-gray-300 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-st-lime focus:border-st-lime outline-none"
+              className="w-full px-3 py-2.5 bg-white dark:bg-[#252A29] text-[#12100C] dark:text-dark-primary border border-gray-300 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-st-lime focus:border-st-lime outline-none"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 disabled:opacity-50"
+            className="w-full py-2.5 bg-[#12100C] dark:bg-st-lime text-white dark:text-[#12100C] rounded-xl text-sm font-extrabold hover:opacity-90 disabled:opacity-50"
           >
             {loading ? 'Signing in...' : 'Sign in'}
           </button>

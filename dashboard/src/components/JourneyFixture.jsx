@@ -14,12 +14,12 @@ export default function JourneyFixture() {
   return (
     <div className="relative">
       <div className="absolute right-[24px] top-[18px] w-[300px] h-[300px] rounded-full bg-st-lime opacity-[0.18] blur-[48px]" />
-      <div className="relative rounded-[28px] bg-[#0D1010] p-3 border border-white/10 shadow-[0_24px_80px_rgba(31,35,35,.22)]">
+      <div className="relative rounded-[28px] bg-[#0D1010] p-3 border border-white/10 shadow-[0_24px_80px_rgba(18,16,12,.22)]">
         <div className="overflow-hidden rounded-[20px] bg-[#121616] border border-[#2D3333]">
           {/* Header */}
           <div className="h-[44px] flex items-center justify-between px-4 bg-[#171B1B] border-b border-white/10">
             <span className="text-[#F5F8F8] text-xs font-bold">Recent converting journeys</span>
-            <span className="inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 bg-[#C8F000]/10 text-st-lime text-[10px] font-black uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 bg-[#D2EC2A]/10 text-st-lime text-[10px] font-black uppercase tracking-wider">
               Sample data
             </span>
           </div>
@@ -38,7 +38,7 @@ export default function JourneyFixture() {
                     </span>
                   ))}
                   <span className="text-st-lime font-black">→</span>
-                  <span className="px-2 py-1 rounded bg-[#C8F000]/20 text-st-lime border border-[#C8F000]/20">{j.event}</span>
+                  <span className="px-2 py-1 rounded bg-[#D2EC2A]/20 text-st-lime border border-[#D2EC2A]/20">{j.event}</span>
                 </div>
                 <div className="mt-2 text-[#9DA7A7] text-[10px] font-bold">{j.model}</div>
               </div>

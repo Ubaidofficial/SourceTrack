@@ -38,7 +38,7 @@ export default function MarketingBeforeAfter({
               onClick={() => setSelectedMode('default')}
               className={`px-4 py-2 rounded-lg transition-colors ${
                 selectedMode === 'default'
-                  ? 'bg-[#C8F000] text-[#0F1012] font-black'
+                  ? 'bg-[#D2EC2A] text-[#0F1012] font-black'
                   : 'text-gray-400 hover:text-white'
               }`}
             >
@@ -48,7 +48,7 @@ export default function MarketingBeforeAfter({
               onClick={() => setSelectedMode('ecommerce')}
               className={`px-4 py-2 rounded-lg transition-colors ${
                 selectedMode === 'ecommerce'
-                  ? 'bg-[#C8F000] text-[#0F1012] font-black'
+                  ? 'bg-[#D2EC2A] text-[#0F1012] font-black'
                   : 'text-gray-400 hover:text-white'
               }`}
             >
@@ -132,15 +132,15 @@ export default function MarketingBeforeAfter({
         </div>
 
         {/* AFTER CARD */}
-        <div className="rounded-2xl bg-[#161719] border border-[#C8F000]/40 p-6 sm:p-8 flex flex-col justify-between shadow-md">
+        <div className="rounded-2xl bg-[#161719] border border-[#D2EC2A]/40 p-6 sm:p-8 flex flex-col justify-between shadow-md">
           <div className="space-y-6">
             {/* Header Badge & Signal Marker */}
             <div className="flex items-center justify-between gap-2 border-b border-[#232527] pb-4">
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black tracking-wide bg-[#C8F000]/10 text-[#C8F000] border border-[#C8F000]/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#C8F000]"></span>
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black tracking-wide bg-[#D2EC2A]/10 text-[#D2EC2A] border border-[#D2EC2A]/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#D2EC2A]"></span>
                 {after.badge}
               </span>
-              <span className="text-[11px] font-mono text-[#C8F000] uppercase tracking-wider">
+              <span className="text-[11px] font-mono text-[#D2EC2A] uppercase tracking-wider">
                 Stitched
               </span>
             </div>
@@ -149,9 +149,9 @@ export default function MarketingBeforeAfter({
             <div className="bg-[#1C1D20] rounded-xl p-4 sm:p-5 border border-[#2A2C30] space-y-2">
               <div className="flex items-center justify-between text-xs text-gray-400 font-medium">
                 <span>Attributed Source:</span>
-                <span className="text-[#C8F000] font-bold">{after.channel}</span>
+                <span className="text-[#D2EC2A] font-bold">{after.channel}</span>
               </div>
-              <div className="flex items-center gap-3 text-lg font-black text-[#C8F000] font-mono">
+              <div className="flex items-center gap-3 text-lg font-black text-[#D2EC2A] font-mono">
                 <span>{after.source}</span>
               </div>
             </div>
@@ -168,7 +168,7 @@ export default function MarketingBeforeAfter({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between text-xs font-bold text-white">
                         <span>{tp.name}</span>
-                        <span className="text-[10px] text-[#C8F000] font-mono">{tp.time}</span>
+                        <span className="text-[10px] text-[#D2EC2A] font-mono">{tp.time}</span>
                       </div>
                       <p className="text-[11px] text-gray-400 truncate">{tp.detail}</p>
                     </div>
@@ -181,11 +181,11 @@ export default function MarketingBeforeAfter({
             <div className="grid grid-cols-3 gap-2 text-center bg-[#1C1D20] p-3 rounded-xl border border-[#2A2C30]">
               <div>
                 <span className="block text-[10px] font-bold uppercase text-gray-400">utm_source</span>
-                <span className="text-xs font-mono font-bold text-[#C8F000]">{after.utmSource}</span>
+                <span className="text-xs font-mono font-bold text-[#D2EC2A]">{after.utmSource}</span>
               </div>
               <div>
                 <span className="block text-[10px] font-bold uppercase text-gray-400">utm_medium</span>
-                <span className="text-xs font-mono font-bold text-[#C8F000]">{after.utmMedium}</span>
+                <span className="text-xs font-mono font-bold text-[#D2EC2A]">{after.utmMedium}</span>
               </div>
               <div>
                 <span className="block text-[10px] font-bold uppercase text-gray-400">utm_campaign</span>
@@ -198,11 +198,11 @@ export default function MarketingBeforeAfter({
           <div className="mt-8 pt-4 border-t border-[#232527] flex items-center justify-between gap-4">
             <div>
               <span className="block text-[11px] font-bold uppercase tracking-wider text-gray-400">Status</span>
-              <span className="text-xs font-extrabold text-[#C8F000]">{after.attributionStatus}</span>
+              <span className="text-xs font-extrabold text-[#D2EC2A]">{after.attributionStatus}</span>
             </div>
             <div className="text-right">
               <span className="block text-[11px] font-bold uppercase tracking-wider text-gray-400">Order Value</span>
-              <span className="text-sm font-black text-[#C8F000] font-mono">{after.customerRevenue}</span>
+              <span className="text-sm font-black text-[#D2EC2A] font-mono">{after.customerRevenue}</span>
             </div>
           </div>
         </div>

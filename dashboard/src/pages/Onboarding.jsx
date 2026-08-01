@@ -383,20 +383,20 @@ export default function Onboarding() {
             subtitle="Register your domain (e.g., yourstore.com) inside SourceTrack."
           >
             <form onSubmit={handleDomainSubmit}>
-              <label className="block text-sm font-bold text-[#1F2323] dark:text-gray-100 mb-2">Website Domain</label>
+              <label className="block text-sm font-bold text-[#12100C] dark:text-gray-100 mb-2">Website Domain</label>
               <input
                 type="text"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 placeholder="ex: google.com"
-                className="w-full px-4 py-3 bg-white dark:bg-[#1A1F1F] text-[#1F2323] dark:text-dark-primary placeholder:text-[#8D9696] border border-[#C9D1D1] dark:border-white/15 rounded-xl text-sm outline-none focus:ring-2 focus:ring-st-lime focus:border-st-lime"
+                className="w-full px-4 py-3 bg-white dark:bg-[#1A1F1F] text-[#12100C] dark:text-dark-primary placeholder:text-[#8D9696] border border-[#C9D1D1] dark:border-white/15 rounded-xl text-sm outline-none focus:ring-2 focus:ring-st-lime focus:border-st-lime"
               />
               <p className="text-xs text-st-gray dark:text-gray-400 mt-1">We'll use this URL to personalize your set up process</p>
               {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
               <button
                 type="submit"
                 disabled={loading}
-                className="mt-5 inline-flex items-center justify-center gap-2 px-7 py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 disabled:opacity-50"
+                className="mt-5 inline-flex items-center justify-center gap-2 px-7 py-3 bg-[#12100C] dark:bg-st-lime text-white dark:text-[#12100C] rounded-xl text-sm font-extrabold hover:opacity-90 disabled:opacity-50"
               >
                 {loading ? 'Confirming...' : 'Confirm Domain'} {!loading && <ArrowRight className="w-4 h-4" />}
               </button>
@@ -413,7 +413,7 @@ export default function Onboarding() {
             showBack
             onBack={() => setStep(1)}
           >
-            <button type="button" onClick={() => setStep(1)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-dark-text transition-colors">
+            <button type="button" onClick={() => setStep(1)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#12100C] dark:text-gray-400 dark:hover:text-dark-text transition-colors">
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -430,11 +430,11 @@ export default function Onboarding() {
                         : 'border-gray-200 dark:border-white/10 hover:border-st-lime/70 dark:hover:border-st-lime/70 bg-white dark:bg-white/[0.02]'
                     }`}
                   >
-                    <span className={`h-16 w-16 rounded-full flex items-center justify-center ${selected ? 'bg-st-lime text-[#1F2323]' : 'bg-white dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/10'}`}>
+                    <span className={`h-16 w-16 rounded-full flex items-center justify-center ${selected ? 'bg-st-lime text-[#12100C]' : 'bg-white dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/10'}`}>
                       <Icon className="w-8 h-8" />
                     </span>
                     <div>
-                      <p className="font-extrabold text-[#1F2323] dark:text-dark-primary">{bt.label}</p>
+                      <p className="font-extrabold text-[#12100C] dark:text-dark-primary">{bt.label}</p>
                       <p className="text-xs text-st-gray dark:text-gray-400 mt-1">{bt.desc}</p>
                     </div>
                   </button>
@@ -461,7 +461,7 @@ export default function Onboarding() {
             showBack
             onBack={() => setStep(3)}
           >
-            <button type="button" onClick={() => setStep(4)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-dark-text transition-colors mb-3">
+            <button type="button" onClick={() => setStep(4)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#12100C] dark:text-gray-400 dark:hover:text-dark-text transition-colors mb-3">
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Configure Conversions</p>
@@ -485,7 +485,7 @@ export default function Onboarding() {
                     }`}
                   >
                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                      selected ? 'border-[#1F2323] bg-[#1F2323] dark:border-[#C8F000] dark:bg-[#C8F000]' : 'border-gray-300'
+                      selected ? 'border-[#12100C] bg-[#12100C] dark:border-[#D2EC2A] dark:bg-[#D2EC2A]' : 'border-gray-300'
                     }`}>
                       {selected && <Check className="w-3 h-3 text-white" />}
                     </div>
@@ -500,7 +500,7 @@ export default function Onboarding() {
             <button
               onClick={handleConversionsContinue}
               disabled={loading}
-              className="mt-6 w-full py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 disabled:opacity-50"
+              className="mt-6 w-full py-3 bg-[#12100C] dark:bg-st-lime text-white dark:text-[#12100C] rounded-xl text-sm font-extrabold hover:opacity-90 disabled:opacity-50"
             >
               {loading ? 'Saving...' : 'Continue'}
             </button>
@@ -517,7 +517,7 @@ export default function Onboarding() {
             showBack
             onBack={() => setStep(5)}
           >
-            <button type="button" onClick={() => setStep(5)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-dark-text transition-colors mb-3">
+            <button type="button" onClick={() => setStep(5)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#12100C] dark:text-gray-400 dark:hover:text-dark-text transition-colors mb-3">
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
             <p className="text-sm font-medium text-gray-700 dark:text-dark-primary mb-1">
@@ -559,7 +559,7 @@ export default function Onboarding() {
                       setLoading(false)
                     }
                   }}
-                  className="px-6 py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 flex items-center gap-2 mx-auto disabled:opacity-50"
+                  className="px-6 py-3 bg-[#12100C] dark:bg-st-lime text-white dark:text-[#12100C] rounded-xl text-sm font-extrabold hover:opacity-90 flex items-center gap-2 mx-auto disabled:opacity-50"
                 >
                   <ArrowRight className="w-4 h-4" /> {loading ? 'Saving...' : 'Continue to Dashboard'}
                 </button>
@@ -640,13 +640,13 @@ export default function Onboarding() {
                       setLoading(false)
                     }
                   }}
-                  className="w-full text-center text-xs font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-dark-text transition-colors py-2 disabled:opacity-50"
+                  className="w-full text-center text-xs font-bold text-[#6B7373] hover:text-[#12100C] dark:text-gray-400 dark:hover:text-dark-text transition-colors py-2 disabled:opacity-50"
                 >
                   Verify Later (Skip for now)
                 </button>
                 <a
                   href="/setup"
-                  className="w-full block text-center text-xs font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-dark-text transition-colors py-1"
+                  className="w-full block text-center text-xs font-bold text-[#6B7373] hover:text-[#12100C] dark:text-gray-400 dark:hover:text-dark-text transition-colors py-1"
                 >
                   Need help? Go to Setup &amp; Health
                 </a>
@@ -672,7 +672,7 @@ export default function Onboarding() {
         showBack
         onBack={() => setStep(2)}
       >
-        <button type="button" onClick={() => setStep(2)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-dark-text transition-colors mb-3">
+        <button type="button" onClick={() => setStep(2)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#12100C] dark:text-gray-400 dark:hover:text-dark-text transition-colors mb-3">
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
 
@@ -690,7 +690,7 @@ export default function Onboarding() {
                 onClick={() => handleInstallMethodSelect(m.key)}
                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-extrabold transition-colors ${
                   selected
-                    ? 'border-st-lime bg-st-lime/10 dark:bg-st-lime/10 text-[#1F2323] dark:text-dark-primary'
+                    ? 'border-st-lime bg-st-lime/10 dark:bg-st-lime/10 text-[#12100C] dark:text-dark-primary'
                     : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.02] text-[#6B7373] dark:text-gray-400 hover:border-st-lime/70'
                 }`}
               >
@@ -716,7 +716,7 @@ export default function Onboarding() {
                 Shopify admin is a separate app we never see, and checkout is Shopify-hosted and
                 not themeable outside Plus. */}
             <div className="rounded-xl border border-[#DDE4E4] dark:border-white/10 bg-[#F1F4F4] dark:bg-white/[0.03] px-3 py-2.5 mb-4">
-              <p className="text-[11px] font-bold text-[#1F2323] dark:text-dark-primary mb-1">What this tracks</p>
+              <p className="text-[11px] font-bold text-[#12100C] dark:text-dark-primary mb-1">What this tracks</p>
               <p className="text-[11px] text-[#6B7373] dark:text-gray-400 leading-normal">
                 All storefront pages — home, product, collection, and cart. It does <strong>not</strong> track
                 inside the Shopify admin, and Shopify hosts checkout on its own domain, so purchases are
@@ -754,10 +754,10 @@ export default function Onboarding() {
         )}
 
         <div className="bg-[#F1F4F4] dark:bg-[#252A29] border border-[#DDE4E4] dark:border-white/10 rounded-xl p-4 relative">
-          <pre className="text-xs text-[#1F2323] dark:text-gray-200 overflow-x-auto whitespace-pre-wrap break-all pr-24">{snippet || 'Loading script...'}</pre>
+          <pre className="text-xs text-[#12100C] dark:text-gray-200 overflow-x-auto whitespace-pre-wrap break-all pr-24">{snippet || 'Loading script...'}</pre>
           <button
             onClick={handleCopySnippet}
-            className="absolute top-3 right-3 px-3 py-1.5 bg-white dark:bg-white/10 text-[#1F2323] dark:text-dark-primary border border-gray-200 dark:border-white/10 text-xs rounded-lg hover:bg-gray-50 dark:hover:bg-white/15 flex items-center gap-1"
+            className="absolute top-3 right-3 px-3 py-1.5 bg-white dark:bg-white/10 text-[#12100C] dark:text-dark-primary border border-gray-200 dark:border-white/10 text-xs rounded-lg hover:bg-gray-50 dark:hover:bg-white/15 flex items-center gap-1"
           >
             <Copy className="w-3 h-3" /> {copied ? 'Copied!' : 'Copy Code'}
           </button>
@@ -787,7 +787,7 @@ export default function Onboarding() {
               const inner = (
                 <>
                   <span className="min-w-0">
-                    <span className="block text-xs font-bold text-[#1F2323] dark:text-dark-primary truncate">
+                    <span className="block text-xs font-bold text-[#12100C] dark:text-dark-primary truncate">
                       {p.label}
                       {isSuggested && (
                         <span className="ml-1.5 align-middle text-[9px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
@@ -837,7 +837,7 @@ export default function Onboarding() {
             }
           }}
           disabled={loading}
-          className="mt-6 w-full py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 disabled:opacity-50"
+          className="mt-6 w-full py-3 bg-[#12100C] dark:bg-st-lime text-white dark:text-[#12100C] rounded-xl text-sm font-extrabold hover:opacity-90 disabled:opacity-50"
         >
           {loading ? 'Saving...' : 'Continue'}
         </button>
@@ -863,7 +863,7 @@ export default function Onboarding() {
   const phaseIdx = step <= 2 ? 0 : step <= 4 ? 1 : 2
 
   return (
-    <div className="min-h-screen bg-[#F1F4F4] dark:bg-[#2B302F] text-[#1F2323] dark:text-dark-primary flex flex-col">
+    <div className="min-h-screen bg-[#F1F4F4] dark:bg-[#2B302F] text-[#12100C] dark:text-dark-primary flex flex-col">
       {/* Header — brand left, stepper centered (desktop), logout right */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-6 px-6 lg:px-12 py-8">
         <div className="dark:hidden"><LogoFull className="h-8 w-auto" /></div>
@@ -892,10 +892,10 @@ export default function Onboarding() {
                 <div
                   className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-extrabold transition-all ${
                     isCompleted
-                      ? `bg-st-lime text-[#1F2323] ${clickable ? 'group-hover:ring-2 group-hover:ring-st-lime/50' : ''}`
+                      ? `bg-st-lime text-[#12100C] ${clickable ? 'group-hover:ring-2 group-hover:ring-st-lime/50' : ''}`
                       : isCurrent
-                      ? 'bg-[#1F2323] dark:bg-white text-white dark:text-[#1F2323]'
-                      : 'bg-[#F1F4F4] dark:bg-white/5 text-[#1F2323] dark:text-gray-500'
+                      ? 'bg-[#12100C] dark:bg-white text-white dark:text-[#12100C]'
+                      : 'bg-[#F1F4F4] dark:bg-white/5 text-[#12100C] dark:text-gray-500'
                   }`}
                 >
                   {isCompleted ? '✓' : stepNum}
@@ -903,22 +903,22 @@ export default function Onboarding() {
                 <span
                   className={`text-sm whitespace-nowrap tracking-[-0.02em] ${
                     isCurrent
-                      ? 'font-extrabold text-[#1F2323] dark:text-dark-primary'
+                      ? 'font-extrabold text-[#12100C] dark:text-dark-primary'
                       : isCompleted
-                      ? `font-semibold text-[#1F2323] dark:text-dark-primary ${clickable ? 'group-hover:underline' : ''}`
+                      ? `font-semibold text-[#12100C] dark:text-dark-primary ${clickable ? 'group-hover:underline' : ''}`
                       : 'font-medium text-[#6B7373] dark:text-gray-500'
                   }`}
                 >
                   {label}
                 </span>
-                <div className={`h-0.5 w-24 rounded-full ${isCurrent ? 'bg-[#1F2323] dark:bg-white' : 'bg-transparent'}`} />
+                <div className={`h-0.5 w-24 rounded-full ${isCurrent ? 'bg-[#12100C] dark:bg-white' : 'bg-transparent'}`} />
               </button>
             )
           })}
         </div>
         <button
           onClick={() => { signOut(); navigate('/login', { replace: true }) }}
-          className="justify-self-end inline-flex items-center justify-center min-h-[44px] px-5 rounded-full border border-[rgba(31,35,35,.12)] dark:border-white/15 bg-white dark:bg-white/5 text-[#1F2323] dark:text-dark-primary text-sm font-bold hover:bg-[#F1F4F4] dark:hover:bg-white/10 transition-colors"
+          className="justify-self-end inline-flex items-center justify-center min-h-[44px] px-5 rounded-full border border-[rgba(18,16,12,.12)] dark:border-white/15 bg-white dark:bg-white/5 text-[#12100C] dark:text-dark-primary text-sm font-bold hover:bg-[#F1F4F4] dark:hover:bg-white/10 transition-colors"
         >
           Log out
         </button>
@@ -937,7 +937,7 @@ export default function Onboarding() {
           <span className="inline-flex items-center px-3 py-1 rounded-full bg-white dark:bg-white/5 text-xs font-semibold text-[#6B7373] dark:text-gray-400 mb-2">
             Step {displayIndexForStep(step)} of {DISPLAY_STEP_COUNT}
           </span>
-          <p className="text-lg font-extrabold text-[#1F2323] dark:text-dark-primary">{STEP_TITLES[displayIndexForStep(step)]}</p>
+          <p className="text-lg font-extrabold text-[#12100C] dark:text-dark-primary">{STEP_TITLES[displayIndexForStep(step)]}</p>
         </div>
         {renderStepContent()}
       </div>

@@ -421,7 +421,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
           </div>
           <button
             onClick={handleActionClick}
-            className="px-3 py-1.5 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-lg font-bold shrink-0 transition-opacity hover:opacity-90"
+            className="px-3 py-1.5 bg-[#12100C] dark:bg-st-lime text-white dark:text-[#12100C] rounded-lg font-bold shrink-0 transition-opacity hover:opacity-90"
           >
             Resolve Issue
           </button>
@@ -454,7 +454,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setTestPageOpened(true)}
-                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-lg text-xs font-extrabold hover:opacity-90 transition-opacity"
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-[#12100C] dark:bg-st-lime text-white dark:text-[#12100C] rounded-lg text-xs font-extrabold hover:opacity-90 transition-opacity"
                 >
                   Open test page <ExternalLink className="w-3.5 h-3.5" />
                 </a>

@@ -8,7 +8,7 @@ export default function ComparisonTable({ rows }) {
 
   return (
     <div className="overflow-x-auto -mx-2 px-2">
-      <div className="overflow-hidden rounded-[32px] bg-white border border-[rgba(31,35,35,.10)] shadow-[0_24px_80px_rgba(31,35,35,.12)]" style={{ minWidth }}>
+      <div className="overflow-hidden rounded-[32px] bg-white border border-[rgba(18,16,12,.10)] shadow-[0_24px_80px_rgba(18,16,12,.12)]" style={{ minWidth }}>
         {rows.map((row, i) => (
           <div key={i} className={`grid border-b border-[#E5ECEC] last:border-0 ${i === 0 ? 'bg-st-black text-white' : ''}`} style={{ gridTemplateColumns }}>
             {row.map((cell, j) => (

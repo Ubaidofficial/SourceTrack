@@ -17,12 +17,12 @@ export default function AiSourcesFixture() {
   return (
     <div className="relative">
       <div className="absolute right-[30px] top-[20px] w-[300px] h-[300px] rounded-full bg-st-lime opacity-[0.20] blur-[48px]" />
-      <div className="relative rounded-[28px] bg-[#0D1010] p-3 border border-white/10 shadow-[0_24px_80px_rgba(31,35,35,.22)]">
+      <div className="relative rounded-[28px] bg-[#0D1010] p-3 border border-white/10 shadow-[0_24px_80px_rgba(18,16,12,.22)]">
         <div className="overflow-hidden rounded-[20px] bg-[#121616] border border-[#2D3333]">
           {/* Header */}
           <div className="h-[44px] flex items-center justify-between px-4 bg-[#171B1B] border-b border-white/10">
             <span className="text-[#F5F8F8] text-xs font-bold">AI referral sources</span>
-            <span className="inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 bg-[#C8F000]/10 text-st-lime text-[10px] font-black uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 bg-[#D2EC2A]/10 text-st-lime text-[10px] font-black uppercase tracking-wider">
               Sample data
             </span>
           </div>
@@ -46,7 +46,7 @@ export default function AiSourcesFixture() {
                 </span>
                 <span>{s.name}</span>
                 <strong className="tabular-nums">{s.visits}</strong>
-                <span className="text-[#18C76E] text-[10px] tabular-nums">↗ {s.trend}</span>
+                <span className="text-[#D2EC2A] text-[10px] tabular-nums">↗ {s.trend}</span>
               </div>
             ))}
           </div>

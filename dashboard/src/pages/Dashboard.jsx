@@ -769,7 +769,7 @@ function DashboardWidgetCard({ report, site }) {
                         <span className="truncate">{label}</span>
                         {isDirectLabel(label) && <DirectInfo />}
                       </span>
-                      <div style={{ height: '2px', width: `${barW}%`, background: 'rgba(200,240,0,0.6)', borderRadius: '1px', marginTop: '3px' }} />
+                      <div style={{ height: '2px', width: `${barW}%`, background: 'rgba(210,236,42,0.6)', borderRadius: '1px', marginTop: '3px' }} />
                     </div>
                     <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300 w-14 text-right flex-shrink-0 tabular-nums">
                       {metricDef.format(val)}

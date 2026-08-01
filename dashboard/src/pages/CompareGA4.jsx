@@ -37,7 +37,7 @@ export default function CompareGA4() {
     >
 
       {/* Four ways */}
-      <section className="py-[96px] bg-[#F7FAFA] border-b border-[rgba(31,35,35,.06)]">
+      <section className="py-[96px] bg-[#F7FAFA] border-b border-[rgba(18,16,12,.06)]">
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="text-center mb-[54px]">
             <SectionKicker label="The four options" />
@@ -52,7 +52,7 @@ export default function CompareGA4() {
               ['Enterprise attribution', 'Cometly, SourceLoop, Ruler, Triple Whale', 'Powerful: ad-cost ROAS, two-way CRM sync, CAPI to ad platforms. Also heavier, pricier, usually demo-gated. Built for ad-ops / RevOps.'],
               ['SourceTrack', 'The simple, private middle', 'The source behind every lead and sale, AI and SEO included, with no CRM and no stack to run. Built for founders.'],
             ].map(([name, who, desc], i) => (
-              <div key={name} className={`lift p-6 rounded-[26px] border ${i === 3 ? 'bg-st-black text-white border-white/10 shadow-[0_24px_80px_rgba(31,35,35,.12)]' : 'bg-white border-[rgba(31,35,35,.10)] shadow-[0_12px_38px_rgba(31,35,35,.055)]'}`}>
+              <div key={name} className={`lift p-6 rounded-[26px] border ${i === 3 ? 'bg-st-black text-white border-white/10 shadow-[0_24px_80px_rgba(18,16,12,.12)]' : 'bg-white border-[rgba(18,16,12,.10)] shadow-[0_12px_38px_rgba(18,16,12,.055)]'}`}>
                 <strong className={`block text-lg tracking-[-0.04em] ${i === 3 ? 'text-white' : 'text-st-black'}`}>{name}</strong>
                 <span className={`block mt-1 text-xs font-bold ${i === 3 ? 'text-[#9FE870]' : 'text-[#8A9B9B]'}`}>{who}</span>
                 <p className={`mt-3 text-sm leading-[1.55] ${i === 3 ? 'text-[#CBD4D4]' : 'text-[#586464]'}`}>{desc}</p>
@@ -92,7 +92,7 @@ export default function CompareGA4() {
       </section>
 
       {/* Where SourceTrack wins */}
-      <section className="py-[96px] bg-[#F7FAFA] border-y border-[rgba(31,35,35,.06)]">
+      <section className="py-[96px] bg-[#F7FAFA] border-y border-[rgba(18,16,12,.06)]">
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-7 mb-[54px]">
             <div>
@@ -129,7 +129,7 @@ export default function CompareGA4() {
               'You want a full SEO suite — rank tracking, keyword research, audits, backlinks → that’s a different category.',
               'You need a warehouse-grade BI canvas for a data team → also not us.',
             ].map((line, i) => (
-              <li key={i} className="px-5 py-3.5 rounded-2xl bg-[#F7FAFA] border border-[rgba(31,35,35,.08)] text-[#586464] text-base font-semibold tracking-[-0.01em]">
+              <li key={i} className="px-5 py-3.5 rounded-2xl bg-[#F7FAFA] border border-[rgba(18,16,12,.08)] text-[#586464] text-base font-semibold tracking-[-0.01em]">
                 {line}
               </li>
             ))}

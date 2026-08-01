@@ -743,9 +743,9 @@ function VisitorAvatar({ shortId, status }) {
       {qualified && (
         <span
           title={`Qualification: ${String(status).toUpperCase()}`}
-          className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-st-green flex items-center justify-center ring-2 ring-white dark:ring-dark-card"
+          className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-st-lime flex items-center justify-center ring-2 ring-white dark:ring-dark-card"
         >
-          <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+          <Check className="w-2.5 h-2.5 text-st-black" strokeWidth={3} />
         </span>
       )}
     </div>

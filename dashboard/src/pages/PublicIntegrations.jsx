@@ -68,7 +68,7 @@ export default function PublicIntegrations() {
           
           <div className="space-y-[72px]">
             {CATEGORIES.map((cat, catIdx) => (
-              <div key={catIdx} className="border-b border-[rgba(31,35,35,.06)] pb-12 last:border-0 last:pb-0">
+              <div key={catIdx} className="border-b border-[rgba(18,16,12,.06)] pb-12 last:border-0 last:pb-0">
                 <div className="max-w-[720px] mb-8">
                   <SectionKicker label={cat.title} />
                   <p className="mt-2 text-[#586464] text-base leading-[1.5]">
@@ -78,7 +78,7 @@ export default function PublicIntegrations() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {cat.items.map((item, itemIdx) => (
-                    <div key={itemIdx} className="bg-white border border-[rgba(31,35,35,.06)] rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
+                    <div key={itemIdx} className="bg-white border border-[rgba(18,16,12,.06)] rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
                       <div className="text-3xl mb-4">{item.icon}</div>
                       <h3 className="text-base font-bold text-st-black mb-1">{item.name}</h3>
                       <p className="text-sm text-[#586464] leading-[1.45]">{item.desc}</p>
@@ -89,7 +89,7 @@ export default function PublicIntegrations() {
             ))}
           </div>
 
-          <div className="mt-16 bg-white border border-[rgba(31,35,35,.08)] rounded-2xl p-8 max-w-[800px] mx-auto text-center shadow-sm">
+          <div className="mt-16 bg-white border border-[rgba(18,16,12,.08)] rounded-2xl p-8 max-w-[800px] mx-auto text-center shadow-sm">
             <h3 className="text-lg font-bold text-st-black mb-2">Need a custom backend connection?</h3>
             <p className="text-sm text-[#586464] leading-relaxed mb-6">
               Our developer documentation details how to send conversion events directly from your server, database, or CRM using the offline conversion endpoints.
