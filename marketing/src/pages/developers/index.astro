@@ -1,22 +1,26 @@
 ---
+// Hero copy comes from content/developers/-index.md. The eight link cards below are still
+// inline: they are route navigation, and the dispatch scoped Tier 1 to each page's four hero
+// strings. Extracting them is a clean follow-up.
 import Base from "@/layouts/Base.astro";
+import { getListPage } from "@/lib/contentParser";
+
+const { frontmatter } = await getListPage("developers/-index.md");
+const { title, description, badge, heading, heading_accent, paragraph } = frontmatter;
 ---
 
-<Base
-  title="SourceTrack Developer API & SDK Reference"
-  description="API endpoints, client SDK methods, webhook payloads, and ingestion parameters."
->
+<Base title={title} description={description}>
   <section class="py-16 bg-[#0E1111] text-white">
     <div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
       <span class="inline-block px-3 py-1 text-xs font-black uppercase tracking-widest text-[#0F1012] bg-[#C8F000] rounded-full">
-        Developer API
+        {badge}
       </span>
       <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight text-white">
-        Developer API & <br />
-        <span class="text-[#C8F000]">Custom Event Methods</span>
+        {heading} <br />
+        <span class="text-[#C8F000]">{heading_accent}</span>
       </h1>
       <p class="max-w-2xl mx-auto text-gray-400 text-base sm:text-lg leading-relaxed">
-        Full technical specification for client-side window.sourcetrack methods, server-side conversion webhooks, and REST APIs.
+        {paragraph}
       </p>
     </div>
   </section>

@@ -1,12 +1,16 @@
 ---
 import Base from "@/layouts/Base.astro";
+import { getListPage } from "@/lib/contentParser";
+
+const { frontmatter } = await getListPage("standalone/dpa.md");
+const { title, description, heading, paragraph } = frontmatter;
 ---
 
-<Base title="Data Processing Addendum (DPA) — SourceTrack" description="GDPR Data Processing Addendum and data transfer commitments for SourceTrack customers.">
+<Base title={title} description={description}>
   <section class="py-16 bg-[#0E1111] text-white">
     <div class="max-w-[800px] mx-auto px-4 space-y-6">
-      <h1 class="text-4xl font-black text-white">Data Processing Addendum (DPA)</h1>
-      <p class="text-gray-400 text-lg">This DPA supplements our Terms of Service for customers operating under GDPR and EU data protection regulations.</p>
+      <h1 class="text-4xl font-black text-white">{heading}</h1>
+      <p class="text-gray-400 text-lg">{paragraph}</p>
     </div>
   </section>
 </Base>

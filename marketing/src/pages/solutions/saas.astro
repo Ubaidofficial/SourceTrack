@@ -1,19 +1,10 @@
 ---
 import Base from "@/layouts/Base.astro";
+import { getListPage } from "@/lib/contentParser";
 import CallToAction from "@/partials/CallToAction.astro";
 import MarketingBeforeAfter from "@/components/MarketingBeforeAfter";
 
-const callToAction = {
-  frontmatter: {
-    title: "Stop guessing where your SaaS growth comes from.",
-    subtitle: "Set up SourceTrack in 5 minutes. See your first attributed AI and organic customer journey today.",
-    button: {
-      enable: true,
-      label: "Start 28-day free trial",
-      link: "https://app.sourcetrack.ai/signup"
-    }
-  }
-};
+const callToAction = await getListPage("standalone/solutions/saas.md");
 ---
 
 <Base

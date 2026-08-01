@@ -1,18 +1,9 @@
 ---
 import Base from "@/layouts/Base.astro";
+import { getListPage } from "@/lib/contentParser";
 import CallToAction from "@/partials/CallToAction.astro";
 
-const callToAction = {
-  frontmatter: {
-    title: "Manage attribution across all client portfolios.",
-    subtitle: "Switch between client sites in seconds with multi-site portfolio scans.",
-    button: {
-      enable: true,
-      label: "Start free trial",
-      link: "https://app.sourcetrack.ai/signup"
-    }
-  }
-};
+const callToAction = await getListPage("standalone/solutions/agency.md");
 ---
 
 <Base

@@ -64,6 +64,23 @@ const sectionsCollection = defineCollection({
   schema: z.object({}).catchall(z.any()),
 });
 
+// Developers collection — the /developers/* reference pages. Mirrors `integrations`:
+// `-index.md` holds the hub's own copy and is filtered out of getStaticPaths by
+// getSinglePage(), so it never generates a route of its own.
+const developersCollection = defineCollection({
+  loader: glob({ pattern: "**/*.{md,mdx}", base: "src/content/developers" }),
+  schema: z.object({}).catchall(z.any()),
+});
+
+// Standalone collection — copy for pages that keep their OWN .astro markup (dpa, security,
+// subprocessors, solutions/*, demo, compare/ga4). Deliberately NOT the `pages` collection:
+// every entry there becomes a route via [regular].astro, which would collide with the .astro
+// file already serving that path. Nothing routes off this collection.
+const standaloneCollection = defineCollection({
+  loader: glob({ pattern: "**/*.{md,mdx}", base: "src/content/standalone" }),
+  schema: z.object({}).catchall(z.any()),
+});
+
 // Export collections
 export const collections = {
   homepage: homepageCollection,
@@ -74,4 +91,6 @@ export const collections = {
   pages: pagesCollection,
   pricing: pricingCollection,
   sections: sectionsCollection,
+  developers: developersCollection,
+  standalone: standaloneCollection,
 };
