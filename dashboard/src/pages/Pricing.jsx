@@ -36,7 +36,7 @@ export default function Pricing() {
     >
 
       {/* Pricing cards — Starter / Growth / Founder */}
-      <section className="py-[96px] bg-[#F7FAFA] border-b border-[rgba(18,16,12,.06)]">
+      <section className="py-[96px] bg-[#F7F4ED] border-b border-[rgba(18,16,12,.06)]">
         <div className="max-w-[1320px] mx-auto px-8">
           <PricingCards />
         </div>
@@ -66,7 +66,7 @@ export default function Pricing() {
               ['Monthly pageviews', '50,000', '150,000', '150,000'],
             ]} />
           </div>
-          <p className="mt-5 text-[#8A9B9B] text-xs font-bold">
+          <p className="mt-5 text-[#A39B8C] text-xs font-bold">
             Monthly pageview caps are from the live entitlement config (plan-features.js). The feature split reflects
             intended packaging — confirm any edge cases against the gate before launch.
           </p>
@@ -81,7 +81,7 @@ export default function Pricing() {
             <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
               Private by design, EU-built.
             </h2>
-            <p className="mt-4 max-w-[640px] mx-auto text-[#586464] text-lg leading-[1.55]">
+            <p className="mt-4 max-w-[640px] mx-auto text-[#6E675C] text-lg leading-[1.55]">
               Privacy is the architecture, not a setting. Core customer data is stored in the EU (Supabase + Railway).
             </p>
           </div>
@@ -94,13 +94,13 @@ export default function Pricing() {
               ['EU-built', 'Built in the EU with a privacy-first model from day one — not bolted on later.'],
               ['Your rights, documented', 'Privacy Policy, DPA (on request), Sub-processors, and a CCPA “Do Not Sell or Share” page — all linked in the footer.'],
             ].map(([title, body]) => (
-              <div key={title} className="lift p-6 rounded-[26px] bg-[#F7FAFA] border border-[rgba(18,16,12,.08)] text-left">
+              <div key={title} className="lift p-6 rounded-[26px] bg-[#F7F4ED] border border-[rgba(18,16,12,.08)] text-left">
                 <strong className="block text-st-black text-base tracking-[-0.03em]">{title}</strong>
-                <p className="mt-2 text-[#586464] text-sm leading-[1.55]">{body}</p>
+                <p className="mt-2 text-[#6E675C] text-sm leading-[1.55]">{body}</p>
               </div>
             ))}
           </div>
-          <p className="mt-6 text-center text-[#8A9B9B] text-xs font-bold max-w-[680px] mx-auto">
+          <p className="mt-6 text-center text-[#A39B8C] text-xs font-bold max-w-[680px] mx-auto">
             We say “stored in the EU” precisely — it describes core data storage, not a claim that all processing happens
             in the EU. We don’t claim a formal “GDPR/CCPA compliant” certification during the private beta.
           </p>
@@ -108,7 +108,7 @@ export default function Pricing() {
       </section>
 
       {/* Pricing FAQ */}
-      <section className="py-[96px] bg-[#F7FAFA] border-t border-[rgba(18,16,12,.06)]">
+      <section className="py-[96px] bg-[#F7F4ED] border-t border-[rgba(18,16,12,.06)]">
         <div className="max-w-[1320px] mx-auto px-8 text-center">
           <SectionKicker label="Pricing FAQ" />
           <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">

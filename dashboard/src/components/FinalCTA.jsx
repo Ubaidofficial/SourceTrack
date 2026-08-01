@@ -8,7 +8,7 @@ export default function FinalCTA({ h2 = "Start seeing what creates revenue.", su
           <div className="absolute right-[-38px] bottom-[-72px] text-white/5 text-[286px] leading-none font-black tracking-[-0.1em] select-none">Aa</div>
           <div className="relative z-10">
             <h2 className="text-[clamp(38px,5vw,74px)] leading-[0.94] tracking-[-0.07em] font-black">{h2}</h2>
-            <p className="mt-[18px] max-w-[620px] text-[#CBD4D4] text-lg leading-[1.55]">{sub}</p>
+            <p className="mt-[18px] max-w-[620px] text-[#D6CDBB] text-lg leading-[1.55]">{sub}</p>
           </div>
           <div className="relative z-10 flex justify-end flex-wrap gap-3">
             <Link to={primaryHref} className="inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full bg-st-lime text-st-black text-[15px] font-extrabold tracking-[-0.025em] shadow-[0_18px_52px_rgba(210,236,42,0.28)] hover:bg-[#BCD41C] transition-all hover:-translate-y-px">

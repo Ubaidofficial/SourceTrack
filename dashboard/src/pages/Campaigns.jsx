@@ -301,7 +301,7 @@ export default function Campaigns() {
       tooltip: { callbacks: { label: (ctx) => ` $${Number(ctx.raw).toFixed(0)}` } }
     },
     scales: {
-      y: { beginAtZero: true, ticks: { callback: (v) => `$${v}`, maxTicksLimit: 4 }, grid: { color: '#f3f4f6' } },
+      y: { beginAtZero: true, ticks: { callback: (v) => `$${v}`, maxTicksLimit: 4 }, grid: { color: '#F7F4ED' } },
       x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 11 } } }
     }
   }

@@ -8,7 +8,7 @@ export default function FeatureCards({ items, compact = false }) {
             {f.icon}
           </div>
           <h3 className="relative z-10 mt-[64px] max-w-[350px] text-2xl leading-[1.04] tracking-[-0.055em] text-st-black font-bold">{f.title}</h3>
-          {f.body && <p className="relative z-10 mt-3 text-[#667272] text-base leading-[1.55]">{f.body}</p>}
+          {f.body && <p className="relative z-10 mt-3 text-[#6E675C] text-base leading-[1.55]">{f.body}</p>}
         </article>
       ))}
     </div>

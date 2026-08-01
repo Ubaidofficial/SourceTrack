@@ -45,7 +45,7 @@ export default function MarketingInteractiveDemo() {
         <h3 className="text-st-black text-2xl sm:text-3xl font-black tracking-[-0.04em]">
           See the product before you install it.
         </h3>
-        <p className="mt-2 text-[#586464] text-sm sm:text-base max-w-[620px] mx-auto font-medium">
+        <p className="mt-2 text-[#6E675C] text-sm sm:text-base max-w-[620px] mx-auto font-medium">
           Explore sample analytics, source attribution, AI traffic, and conversion journeys — no account needed.
         </p>
       </div>
@@ -55,7 +55,7 @@ export default function MarketingInteractiveDemo() {
         <div className="overflow-hidden rounded-[18px] sm:rounded-[26px] bg-[#111414] border border-[#2A2F2F]">
           
           {/* Top Browser Bar */}
-          <div className="h-[52px] sm:h-[60px] grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-4 px-3 sm:px-[18px] bg-[#161A1A] border-b border-white/10 text-[12px] font-bold text-[#F5F8F8]">
+          <div className="h-[52px] sm:h-[60px] grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-4 px-3 sm:px-[18px] bg-[#161A1A] border-b border-white/10 text-[12px] font-bold text-[#F7F4ED]">
             {/* Mac style dots */}
             <div className="flex gap-[6px] sm:gap-[7px]">
               <span className="w-[8px] h-[8px] sm:w-[10px] sm:h-[10px] rounded-full bg-[#C4381C]" />
@@ -96,7 +96,7 @@ export default function MarketingInteractiveDemo() {
                   className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-extrabold transition-all focus:outline-none focus:ring-2 focus:ring-st-lime ${
                     activeMode === key
                       ? 'bg-[#D2EC2A] text-[#111414] shadow-md'
-                      : 'text-[#B9C2C2] hover:text-white'
+                      : 'text-[#D6CDBB] hover:text-white'
                   }`}
                 >
                   {label}
@@ -105,7 +105,7 @@ export default function MarketingInteractiveDemo() {
             </nav>
 
             {/* Date Preset Selector */}
-            <div className="flex items-center gap-2 text-xs font-bold text-[#B9C2C2]">
+            <div className="flex items-center gap-2 text-xs font-bold text-[#D6CDBB]">
               <span className="px-3 py-1.5 bg-[#1D2222] border border-white/10 rounded-lg text-white">
                 Last 30 days
               </span>
@@ -137,7 +137,7 @@ export default function MarketingInteractiveDemo() {
             <div className="bg-[#161A1A] border border-[#2E3434] rounded-xl p-4 sm:p-5">
               <div className="flex justify-between items-center mb-4">
                 <div>
-                  <h4 className="text-[#9DA7A7] text-[11px] font-black uppercase tracking-[0.05em]">
+                  <h4 className="text-[#A39B8C] text-[11px] font-black uppercase tracking-[0.05em]">
                     Combined Traffic &amp; {modeData.revenueLabel} Trend
                   </h4>
                   <p className="text-[#6E675C] text-xs mt-0.5">
@@ -219,7 +219,7 @@ export default function MarketingInteractiveDemo() {
                       className={`mr-4 pb-2 text-xs font-black transition-all border-b-2 -mb-[10px] focus:outline-none focus:text-white ${
                         activeTabA === key
                           ? 'border-[#D2EC2A] text-white'
-                          : 'border-transparent text-[#6E675C] hover:text-[#B9C2C2]'
+                          : 'border-transparent text-[#6E675C] hover:text-[#D6CDBB]'
                       }`}
                     >
                       {label}
@@ -259,10 +259,10 @@ export default function MarketingInteractiveDemo() {
                                 <span className="truncate">{row.name}</span>
                               </button>
                             </td>
-                            <td className="py-2 text-right font-mono pr-2 text-[#DDE5E5] group-hover:text-white">
+                            <td className="py-2 text-right font-mono pr-2 text-[#E7E0D2] group-hover:text-white">
                               {row.visitors}
                             </td>
-                            <td className="py-2 text-right font-mono pr-2 text-[#DDE5E5] group-hover:text-white">
+                            <td className="py-2 text-right font-mono pr-2 text-[#E7E0D2] group-hover:text-white">
                               {row.conversions} <span className="text-[9px] text-[#6E675C] font-normal">({row.rate})</span>
                             </td>
                             <td className={`py-2 text-right font-extrabold ${isSelected ? 'text-[#D2EC2A]' : 'text-white'}`}>
@@ -298,7 +298,7 @@ export default function MarketingInteractiveDemo() {
                       className={`mr-4 pb-2 text-xs font-black transition-all border-b-2 -mb-[10px] focus:outline-none focus:text-white ${
                         activeTabB === key
                           ? 'border-[#D2EC2A] text-white'
-                          : 'border-transparent text-[#6E675C] hover:text-[#B9C2C2]'
+                          : 'border-transparent text-[#6E675C] hover:text-[#D6CDBB]'
                       }`}
                     >
                       {label}
@@ -324,10 +324,10 @@ export default function MarketingInteractiveDemo() {
                           <td className="py-2.5 pr-2 font-bold truncate max-w-[120px] text-white">
                             {row.name}
                           </td>
-                          <td className="py-2.5 text-right font-mono pr-2 text-[#DDE5E5]">
+                          <td className="py-2.5 text-right font-mono pr-2 text-[#E7E0D2]">
                             {row.visitors}
                           </td>
-                          <td className="py-2.5 text-right font-extrabold text-[#DDE5E5]">
+                          <td className="py-2.5 text-right font-extrabold text-[#E7E0D2]">
                             {row.revenue}
                           </td>
                         </tr>
@@ -361,7 +361,7 @@ export default function MarketingInteractiveDemo() {
                           →
                         </span>
                       )}
-                      <span className="px-2.5 py-1 rounded-full bg-[#1D2222] text-[#E0E7E7] text-[10px] font-bold border border-white/10 truncate max-w-[120px]" title={step}>
+                      <span className="px-2.5 py-1 rounded-full bg-[#1D2222] text-[#E7E0D2] text-[10px] font-bold border border-white/10 truncate max-w-[120px]" title={step}>
                         {step}
                       </span>
                     </React.Fragment>
@@ -370,7 +370,7 @@ export default function MarketingInteractiveDemo() {
 
                 {/* Attribution Explanation Card */}
                 {journey.explanation && (
-                  <p className="text-[#B9C2C2] text-[11px] leading-relaxed mt-3 bg-[#1D2222] p-2.5 rounded-lg border border-white/5 font-semibold">
+                  <p className="text-[#D6CDBB] text-[11px] leading-relaxed mt-3 bg-[#1D2222] p-2.5 rounded-lg border border-white/5 font-semibold">
                     {journey.explanation}
                   </p>
                 )}

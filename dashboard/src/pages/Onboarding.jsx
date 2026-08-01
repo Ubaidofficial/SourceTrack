@@ -389,7 +389,7 @@ export default function Onboarding() {
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 placeholder="ex: google.com"
-                className="w-full px-4 py-3 bg-white dark:bg-[#1A1F1F] text-[#12100C] dark:text-dark-primary placeholder:text-[#8D9696] border border-[#C9D1D1] dark:border-white/15 rounded-xl text-sm outline-none focus:ring-2 focus:ring-st-lime focus:border-st-lime"
+                className="w-full px-4 py-3 bg-white dark:bg-[#1A1F1F] text-[#12100C] dark:text-dark-primary placeholder:text-[#A39B8C] border border-[#D6CDBB] dark:border-white/15 rounded-xl text-sm outline-none focus:ring-2 focus:ring-st-lime focus:border-st-lime"
               />
               <p className="text-xs text-st-gray dark:text-gray-400 mt-1">We'll use this URL to personalize your set up process</p>
               {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
@@ -413,7 +413,7 @@ export default function Onboarding() {
             showBack
             onBack={() => setStep(1)}
           >
-            <button type="button" onClick={() => setStep(1)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#12100C] dark:text-gray-400 dark:hover:text-dark-text transition-colors">
+            <button type="button" onClick={() => setStep(1)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6E675C] hover:text-[#12100C] dark:text-gray-400 dark:hover:text-dark-text transition-colors">
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -461,7 +461,7 @@ export default function Onboarding() {
             showBack
             onBack={() => setStep(3)}
           >
-            <button type="button" onClick={() => setStep(4)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#12100C] dark:text-gray-400 dark:hover:text-dark-text transition-colors mb-3">
+            <button type="button" onClick={() => setStep(4)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6E675C] hover:text-[#12100C] dark:text-gray-400 dark:hover:text-dark-text transition-colors mb-3">
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Configure Conversions</p>
@@ -517,7 +517,7 @@ export default function Onboarding() {
             showBack
             onBack={() => setStep(5)}
           >
-            <button type="button" onClick={() => setStep(5)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#12100C] dark:text-gray-400 dark:hover:text-dark-text transition-colors mb-3">
+            <button type="button" onClick={() => setStep(5)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6E675C] hover:text-[#12100C] dark:text-gray-400 dark:hover:text-dark-text transition-colors mb-3">
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
             <p className="text-sm font-medium text-gray-700 dark:text-dark-primary mb-1">
@@ -640,13 +640,13 @@ export default function Onboarding() {
                       setLoading(false)
                     }
                   }}
-                  className="w-full text-center text-xs font-bold text-[#6B7373] hover:text-[#12100C] dark:text-gray-400 dark:hover:text-dark-text transition-colors py-2 disabled:opacity-50"
+                  className="w-full text-center text-xs font-bold text-[#6E675C] hover:text-[#12100C] dark:text-gray-400 dark:hover:text-dark-text transition-colors py-2 disabled:opacity-50"
                 >
                   Verify Later (Skip for now)
                 </button>
                 <a
                   href="/setup"
-                  className="w-full block text-center text-xs font-bold text-[#6B7373] hover:text-[#12100C] dark:text-gray-400 dark:hover:text-dark-text transition-colors py-1"
+                  className="w-full block text-center text-xs font-bold text-[#6E675C] hover:text-[#12100C] dark:text-gray-400 dark:hover:text-dark-text transition-colors py-1"
                 >
                   Need help? Go to Setup &amp; Health
                 </a>
@@ -672,7 +672,7 @@ export default function Onboarding() {
         showBack
         onBack={() => setStep(2)}
       >
-        <button type="button" onClick={() => setStep(2)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#12100C] dark:text-gray-400 dark:hover:text-dark-text transition-colors mb-3">
+        <button type="button" onClick={() => setStep(2)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6E675C] hover:text-[#12100C] dark:text-gray-400 dark:hover:text-dark-text transition-colors mb-3">
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
 
@@ -691,7 +691,7 @@ export default function Onboarding() {
                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-extrabold transition-colors ${
                   selected
                     ? 'border-st-lime bg-st-lime/10 dark:bg-st-lime/10 text-[#12100C] dark:text-dark-primary'
-                    : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.02] text-[#6B7373] dark:text-gray-400 hover:border-st-lime/70'
+                    : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.02] text-[#6E675C] dark:text-gray-400 hover:border-st-lime/70'
                 }`}
               >
                 <Icon className="w-4 h-4 shrink-0" />
@@ -715,9 +715,9 @@ export default function Onboarding() {
                 discover it from a gap in their data. theme.liquid renders the storefront only —
                 Shopify admin is a separate app we never see, and checkout is Shopify-hosted and
                 not themeable outside Plus. */}
-            <div className="rounded-xl border border-[#DDE4E4] dark:border-white/10 bg-[#F1F4F4] dark:bg-white/[0.03] px-3 py-2.5 mb-4">
+            <div className="rounded-xl border border-[#E7E0D2] dark:border-white/10 bg-[#F7F4ED] dark:bg-white/[0.03] px-3 py-2.5 mb-4">
               <p className="text-[11px] font-bold text-[#12100C] dark:text-dark-primary mb-1">What this tracks</p>
-              <p className="text-[11px] text-[#6B7373] dark:text-gray-400 leading-normal">
+              <p className="text-[11px] text-[#6E675C] dark:text-gray-400 leading-normal">
                 All storefront pages — home, product, collection, and cart. It does <strong>not</strong> track
                 inside the Shopify admin, and Shopify hosts checkout on its own domain, so purchases are
                 captured by the Shopify webhook rather than this script.
@@ -753,7 +753,7 @@ export default function Onboarding() {
           </>
         )}
 
-        <div className="bg-[#F1F4F4] dark:bg-[#252A29] border border-[#DDE4E4] dark:border-white/10 rounded-xl p-4 relative">
+        <div className="bg-[#F7F4ED] dark:bg-[#252A29] border border-[#E7E0D2] dark:border-white/10 rounded-xl p-4 relative">
           <pre className="text-xs text-[#12100C] dark:text-gray-200 overflow-x-auto whitespace-pre-wrap break-all pr-24">{snippet || 'Loading script...'}</pre>
           <button
             onClick={handleCopySnippet}
@@ -765,7 +765,7 @@ export default function Onboarding() {
 
         {/* Platform install guides — prominent cards linking to existing /docs/platforms/* */}
         <div className="mt-4">
-          <p className="text-xs font-semibold text-[#6B7373] dark:text-gray-400 mb-2">
+          <p className="text-xs font-semibold text-[#6E675C] dark:text-gray-400 mb-2">
             {suggestedGuide
               ? <>Looks like your site runs on <strong>{suggestedGuide.label}</strong> — that guide is marked below. Not right? Any of these work:</>
               : <>Using a website builder or CMS? Open the step-by-step guide:</>}
@@ -780,7 +780,7 @@ export default function Onboarding() {
               const cardClass = `relative flex items-center justify-between gap-2 rounded-xl border px-3 py-2 transition-colors ${
                 isSuggested
                   ? 'border-blue-400 dark:border-blue-400/60 bg-blue-50/60 dark:bg-blue-400/10'
-                  : 'border-[#DDE4E4] dark:border-white/10 bg-white dark:bg-white/5 hover:border-blue-400 dark:hover:border-blue-400/60 hover:bg-blue-50/40 dark:hover:bg-white/10'
+                  : 'border-[#E7E0D2] dark:border-white/10 bg-white dark:bg-white/5 hover:border-blue-400 dark:hover:border-blue-400/60 hover:bg-blue-50/40 dark:hover:bg-white/10'
               }`
               // Identical content either way — only the ELEMENT differs, so a guided card and a
               // doc-link card are visually the same and the "Suggested" badge works on both.
@@ -795,7 +795,7 @@ export default function Onboarding() {
                         </span>
                       )}
                     </span>
-                    <span className="block text-[10px] text-[#6B7373] dark:text-gray-400 truncate">{p.desc}</span>
+                    <span className="block text-[10px] text-[#6E675C] dark:text-gray-400 truncate">{p.desc}</span>
                   </span>
                   <ArrowRight className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
                 </>
@@ -851,7 +851,7 @@ export default function Onboarding() {
   // users, even when they are mid-setup or already complete.
   if (statusLoading) {
     return (
-      <div className="min-h-screen bg-[#F1F4F4] dark:bg-[#2B302F] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F7F4ED] dark:bg-[#2B302F] flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black dark:border-st-lime" />
       </div>
     )
@@ -863,7 +863,7 @@ export default function Onboarding() {
   const phaseIdx = step <= 2 ? 0 : step <= 4 ? 1 : 2
 
   return (
-    <div className="min-h-screen bg-[#F1F4F4] dark:bg-[#2B302F] text-[#12100C] dark:text-dark-primary flex flex-col">
+    <div className="min-h-screen bg-[#F7F4ED] dark:bg-[#2B302F] text-[#12100C] dark:text-dark-primary flex flex-col">
       {/* Header — brand left, stepper centered (desktop), logout right */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-6 px-6 lg:px-12 py-8">
         <div className="dark:hidden"><LogoFull className="h-8 w-auto" /></div>
@@ -895,7 +895,7 @@ export default function Onboarding() {
                       ? `bg-st-lime text-[#12100C] ${clickable ? 'group-hover:ring-2 group-hover:ring-st-lime/50' : ''}`
                       : isCurrent
                       ? 'bg-[#12100C] dark:bg-white text-white dark:text-[#12100C]'
-                      : 'bg-[#F1F4F4] dark:bg-white/5 text-[#12100C] dark:text-gray-500'
+                      : 'bg-[#F7F4ED] dark:bg-white/5 text-[#12100C] dark:text-gray-500'
                   }`}
                 >
                   {isCompleted ? '✓' : stepNum}
@@ -906,7 +906,7 @@ export default function Onboarding() {
                       ? 'font-extrabold text-[#12100C] dark:text-dark-primary'
                       : isCompleted
                       ? `font-semibold text-[#12100C] dark:text-dark-primary ${clickable ? 'group-hover:underline' : ''}`
-                      : 'font-medium text-[#6B7373] dark:text-gray-500'
+                      : 'font-medium text-[#6E675C] dark:text-gray-500'
                   }`}
                 >
                   {label}
@@ -918,7 +918,7 @@ export default function Onboarding() {
         </div>
         <button
           onClick={() => { signOut(); navigate('/login', { replace: true }) }}
-          className="justify-self-end inline-flex items-center justify-center min-h-[44px] px-5 rounded-full border border-[rgba(18,16,12,.12)] dark:border-white/15 bg-white dark:bg-white/5 text-[#12100C] dark:text-dark-primary text-sm font-bold hover:bg-[#F1F4F4] dark:hover:bg-white/10 transition-colors"
+          className="justify-self-end inline-flex items-center justify-center min-h-[44px] px-5 rounded-full border border-[rgba(18,16,12,.12)] dark:border-white/15 bg-white dark:bg-white/5 text-[#12100C] dark:text-dark-primary text-sm font-bold hover:bg-[#F7F4ED] dark:hover:bg-white/10 transition-colors"
         >
           Log out
         </button>
@@ -928,13 +928,13 @@ export default function Onboarding() {
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-10">
         {/* 3-phase progress framing (presentational; underlying flow is still 6 steps) */}
         <div className="text-center mb-3">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#6B7373] dark:text-gray-400">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#6E675C] dark:text-gray-400">
             Phase {phaseIdx + 1} of 3 · {PHASES[phaseIdx]}
           </span>
         </div>
         {/* Mobile fallback: full stepper is hidden below md, show compact step text instead */}
         <div className="md:hidden text-center mb-6">
-          <span className="inline-flex items-center px-3 py-1 rounded-full bg-white dark:bg-white/5 text-xs font-semibold text-[#6B7373] dark:text-gray-400 mb-2">
+          <span className="inline-flex items-center px-3 py-1 rounded-full bg-white dark:bg-white/5 text-xs font-semibold text-[#6E675C] dark:text-gray-400 mb-2">
             Step {displayIndexForStep(step)} of {DISPLAY_STEP_COUNT}
           </span>
           <p className="text-lg font-extrabold text-[#12100C] dark:text-dark-primary">{STEP_TITLES[displayIndexForStep(step)]}</p>

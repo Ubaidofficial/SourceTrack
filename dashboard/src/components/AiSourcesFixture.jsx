@@ -21,7 +21,7 @@ export default function AiSourcesFixture() {
         <div className="overflow-hidden rounded-[20px] bg-[#121616] border border-[#2D3333]">
           {/* Header */}
           <div className="h-[44px] flex items-center justify-between px-4 bg-[#171B1B] border-b border-white/10">
-            <span className="text-[#F5F8F8] text-xs font-bold">AI referral sources</span>
+            <span className="text-[#F7F4ED] text-xs font-bold">AI referral sources</span>
             <span className="inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 bg-[#D2EC2A]/10 text-st-lime text-[10px] font-black uppercase tracking-wider">
               Sample data
             </span>
@@ -30,7 +30,7 @@ export default function AiSourcesFixture() {
           {/* Chips */}
           <div className="px-4 pt-4 flex flex-wrap gap-2">
             {AI_SOURCES.map((s) => (
-              <span key={s.key} className="inline-flex items-center gap-1.5 rounded-full py-1.5 px-2.5 bg-[#1D2222] border border-white/10 text-[#DDE5E5] text-[11px] font-bold">
+              <span key={s.key} className="inline-flex items-center gap-1.5 rounded-full py-1.5 px-2.5 bg-[#1D2222] border border-white/10 text-[#E7E0D2] text-[11px] font-bold">
                 <SourceIcon source={s.key} className="w-3.5 h-3.5" />
                 {s.name}
               </span>
@@ -40,7 +40,7 @@ export default function AiSourcesFixture() {
           {/* Breakdown */}
           <div className="p-4 grid gap-2">
             {AI_SOURCES.map((s) => (
-              <div key={s.key} className="grid grid-cols-[28px_1fr_auto_auto] items-center gap-3 py-1.5 border-b border-[#2D3333] last:border-0 text-xs font-extrabold text-[#DDE5E5]">
+              <div key={s.key} className="grid grid-cols-[28px_1fr_auto_auto] items-center gap-3 py-1.5 border-b border-[#2D3333] last:border-0 text-xs font-extrabold text-[#E7E0D2]">
                 <span className="w-7 h-7 rounded-[9px] grid place-items-center bg-[#252B2B] border border-white/10">
                   <SourceIcon source={s.key} className="w-4 h-4" />
                 </span>
@@ -53,8 +53,8 @@ export default function AiSourcesFixture() {
 
           {/* AI attribution callout */}
           <div className="mx-4 mb-4 rounded-2xl bg-[#181D1D] border border-[#2D3333] p-3.5">
-            <div className="text-[#9DA7A7] text-[10px] font-extrabold uppercase tracking-wider mb-1">AI attribution</div>
-            <p className="text-[#DDE5E5] text-[11px] font-semibold leading-normal">
+            <div className="text-[#A39B8C] text-[10px] font-extrabold uppercase tracking-wider mb-1">AI attribution</div>
+            <p className="text-[#E7E0D2] text-[11px] font-semibold leading-normal">
               AI referrals drove <span className="text-st-lime font-black">21%</span> of conversions this period — most analytics
               label these as direct traffic.
             </p>

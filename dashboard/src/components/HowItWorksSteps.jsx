@@ -7,7 +7,7 @@ export default function HowItWorksSteps({ steps }) {
             0{i + 1}
           </span>
           <h3 className="text-[22px] font-bold text-white tracking-[-0.055em] leading-[1.04]">{s.title}</h3>
-          <p className="mt-[10px] text-[#BBC5C5] text-[15px] leading-[1.5]">{s.body}</p>
+          <p className="mt-[10px] text-[#D6CDBB] text-[15px] leading-[1.5]">{s.body}</p>
         </div>
       ))}
     </div>

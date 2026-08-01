@@ -37,7 +37,7 @@ export default function CompareGA4() {
     >
 
       {/* Four ways */}
-      <section className="py-[96px] bg-[#F7FAFA] border-b border-[rgba(18,16,12,.06)]">
+      <section className="py-[96px] bg-[#F7F4ED] border-b border-[rgba(18,16,12,.06)]">
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="text-center mb-[54px]">
             <SectionKicker label="The four options" />
@@ -54,8 +54,8 @@ export default function CompareGA4() {
             ].map(([name, who, desc], i) => (
               <div key={name} className={`lift p-6 rounded-[26px] border ${i === 3 ? 'bg-st-black text-white border-white/10 shadow-[0_24px_80px_rgba(18,16,12,.12)]' : 'bg-white border-[rgba(18,16,12,.10)] shadow-[0_12px_38px_rgba(18,16,12,.055)]'}`}>
                 <strong className={`block text-lg tracking-[-0.04em] ${i === 3 ? 'text-white' : 'text-st-black'}`}>{name}</strong>
-                <span className={`block mt-1 text-xs font-bold ${i === 3 ? 'text-[#9FE870]' : 'text-[#8A9B9B]'}`}>{who}</span>
-                <p className={`mt-3 text-sm leading-[1.55] ${i === 3 ? 'text-[#CBD4D4]' : 'text-[#586464]'}`}>{desc}</p>
+                <span className={`block mt-1 text-xs font-bold ${i === 3 ? 'text-[#9FE870]' : 'text-[#A39B8C]'}`}>{who}</span>
+                <p className={`mt-3 text-sm leading-[1.55] ${i === 3 ? 'text-[#D6CDBB]' : 'text-[#6E675C]'}`}>{desc}</p>
               </div>
             ))}
           </div>
@@ -69,7 +69,7 @@ export default function CompareGA4() {
           <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
             An honest side-by-side.
           </h2>
-          <p className="mt-5 max-w-[640px] mx-auto text-[#586464] text-lg leading-[1.55]">
+          <p className="mt-5 max-w-[640px] mx-auto text-[#6E675C] text-lg leading-[1.55]">
             SourceTrack’s column is written truthfully against the shipped product. Competitor cells are unverified until
             checked on their live sites — don’t publish them as fact before then.
           </p>
@@ -85,14 +85,14 @@ export default function CompareGA4() {
               ['Starting price', '$49/mo · $99/yr Founder', 'Free', '[verify]', '$$$ [verify]'],
             ]} />
           </div>
-          <p className="mt-5 text-[#8A9B9B] text-xs font-bold">
+          <p className="mt-5 text-[#A39B8C] text-xs font-bold">
             Last verified: [DATE]. Competitor features and prices change — re-check each cell on their live site and date this page before publishing.
           </p>
         </div>
       </section>
 
       {/* Where SourceTrack wins */}
-      <section className="py-[96px] bg-[#F7FAFA] border-y border-[rgba(18,16,12,.06)]">
+      <section className="py-[96px] bg-[#F7F4ED] border-y border-[rgba(18,16,12,.06)]">
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-7 mb-[54px]">
             <div>
@@ -101,7 +101,7 @@ export default function CompareGA4() {
                 Lighter, private, and all in one place.
               </h2>
             </div>
-            <p className="self-end text-[#586464] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
+            <p className="self-end text-[#6E675C] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
               Built for founders, not ad-ops teams: the source behind every lead and sale, AI and SEO included, with no CRM
               and no stack to run.
             </p>
@@ -129,7 +129,7 @@ export default function CompareGA4() {
               'You want a full SEO suite — rank tracking, keyword research, audits, backlinks → that’s a different category.',
               'You need a warehouse-grade BI canvas for a data team → also not us.',
             ].map((line, i) => (
-              <li key={i} className="px-5 py-3.5 rounded-2xl bg-[#F7FAFA] border border-[rgba(18,16,12,.08)] text-[#586464] text-base font-semibold tracking-[-0.01em]">
+              <li key={i} className="px-5 py-3.5 rounded-2xl bg-[#F7F4ED] border border-[rgba(18,16,12,.08)] text-[#6E675C] text-base font-semibold tracking-[-0.01em]">
                 {line}
               </li>
             ))}

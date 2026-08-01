@@ -149,14 +149,14 @@ export default function ResetPassword() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F1F4F4] dark:bg-[#2B302F]">
+      <div className="min-h-screen flex items-center justify-center bg-[#F7F4ED] dark:bg-[#2B302F]">
         <div className="h-8 w-8 rounded-full border-2 border-st-lime border-t-transparent animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F1F4F4] dark:bg-[#2B302F] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#F7F4ED] dark:bg-[#2B302F] px-4">
       <Helmet>
         <title>Create a new password | SourceTrack</title>
         <meta name="description" content="Set a new password for your SourceTrack account." />
@@ -169,7 +169,7 @@ export default function ResetPassword() {
           <p className="text-st-gray dark:text-gray-400 mt-2">Set new password</p>
         </div>
 
-        <div className="bg-white dark:bg-[#1A1F1F] shadow-[0_18px_50px_rgba(18,16,12,0.10)] border border-[#DDE4E4] dark:border-white/10 rounded-2xl p-6 space-y-4">
+        <div className="bg-white dark:bg-[#1A1F1F] shadow-[0_18px_50px_rgba(18,16,12,0.10)] border border-[#E7E0D2] dark:border-white/10 rounded-2xl p-6 space-y-4">
           {error && (
             <div className="bg-red-50 dark:bg-red-900/20 text-red-600 text-sm p-3 rounded">
               {error}

@@ -21,13 +21,13 @@ export default function MarketingBeforeAfter({
     <div className={`w-full ${className}`}>
       {/* Header section */}
       <div className="text-center max-w-[760px] mx-auto mb-10 sm:mb-14">
-        <span className="inline-block px-3 py-1 text-xs font-black uppercase tracking-widest text-st-black bg-[#E8F0F0] rounded-full mb-3 border border-[#E5E7EB]">
+        <span className="inline-block px-3 py-1 text-xs font-black uppercase tracking-widest text-st-black bg-[#F1EDE3] rounded-full mb-3 border border-[#E7E0D2]">
           Attribution comparison
         </span>
         <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-st-black tracking-[-0.05em] leading-[1.05]">
           {displayTitle}
         </h2>
-        <p className="mt-3 text-sm sm:text-base text-[#586464] font-medium leading-relaxed">
+        <p className="mt-3 text-sm sm:text-base text-[#6E675C] font-medium leading-relaxed">
           {displaySubtitle}
         </p>
 

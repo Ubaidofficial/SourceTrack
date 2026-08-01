@@ -26,7 +26,7 @@ export default function Attribution() {
     <MarketingPage seo={SEO} hero={HERO} heroChildren={<HeroPreviewCard />}>
 
       {/* Attribution problems */}
-      <section className="py-[96px] bg-[#F7FAFA]">
+      <section className="py-[96px] bg-[#F7F4ED]">
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-7 mb-[54px]">
             <div>
@@ -35,7 +35,7 @@ export default function Attribution() {
                 Every platform claims credit. SourceTrack gives you an independent source of truth.
               </h2>
             </div>
-            <p className="self-end text-[#586464] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
+            <p className="self-end text-[#6E675C] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
               Ad platforms self-report conversion data to justify your spend. GA4 over-credits the last click. SourceTrack tracks every touchpoint in the journey, giving you a neutral source of truth to reduce wasted budget and scale what converts.
             </p>
           </div>
@@ -51,7 +51,7 @@ export default function Attribution() {
       {/* Neutral Positioning Notice Callout */}
       <section className="py-12 bg-white">
         <div className="max-w-[960px] mx-auto px-8 text-center">
-          <div className="p-8 rounded-3xl bg-[#F7FAFA] border border-[rgba(18,16,12,.08)]">
+          <div className="p-8 rounded-3xl bg-[#F7F4ED] border border-[rgba(18,16,12,.08)]">
             <span className="block text-2xl mb-3">🛡️</span>
             <p className="text-[#12100C] text-lg font-bold leading-relaxed max-w-[720px] mx-auto">
               “SourceTrack gives you an independent attribution view from your own visitor and conversion data, not only ad-platform self-reporting.”
@@ -68,7 +68,7 @@ export default function Attribution() {
             <h2 className="text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
               Attribution models available in SourceTrack
             </h2>
-            <p className="mt-4 max-w-[620px] mx-auto text-[#586464] text-lg leading-[1.55]">
+            <p className="mt-4 max-w-[620px] mx-auto text-[#6E675C] text-lg leading-[1.55]">
               Compare acquisition touchpoints across standard modeling rules.
             </p>
           </div>
@@ -84,9 +84,9 @@ export default function Attribution() {
               { name: 'Referring Domains', desc: 'Extracts domain referrers from document.referrer directly to classify organic, search, and social platforms.' },
               { name: 'AI Search Capture', desc: 'Resolves referrals from Claude, Perplexity, and ChatGPT automatically instead of marking them as direct traffic.' },
             ].map((m, i) => (
-              <div key={i} className="p-5 rounded-2xl bg-[#F7FAFA] border border-[rgba(18,16,12,.06)]">
+              <div key={i} className="p-5 rounded-2xl bg-[#F7F4ED] border border-[rgba(18,16,12,.06)]">
                 <strong className="text-[#12100C] text-base tracking-tight block mb-2">{m.name}</strong>
-                <p className="text-[#586464] text-sm leading-relaxed">{m.desc}</p>
+                <p className="text-[#6E675C] text-sm leading-relaxed">{m.desc}</p>
               </div>
             ))}
           </div>
@@ -100,7 +100,7 @@ export default function Attribution() {
           <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black">
             Every signal that explains why a conversion happened.
           </h2>
-          <p className="mt-5 max-w-[620px] mx-auto text-[#B9C2C2] text-lg leading-[1.55]">
+          <p className="mt-5 max-w-[620px] mx-auto text-[#D6CDBB] text-lg leading-[1.55]">
             SourceTrack captures the small details that most analytics tools ignore — AI platform referrers, campaign params across sessions, and the full journey path.
           </p>
 

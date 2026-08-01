@@ -18,7 +18,7 @@ export default function GscQueryFixture() {
         <div className="overflow-hidden rounded-[20px] bg-[#121616] border border-[#2D3333]">
           {/* Header */}
           <div className="h-[44px] flex items-center justify-between px-4 bg-[#171B1B] border-b border-white/10">
-            <span className="text-[#F5F8F8] text-xs font-bold">Search Console — top queries</span>
+            <span className="text-[#F7F4ED] text-xs font-bold">Search Console — top queries</span>
             <span className="inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 bg-[#D2EC2A]/10 text-st-lime text-[10px] font-black uppercase tracking-wider">
               Sample data
             </span>
@@ -38,10 +38,10 @@ export default function GscQueryFixture() {
               </thead>
               <tbody>
                 {QUERIES.map((q) => (
-                  <tr key={q.query} className="border-b border-[#202525] last:border-0 text-[#DDE5E5] font-bold">
+                  <tr key={q.query} className="border-b border-[#202525] last:border-0 text-[#E7E0D2] font-bold">
                     <td className="py-2.5 pr-2 font-mono text-[11px] text-white truncate max-w-[180px]">{q.query}</td>
                     <td className="py-2.5 px-2 text-right tabular-nums">{q.clicks}</td>
-                    <td className="py-2.5 px-2 text-right tabular-nums text-[#9DA7A7]">{q.impr}</td>
+                    <td className="py-2.5 px-2 text-right tabular-nums text-[#A39B8C]">{q.impr}</td>
                     <td className="py-2.5 px-2 text-right tabular-nums">{q.ctr}</td>
                     <td className="py-2.5 pl-2 text-right tabular-nums text-st-lime">{q.pos}</td>
                   </tr>

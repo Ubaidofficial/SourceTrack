@@ -25,7 +25,7 @@ export default function ReportBuilderMarketing() {
     <MarketingPage seo={SEO} hero={HERO} heroChildren={<ReportBuilderMock />}>
 
       {/* Why report builder matters */}
-      <section className="py-[96px] bg-[#F7FAFA]">
+      <section className="py-[96px] bg-[#F7F4ED]">
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-7 mb-[54px]">
             <div>
@@ -34,7 +34,7 @@ export default function ReportBuilderMarketing() {
                 Your dashboard should answer the questions you actually ask — not the ones a template chose.
               </h2>
             </div>
-            <p className="self-end text-[#586464] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
+            <p className="self-end text-[#6E675C] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
               Most analytics tools overwhelm you with 30 widgets you don't need. SourceTrack starts blank. You build, save, and pin only the attribution reports that help your team make budget and channel decisions.
             </p>
           </div>
@@ -48,7 +48,7 @@ export default function ReportBuilderMarketing() {
       </section>
 
       {/* Report templates */}
-      <section className="py-[96px] bg-[#F7FAFA]">
+      <section className="py-[96px] bg-[#F7F4ED]">
         <div className="max-w-[1320px] mx-auto px-8 text-center">
           <SectionKicker label="Report templates" />
           <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
@@ -58,27 +58,27 @@ export default function ReportBuilderMarketing() {
           <div className="mt-[54px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(18,16,12,.12)] shadow-[0_12px_38px_rgba(18,16,12,.055)] min-h-[138px]">
               <strong className="text-lg tracking-[-0.04em]">Attributed purchase revenue</strong>
-              <p className="mt-1.5 text-[#586464] text-[15px] font-semibold">Show which channels create paid customers across all attribution models.</p>
+              <p className="mt-1.5 text-[#6E675C] text-[15px] font-semibold">Show which channels create paid customers across all attribution models.</p>
             </div>
             <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(18,16,12,.12)] shadow-[0_12px_38px_rgba(18,16,12,.055)] min-h-[138px]">
               <strong className="text-lg tracking-[-0.04em]">AI traffic quality</strong>
-              <p className="mt-1.5 text-[#586464] text-[15px] font-semibold">Compare AI referral conversion rates and revenue against traditional search and social paths.</p>
+              <p className="mt-1.5 text-[#6E675C] text-[15px] font-semibold">Compare AI referral conversion rates and revenue against traditional search and social paths.</p>
             </div>
             <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(18,16,12,.12)] shadow-[0_12px_38px_rgba(18,16,12,.055)] min-h-[138px]">
               <strong className="text-lg tracking-[-0.04em]">Landing page revenue</strong>
-              <p className="mt-1.5 text-[#586464] text-[15px] font-semibold">Find entry pages that produce pipeline — attribute revenue back to the pages that start journeys.</p>
+              <p className="mt-1.5 text-[#6E675C] text-[15px] font-semibold">Find entry pages that produce pipeline — attribute revenue back to the pages that start journeys.</p>
             </div>
             <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(18,16,12,.12)] shadow-[0_12px_38px_rgba(18,16,12,.055)] min-h-[138px]">
               <strong className="text-lg tracking-[-0.04em]">Imported cost vs attributed revenue</strong>
-              <p className="mt-1.5 text-[#586464] text-[15px] font-semibold">Measure campaign cost performance by mapping spreadsheet ad spend against attributed revenue outcomes.</p>
+              <p className="mt-1.5 text-[#6E675C] text-[15px] font-semibold">Measure campaign cost performance by mapping spreadsheet ad spend against attributed revenue outcomes.</p>
             </div>
             <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(18,16,12,.12)] shadow-[0_12px_38px_rgba(18,16,12,.055)] min-h-[138px]">
               <strong className="text-lg tracking-[-0.04em]">Lead source quality</strong>
-              <p className="mt-1.5 text-[#586464] text-[15px] font-semibold">See which sources produce qualified leads vs. raw form fills. Measure average quality scores by channel.</p>
+              <p className="mt-1.5 text-[#6E675C] text-[15px] font-semibold">See which sources produce qualified leads vs. raw form fills. Measure average quality scores by channel.</p>
             </div>
             <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(18,16,12,.12)] shadow-[0_12px_38px_rgba(18,16,12,.055)] min-h-[138px]">
               <strong className="text-lg tracking-[-0.04em]">Stripe/API trial-to-paid</strong>
-              <p className="mt-1.5 text-[#586464] text-[15px] font-semibold">Track trial conversion events by acquisition channel using webhook integration recipes.</p>
+              <p className="mt-1.5 text-[#6E675C] text-[15px] font-semibold">Track trial conversion events by acquisition channel using webhook integration recipes.</p>
             </div>
           </div>
         </div>

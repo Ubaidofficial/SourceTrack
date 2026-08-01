@@ -75,7 +75,7 @@ export default function UtmBuilder() {
             <h2 className="mt-5 text-[clamp(30px,4vw,52px)] leading-[0.95] tracking-[-0.06em] font-black text-st-black">
               What is a UTM-tagged URL?
             </h2>
-            <p className="mt-5 text-[#586464] text-lg leading-[1.6]">
+            <p className="mt-5 text-[#6E675C] text-lg leading-[1.6]">
               A UTM-tagged URL is a normal link with extra parameters on the end that describe where the
               click came from. When someone lands on your site, analytics tools read those parameters and
               record the source — so you can tell paid, email, and social traffic apart instead of lumping
@@ -93,7 +93,7 @@ export default function UtmBuilder() {
             ].map(([param, what, eg]) => (
               <div key={param} className="p-5 rounded-[20px] border border-[rgba(18,16,12,.10)] bg-white shadow-[0_12px_38px_rgba(18,16,12,.05)]">
                 <code className="text-sm font-bold text-st-black">{param}</code>
-                <p className="mt-2 text-sm text-[#586464] leading-[1.5]">{what}</p>
+                <p className="mt-2 text-sm text-[#6E675C] leading-[1.5]">{what}</p>
                 <p className="mt-2 text-xs font-mono text-st-gray">{eg}</p>
               </div>
             ))}
@@ -102,20 +102,20 @@ export default function UtmBuilder() {
       </section>
 
       {/* Why consistency matters + internal links */}
-      <section className="py-[88px] bg-[#F7FAFA]">
+      <section className="py-[88px] bg-[#F7F4ED]">
         <div className="max-w-[1320px] mx-auto px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
           <div>
             <SectionKicker label="Why it matters" />
             <h2 className="mt-5 text-[clamp(30px,4vw,52px)] leading-[0.95] tracking-[-0.06em] font-black text-st-black">
               Consistent tags make attribution honest.
             </h2>
-            <p className="mt-5 text-[#586464] text-lg leading-[1.6]">
+            <p className="mt-5 text-[#6E675C] text-lg leading-[1.6]">
               <code>Google</code>, <code>google</code>, and <code>Google-Ads</code> are three different sources
               to a reporting tool. Inconsistent casing and naming split one channel across several rows and
               quietly distort which source gets credit. This builder lowercases your parameters automatically
               so the same campaign always reports as the same thing.
             </p>
-            <p className="mt-4 text-[#586464] text-lg leading-[1.6]">
+            <p className="mt-4 text-[#6E675C] text-lg leading-[1.6]">
               Tagging the link is step one. To learn which of those campaigns actually drives leads and
               revenue, you need to connect the tagged visit to what happens next.
             </p>

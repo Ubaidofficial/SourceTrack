@@ -26,7 +26,7 @@ export default function Product() {
     <MarketingPage seo={SEO} hero={HERO} heroChildren={<HeroPreviewCard />}>
 
       {/* Core platform */}
-      <section className="py-[96px] bg-[#F7FAFA]">
+      <section className="py-[96px] bg-[#F7F4ED]">
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-7 mb-[54px]">
             <div>
@@ -35,7 +35,7 @@ export default function Product() {
                 Capture the visit. Connect the journey. Attribute the revenue.
               </h2>
             </div>
-            <p className="self-end text-[#586464] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
+            <p className="self-end text-[#6E675C] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
               SourceTrack captures every source signal, connects touchpoints into a full customer journey, and attributes conversions using 9 models — so you know which channels create revenue, not just traffic.
             </p>
           </div>
@@ -56,7 +56,7 @@ export default function Product() {
             <h2 className="text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
               What is inside SourceTrack?
             </h2>
-            <p className="mt-4 max-w-[620px] mx-auto text-[#586464] text-lg leading-[1.55]">
+            <p className="mt-4 max-w-[620px] mx-auto text-[#6E675C] text-lg leading-[1.55]">
               Everything you need for clean revenue attribution, built without enterprise bloat.
             </p>
           </div>
@@ -73,9 +73,9 @@ export default function Product() {
               { title: 'Developer API', desc: 'Use our HTTP ingestion endpoints to report offline conversions, backend trial updates, and database actions.' },
               { title: 'Spreadsheet Export', desc: 'Download clean, unbranded CSV reports of campaigns, referrers, and conversion parameters for client reports.' },
             ].map((f, i) => (
-              <div key={i} className="p-6 rounded-2xl bg-[#F7FAFA] border border-[rgba(18,16,12,.08)] shadow-[0_12px_38px_rgba(18,16,12,.01)]">
+              <div key={i} className="p-6 rounded-2xl bg-[#F7F4ED] border border-[rgba(18,16,12,.08)] shadow-[0_12px_38px_rgba(18,16,12,.01)]">
                 <strong className="text-lg tracking-[-0.04em] text-st-black block mb-2">{f.title}</strong>
-                <p className="text-[#586464] text-sm leading-relaxed">{f.desc}</p>
+                <p className="text-[#6E675C] text-sm leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -89,7 +89,7 @@ export default function Product() {
           <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black">
             From one script to source-to-revenue clarity.
           </h2>
-          <p className="mt-5 max-w-[620px] mx-auto text-[#B9C2C2] text-lg leading-[1.55]">
+          <p className="mt-5 max-w-[620px] mx-auto text-[#D6CDBB] text-lg leading-[1.55]">
             No long implementation. Paste one script, define your conversion events, and see which channels produce customers — not just clicks.
           </p>
 

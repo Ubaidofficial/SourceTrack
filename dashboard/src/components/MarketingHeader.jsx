@@ -36,7 +36,7 @@ export default function MarketingHeader({ themed = false }) {
           {themed && <LogoFullDark className="h-9 w-auto hidden dark:block" />}
         </Link>
 
-        <nav className={`hidden md:flex items-center gap-[26px] text-[#586161] text-sm font-extrabold${dk('dark:text-gray-400')}`} aria-label="Primary navigation">
+        <nav className={`hidden md:flex items-center gap-[26px] text-[#6E675C] text-sm font-extrabold${dk('dark:text-gray-400')}`} aria-label="Primary navigation">
           {/* Solutions dropdown — opens on hover or keyboard focus (focus-within) */}
           <div className="relative group">
             <button
@@ -53,7 +53,7 @@ export default function MarketingHeader({ themed = false }) {
               <div className={`min-w-[200px] rounded-2xl border border-[rgba(18,16,12,0.08)] bg-white shadow-[0_18px_52px_rgba(18,16,12,.12)] p-2${dk('dark:bg-dark-card dark:border-dark-border card-hairline')}`}>
                 {SOLUTIONS.map(s => (
                   <Link key={s.href} to={s.href} aria-current={pathname === s.href ? 'page' : undefined}
-                    className={`block px-3 py-2 rounded-xl text-sm font-extrabold hover:bg-[rgba(18,16,12,.04)] transition-colors${dk('dark:hover:bg-dark-hover')} ${pathname === s.href ? `text-st-black${dk('dark:text-dark-text')}` : `text-[#586161] hover:text-st-black${dk('dark:text-gray-400 dark:hover:text-dark-text')}`}`}>
+                    className={`block px-3 py-2 rounded-xl text-sm font-extrabold hover:bg-[rgba(18,16,12,.04)] transition-colors${dk('dark:hover:bg-dark-hover')} ${pathname === s.href ? `text-st-black${dk('dark:text-dark-text')}` : `text-[#6E675C] hover:text-st-black${dk('dark:text-gray-400 dark:hover:text-dark-text')}`}`}>
                     {s.label}
                   </Link>
                 ))}
@@ -90,14 +90,14 @@ export default function MarketingHeader({ themed = false }) {
         <div className="md:hidden px-8 pb-4 space-y-1">
           {NAV_LINKS.map(l => (
             <Link key={l.href} to={l.href} onClick={() => setOpen(false)}
-              className={`block py-2 text-sm font-extrabold ${pathname === l.href ? `text-st-black${dk('dark:text-dark-text')}` : `text-[#586161]${dk('dark:text-gray-400')}`}`}>
+              className={`block py-2 text-sm font-extrabold ${pathname === l.href ? `text-st-black${dk('dark:text-dark-text')}` : `text-[#6E675C]${dk('dark:text-gray-400')}`}`}>
               {l.label}
             </Link>
           ))}
-          <p className={`pt-3 pb-1 text-[11px] uppercase tracking-[0.08em] font-bold text-[#8A9B9B]${dk('dark:text-gray-500')}`}>Solutions</p>
+          <p className={`pt-3 pb-1 text-[11px] uppercase tracking-[0.08em] font-bold text-[#A39B8C]${dk('dark:text-gray-500')}`}>Solutions</p>
           {SOLUTIONS.map(s => (
             <Link key={s.href} to={s.href} onClick={() => setOpen(false)}
-              className={`block py-2 pl-3 text-sm font-extrabold ${pathname === s.href ? `text-st-black${dk('dark:text-dark-text')}` : `text-[#586161]${dk('dark:text-gray-400')}`}`}>
+              className={`block py-2 pl-3 text-sm font-extrabold ${pathname === s.href ? `text-st-black${dk('dark:text-dark-text')}` : `text-[#6E675C]${dk('dark:text-gray-400')}`}`}>
               {s.label}
             </Link>
           ))}
@@ -105,7 +105,7 @@ export default function MarketingHeader({ themed = false }) {
             <Link to="/login" onClick={() => setOpen(false)} className={`inline-flex items-center justify-center min-h-[44px] px-4 rounded-full border border-[rgba(18,16,12,0.10)] text-sm font-extrabold${dk('dark:border-dark-border dark:text-dark-text')}`}>Log in</Link>
             <Link to="/signup" onClick={() => setOpen(false)} className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-full bg-st-lime text-st-black text-sm font-extrabold">Start free</Link>
           </div>
-          <p className={`text-[13px] font-bold text-[#586464] pt-2${dk('dark:text-gray-400')}`}>Revenue attribution, AI referral tracking, and custom reports.</p>
+          <p className={`text-[13px] font-bold text-[#6E675C] pt-2${dk('dark:text-gray-400')}`}>Revenue attribution, AI referral tracking, and custom reports.</p>
         </div>
       )}
     </header>
