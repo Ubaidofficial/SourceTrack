@@ -242,6 +242,21 @@ export async function conversion(req, res) {
         ? { currency: normalizeCurrencyCode(req.body.currency) }
         : {}),
       ...getFirstTouchFields(req.body),
+      // Real ad-click instant, forwarded by the cookie tracker as `st_click_ts` (last-write-wins).
+      // Sanitized through the SAME helper as req.body.timestamp — no second timestamp sanitizer.
+      // sanitizeClientTimestamp bounds it to <=1h future / <=90d past and returns null otherwise,
+      // so a malformed or spoofed value is DROPPED here rather than reaching Meta.
+      //
+      // Conditional spread (the `currency` precedent above), so an absent/rejected value omits the
+      // key entirely instead of writing `click_timestamp: null`. sendMetaCAPI branches on presence,
+      // and a null would be a positive claim of "no click" rather than "not reported".
+      //
+      // Lands in BOTH consumers from this one addition: `props` is dual-written to Tinybird (as an
+      // untyped bag field — no schema change) and `capiEvt` is spread from `props` (:444), which is
+      // built in-memory and passed synchronously to dispatchCapi with no Tinybird read-back.
+      ...(sanitizeClientTimestamp(req.body?.click_timestamp)
+        ? { click_timestamp: sanitizeClientTimestamp(req.body.click_timestamp) }
+        : {}),
       page_url: req.body.page_url,
       referrer: req.body.referrer,
       utm_source: normalizeUtm(req.body.utm_source),

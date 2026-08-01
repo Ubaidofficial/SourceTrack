@@ -293,6 +293,27 @@
     ls('st_ft_cmp', p.utm_campaign || '')
     ls('st_ft_ts',  new Date().toISOString())
   }
+  // ─── Click timestamp ───────────────────────────────────────────────────────
+  // LAST-WRITE-WINS, deliberately the OPPOSITE of storeFirstTouch's write-once guard.
+  // A visitor can click a fresh ad on visit 3 after visit 1 already set first-touch, and the
+  // ad platform needs the instant of the click that led to THIS conversion — so `st_ft_ts` is
+  // the wrong shape for it and is not reused.
+  //
+  // GENERAL, not Meta-specific: it fires for ANY click id, even though Meta's fbc is the only
+  // consumer today. The click instant is a property of the click, not of one ad network.
+  //
+  // A pageview with NO click id leaves an existing value untouched — it must keep describing
+  // the last real ad click, not be cleared by ordinary organic browsing in between.
+  //
+  // `st_` prefix is load-bearing: clearStoredIdentity() sweeps every `st_`-prefixed key on
+  // consent withdrawal, so this is erased with the rest of the identity for free.
+  function storeClickTimestamp(p) {
+    if (!(p.gclid || p.gbraid || p.wbraid || p.fbclid || p.msclkid || p.ttclid ||
+          p.li_fat_id || p.twclid || p.dclid || p.snapclid || p.pclid || p.sccid ||
+          p.ko_click_id)) return
+    ls('st_click_ts', new Date().toISOString())   // OVERWRITE unconditionally
+  }
+
   function getFT() {
     // first_touch_timestamp is written by storeFirstTouch() in localStorage as `st_ft_ts`.
     // We forward it so the backend can preserve the original first-touch moment
@@ -402,6 +423,7 @@
   function sendPageview() {
     var p = params(), ref = document.referrer || null
     storeFirstTouch(p, ref)
+    storeClickTimestamp(p)
     var f = getFT(), u = utmFields(p)
     send('/api/track', Object.assign(
       { site_key: K, event: '$pageview', anonymous_id: AID, session_id: SID, page_url: location.href, referrer: ref },
@@ -555,6 +577,10 @@
           via_param:        p.via || null },
         utmFields(p),
         getFT(),
+        // Real click instant for Meta's fbc (`fb.1.<CLICK_time_ms>.<fbclid>`). Spread so the key
+        // is OMITTED when absent rather than sent as a bare null — a null would be an assertion
+        // that there was no click, which is not what "this visitor predates the feature" means.
+        (function () { var c = ls('st_click_ts'); return c ? { click_timestamp: c } : {} })(),
         { ai_source: aiSrc(ref, p.utm_source) }
       ))
     },

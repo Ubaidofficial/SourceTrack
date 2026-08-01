@@ -142,6 +142,26 @@ function getMetaEventName(conversionType) {
   return META_EVENT_MAP[normalizeKey(conversionType)] || 'Purchase'
 }
 
+// Meta's fbc format is `fb.1.<CLICK_time_ms>.<fbclid>` — the middle segment is the instant of the
+// AD CLICK, in epoch MILLISECONDS, not send time. We stamped Date.now() there for as long as this
+// sender has existed, which overstates the click time by the entire browse-to-convert gap and
+// costs attribution match quality.
+//
+// `click_timestamp` is an ISO string (already bounded by sanitizeClientTimestamp at the ingest
+// route: <=1h future, <=90d past, else null). Converted here, once.
+//
+// FALLBACK IS DELIBERATE AND MUST STAY: absent or unparseable → Date.now(), byte-identical to the
+// previous behaviour. Three real populations depend on it — installs still running a tracker build
+// from before this shipped, all cookieless traffic (that build has no storage, so it cannot carry a
+// click instant), and merchant-uploaded offline conversions. For them nothing changes.
+export function metaFbcClickMs (clickTimestamp) {
+  if (typeof clickTimestamp === 'string' && clickTimestamp) {
+    const ms = new Date(clickTimestamp).getTime()
+    if (Number.isFinite(ms)) return ms
+  }
+  return Date.now()
+}
+
 // ─── Meta CAPI ────────────────────────────────────────────────────────────────
 export async function sendMetaCAPI(site, evt) {
   const token = safeDecrypt(site.meta_capi_token)
@@ -154,7 +174,7 @@ export async function sendMetaCAPI(site, evt) {
   // Prefer the real Meta cookies (highest match quality); else derive fbc from fbclid.
   if (evt.fbp)         userData.fbp = evt.fbp
   if (evt.fbc)         userData.fbc = evt.fbc
-  else if (evt.fbclid) userData.fbc = `fb.1.${Date.now()}.${evt.fbclid}`
+  else if (evt.fbclid) userData.fbc = `fb.1.${metaFbcClickMs(evt.click_timestamp)}.${evt.fbclid}`
 
   const eventName = getMetaEventName(evt.conversion_type)
 
