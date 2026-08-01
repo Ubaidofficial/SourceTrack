@@ -1909,11 +1909,29 @@ It also removed per-suite failure locality in the CI UI — a real cost for no g
 
 **The one useful residual**, filed as non-urgent backlog in `NEXT_SESSION_PROMPT.md`: unit steps are ~120s of a ~168s job and two suites dominate — **Tracker 44s, Tinybird dual-write 43s** (Identity 30s, Attribution 3s). If CI duration ever matters, that is the target — what is slow inside those two suites, not invocation count.
 
-### ⚠️ `fbc` fallback stamps the wrong timestamp — degrades Meta CAPI match quality, no fix currently reachable (2026-07-27)
+### ✅ MOSTLY FIXED — `fbc` now carries the real click timestamp on the cookie tracker; cookieless + offline remain send-time (filed 2026-07-27 · fixed 2026-08-01)
 
-`api/lib/conversion-sync.js` `sendMetaCAPI()`: when no real `fbc` cookie is present, `fbc` is derived from `fbclid` using `Date.now()` (send-time) instead of the actual click timestamp, which Meta's own `fbc` spec requires (`fb.<subdomain_index>.<CLICK_time_ms>.<fbclid>`). Every event that falls back to this path — no real `fbc` cookie, only a raw `fbclid` — silently ships a wrong timestamp with no error thrown anywhere.
+> **STATUS 2026-08-01: fixed for the common case.** `sendMetaCAPI()` now derives `fbc` as `fb.1.${metaFbcClickMs(evt.click_timestamp)}.${fbclid}`, using the real ad-click instant when the tracker supplied one. **Two residual gaps below are permanent-by-design, not follow-ups.**
+>
+> **What shipped**, four layers, no Tinybird schema change:
+> 1. `tracker/tracker.js` — `storeClickTimestamp(p)` writes `st_click_ts` **last-write-wins** on any pageview carrying any click ID (general, not Meta-specific). `st_`-prefixed, so `clearStoredIdentity()`'s existing sweep erases it on consent withdrawal for free.
+> 2. `tracker.js` `conversion()` forwards it as `click_timestamp`, **omitting the key when absent** rather than sending a bare null.
+> 3. `api/routes/conversion.js` sanitizes it through the **existing** `sanitizeClientTimestamp()` (no second sanitizer) and conditional-spreads it into `props` — which is both the Tinybird dual-write payload and the source of `capiEvt`, so one addition reaches both. **The `events.datasource` column in item 4 of the old plan turned out to be unnecessary**: it rides as an untyped bag field, and the CAPI path never reads back from Tinybird.
+> 4. `api/lib/conversion-sync.js` — `metaFbcClickMs()` converts ISO → epoch ms.
+>
+> **🔴 RESIDUAL GAP 1 — cookieless traffic keeps the send-time fallback, permanently.** `tracker.cookieless.js` has no localStorage, sessionStorage or cookies **by design** (verified: even the consent decision is in-memory and per-page-load), so there is nowhere to hold a click instant between the ad click and a later conversion. This is stated in a comment at the cookieless `conversion()` payload, and a test asserts the minified cookieless bundle contains **neither** `st_click_ts` nor `click_timestamp` — so a future change cannot quietly ship a mechanism there. Closing it would require introducing device persistence, which that build exists to avoid.
+>
+> **🔴 RESIDUAL GAP 2 — `api/routes/conversion-offline.js` is unchanged and unfixable server-side.** A merchant-uploaded `fbclid` has no matching pageview, so no click instant can be derived. Deliberately out of scope; the merchant would have to supply it.
+>
+> **Also still send-time:** any install running a tracker build from before 2026-08-01, until it picks up the new `tracker.min.js`. The `Date.now()` fallback is retained and tested precisely so those three populations see **byte-identical** behaviour to before.
+>
+> **Bound worth knowing:** `sanitizeClientTimestamp` rejects anything >1h in the future or >90d in the past, so a click older than 90 days falls back to send time. Meta's attribution windows are far shorter, so this is not expected to bite — but it is the one input shape where a *valid* click timestamp is still discarded.
 
-Real, structural gap: **no click timestamp exists anywhere in the current pipeline.**
+The original analysis is kept below because items 4–6 were re-scoped by the fix and the reasoning explains why.
+
+`api/lib/conversion-sync.js` `sendMetaCAPI()`: when no real `fbc` cookie is present, `fbc` was derived from `fbclid` using `Date.now()` (send-time) instead of the actual click timestamp, which Meta's own `fbc` spec requires (`fb.<subdomain_index>.<CLICK_time_ms>.<fbclid>`). Every event that fell back to this path — no real `fbc` cookie, only a raw `fbclid` — silently shipped a wrong timestamp with no error thrown anywhere.
+
+Real, structural gap **as filed**: no click timestamp existed anywhere in the pipeline.
 
 - `tracker/tracker.js:265` `params()` reads click IDs from `location.search` but never persists them client-side or timestamps the read. localStorage holds only `st_aid`/`st_ft_*`, sessionStorage only `st_sid` — no click ID, no per-click timestamp.
 - `first_touch_timestamp` (`st_ft_ts`) reaches `evt` but is **write-once** (`storeFirstTouch`, `if (ls('st_ft_src')) return`, never overwritten) — it is the visitor's first-ever touch, not the click that produced this `fbclid`. An organic day-1 visit + a day-10 ad click would stamp `fbc` 9 days early. **Worse than `Date.now()`**, not better.
@@ -1921,14 +1939,14 @@ Real, structural gap: **no click timestamp exists anywhere in the current pipeli
 - `fbclid` is never persisted in Supabase (`grep -rn fbclid supabase/migrations/` → zero hits).
 - Tinybird `events.datasource` has both `fbclid` and `timestamp` typed, and the carrying pageview lands within seconds of the click — the only genuinely good proxy that exists today. Not implemented: it would add a synchronous cross-store read inside the CAPI fan-out, conflicts with the fan-out's designed never-block-a-conversion behavior under the null-read-fails-closed rule (§5), and cannot help `api/routes/conversion-offline.js` at all (merchant-uploaded `fbclid` with no matching pageview).
 
-**What a real fix needs** (not attempted, scoped as its own initiative):
+**What a real fix needs** (as scoped when filed — annotated with what actually happened):
 
-1. `tracker.js` captures `st_click_ts` last-write-wins per click — the opposite of `storeFirstTouch`'s write-once.
-2. `utmFields()` forwards it as `click_timestamp`.
-3. `normalizeClickIds()` (`api/lib/utils.js:745`) / `api/routes/conversion.js:239` carry it through sanitized.
-4. `events.datasource` gets a `click_timestamp` column (founder-gated pipe deploy).
-5. `tracker.cookieless.js` has zero localStorage — needs a deliberate decision (alternate mechanism, or an accepted gap).
-6. `conversion-offline.js` merchant uploads would need to supply it manually; no server-side derivation is possible.
+1. ✅ `tracker.js` captures `st_click_ts` last-write-wins per click — the opposite of `storeFirstTouch`'s write-once. **Shipped as specified.**
+2. ✅ Forwarded as `click_timestamp`. **Shipped from `conversion()` directly rather than via `utmFields()`** — `utmFields` is shared with the pageview payload, and the click instant belongs to the conversion call.
+3. ✅ Carried through sanitized. **Via the existing `sanitizeClientTimestamp()` in `conversion.js`, not `normalizeClickIds()`** — it is a timestamp, not a click ID, and the repo already had the right helper.
+4. ❌ **NOT NEEDED — this item was wrong.** `events.datasource` needs no `click_timestamp` column: the field rides the dual-write as an untyped bag field, and the CAPI path builds `capiEvt` in-memory from `props` with no Tinybird read-back. No pipe deploy, no schema change, no founder gate.
+5. ✅ Decided: **accepted gap**, stated in the cookieless source and enforced by a test against the minified bundle. See RESIDUAL GAP 1.
+6. ✅ Confirmed unfixable server-side; left untouched. See RESIDUAL GAP 2.
 
 Until (1)–(3) exist, `Date.now()` is the only value `sendMetaCAPI` can honestly write — every reachable substitute is wrong in a harder-to-reason-about way. **Leave as-is; do not "fix" with `first_touch_timestamp` or conversion time.**
 

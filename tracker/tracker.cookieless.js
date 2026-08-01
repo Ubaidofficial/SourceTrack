@@ -415,6 +415,18 @@
           conversion_type:  opts.type  || opts.conversion_type  || 'conversion',
           order_id:         opts.order_id || opts.orderId        || null,
           event_id:         opts.event_id || null },           // dedup id (no _fbp/_fbc: cookieless reads no cookies)
+        // NO `click_timestamp` HERE, AND THAT IS THE ACCEPTED GAP — stated rather than silently
+        // absent. The cookie build persists the real click instant as `st_click_ts` in
+        // localStorage (last-write-wins) and forwards it so Meta's fbc carries the true
+        // `fb.1.<CLICK_time_ms>.<fbclid>`. This build has NO storage of any kind by design (see
+        // the "No localStorage, no sessionStorage, no cookies" note at the top — even the consent
+        // decision is in-memory and per-page-load), so there is nowhere to hold a click instant
+        // between the ad click and a later conversion. Verified as genuinely zero-persistence,
+        // not merely "not used here": there is no alternative mechanism to reuse.
+        // Consequence: cookieless traffic keeps the send-time Date.now() fbc fallback in
+        // sendMetaCAPI, which is a match-quality cost, not a correctness bug. Closing this would
+        // require introducing device persistence, which this build exists to avoid — so it is a
+        // deliberate trade, not a TODO.
         utmFields(p),
         deriveFirstTouch(p, ref),
         { ai_source: aiSrc(ref, p.utm_source) }
