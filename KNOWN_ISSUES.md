@@ -2167,3 +2167,56 @@ the protection gap is real but mostly theoretical today, and the cost lands on t
 a new failure mode is least acceptable. Revisit if account deletion ever stops deleting the sites, or
 if shared-workspace deletion starts removing visitor PII — either change turns this from theoretical
 into live.
+
+### An invalid conversion returns `undefined`, and the reprocess path can push it into a bulk insert after the site's data is already deleted (found 2026-08-01, during PR #560's `processConversion` read/write split)
+
+**The fact.** `processConversion` guards on invalid input with a bare early return:
+
+```js
+if ((convValue < 0 && conversion.conversion_type !== 'refund') || !conversion.distinct_id) {
+  logWarn(`Skipping invalid conversion ${conversion.uuid}`)
+  return
+}
+```
+
+No value — the function returns `undefined`. Nothing between that guard and `processSite`'s two call
+sites checks for it.
+
+**Normal (non-reprocess) path:** the `undefined` is passed straight into
+`supabase.from('attributed_conversions').upsert(record, { onConflict: '...' })`. Whether the
+Supabase-js client throws synchronously, returns a row-level `error`, or silently no-ops on an
+`undefined` payload is **not verified here** — worth an isolated check before assuming either
+outcome, rather than guessing at the failure mode.
+
+**Reprocess path is the sharper case.** `records.push(record)` accepts the `undefined` entry into the
+array unchecked, and that array is not used per-row — it is inserted **once, in bulk**, after the
+per-conversion loop finishes:
+
+```js
+await supabase.from('attributed_conversions').delete().eq('site_id', site.id)
+// ...
+await supabase.from('attributed_conversions').insert(records)   // records may contain `undefined`
+```
+
+The delete already ran by the time the insert is attempted. If a bulk `.insert()` on an array
+containing one `undefined` element rejects the whole call (plausible, not confirmed) rather than
+erroring per-row, the site's `attributed_conversions` are left **empty** rather than restored —
+one malformed conversion in the reprocess window could wipe a site's attribution history with no
+successful reinsert to follow the delete.
+
+**Why this is lower urgency than it sounds:** `isReprocess` is gated three ways before any of this
+runs — a hardcoded staging-project-ref check (`STAGING_REF`), the explicit `--confirm-destructive`
+flag, and a single recognized test site key (`STABLE_TEST_SITE_KEY`). This is not a live prod
+exposure today; it's a footgun specific to the staging reprocess tool, not the nightly cron.
+
+**Not fixed here, reproduced exactly instead.** Found while splitting `processConversion` into
+`computeConversionRecord` / `writeConversionSideEffects` (PR #560). Out of scope for that change —
+guarding it would alter `processed`/`failed` totals and the reprocess write shape, which needs its
+own verified change, not a side effect of an unrelated perf PR. The split preserves the bare
+`return` in both `dryRun` and normal modes, confirmed by `nightly-refund-persist.test.js:75`, which
+already covers this path and still passes untouched.
+
+**Next step, if picked up:** confirm what Supabase-js actually does with `.insert([validRow,
+undefined, validRow2])` before deciding the fix — a `.filter(Boolean)` before both the `upsert` and
+the `records.push` is the likely shape, but only after the actual failure mode is known rather than
+assumed.
