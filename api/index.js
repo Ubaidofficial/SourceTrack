@@ -75,6 +75,7 @@ import proxyRouter from './routes/proxy.js'
 import webhookIncomingRouter from './routes/webhook-incoming.js'
 import { trackerIdRouter } from './routes/tracker-id.js'
 import { gdprRouter } from './routes/gdpr.js'
+import { internalJobsRouter } from './routes/internal-jobs.js'
 import { pixelRouter } from './routes/pixel.js'
 import { webhooksRouter } from './routes/webhooks.js'
 import { stripeWebhookRouter } from './routes/stripe-webhook.js'
@@ -566,6 +567,10 @@ app.use('/api/tracker/id', bindManagedProxySiteKey, trackerIdRouter)
 
 // GDPR / privacy endpoints (authenticated)
 app.use('/api/gdpr', requireUserAuth, gdprRouter)
+// Internal job triggers. NOT behind requireUserAuth — the caller is a cron, not a signed-in user.
+// The router applies its own shared-secret guard per route and fails CLOSED when the secret is
+// unset (503), so mounting it cannot expose an unauthenticated delete trigger.
+app.use('/api/internal/jobs', internalJobsRouter)
 
 // Temporary deployment diagnostic route. Should be disabled by removing
 // ST_IP_DIAGNOSTIC_SECRET from the environment after verification.

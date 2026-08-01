@@ -15,7 +15,10 @@ const API_URL = process.env.API_URL || 'http://localhost:3000'
 // decommissioned (D5 done — POSTHOG_* stripped from Railway, project deleted), so a
 // posthog check would alarm 🔴 on every run forever with nothing to reach. Exported so
 // a test can assert `posthog` is no longer a critical check.
-export const CRITICAL_CHECKS = new Set(['supabase', 'nightly_job', 'conversions', 'tinybird_quarantine'])
+// `erasure_resweep` is CRITICAL by decision, not by default: a stuck re-sweep means a subject who
+// exercised Art. 17 is still unprotected, which is the exact state the suppression work exists to
+// close. Same tier as the money-rail checks — a compliance failure is not a warning.
+export const CRITICAL_CHECKS = new Set(['supabase', 'nightly_job', 'conversions', 'tinybird_quarantine', 'erasure_resweep'])
 
 // Required env for the monitor to function. POSTHOG_* were removed (D2): no check reads
 // them anymore (the posthog liveness check is deleted and data_flow reads Tinybird).
@@ -181,6 +184,31 @@ async function collectSnapshot() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       return { status_reported: data.status }
+    }),
+
+    // 2b. Erasure re-sweep — CRITICAL. The cron SCHEDULES; the API EXECUTES, because only the API
+    // holds TINYBIRD_ADMIN_TOKEN (verified on prod: this service has the read token only). Granting
+    // a monitor delete rights on the event store was the alternative and was rejected.
+    //
+    // Every non-2xx is thrown, deliberately — including 503 "not configured". A missing
+    // ST_INTERNAL_JOB_SECRET must turn this check RED rather than let it pass quietly, or the
+    // monitor would report healthy while the sweep never ran once.
+    check('erasure_resweep', async () => {
+      const secret = process.env.ST_INTERNAL_JOB_SECRET
+      if (!secret) throw new Error('ST_INTERNAL_JOB_SECRET is not set on this service — the re-sweep cannot be triggered')
+      const res = await fetch(`${API_URL}/api/internal/jobs/erasure-resweep`, {
+        method: 'POST',
+        headers: { 'x-internal-job-secret': secret },
+        signal: AbortSignal.timeout(30000)
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${body?.error || 'resweep failed'}`)
+      const d = body?.data || {}
+      // Rows that have failed RESWEEP_ALERT_AFTER_ATTEMPTS times or more. Retrying is normal
+      // (Tinybird caps active delete jobs, so a single collision is expected); still failing after
+      // ~90 minutes is not.
+      if (d.alerting > 0) throw new Error(`${d.alerting} erasure(s) still un-swept after repeated attempts — subjects remain unprotected`)
+      return { swept: d.swept ?? 0, failed: d.failed ?? 0, pending: d.pending ?? 0 }
     }),
 
     // 3. Nightly attribution job — CRITICAL assertion (not a passive observation).
