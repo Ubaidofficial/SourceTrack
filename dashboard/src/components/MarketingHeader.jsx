@@ -29,7 +29,7 @@ export default function MarketingHeader({ themed = false }) {
   const dk = (classes) => (themed ? ` ${classes}` : '')
 
   return (
-    <header className={`sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-[rgba(31,35,35,0.08)]${dk('dark:bg-dark-bg/80 dark:border-dark-border card-hairline')}`}>
+    <header className={`sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-[rgba(18,16,12,0.08)]${dk('dark:bg-dark-bg/80 dark:border-dark-border card-hairline')}`}>
       <div className="max-w-[1320px] mx-auto px-8 h-[76px] flex items-center justify-between gap-7">
         <Link to="/" aria-label="SourceTrack home" className="inline-flex items-center">
           <LogoFull className={`h-9 w-auto${dk('dark:hidden')}`} />
@@ -50,10 +50,10 @@ export default function MarketingHeader({ themed = false }) {
               </svg>
             </button>
             <div className="absolute left-0 top-full pt-3 z-50 invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-opacity">
-              <div className={`min-w-[200px] rounded-2xl border border-[rgba(31,35,35,0.08)] bg-white shadow-[0_18px_52px_rgba(31,35,35,.12)] p-2${dk('dark:bg-dark-card dark:border-dark-border card-hairline')}`}>
+              <div className={`min-w-[200px] rounded-2xl border border-[rgba(18,16,12,0.08)] bg-white shadow-[0_18px_52px_rgba(18,16,12,.12)] p-2${dk('dark:bg-dark-card dark:border-dark-border card-hairline')}`}>
                 {SOLUTIONS.map(s => (
                   <Link key={s.href} to={s.href} aria-current={pathname === s.href ? 'page' : undefined}
-                    className={`block px-3 py-2 rounded-xl text-sm font-extrabold hover:bg-[rgba(31,35,35,.04)] transition-colors${dk('dark:hover:bg-dark-hover')} ${pathname === s.href ? `text-st-black${dk('dark:text-dark-text')}` : `text-[#586161] hover:text-st-black${dk('dark:text-gray-400 dark:hover:text-dark-text')}`}`}>
+                    className={`block px-3 py-2 rounded-xl text-sm font-extrabold hover:bg-[rgba(18,16,12,.04)] transition-colors${dk('dark:hover:bg-dark-hover')} ${pathname === s.href ? `text-st-black${dk('dark:text-dark-text')}` : `text-[#586161] hover:text-st-black${dk('dark:text-gray-400 dark:hover:text-dark-text')}`}`}>
                     {s.label}
                   </Link>
                 ))}
@@ -69,10 +69,10 @@ export default function MarketingHeader({ themed = false }) {
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
-          <Link to="/login" className={`inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full border border-[rgba(31,35,35,0.10)] bg-white text-st-black text-[15px] font-extrabold tracking-[-0.025em] hover:border-[rgba(31,35,35,0.24)] transition-all hover:-translate-y-px${dk('dark:bg-dark-card dark:text-dark-text dark:border-dark-border dark:hover:border-white/20 card-hairline')}`}>
+          <Link to="/login" className={`inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full border border-[rgba(18,16,12,0.10)] bg-white text-st-black text-[15px] font-extrabold tracking-[-0.025em] hover:border-[rgba(18,16,12,0.24)] transition-all hover:-translate-y-px${dk('dark:bg-dark-card dark:text-dark-text dark:border-dark-border dark:hover:border-white/20 card-hairline')}`}>
             Log in
           </Link>
-          <Link to="/signup" className="inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full bg-st-lime text-st-black text-[15px] font-extrabold tracking-[-0.025em] shadow-[0_18px_52px_rgba(200,240,0,0.28)] hover:bg-[#D9FA64] transition-all hover:-translate-y-px">
+          <Link to="/signup" className="inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full bg-st-lime text-st-black text-[15px] font-extrabold tracking-[-0.025em] shadow-[0_18px_52px_rgba(210,236,42,0.28)] hover:bg-[#BCD41C] transition-all hover:-translate-y-px">
             Start free
           </Link>
         </div>
@@ -102,7 +102,7 @@ export default function MarketingHeader({ themed = false }) {
             </Link>
           ))}
           <div className="pt-3 flex flex-col gap-2">
-            <Link to="/login" onClick={() => setOpen(false)} className={`inline-flex items-center justify-center min-h-[44px] px-4 rounded-full border border-[rgba(31,35,35,0.10)] text-sm font-extrabold${dk('dark:border-dark-border dark:text-dark-text')}`}>Log in</Link>
+            <Link to="/login" onClick={() => setOpen(false)} className={`inline-flex items-center justify-center min-h-[44px] px-4 rounded-full border border-[rgba(18,16,12,0.10)] text-sm font-extrabold${dk('dark:border-dark-border dark:text-dark-text')}`}>Log in</Link>
             <Link to="/signup" onClick={() => setOpen(false)} className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-full bg-st-lime text-st-black text-sm font-extrabold">Start free</Link>
           </div>
           <p className={`text-[13px] font-bold text-[#586464] pt-2${dk('dark:text-gray-400')}`}>Revenue attribution, AI referral tracking, and custom reports.</p>

@@ -82,17 +82,17 @@ export default function AuthConfirm() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <LogoMark className="w-12 h-12 mx-auto mb-4" />
-          <h1 className="text-3xl font-extrabold tracking-[-0.06em] text-[#1F2323] dark:text-dark-primary">SourceTrack</h1>
+          <h1 className="text-3xl font-extrabold tracking-[-0.06em] text-[#12100C] dark:text-dark-primary">SourceTrack</h1>
           <p className="text-st-gray dark:text-gray-400 mt-2">Link expired or invalid</p>
         </div>
 
-        <div className="bg-white dark:bg-[#1A1F1F] shadow-[0_18px_50px_rgba(31,35,35,0.10)] border border-[#DDE4E4] dark:border-white/10 rounded-2xl p-6 space-y-4">
+        <div className="bg-white dark:bg-[#1A1F1F] shadow-[0_18px_50px_rgba(18,16,12,0.10)] border border-[#DDE4E4] dark:border-white/10 rounded-2xl p-6 space-y-4">
           <p className="text-sm text-st-gray dark:text-gray-400">
             This link has expired or has already been used. Request a new one and we&rsquo;ll email you a fresh link.
           </p>
           <Link
             to={requestPath}
-            className="block w-full text-center py-2.5 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90"
+            className="block w-full text-center py-2.5 bg-[#12100C] dark:bg-st-lime text-white dark:text-[#12100C] rounded-xl text-sm font-extrabold hover:opacity-90"
           >
             {requestLabel}
           </Link>

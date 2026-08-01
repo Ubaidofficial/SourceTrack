@@ -28,7 +28,7 @@ export default function Privacy() {
               </p>
             </div>
 
-            <hr className="border-[rgba(31,35,35,0.08)]" />
+            <hr className="border-[rgba(18,16,12,0.08)]" />
 
             <div>
               <h2 className="text-2xl font-black tracking-[-0.05em] text-st-black mb-4">1. Privacy-Conscious Design</h2>

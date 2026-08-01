@@ -203,7 +203,7 @@ export default function AttributionPage() {
           {/* ── d. AI Source Performance — PROMOTED hero (§10.4). Chips + real traffic. No
               fake delta/sparkline/recommendation (§26). Lime is the SIGNAL accent. ── */}
           {aiSourceRows.length > 0 ? (
-            <div className="rounded-2xl border border-[#C8F000]/40 bg-[#C8F000]/[0.06] dark:bg-[#C8F000]/[0.04] p-5 space-y-4">
+            <div className="rounded-2xl border border-[#D2EC2A]/40 bg-[#D2EC2A]/[0.06] dark:bg-[#D2EC2A]/[0.04] p-5 space-y-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-2.5">
                   <Sparkles className="w-5 h-5 text-st-black dark:text-dark-primary shrink-0 mt-0.5" />

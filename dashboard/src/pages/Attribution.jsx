@@ -51,9 +51,9 @@ export default function Attribution() {
       {/* Neutral Positioning Notice Callout */}
       <section className="py-12 bg-white">
         <div className="max-w-[960px] mx-auto px-8 text-center">
-          <div className="p-8 rounded-3xl bg-[#F7FAFA] border border-[rgba(31,35,35,.08)]">
+          <div className="p-8 rounded-3xl bg-[#F7FAFA] border border-[rgba(18,16,12,.08)]">
             <span className="block text-2xl mb-3">🛡️</span>
-            <p className="text-[#1F2323] text-lg font-bold leading-relaxed max-w-[720px] mx-auto">
+            <p className="text-[#12100C] text-lg font-bold leading-relaxed max-w-[720px] mx-auto">
               “SourceTrack gives you an independent attribution view from your own visitor and conversion data, not only ad-platform self-reporting.”
             </p>
           </div>
@@ -84,8 +84,8 @@ export default function Attribution() {
               { name: 'Referring Domains', desc: 'Extracts domain referrers from document.referrer directly to classify organic, search, and social platforms.' },
               { name: 'AI Search Capture', desc: 'Resolves referrals from Claude, Perplexity, and ChatGPT automatically instead of marking them as direct traffic.' },
             ].map((m, i) => (
-              <div key={i} className="p-5 rounded-2xl bg-[#F7FAFA] border border-[rgba(31,35,35,.06)]">
-                <strong className="text-[#1F2323] text-base tracking-tight block mb-2">{m.name}</strong>
+              <div key={i} className="p-5 rounded-2xl bg-[#F7FAFA] border border-[rgba(18,16,12,.06)]">
+                <strong className="text-[#12100C] text-base tracking-tight block mb-2">{m.name}</strong>
                 <p className="text-[#586464] text-sm leading-relaxed">{m.desc}</p>
               </div>
             ))}

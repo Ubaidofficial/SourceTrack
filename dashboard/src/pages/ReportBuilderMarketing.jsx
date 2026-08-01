@@ -56,27 +56,27 @@ export default function ReportBuilderMarketing() {
           </h2>
 
           <div className="mt-[54px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[138px]">
+            <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(18,16,12,.12)] shadow-[0_12px_38px_rgba(18,16,12,.055)] min-h-[138px]">
               <strong className="text-lg tracking-[-0.04em]">Attributed purchase revenue</strong>
               <p className="mt-1.5 text-[#586464] text-[15px] font-semibold">Show which channels create paid customers across all attribution models.</p>
             </div>
-            <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[138px]">
+            <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(18,16,12,.12)] shadow-[0_12px_38px_rgba(18,16,12,.055)] min-h-[138px]">
               <strong className="text-lg tracking-[-0.04em]">AI traffic quality</strong>
               <p className="mt-1.5 text-[#586464] text-[15px] font-semibold">Compare AI referral conversion rates and revenue against traditional search and social paths.</p>
             </div>
-            <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[138px]">
+            <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(18,16,12,.12)] shadow-[0_12px_38px_rgba(18,16,12,.055)] min-h-[138px]">
               <strong className="text-lg tracking-[-0.04em]">Landing page revenue</strong>
               <p className="mt-1.5 text-[#586464] text-[15px] font-semibold">Find entry pages that produce pipeline — attribute revenue back to the pages that start journeys.</p>
             </div>
-            <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[138px]">
+            <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(18,16,12,.12)] shadow-[0_12px_38px_rgba(18,16,12,.055)] min-h-[138px]">
               <strong className="text-lg tracking-[-0.04em]">Imported cost vs attributed revenue</strong>
               <p className="mt-1.5 text-[#586464] text-[15px] font-semibold">Measure campaign cost performance by mapping spreadsheet ad spend against attributed revenue outcomes.</p>
             </div>
-            <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[138px]">
+            <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(18,16,12,.12)] shadow-[0_12px_38px_rgba(18,16,12,.055)] min-h-[138px]">
               <strong className="text-lg tracking-[-0.04em]">Lead source quality</strong>
               <p className="mt-1.5 text-[#586464] text-[15px] font-semibold">See which sources produce qualified leads vs. raw form fills. Measure average quality scores by channel.</p>
             </div>
-            <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[138px]">
+            <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(18,16,12,.12)] shadow-[0_12px_38px_rgba(18,16,12,.055)] min-h-[138px]">
               <strong className="text-lg tracking-[-0.04em]">Stripe/API trial-to-paid</strong>
               <p className="mt-1.5 text-[#586464] text-[15px] font-semibold">Track trial conversion events by acquisition channel using webhook integration recipes.</p>
             </div>

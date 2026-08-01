@@ -853,7 +853,7 @@ export default function Integrations() {
                 <>
                   <button
                     onClick={handleCopy}
-                    className="px-4 py-2.5 text-xs font-semibold bg-st-green hover:opacity-90 text-white rounded-xl transition-colors flex items-center gap-2 shadow-sm"
+                    className="px-4 py-2.5 text-xs font-semibold bg-st-lime hover:opacity-90 text-st-black rounded-xl transition-colors flex items-center gap-2 shadow-sm"
                   >
                     {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     {copied ? 'Copied' : 'Copy script'}
@@ -904,7 +904,7 @@ export default function Integrations() {
                     {!isVerified && !isPreview && (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleCopy(); }}
-                        className="px-2.5 py-1 text-xs font-semibold bg-st-green hover:opacity-90 text-white rounded-lg transition-colors flex items-center gap-1 shrink-0"
+                        className="px-2.5 py-1 text-xs font-semibold bg-st-lime hover:opacity-90 text-st-black rounded-lg transition-colors flex items-center gap-1 shrink-0"
                       >
                         {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                         {copied ? 'Copied' : 'Copy script'}
@@ -1025,7 +1025,7 @@ export default function Integrations() {
                       className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
                         stripeConnected
                           ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
-                          : 'bg-st-green hover:opacity-90 text-white'
+                          : 'bg-st-lime hover:opacity-90 text-st-black'
                       }`}
                     >
                       {stripeConnected ? 'Manage' : 'Connect'}
@@ -1155,7 +1155,7 @@ export default function Integrations() {
                       className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
                         shopifyConnected
                           ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
-                          : 'bg-st-green hover:opacity-90 text-white'
+                          : 'bg-st-lime hover:opacity-90 text-st-black'
                       }`}
                     >
                       {shopifyConnected ? 'Manage' : 'Connect'}
@@ -1535,7 +1535,7 @@ export default function Integrations() {
                         className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
                           gscIntegData?.connected
                             ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
-                            : 'bg-st-green hover:opacity-90 text-white'
+                            : 'bg-st-lime hover:opacity-90 text-st-black'
                         }`}
                       >
                         {gscIntegData?.connected ? 'Manage' : 'Connect'}
@@ -1573,7 +1573,7 @@ export default function Integrations() {
                         type="button"
                         onClick={handleConnectGsc}
                         disabled={isPreview}
-                        className="px-4 py-2 bg-st-green hover:opacity-90 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
+                        className="px-4 py-2 bg-st-lime hover:opacity-90 text-st-black text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
                       >
                         Connect Google Search Console
                       </button>

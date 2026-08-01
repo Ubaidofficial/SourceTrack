@@ -31,7 +31,7 @@ export default function Subprocessors() {
     <MarketingPage seo={SEO} hero={HERO}>
       <section className="py-[80px] bg-white text-st-black">
         <div className="max-w-[820px] mx-auto px-8">
-          <div className="rounded-2xl border border-dashed border-[rgba(31,35,35,.25)] bg-[#F7FAFA] p-5 mb-8">
+          <div className="rounded-2xl border border-dashed border-[rgba(18,16,12,.25)] bg-[#F7FAFA] p-5 mb-8">
             <span className="text-xs uppercase tracking-widest font-extrabold text-st-black block mb-1">Draft</span>
             <p className="text-sm text-[#586464] leading-[1.6]">
               This list is maintained for transparency during the private beta. Provider regions are being confirmed

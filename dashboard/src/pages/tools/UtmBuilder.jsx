@@ -55,7 +55,7 @@ export default function UtmBuilder() {
       seo={SEO}
       hero={HERO}
       heroChildren={
-        <div className="bg-white border border-[rgba(31,35,35,.10)] rounded-[26px] p-6 sm:p-7 shadow-[0_24px_80px_rgba(31,35,35,.10)]">
+        <div className="bg-white border border-[rgba(18,16,12,.10)] rounded-[26px] p-6 sm:p-7 shadow-[0_24px_80px_rgba(18,16,12,.10)]">
           <UTMBuilder />
         </div>
       }
@@ -68,7 +68,7 @@ export default function UtmBuilder() {
       }}
     >
       {/* What is a UTM-tagged URL */}
-      <section className="py-[88px] border-b border-[rgba(31,35,35,.06)]">
+      <section className="py-[88px] border-b border-[rgba(18,16,12,.06)]">
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="max-w-[760px]">
             <SectionKicker label="The basics" />
@@ -91,7 +91,7 @@ export default function UtmBuilder() {
               ['utm_content', 'Which creative or link (optional)', 'banner-top, footer-link'],
               ['utm_term', 'Paid keyword (optional)', 'running shoes'],
             ].map(([param, what, eg]) => (
-              <div key={param} className="p-5 rounded-[20px] border border-[rgba(31,35,35,.10)] bg-white shadow-[0_12px_38px_rgba(31,35,35,.05)]">
+              <div key={param} className="p-5 rounded-[20px] border border-[rgba(18,16,12,.10)] bg-white shadow-[0_12px_38px_rgba(18,16,12,.05)]">
                 <code className="text-sm font-bold text-st-black">{param}</code>
                 <p className="mt-2 text-sm text-[#586464] leading-[1.5]">{what}</p>
                 <p className="mt-2 text-xs font-mono text-st-gray">{eg}</p>
@@ -133,8 +133,8 @@ export default function UtmBuilder() {
                 ['Plans and pricing', '/pricing'],
               ].map(([label, href]) => (
                 <li key={href}>
-                  <Link to={href} className="group inline-flex items-center gap-2 text-st-black font-bold tracking-[-0.02em] hover:text-st-green transition-colors">
-                    <span className="border-b border-transparent group-hover:border-st-green">{label}</span>
+                  <Link to={href} className="group inline-flex items-center gap-2 text-st-black font-bold tracking-[-0.02em] hover:text-st-black transition-colors">
+                    <span className="border-b border-transparent group-hover:border-st-lime">{label}</span>
                     <span aria-hidden>→</span>
                   </Link>
                 </li>

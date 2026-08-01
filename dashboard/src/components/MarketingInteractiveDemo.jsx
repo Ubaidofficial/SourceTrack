@@ -51,30 +51,30 @@ export default function MarketingInteractiveDemo() {
       </div>
 
       {/* Browser frame container */}
-      <div className="relative rounded-[24px] sm:rounded-[36px] bg-[#0D1010] p-[10px] sm:p-[14px] shadow-[0_34px_110px_rgba(31,35,35,.34)] border border-white/20">
+      <div className="relative rounded-[24px] sm:rounded-[36px] bg-[#0D1010] p-[10px] sm:p-[14px] shadow-[0_34px_110px_rgba(18,16,12,.34)] border border-white/20">
         <div className="overflow-hidden rounded-[18px] sm:rounded-[26px] bg-[#111414] border border-[#2A2F2F]">
           
           {/* Top Browser Bar */}
           <div className="h-[52px] sm:h-[60px] grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-4 px-3 sm:px-[18px] bg-[#161A1A] border-b border-white/10 text-[12px] font-bold text-[#F5F8F8]">
             {/* Mac style dots */}
             <div className="flex gap-[6px] sm:gap-[7px]">
-              <span className="w-[8px] h-[8px] sm:w-[10px] sm:h-[10px] rounded-full bg-[#E54545]" />
-              <span className="w-[8px] h-[8px] sm:w-[10px] sm:h-[10px] rounded-full bg-[#FF8800]" />
-              <span className="w-[8px] h-[8px] sm:w-[10px] sm:h-[10px] rounded-full bg-[#C8F000]" />
+              <span className="w-[8px] h-[8px] sm:w-[10px] sm:h-[10px] rounded-full bg-[#C4381C]" />
+              <span className="w-[8px] h-[8px] sm:w-[10px] sm:h-[10px] rounded-full bg-[#FF7A33]" />
+              <span className="w-[8px] h-[8px] sm:w-[10px] sm:h-[10px] rounded-full bg-[#D2EC2A]" />
             </div>
 
             {/* Site Pill Search Bar */}
-            <div className="mx-auto w-[160px] sm:w-[280px] bg-[#0E1111] border border-white/10 rounded-lg py-1 px-2.5 sm:px-4 text-[11px] font-mono text-[#7D8090] text-center truncate">
+            <div className="mx-auto w-[160px] sm:w-[280px] bg-[#0E1111] border border-white/10 rounded-lg py-1 px-2.5 sm:px-4 text-[11px] font-mono text-[#6E675C] text-center truncate">
               demo.sourcetrack.ai
             </div>
 
             {/* Live details & copy */}
             <div className="flex items-center gap-3">
-              <span className="hidden md:inline text-[11px] text-[#7D8090]">
+              <span className="hidden md:inline text-[11px] text-[#6E675C]">
                 Interactive demo · sample data
               </span>
-              <span className="inline-flex items-center gap-[5px] sm:gap-[7px] rounded-full py-[4px] px-[8px] bg-[rgba(200,240,0,.12)] text-[#C8F000] text-[10px] sm:text-xs font-black">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#C8F000] animate-pulse" />Sample
+              <span className="inline-flex items-center gap-[5px] sm:gap-[7px] rounded-full py-[4px] px-[8px] bg-[rgba(210,236,42,.12)] text-[#D2EC2A] text-[10px] sm:text-xs font-black">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#D2EC2A] animate-pulse" />Sample
               </span>
             </div>
           </div>
@@ -95,7 +95,7 @@ export default function MarketingInteractiveDemo() {
                   aria-pressed={activeMode === key}
                   className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-extrabold transition-all focus:outline-none focus:ring-2 focus:ring-st-lime ${
                     activeMode === key
-                      ? 'bg-[#C8F000] text-[#111414] shadow-md'
+                      ? 'bg-[#D2EC2A] text-[#111414] shadow-md'
                       : 'text-[#B9C2C2] hover:text-white'
                   }`}
                 >
@@ -119,13 +119,13 @@ export default function MarketingInteractiveDemo() {
                 key={m.id}
                 className="bg-[#161A1A] border border-[#2E3434] rounded-xl p-3 sm:p-4 min-h-[92px] sm:min-h-[108px] flex flex-col justify-between"
               >
-                <div className="text-[#7D8090] text-[10px] sm:text-[11px] font-black uppercase tracking-[0.05em] truncate">
+                <div className="text-[#6E675C] text-[10px] sm:text-[11px] font-black uppercase tracking-[0.05em] truncate">
                   {m.label}
                 </div>
                 <div className="mt-1 text-2xl sm:text-[28px] leading-none font-black text-white tracking-[-0.04em]">
                   {m.value}
                 </div>
-                <div className={`mt-1 text-[10px] sm:text-xs font-bold ${m.isLive ? 'text-[#C8F000]' : 'text-[#18C76E]'}`}>
+                <div className={`mt-1 text-[10px] sm:text-xs font-bold ${m.isLive ? 'text-[#D2EC2A]' : 'text-[#6E675C]'}`}>
                   {m.trend}
                 </div>
               </div>
@@ -140,15 +140,15 @@ export default function MarketingInteractiveDemo() {
                   <h4 className="text-[#9DA7A7] text-[11px] font-black uppercase tracking-[0.05em]">
                     Combined Traffic &amp; {modeData.revenueLabel} Trend
                   </h4>
-                  <p className="text-[#7D8090] text-xs mt-0.5">
+                  <p className="text-[#6E675C] text-xs mt-0.5">
                     Hover over bars to inspect daily metrics (Sample data)
                   </p>
                 </div>
                 <div className="text-right text-xs bg-[#1D2222] border border-white/5 px-3 py-1.5 rounded-lg text-white font-mono">
-                  <span className="text-[#7D8090]">{hoveredDay.date}:</span>{' '}
+                  <span className="text-[#6E675C]">{hoveredDay.date}:</span>{' '}
                   <span className="text-white font-extrabold">{hoveredDay.visitors} visitors</span>{' '}
-                  <span className="text-[#7D8090]">·</span>{' '}
-                  <span className="text-[#C8F000] font-extrabold">${hoveredDay.revenue}</span>
+                  <span className="text-[#6E675C]">·</span>{' '}
+                  <span className="text-[#D2EC2A] font-extrabold">${hoveredDay.revenue}</span>
                 </div>
               </div>
 
@@ -171,7 +171,7 @@ export default function MarketingInteractiveDemo() {
                         className="w-1.5 sm:w-2.5 rounded-t-sm transition-all duration-100"
                         style={{
                           height: `${visitorsHeight}%`,
-                          backgroundColor: isHovered ? '#7D8090' : '#4E5353'
+                          backgroundColor: isHovered ? '#6E675C' : '#4E5353'
                         }}
                       />
                       {/* Revenue Bar */}
@@ -180,8 +180,8 @@ export default function MarketingInteractiveDemo() {
                         style={{
                           height: `${revenueHeight}%`,
                           background: isHovered
-                            ? 'linear-gradient(180deg, #C8F000 0%, rgba(200,240,0,0.3) 100%)'
-                            : 'linear-gradient(180deg, rgba(200,240,0,0.85) 0%, rgba(200,240,0,0.06) 100%)'
+                            ? 'linear-gradient(180deg, #D2EC2A 0%, rgba(210,236,42,0.3) 100%)'
+                            : 'linear-gradient(180deg, rgba(210,236,42,0.85) 0%, rgba(210,236,42,0.06) 100%)'
                         }}
                       />
                     </div>
@@ -190,7 +190,7 @@ export default function MarketingInteractiveDemo() {
               </div>
 
               {/* X Axis Labels */}
-              <div className="flex justify-between mt-2 text-[9px] sm:text-[10px] font-bold text-[#7D8090] uppercase tracking-wider">
+              <div className="flex justify-between mt-2 text-[9px] sm:text-[10px] font-bold text-[#6E675C] uppercase tracking-wider">
                 <span>{modeData.chartData[0].date}</span>
                 <span>{modeData.chartData[Math.floor(modeData.chartData.length / 2)].date}</span>
                 <span>{modeData.chartData[modeData.chartData.length - 1].date}</span>
@@ -218,8 +218,8 @@ export default function MarketingInteractiveDemo() {
                       onClick={() => setActiveTabA(key)}
                       className={`mr-4 pb-2 text-xs font-black transition-all border-b-2 -mb-[10px] focus:outline-none focus:text-white ${
                         activeTabA === key
-                          ? 'border-[#C8F000] text-white'
-                          : 'border-transparent text-[#7D8090] hover:text-[#B9C2C2]'
+                          ? 'border-[#D2EC2A] text-white'
+                          : 'border-transparent text-[#6E675C] hover:text-[#B9C2C2]'
                       }`}
                     >
                       {label}
@@ -230,7 +230,7 @@ export default function MarketingInteractiveDemo() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs font-semibold text-white">
                     <thead>
-                      <tr className="text-[#7D8090] border-b border-[#2A2F2F] text-[10px] font-black uppercase tracking-wider">
+                      <tr className="text-[#6E675C] border-b border-[#2A2F2F] text-[10px] font-black uppercase tracking-wider">
                         <th className="py-2 pr-2">Name</th>
                         <th className="py-2 text-right pr-2">Visitors</th>
                         <th className="py-2 text-right pr-2">Convs</th>
@@ -244,7 +244,7 @@ export default function MarketingInteractiveDemo() {
                           <tr
                             key={row.name}
                             className={`group border-b border-[#202525] last:border-0 hover:bg-white/5 transition-colors ${
-                              isSelected ? 'bg-[rgba(200,240,0,.06)] text-[#C8F000]' : ''
+                              isSelected ? 'bg-[rgba(210,236,42,.06)] text-[#D2EC2A]' : ''
                             }`}
                           >
                             <td className="py-2 pr-2 font-bold truncate max-w-[120px]">
@@ -252,10 +252,10 @@ export default function MarketingInteractiveDemo() {
                                 onClick={() => setSelectedRowName(row.name)}
                                 aria-pressed={isSelected}
                                 className={`w-full text-left font-bold focus:outline-none focus:ring-2 focus:ring-st-lime rounded px-1 -mx-1 py-1 flex items-center gap-1.5 transition-all ${
-                                  isSelected ? 'text-[#C8F000]' : 'text-white hover:text-white'
+                                  isSelected ? 'text-[#D2EC2A]' : 'text-white hover:text-white'
                                 }`}
                               >
-                                {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#C8F000] shrink-0" />}
+                                {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#D2EC2A] shrink-0" />}
                                 <span className="truncate">{row.name}</span>
                               </button>
                             </td>
@@ -263,9 +263,9 @@ export default function MarketingInteractiveDemo() {
                               {row.visitors}
                             </td>
                             <td className="py-2 text-right font-mono pr-2 text-[#DDE5E5] group-hover:text-white">
-                              {row.conversions} <span className="text-[9px] text-[#7D8090] font-normal">({row.rate})</span>
+                              {row.conversions} <span className="text-[9px] text-[#6E675C] font-normal">({row.rate})</span>
                             </td>
-                            <td className={`py-2 text-right font-extrabold ${isSelected ? 'text-[#C8F000]' : 'text-white'}`}>
+                            <td className={`py-2 text-right font-extrabold ${isSelected ? 'text-[#D2EC2A]' : 'text-white'}`}>
                               {row.revenue}
                             </td>
                           </tr>
@@ -275,7 +275,7 @@ export default function MarketingInteractiveDemo() {
                   </table>
                 </div>
               </div>
-              <div className="mt-3 text-[10px] text-[#7D8090] italic font-medium">
+              <div className="mt-3 text-[10px] text-[#6E675C] italic font-medium">
                 * Select a source button to inspect its attribution journey.
               </div>
             </div>
@@ -297,8 +297,8 @@ export default function MarketingInteractiveDemo() {
                       onClick={() => setActiveTabB(key)}
                       className={`mr-4 pb-2 text-xs font-black transition-all border-b-2 -mb-[10px] focus:outline-none focus:text-white ${
                         activeTabB === key
-                          ? 'border-[#C8F000] text-white'
-                          : 'border-transparent text-[#7D8090] hover:text-[#B9C2C2]'
+                          ? 'border-[#D2EC2A] text-white'
+                          : 'border-transparent text-[#6E675C] hover:text-[#B9C2C2]'
                       }`}
                     >
                       {label}
@@ -309,7 +309,7 @@ export default function MarketingInteractiveDemo() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs font-semibold text-white">
                     <thead>
-                      <tr className="text-[#7D8090] border-b border-[#2A2F2F] text-[10px] font-black uppercase tracking-wider">
+                      <tr className="text-[#6E675C] border-b border-[#2A2F2F] text-[10px] font-black uppercase tracking-wider">
                         <th className="py-2 pr-2">Dimension</th>
                         <th className="py-2 text-right pr-2">Visitors</th>
                         <th className="py-2 text-right">Value</th>
@@ -336,7 +336,7 @@ export default function MarketingInteractiveDemo() {
                   </table>
                 </div>
               </div>
-              <div className="mt-3 text-[10px] text-[#7D8090] font-medium uppercase tracking-wider">
+              <div className="mt-3 text-[10px] text-[#6E675C] font-medium uppercase tracking-wider">
                 Demographic split (Sample data)
               </div>
             </div>
@@ -345,10 +345,10 @@ export default function MarketingInteractiveDemo() {
             <div className="bg-[#161A1A] border border-[#2E3434] rounded-xl p-4 sm:p-5 flex flex-col justify-between min-h-[300px]">
               <div>
                 <h4 className="text-white text-xs font-black border-b border-[#2A2F2F] pb-2 mb-3">
-                  Attribution Journey — <span className="text-[#C8F000]">{journey.sourceName}</span>
+                  Attribution Journey — <span className="text-[#D2EC2A]">{journey.sourceName}</span>
                 </h4>
                 
-                <p className="text-[#7D8090] text-[10px] leading-relaxed uppercase tracking-wider font-extrabold">
+                <p className="text-[#6E675C] text-[10px] leading-relaxed uppercase tracking-wider font-extrabold">
                   Journey Timeline
                 </p>
 
@@ -357,7 +357,7 @@ export default function MarketingInteractiveDemo() {
                   {journey.steps.map((step, idx) => (
                     <React.Fragment key={idx}>
                       {idx > 0 && (
-                        <span className="text-[#7D8090] text-xs font-extrabold font-mono">
+                        <span className="text-[#6E675C] text-xs font-extrabold font-mono">
                           →
                         </span>
                       )}
@@ -377,8 +377,8 @@ export default function MarketingInteractiveDemo() {
 
                 {/* Recommended Report Template Card */}
                 {journey.recommendedTemplate && (
-                  <div className="mt-3 p-2.5 rounded-lg bg-[#C8F000]/10 border border-[#C8F000]/20 text-[10px] font-black text-st-lime">
-                    <span className="text-[#7D8090] text-[8px] uppercase tracking-wider block mb-0.5 font-bold">Recommended Template</span>
+                  <div className="mt-3 p-2.5 rounded-lg bg-[#D2EC2A]/10 border border-[#D2EC2A]/20 text-[10px] font-black text-st-lime">
+                    <span className="text-[#6E675C] text-[8px] uppercase tracking-wider block mb-0.5 font-bold">Recommended Template</span>
                     {journey.recommendedTemplate}
                   </div>
                 )}
@@ -386,38 +386,38 @@ export default function MarketingInteractiveDemo() {
                 {/* Attribution properties */}
                 <div className="grid grid-cols-2 gap-2 mt-4 text-[10px] font-bold">
                   <div className="p-2 rounded-lg bg-[#1D2222] border border-white/5 truncate">
-                    <div className="text-[#7D8090] text-[8px] uppercase tracking-wider">First Touch</div>
+                    <div className="text-[#6E675C] text-[8px] uppercase tracking-wider">First Touch</div>
                     <div className="mt-0.5 text-white truncate" title={journey.firstTouch}>{journey.firstTouch}</div>
                   </div>
                   <div className="p-2 rounded-lg bg-[#1D2222] border border-white/5 truncate">
-                    <div className="text-[#7D8090] text-[8px] uppercase tracking-wider">Last Touch</div>
+                    <div className="text-[#6E675C] text-[8px] uppercase tracking-wider">Last Touch</div>
                     <div className="mt-0.5 text-white truncate" title={journey.lastTouch}>{journey.lastTouch}</div>
                   </div>
                   <div className="p-2 rounded-lg bg-[#1D2222] border border-white/5 truncate">
-                    <div className="text-[#7D8090] text-[8px] uppercase tracking-wider">Attributed Value</div>
-                    <div className="mt-0.5 text-[#C8F000] truncate">{journey.revenue}</div>
+                    <div className="text-[#6E675C] text-[8px] uppercase tracking-wider">Attributed Value</div>
+                    <div className="mt-0.5 text-[#D2EC2A] truncate">{journey.revenue}</div>
                   </div>
                   <div className="p-2 rounded-lg bg-[#1D2222] border border-white/5 truncate">
-                    <div className="text-[#7D8090] text-[8px] uppercase tracking-wider">Attribution Status</div>
-                    <div className="mt-0.5 text-[#18C76E] truncate" title={journey.status}>{journey.status}</div>
+                    <div className="text-[#6E675C] text-[8px] uppercase tracking-wider">Attribution Status</div>
+                    <div className="mt-0.5 text-[#D2EC2A] truncate" title={journey.status}>{journey.status}</div>
                   </div>
                 </div>
 
                 <div className="mt-3 p-2 rounded-lg bg-[#1D2222] border border-white/5 text-[10px] font-bold">
                   <div className="flex justify-between items-center border-b border-white/5 pb-1">
-                    <span className="text-[#7D8090] text-[8px] uppercase tracking-wider">Stitching Method</span>
+                    <span className="text-[#6E675C] text-[8px] uppercase tracking-wider">Stitching Method</span>
                     <span className="text-white font-mono text-[9px]">{journey.stitchingMethod}</span>
                   </div>
                   <div className="flex justify-between items-center pt-1 text-[10px]">
-                    <span className="text-[#7D8090] text-[8px] uppercase tracking-wider">Conversion Type</span>
+                    <span className="text-[#6E675C] text-[8px] uppercase tracking-wider">Conversion Type</span>
                     <span className="text-white text-[9px]">{journey.conversionType}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-[#2A2F2F] text-[10px] text-[#7D8090] flex items-center justify-between">
+              <div className="mt-4 pt-3 border-t border-[#2A2F2F] text-[10px] text-[#6E675C] flex items-center justify-between">
                 <span>Stitched visitor journey</span>
-                <span className="px-1.5 py-0.5 bg-[#252B2B] text-[#C8F000] text-[9px] rounded font-black font-mono">STITCHED</span>
+                <span className="px-1.5 py-0.5 bg-[#252B2B] text-[#D2EC2A] text-[9px] rounded font-black font-mono">STITCHED</span>
               </div>
             </div>
 
@@ -430,13 +430,13 @@ export default function MarketingInteractiveDemo() {
       <div className="mt-8 text-center flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
         <Link
           to="/signup"
-          className="w-full sm:w-auto inline-flex items-center justify-center min-h-[50px] px-8 rounded-full bg-[#C8F000] text-[#111414] text-[15px] font-extrabold tracking-[-0.02em] shadow-[0_12px_44px_rgba(200,240,0,0.18)] hover:bg-[#D9FA64] transition-all hover:-translate-y-px"
+          className="w-full sm:w-auto inline-flex items-center justify-center min-h-[50px] px-8 rounded-full bg-[#D2EC2A] text-[#111414] text-[15px] font-extrabold tracking-[-0.02em] shadow-[0_12px_44px_rgba(210,236,42,0.18)] hover:bg-[#BCD41C] transition-all hover:-translate-y-px"
         >
           Start tracking free
         </Link>
         <Link
           to="/pricing"
-          className="w-full sm:w-auto inline-flex items-center justify-center min-h-[50px] px-8 rounded-full border border-[rgba(31,35,35,.12)] bg-white text-st-black text-[15px] font-extrabold tracking-[-0.02em] hover:border-[rgba(31,35,35,.24)] transition-all hover:-translate-y-px"
+          className="w-full sm:w-auto inline-flex items-center justify-center min-h-[50px] px-8 rounded-full border border-[rgba(18,16,12,.12)] bg-white text-st-black text-[15px] font-extrabold tracking-[-0.02em] hover:border-[rgba(18,16,12,.24)] transition-all hover:-translate-y-px"
         >
           See pricing
         </Link>

@@ -45,7 +45,7 @@ export default function Security() {
               </p>
             </div>
 
-            <hr className="border-[rgba(31,35,35,.08)]" />
+            <hr className="border-[rgba(18,16,12,.08)]" />
 
             {/* 2. What conversion data customers may send */}
             <div>
@@ -62,7 +62,7 @@ export default function Security() {
               </ul>
             </div>
 
-            <hr className="border-[rgba(31,35,35,.08)]" />
+            <hr className="border-[rgba(18,16,12,.08)]" />
 
             {/* 3. How site keys/API tokens are handled */}
             <div>
@@ -77,7 +77,7 @@ export default function Security() {
               </ul>
             </div>
 
-            <hr className="border-[rgba(31,35,35,.08)]" />
+            <hr className="border-[rgba(18,16,12,.08)]" />
 
             {/* 4. How manual/API integrations should be secured */}
             <div>
@@ -93,7 +93,7 @@ export default function Security() {
               </ul>
             </div>
 
-            <hr className="border-[rgba(31,35,35,.08)]" />
+            <hr className="border-[rgba(18,16,12,.08)]" />
 
             {/* 5. Data minimization guidance */}
             <div>
@@ -104,7 +104,7 @@ export default function Security() {
               </p>
             </div>
 
-            <hr className="border-[rgba(31,35,35,.08)]" />
+            <hr className="border-[rgba(18,16,12,.08)]" />
 
             {/* 6. Contact */}
             <div>

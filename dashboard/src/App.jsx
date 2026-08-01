@@ -249,7 +249,7 @@ function ProtectedRoute({ children }) {
                 setOnboarding({ loading: true, completed: false, hasCompletedSite: false, hasSite: false, errorKind: null })
                 checkOnboarding()
               }}
-              className="px-5 py-2.5 rounded-xl bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] text-sm font-bold hover:opacity-90"
+              className="px-5 py-2.5 rounded-xl bg-[#12100C] dark:bg-st-lime text-white dark:text-[#12100C] text-sm font-bold hover:opacity-90"
             >
               Try again
             </button>
