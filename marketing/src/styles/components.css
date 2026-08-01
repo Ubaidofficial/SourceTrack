@@ -188,7 +188,7 @@
    dark-on-lime register as the pill badges and primary buttons.
    Replaces gradient-text-hero, which filled the <mark> with
    linear-gradient(270deg, #FFFFFF 2.46%, #bc88ff 50.39%, #FFFFFF 98.32%) via
-   background-clip:text. Both of its end stops were pure white, so on the #F5F4F0 body the
+   background-clip:text. Both of its end stops were pure white, so on the #F7F4ED body the
    headline faded to invisible at both ends with pale violet in the middle — and the violet
    was a design.md 3.5 "purple gradients" violation. It affected the <mark> in the H1 of six
    of the seven built pages, not just the homepage.

@@ -96,11 +96,11 @@ const Statistics = ({ data }: { data: PageData }) => {
                       gradientUnits="userSpaceOnUse"
                     >
                       <stop
-                        stopColor={primaryColor ? primaryColor : "#B8DD00"}
+                        stopColor={primaryColor ? primaryColor : "#BCD41C"}
                       />
                       <stop
                         offset="1"
-                        stopColor={secondaryColor ? secondaryColor : "#C8F000"}
+                        stopColor={secondaryColor ? secondaryColor : "#D2EC2A"}
                       />
                     </linearGradient>
                   </defs>

@@ -52,7 +52,7 @@ const GCLID_TEST_URL = `https://yourdomain.com/?gclid=test_gclid_123`;
   <section class="py-16 bg-[#0E1111] text-white">
     <div class="max-w-[800px] mx-auto px-4 space-y-8">
       <div class="space-y-4">
-        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#C8F000]">&larr; Back to Docs</a>
+        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#D2EC2A]">&larr; Back to Docs</a>
         <h1 class="text-4xl font-black text-white tracking-tight">Google Ads Setup Guide</h1>
         <p class="text-gray-400 text-lg leading-relaxed">
           Configure Google Ads with our tracking template to capture Google Click IDs, ValueTrack
@@ -82,10 +82,10 @@ const GCLID_TEST_URL = `https://yourdomain.com/?gclid=test_gclid_123`;
         <h4 class="font-extrabold text-[#7CC4FF] mb-2 text-sm">Performance Max &amp; Keywordless Traffic:</h4>
         <p class="text-xs text-[#A8CFF0] leading-relaxed">
           For modern Google Ads campaigns like <strong>Performance Max (PMax)</strong> or Dynamic Search
-          Ads (DSA), Google does not use keywords. Therefore, the <code class="text-[#C8F000]">{KEYWORD_MACRO}</code>
+          Ads (DSA), Google does not use keywords. Therefore, the <code class="text-[#D2EC2A]">{KEYWORD_MACRO}</code>
           placeholder will often resolve to a blank value. By capturing
-          <code class="text-[#C8F000]">st_campaign_id</code>, <code class="text-[#C8F000]">st_adgroup_id</code>,
-          and <code class="text-[#C8F000]">st_ad_id</code> directly from Google's ValueTrack macro engine,
+          <code class="text-[#D2EC2A]">st_campaign_id</code>, <code class="text-[#D2EC2A]">st_adgroup_id</code>,
+          and <code class="text-[#D2EC2A]">st_ad_id</code> directly from Google's ValueTrack macro engine,
           SourceTrack can still attribute conversions to the exact campaign and asset groups without
           relying on keyword strings.
         </p>
@@ -132,11 +132,11 @@ const GCLID_TEST_URL = `https://yourdomain.com/?gclid=test_gclid_123`;
         <ol class="list-decimal pl-5 space-y-2 text-sm text-gray-300 leading-relaxed">
           <li>
             Open the
-            <a href="https://app.sourcetrack.ai/app/integrations" class="text-[#C8F000] font-bold hover:underline">Integrations</a>
+            <a href="https://app.sourcetrack.ai/app/integrations" class="text-[#D2EC2A] font-bold hover:underline">Integrations</a>
             page.
           </li>
           <li>Look at the <strong>Google Ads Setup Checklist</strong> card.</li>
-          <li>Click your Google Ads links or send test traffic using a GCLID (e.g. <code class="text-[#C8F000]">{GCLID_TEST_URL}</code>).</li>
+          <li>Click your Google Ads links or send test traffic using a GCLID (e.g. <code class="text-[#D2EC2A]">{GCLID_TEST_URL}</code>).</li>
           <li>Refresh the checklist or visit the <strong>Event Debugger</strong> to verify that click IDs and parameters are captured.</li>
         </ol>
       </section>

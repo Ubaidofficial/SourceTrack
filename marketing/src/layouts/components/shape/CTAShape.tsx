@@ -12,9 +12,9 @@ function seededRand(seed: number) {
 
 const CTAShape = () => {
   const primaryColor =
-    theme?.colors?.default?.theme_color?.primary ?? "#B8DD00";
+    theme?.colors?.default?.theme_color?.primary ?? "#BCD41C";
   const secondaryColor =
-    theme?.colors?.default?.theme_color?.secondary ?? "#C8F000";
+    theme?.colors?.default?.theme_color?.secondary ?? "#D2EC2A";
 
 
   /* stable star field */
@@ -137,7 +137,7 @@ const CTAShape = () => {
             keySplines="0.42 0 0.58 1;0.42 0 0.58 1"
             repeatCount="indefinite"
           />
-          <stop stopColor={primaryColor ? primaryColor : "#B8DD00"}>
+          <stop stopColor={primaryColor ? primaryColor : "#BCD41C"}>
             <animate
               attributeName="stop-opacity"
               values="0.95;1;0.95"
@@ -150,7 +150,7 @@ const CTAShape = () => {
           </stop>
           <stop
             offset="1"
-            stopColor={secondaryColor ? secondaryColor : "#C8F000"}
+            stopColor={secondaryColor ? secondaryColor : "#D2EC2A"}
           >
             <animate
               attributeName="stop-opacity"
@@ -198,7 +198,7 @@ const CTAShape = () => {
             keySplines="0.42 0 0.58 1;0.42 0 0.58 1"
             repeatCount="indefinite"
           />
-          <stop stopColor={primaryColor ? primaryColor : "#B8DD00"}>
+          <stop stopColor={primaryColor ? primaryColor : "#BCD41C"}>
             <animate
               attributeName="stop-opacity"
               values="0.92;1;0.92"
@@ -211,7 +211,7 @@ const CTAShape = () => {
           </stop>
           <stop
             offset="1"
-            stopColor={secondaryColor ? secondaryColor : "#C8F000"}
+            stopColor={secondaryColor ? secondaryColor : "#D2EC2A"}
           >
             <animate
               attributeName="stop-opacity"

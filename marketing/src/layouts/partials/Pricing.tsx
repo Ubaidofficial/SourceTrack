@@ -194,7 +194,7 @@ const Pricing = ({
                               <g opacity="0.3" filter="url(#filter0_f_40_2892)"><circle cx="28" cy="40" r="20" fill="url(#paint0_linear_40_2892)" /></g>
                               <defs>
                                 <filter id="filter0_f_40_2892" x="-12" y="0" width="80" height="80" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB"><feFlood floodOpacity="0" result="BackgroundImageFix" /><feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" /><feGaussianBlur stdDeviation="10" result="effect1_foregroundBlur_40_2892" /></filter>
-                                <linearGradient id="paint0_linear_40_2892" x1="8" y1="40" x2="48" y2="40" gradientUnits="userSpaceOnUse"><stop stopColor="#B8DD00" /><stop offset="1" stopColor="#C8F000" /></linearGradient>
+                                <linearGradient id="paint0_linear_40_2892" x1="8" y1="40" x2="48" y2="40" gradientUnits="userSpaceOnUse"><stop stopColor="#BCD41C" /><stop offset="1" stopColor="#D2EC2A" /></linearGradient>
                               </defs>
                             </svg>
                           </div>
@@ -297,7 +297,7 @@ const Pricing = ({
                           <g opacity="0.3" filter="url(#filter0_f_40_2892)"><circle cx="28" cy="40" r="20" fill="url(#paint0_linear_40_2892)" /></g>
                           <defs>
                             <filter id="filter0_f_40_2892" x="-12" y="0" width="80" height="80" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB"><feFlood floodOpacity="0" result="BackgroundImageFix" /><feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" /><feGaussianBlur stdDeviation="10" result="effect1_foregroundBlur_40_2892" /></filter>
-                            <linearGradient id="paint0_linear_40_2892" x1="8" y1="40" x2="48" y2="40" gradientUnits="userSpaceOnUse"><stop stopColor="#B8DD00" /><stop offset="1" stopColor="#C8F000" /></linearGradient>
+                            <linearGradient id="paint0_linear_40_2892" x1="8" y1="40" x2="48" y2="40" gradientUnits="userSpaceOnUse"><stop stopColor="#BCD41C" /><stop offset="1" stopColor="#D2EC2A" /></linearGradient>
                           </defs>
                         </svg>
                       </div>
