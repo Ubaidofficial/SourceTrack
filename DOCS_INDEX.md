@@ -50,6 +50,7 @@ Trust tier per doc. **Precedence when sources conflict:** code → `KNOWN_ISSUES
 | File | Purpose | Tier |
 |---|---|---|
 | `SESSION_STATE.md` | Current session, branch, blockers, active work. | Maintained |
+| `SESSION_HANDOFF_2026-08-01.md` | Frozen point-in-time handoff for the 2026-08-01 thread (GDPR erasure-suppression arc #540→#554, Sitepins tiers 1–3, the KNOWN_ISSUES batch). Dated snapshot — **not** a rolling doc; do not edit it forward. Same pattern as `SESSION_HANDOFF_2026-07-26.md`. | Historical |
 
 *(`SESSION_HANDOFF.md` and `SESSION_LOG.md` — the rolling session narrative — were archived 2026-07-24 → `docs/archive/2026-07/`, superseded by `NEXT_SESSION_PROMPT.md §0.5`; see the dated section below.)*
 
