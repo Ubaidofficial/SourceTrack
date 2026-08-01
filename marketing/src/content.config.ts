@@ -81,6 +81,14 @@ const standaloneCollection = defineCollection({
   schema: z.object({}).catchall(z.any()),
 });
 
+// Glossary collection — one file per docs-hub glossary term. A collection rather than a nested
+// YAML array so terms can be added, edited and reordered individually; `order` in the frontmatter
+// fixes the sequence, because the glob loader sorts by id and would otherwise reshuffle them.
+const glossaryCollection = defineCollection({
+  loader: glob({ pattern: "**/*.{md,mdx}", base: "src/content/glossary" }),
+  schema: z.object({}).catchall(z.any()),
+});
+
 // Export collections
 export const collections = {
   homepage: homepageCollection,
@@ -93,4 +101,5 @@ export const collections = {
   sections: sectionsCollection,
   developers: developersCollection,
   standalone: standaloneCollection,
+  glossary: glossaryCollection,
 };

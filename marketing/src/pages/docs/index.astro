@@ -1,44 +1,43 @@
 ---
-// NOT a stub, unlike the other three pages in this batch — this hub already carried nine
-// real link cards (4280 B against DocsHome.jsx's 3874 B), so "replace the stub prose
-// wholesale" does not apply here and would have destroyed working content.
+// Hub copy lives in content/standalone/docs-hub.md; the seven glossary terms are one file each
+// in the `glossary` collection. Still verbatim from GLOSSARY in DocsHome.jsx — two bodies carry
+// inline <code>, kept as HTML strings and rendered with set:html exactly as before.
 //
-// The port is therefore ADDITIVE: the only real content DocsHome.jsx has that this page
-// lacked is its seven-term glossary, added below verbatim. Its card grid is NOT ported,
-// because DocsHome derives cards from dashboard/src/components/docs/docsManifest.js —
-// porting that would mean either duplicating the manifest here (a second list to drift) or
-// porting the manifest itself, which is outside a four-page content batch.
+// The nine link cards below stay inline: they are route navigation, and this batch is scoped to
+// page copy. docs/index.astro is the ONE page in this directory the docs-mirror parity guard
+// deliberately excludes (DocsHome's card grid derives from docsManifest.js, so it is not shared
+// prose) — which is why it can move to a content model while its ten siblings currently cannot.
+//
+// The card grid is still NOT ported from DocsHome.jsx, which derives its cards from
+// dashboard/src/components/docs/docsManifest.js: porting it would mean either duplicating that
+// manifest here (a second list to drift) or porting the manifest itself.
 import Base from "@/layouts/Base.astro";
+import { getCollection } from "astro:content";
+import { getListPage } from "@/lib/contentParser";
 
-// Verbatim from GLOSSARY in dashboard/src/pages/docs/DocsHome.jsx. The source renders two
-// of these bodies as JSX with inline <code>; expressed here as pre-marked HTML strings and
-// rendered with set:html so the code formatting survives the port intact.
-const GLOSSARY = [
-  { term: 'Tracker Script', body: 'The lightweight JS snippet that records visitor sessions and referrers.' },
-  { term: 'Site Key', body: 'The public <code class="text-[#C8F000]">st_</code> identifier that authorizes your script to submit data.' },
-  { term: 'Pageview', body: 'An event recorded automatically each time a visitor loads a page or route.' },
-  { term: 'Conversion', body: 'A tracked action — signup, demo, or purchase — you attribute to a source.' },
-  { term: 'Source & Referrer', body: 'The channel that sent the visitor (e.g. <code class="text-[#C8F000]">google</code> or direct).' },
-  { term: 'UTMs & Click IDs', body: 'URL tags (<code class="text-[#C8F000]">utm_source</code>) and ad click IDs (<code class="text-[#C8F000]">gclid</code>) that map paid campaigns.' },
-  { term: 'Webhook', body: 'A server-to-server message reporting order value from Stripe or Shopify.' }
-];
+const { frontmatter } = await getListPage("standalone/docs-hub.md");
+const { title, description, badge, heading, heading_accent, paragraph, glossary_heading } = frontmatter;
+
+const GLOSSARY = (await getCollection("glossary"))
+  .map((e: any) => e.data)
+  .sort((a: any, b: any) => a.order - b.order);
 ---
 
 <Base
-  title="SourceTrack Documentation & Integration Guides"
-  description="Step-by-step installation guides, platform walkthroughs, and setup recipes for SourceTrack."
+  title={title}
+  description={description}
 >
   <section class="py-16 bg-[#0E1111] text-white">
     <div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
       <span class="inline-block px-3 py-1 text-xs font-black uppercase tracking-widest text-[#0F1012] bg-[#C8F000] rounded-full">
-        Documentation Home
+        {badge}
       </span>
       <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight text-white">
-        SourceTrack Docs & <br />
-        <span class="text-[#C8F000]">Platform Guides</span>
+        {heading} <br />
+        <span class="text-[#C8F000]">{heading_accent}</span>
       </h1>
       <p class="max-w-2xl mx-auto text-gray-400 text-base sm:text-lg leading-relaxed">
-        Everything you need to set up tracking, connect payment gateways, and start inspecting customer journeys in minutes.
+        {paragraph}
       </p>
     </div>
   </section>
@@ -88,7 +87,7 @@ const GLOSSARY = [
     <div class="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
       <div class="bg-[#161719] border border-[#2A2C30] rounded-2xl p-6 sm:p-8 space-y-4">
         <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">
-          Glossary: Key Concepts
+          {glossary_heading}
         </h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
           {GLOSSARY.map((g) => (
