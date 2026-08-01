@@ -1,18 +1,9 @@
 ---
 import Base from "@/layouts/Base.astro";
+import { getListPage } from "@/lib/contentParser";
 import CallToAction from "@/partials/CallToAction.astro";
 
-const callToAction = {
-  frontmatter: {
-    title: "Track form submits and qualified lead sources.",
-    subtitle: "Identify which channels generate your highest-quality form conversions.",
-    button: {
-      enable: true,
-      label: "Start free trial",
-      link: "https://app.sourcetrack.ai/signup"
-    }
-  }
-};
+const callToAction = await getListPage("standalone/solutions/lead-gen.md");
 ---
 
 <Base

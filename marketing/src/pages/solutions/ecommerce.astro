@@ -1,19 +1,10 @@
 ---
 import Base from "@/layouts/Base.astro";
+import { getListPage } from "@/lib/contentParser";
 import CallToAction from "@/partials/CallToAction.astro";
 import MarketingBeforeAfter from "@/components/MarketingBeforeAfter";
 
-const callToAction = {
-  frontmatter: {
-    title: "Start attributing real Shopify sales today.",
-    subtitle: "Stitch ad clicks, AI search comparisons, and Shopify orders in 5 minutes.",
-    button: {
-      enable: true,
-      label: "Start free trial",
-      link: "https://app.sourcetrack.ai/signup"
-    }
-  }
-};
+const callToAction = await getListPage("standalone/solutions/ecommerce.md");
 ---
 
 <Base

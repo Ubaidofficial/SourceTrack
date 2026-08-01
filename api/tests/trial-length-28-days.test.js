@@ -34,7 +34,9 @@ const EXPECTED = [
   ['marketing/src/content/homepage/-index.md', 'Start 28-day free trial', 1],
   ['marketing/src/content/sections/call-to-action.md', 'Start 28-day free trial', 1],
   ['marketing/src/content/sections/pricing.md', 'Start 28-day free trial', 2],
-  ['marketing/src/pages/solutions/saas.astro', 'Start 28-day free trial', 1],
+  // Moved out of solutions/saas.astro when that page's CTA became content-backed — the string
+  // itself is unchanged, only its home.
+  ['marketing/src/content/standalone/solutions/saas.md', 'Start 28-day free trial', 1],
   ['marketing/src/content/sections/faq.md', 'starts on a 28-day trial', 1]
 ]
 

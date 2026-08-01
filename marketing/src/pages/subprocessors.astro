@@ -1,12 +1,16 @@
 ---
 import Base from "@/layouts/Base.astro";
+import { getListPage } from "@/lib/contentParser";
+
+const { frontmatter } = await getListPage("standalone/subprocessors.md");
+const { title, description, heading, paragraph } = frontmatter;
 ---
 
-<Base title="Subprocessors & Infrastructure Partners — SourceTrack" description="List of third-party infrastructure subprocessors used by SourceTrack.">
+<Base title={title} description={description}>
   <section class="py-16 bg-[#0E1111] text-white">
     <div class="max-w-[800px] mx-auto px-4 space-y-6">
-      <h1 class="text-4xl font-black text-white">Subprocessor Inventory</h1>
-      <p class="text-gray-400 text-lg">SourceTrack uses the following sub-processors for hosting, database persistence, and analytics ingestion:</p>
+      <h1 class="text-4xl font-black text-white">{heading}</h1>
+      <p class="text-gray-400 text-lg">{paragraph}</p>
       <div class="bg-[#161719] p-6 rounded-2xl border border-[#2A2C30] space-y-4">
         <div class="flex justify-between items-center border-b border-[#2A2C30] pb-3">
           <span class="font-bold text-[#C8F000]">Supabase Inc.</span>

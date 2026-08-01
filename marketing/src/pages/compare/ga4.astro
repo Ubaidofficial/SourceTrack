@@ -1,19 +1,15 @@
 ---
+// Copy lives in content/standalone/compare/ga4.md — hero strings, the four comparison cards,
+// and the CTA. Grid, card chrome, and every Tailwind class stay here: `highlight` is the only
+// content-side switch, and it drives the one accent variant the SourceTrack card already had.
 import Base from "@/layouts/Base.astro";
+import { getListPage } from "@/lib/contentParser";
 import CallToAction from "@/partials/CallToAction.astro";
 import MarketingBeforeAfter from "@/components/MarketingBeforeAfter";
 
-const callToAction = {
-  frontmatter: {
-    title: "See it on your own traffic.",
-    subtitle: "Start free — no card required — and have your first attributed customer journey today.",
-    button: {
-      enable: true,
-      label: "Start free trial",
-      link: "https://app.sourcetrack.ai/signup"
-    }
-  }
-};
+const { frontmatter } = await getListPage("standalone/compare/ga4.md");
+const { title, description, badge, heading, heading_accent, paragraph, comparison_cards } = frontmatter;
+const callToAction = { frontmatter: frontmatter.cta };
 
 const breadcrumbSchema = {
   "@context": "https://schema.org",
@@ -27,22 +23,22 @@ const breadcrumbSchema = {
 ---
 
 <Base
-  title="SourceTrack vs GA4 & Alternatives — Founder-Simple Attribution"
-  description="How SourceTrack compares to GA4, Plausible, and enterprise tools: privacy-first attribution with AI-referral and SEO-revenue tracking, no CRM required."
+  title={title}
+  description={description}
   canonical="https://www.sourcetrack.ai/compare/ga4"
   structuredData={[breadcrumbSchema]}
 >
   <section class="py-16 bg-[#0E1111] text-white">
     <div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
       <span class="inline-block px-3 py-1 text-xs font-black uppercase tracking-widest text-[#0F1012] bg-[#C8F000] rounded-full">
-        Comparison Overview
+        {badge}
       </span>
       <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight text-white">
-        Four Ways to Answer <br />
-        <span class="text-[#C8F000]">“Where do my customers come from?”</span>
+        {heading} <br />
+        <span class="text-[#C8F000]">{heading_accent}</span>
       </h1>
       <p class="max-w-2xl mx-auto text-gray-400 text-base sm:text-lg leading-relaxed">
-        Free analytics measure pageviews, not revenue. Form-trackers require a CRM. Enterprise platforms are heavy and demo-gated. SourceTrack is the simple, private middle.
+        {paragraph}
       </p>
     </div>
   </section>
@@ -56,37 +52,15 @@ const breadcrumbSchema = {
 
   <section class="py-16 bg-[#161719] text-white">
     <div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      <div class="bg-[#1C1D20] p-6 rounded-2xl border border-[#2A2C30] space-y-2">
-        <h3 class="text-xl font-bold text-white">Free Analytics</h3>
-        <span class="text-xs font-extrabold text-gray-400 block">GA4, Plausible</span>
-        <p class="text-sm text-gray-400 leading-relaxed">
-          Great for raw pageviews, weak on which source makes money. Built to measure traffic, not revenue.
-        </p>
-      </div>
-
-      <div class="bg-[#1C1D20] p-6 rounded-2xl border border-[#2A2C30] space-y-2">
-        <h3 class="text-xl font-bold text-white">Form Trackers</h3>
-        <span class="text-xs font-extrabold text-gray-400 block">Attributer, LeadSources</span>
-        <p class="text-sm text-gray-400 leading-relaxed">
-          Clear and simple, but exist to pipe attribution into a CRM. Without a CRM, they provide less value.
-        </p>
-      </div>
-
-      <div class="bg-[#1C1D20] p-6 rounded-2xl border border-[#2A2C30] space-y-2">
-        <h3 class="text-xl font-bold text-white">Enterprise Platforms</h3>
-        <span class="text-xs font-extrabold text-gray-400 block">Cometly, SourceLoop, Ruler</span>
-        <p class="text-sm text-gray-400 leading-relaxed">
-          Powerful ad-cost ROAS and two-way CRM sync. Also heavier, pricier, and demo-gated for RevOps teams.
-        </p>
-      </div>
-
-      <div class="bg-[#1C1D20] p-6 rounded-2xl border border-[#C8F000] space-y-2">
-        <h3 class="text-xl font-bold text-[#C8F000]">SourceTrack</h3>
-        <span class="text-xs font-extrabold text-[#C8F000] block">The Simple Private Middle</span>
-        <p class="text-sm text-gray-300 leading-relaxed">
-          The source behind every lead and sale, AI and SEO included, with zero CRM and no stack to run. Built for founders.
-        </p>
-      </div>
+      {comparison_cards.map((card: any) => (
+        <div class={`bg-[#1C1D20] p-6 rounded-2xl border space-y-2 ${card.highlight ? "border-[#C8F000]" : "border-[#2A2C30]"}`}>
+          <h3 class={`text-xl font-bold ${card.highlight ? "text-[#C8F000]" : "text-white"}`}>{card.title}</h3>
+          <span class={`text-xs font-extrabold block ${card.highlight ? "text-[#C8F000]" : "text-gray-400"}`}>{card.subtitle}</span>
+          <p class={`text-sm leading-relaxed ${card.highlight ? "text-gray-300" : "text-gray-400"}`}>
+            {card.description}
+          </p>
+        </div>
+      ))}
     </div>
   </section>
 
