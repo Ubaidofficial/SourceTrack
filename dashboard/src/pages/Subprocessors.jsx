@@ -31,15 +31,15 @@ export default function Subprocessors() {
     <MarketingPage seo={SEO} hero={HERO}>
       <section className="py-[80px] bg-white text-st-black">
         <div className="max-w-[820px] mx-auto px-8">
-          <div className="rounded-2xl border border-dashed border-[rgba(18,16,12,.25)] bg-[#F7FAFA] p-5 mb-8">
+          <div className="rounded-2xl border border-dashed border-[rgba(18,16,12,.25)] bg-[#F7F4ED] p-5 mb-8">
             <span className="text-xs uppercase tracking-widest font-extrabold text-st-black block mb-1">Draft</span>
-            <p className="text-sm text-[#586464] leading-[1.6]">
+            <p className="text-sm text-[#6E675C] leading-[1.6]">
               This list is maintained for transparency during the private beta. Provider regions are being confirmed
               before launch — treat regions marked here as provisional until this notice is removed.
             </p>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-[#E5ECEC]">
+          <div className="overflow-x-auto rounded-2xl border border-[#F1EDE3]">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="bg-st-black text-white text-xs uppercase tracking-wider">
@@ -50,9 +50,9 @@ export default function Subprocessors() {
               </thead>
               <tbody>
                 {ROWS.map(([name, purpose, region]) => (
-                  <tr key={name} className="border-b border-[#E5ECEC] last:border-0">
+                  <tr key={name} className="border-b border-[#F1EDE3] last:border-0">
                     <td className="py-3 px-4 font-extrabold text-st-black">{name}</td>
-                    <td className="py-3 px-4 text-[#586464]">{purpose}</td>
+                    <td className="py-3 px-4 text-[#6E675C]">{purpose}</td>
                     <td className="py-3 px-4 font-bold text-st-black">{region}</td>
                   </tr>
                 ))}
@@ -60,7 +60,7 @@ export default function Subprocessors() {
             </table>
           </div>
 
-          <p className="mt-6 text-sm text-[#586464] leading-[1.6]">
+          <p className="mt-6 text-sm text-[#6E675C] leading-[1.6]">
             Core customer data (database and hosting) is stored in the EU. Some sub-processors operate outside the EU, so
             “stored in the EU” refers to core data storage — not a claim that all processing happens in the EU. To be
             notified of changes to this list, email{' '}

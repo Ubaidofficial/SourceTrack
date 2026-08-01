@@ -82,7 +82,7 @@ export default function Landing() {
     >
 
       {/* Interactive Demo Section — fixture product preview (attribution story) */}
-      <section className="py-[72px] border-b border-[rgba(18,16,12,.06)] bg-[#F7FAFA]">
+      <section className="py-[72px] border-b border-[rgba(18,16,12,.06)] bg-[#F7F4ED]">
         <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8">
           <MarketingInteractiveDemo />
         </div>
@@ -91,9 +91,9 @@ export default function Landing() {
       {/* Social proof — PLACEHOLDER (visible TODO; no fabricated logos/quotes/counts) */}
       <section className="py-[56px] border-b border-[rgba(18,16,12,.06)] bg-white">
         <div className="max-w-[860px] mx-auto px-8">
-          <div className="rounded-2xl border border-dashed border-[rgba(18,16,12,.22)] bg-[#F7FAFA] p-6 text-center">
+          <div className="rounded-2xl border border-dashed border-[rgba(18,16,12,.22)] bg-[#F7F4ED] p-6 text-center">
             <strong className="block text-st-black text-sm font-extrabold tracking-[-0.02em]">[ TODO — social proof ]</strong>
-            <p className="mt-1.5 text-[#586464] text-sm leading-[1.55]">
+            <p className="mt-1.5 text-[#6E675C] text-sm leading-[1.55]">
               No fabricated logos, quotes, or user counts. Before publishing, add a real beta quote, a single honest line
               (e.g. &ldquo;Built by a founder who got tired of GA4&rdquo;), or leave this blank. Do not borrow competitors&rsquo; numbers.
             </p>
@@ -102,7 +102,7 @@ export default function Landing() {
       </section>
 
       {/* The problem */}
-      <section className="py-[96px] bg-[#F7FAFA] border-b border-[rgba(18,16,12,.06)]">
+      <section className="py-[96px] bg-[#F7F4ED] border-b border-[rgba(18,16,12,.06)]">
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-7">
             <div>
@@ -111,7 +111,7 @@ export default function Landing() {
                 GA4 buries the one answer you need.
               </h2>
             </div>
-            <p className="self-end text-[#586464] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
+            <p className="self-end text-[#6E675C] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
               GA4 hides the answer you need under a hundred you don&rsquo;t. Enterprise attribution tools want your ad budget,
               your CRM, and a sales call before you see a number. SourceTrack is the third option: the source behind every
               lead and sale, readable in five seconds, set up in five minutes.
@@ -134,7 +134,7 @@ export default function Landing() {
           <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black">
             Find what&rsquo;s working in 3 steps.
           </h2>
-          <p className="mt-5 max-w-[620px] mx-auto text-[#B9C2C2] text-lg leading-[1.55]">
+          <p className="mt-5 max-w-[620px] mx-auto text-[#D6CDBB] text-lg leading-[1.55]">
             No long implementation. Install one script, connect your events, and see which sources actually drive leads and revenue.
           </p>
 
@@ -158,7 +158,7 @@ export default function Landing() {
                 The plain answer to &ldquo;where is my growth coming from?&rdquo;
               </h2>
             </div>
-            <p className="self-end text-[#586464] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
+            <p className="self-end text-[#6E675C] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
               Go beyond UTMs and last-click. SourceTrack connects sources, search queries, AI tools, and journeys to the
               leads and customers they actually produce — without a CRM or a heavy stack.
             </p>
@@ -181,14 +181,14 @@ export default function Landing() {
       </section>
 
       {/* Showcase — AI sources */}
-      <section className="py-[96px] bg-[#F7FAFA] border-y border-[rgba(18,16,12,.06)]">
+      <section className="py-[96px] bg-[#F7F4ED] border-y border-[rgba(18,16,12,.06)]">
         <div className="max-w-[1320px] mx-auto px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
             <SectionKicker label="AI sources" />
             <h2 className="mt-5 text-[clamp(28px,3.6vw,46px)] leading-[0.98] tracking-[-0.06em] font-black text-st-black">
               The AI traffic everyone else calls &ldquo;direct.&rdquo;
             </h2>
-            <p className="mt-4 text-[#586464] text-lg leading-[1.55] max-w-[460px]">
+            <p className="mt-4 text-[#6E675C] text-lg leading-[1.55] max-w-[460px]">
               ChatGPT, Perplexity, Gemini, Claude, Copilot, and DeepSeek are a real acquisition channel now.
               SourceTrack recognizes each one and tracks what those visitors do next.
             </p>
@@ -205,7 +205,7 @@ export default function Landing() {
             <h2 className="mt-5 text-[clamp(28px,3.6vw,46px)] leading-[0.98] tracking-[-0.06em] font-black text-st-black">
               Turn Search Console into a revenue signal.
             </h2>
-            <p className="mt-4 text-[#586464] text-lg leading-[1.55] max-w-[460px]">
+            <p className="mt-4 text-[#6E675C] text-lg leading-[1.55] max-w-[460px]">
               See which queries and landing pages bring traffic that converts — matched by landing page and date range.
               Clicks and impressions stop being vanity and start showing outcomes.
             </p>
@@ -217,14 +217,14 @@ export default function Landing() {
       </section>
 
       {/* Showcase — Journeys */}
-      <section className="py-[96px] bg-[#F7FAFA] border-y border-[rgba(18,16,12,.06)]">
+      <section className="py-[96px] bg-[#F7F4ED] border-y border-[rgba(18,16,12,.06)]">
         <div className="max-w-[1320px] mx-auto px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
             <SectionKicker label="Journeys" />
             <h2 className="mt-5 text-[clamp(28px,3.6vw,46px)] leading-[0.98] tracking-[-0.06em] font-black text-st-black">
               Follow the journey, not just the last click.
             </h2>
-            <p className="mt-4 text-[#586464] text-lg leading-[1.55] max-w-[460px]">
+            <p className="mt-4 text-[#6E675C] text-lg leading-[1.55] max-w-[460px]">
               Every conversion has a path — first touch, the pages in between, the return visits. SourceTrack tells the
               story of how a visitor actually became a customer.
             </p>
@@ -241,7 +241,7 @@ export default function Landing() {
             <h2 className="mt-5 text-[clamp(28px,3.6vw,46px)] leading-[0.98] tracking-[-0.06em] font-black text-st-black">
               Build the report, save the view.
             </h2>
-            <p className="mt-4 text-[#586464] text-lg leading-[1.55] max-w-[460px]">
+            <p className="mt-4 text-[#6E675C] text-lg leading-[1.55] max-w-[460px]">
               Start from a template, pick your dimensions and metrics, and pin the views that matter to your dashboard.
               Powerful enough to investigate, simple enough you won&rsquo;t need a data team.
             </p>
@@ -253,7 +253,7 @@ export default function Landing() {
       </section>
 
       {/* Things you won't say anymore */}
-      <section className="py-[96px] bg-[#F7FAFA] border-y border-[rgba(18,16,12,.06)]">
+      <section className="py-[96px] bg-[#F7F4ED] border-y border-[rgba(18,16,12,.06)]">
         <div className="max-w-[900px] mx-auto px-8 text-center">
           <SectionKicker label="Before & after" />
           <h2 className="mt-5 text-[clamp(28px,4vw,48px)] leading-[0.96] tracking-[-0.06em] font-black text-st-black">
@@ -267,7 +267,7 @@ export default function Landing() {
               '“I’ll figure out attribution once we’re bigger.”',
               '“Let me export four tools into a spreadsheet.”',
             ].map((line, i) => (
-              <li key={i} className="px-5 py-3.5 rounded-2xl bg-white border border-[rgba(18,16,12,.08)] text-[#586464] text-base font-semibold tracking-[-0.01em] line-through decoration-[rgba(18,16,12,.25)]">
+              <li key={i} className="px-5 py-3.5 rounded-2xl bg-white border border-[rgba(18,16,12,.08)] text-[#6E675C] text-base font-semibold tracking-[-0.01em] line-through decoration-[rgba(18,16,12,.25)]">
                 {line}
               </li>
             ))}
@@ -282,9 +282,9 @@ export default function Landing() {
       <section className="py-[96px] bg-white">
         <div className="max-w-[820px] mx-auto px-8">
           <SectionKicker label="A note from the founder" />
-          <div className="mt-6 rounded-[28px] border border-dashed border-[rgba(18,16,12,.22)] bg-[#F7FAFA] p-7">
+          <div className="mt-6 rounded-[28px] border border-dashed border-[rgba(18,16,12,.22)] bg-[#F7F4ED] p-7">
             <strong className="block text-st-black text-sm font-extrabold tracking-[-0.02em]">[ TODO — founder note ]</strong>
-            <p className="mt-2 text-[#586464] text-base leading-[1.6]">
+            <p className="mt-2 text-[#6E675C] text-base leading-[1.6]">
               Write this in your own voice, with real detail — why you built SourceTrack, what you needed that other tools
               couldn&rsquo;t give you, and an honest invitation to try it. Keep it true; don&rsquo;t borrow another founder&rsquo;s story or
               numbers. Sign it with your name. (Suggested frame is in the copy doc.)
@@ -294,14 +294,14 @@ export default function Landing() {
       </section>
 
       {/* Works with your stack */}
-      <section className="py-[96px] bg-[#F7FAFA] border-b border-[rgba(18,16,12,.06)]">
+      <section className="py-[96px] bg-[#F7F4ED] border-b border-[rgba(18,16,12,.06)]">
         <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-[54px]">
             <SectionKicker label="Works with your stack" />
             <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
               Add it in minutes, your way.
             </h2>
-            <p className="mt-4 max-w-[620px] mx-auto text-[#586464] text-lg leading-[1.55]">
+            <p className="mt-4 max-w-[620px] mx-auto text-[#6E675C] text-lg leading-[1.55]">
               Add SourceTrack with a single script, through Google Tag Manager, or with the guided setup for WordPress,
               Shopify, Webflow, and Framer. Connect Search Console for SEO and Stripe (beta) or a manual webhook for revenue.
             </p>
@@ -319,7 +319,7 @@ export default function Landing() {
             ].map((item) => (
               <div key={item.title} className="p-4 rounded-xl bg-white border border-[rgba(18,16,12,.08)] shadow-[0_4px_12px_rgba(18,16,12,.015)]">
                 <strong className="block text-st-black text-sm tracking-tight">{item.title}</strong>
-                <p className="mt-1 text-[#586464] text-xs leading-relaxed">{item.desc}</p>
+                <p className="mt-1 text-[#6E675C] text-xs leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -333,7 +333,7 @@ export default function Landing() {
           <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
             The simple, private middle.
           </h2>
-          <p className="mt-5 max-w-[640px] mx-auto text-[#586464] text-lg leading-[1.55]">
+          <p className="mt-5 max-w-[640px] mx-auto text-[#6E675C] text-lg leading-[1.55]">
             Most founders choose between free analytics that don&rsquo;t tell you what pays, form-trackers that need a CRM, or
             enterprise platforms priced like a hire. SourceTrack is the simple, private middle.
           </p>
@@ -350,14 +350,14 @@ export default function Landing() {
               ['Starting price', '$49/mo · $99/yr Founder', 'Free', '[verify]', '$$$ [verify]'],
             ]} />
           </div>
-          <p className="mt-5 text-[#8A9B9B] text-xs font-bold">
+          <p className="mt-5 text-[#A39B8C] text-xs font-bold">
             Last verified: [DATE]. Competitor cells must be re-checked on their live sites before publishing.
           </p>
         </div>
       </section>
 
       {/* Simple pricing — summary */}
-      <section className="py-[96px] bg-[#F7FAFA] border-y border-[rgba(18,16,12,.06)]">
+      <section className="py-[96px] bg-[#F7F4ED] border-y border-[rgba(18,16,12,.06)]">
         <div className="max-w-[1320px] mx-auto px-8 text-center">
           <SectionKicker label="Simple pricing" />
           <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
@@ -372,7 +372,7 @@ export default function Landing() {
               <div key={name} className="lift p-6 rounded-[26px] bg-white border border-[rgba(18,16,12,.10)] shadow-[0_12px_38px_rgba(18,16,12,.055)] text-left">
                 <strong className="block text-st-black text-lg tracking-[-0.04em]">{name}</strong>
                 <span className="block mt-1 text-[28px] font-black tracking-[-0.05em] text-st-black">{price}</span>
-                <p className="mt-2 text-[#586464] text-sm leading-[1.5]">{desc}</p>
+                <p className="mt-2 text-[#6E675C] text-sm leading-[1.5]">{desc}</p>
               </div>
             ))}
           </div>
@@ -400,9 +400,9 @@ export default function Landing() {
               ['What about Search Console?', 'Connect it and SourceTrack matches your search queries and landing pages to conversions by landing page and date range. Search Console data can lag 2–3 days, and Google omits some rare queries.'],
               ['Is there a free trial?', 'Yes — and no credit card required to start.'],
             ].map(([q, a], i) => (
-              <div key={i} className="p-6 rounded-[24px] bg-white border border-[#E0E7E7]">
+              <div key={i} className="p-6 rounded-[24px] bg-white border border-[#E7E0D2]">
                 <strong className="block text-lg tracking-[-0.04em] mb-2 text-st-black">{q}</strong>
-                <p className="text-[#667272] leading-relaxed">{a}</p>
+                <p className="text-[#6E675C] leading-relaxed">{a}</p>
               </div>
             ))}
           </div>

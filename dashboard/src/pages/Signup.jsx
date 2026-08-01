@@ -85,7 +85,7 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F1F4F4] dark:bg-[#2B302F] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#F7F4ED] dark:bg-[#2B302F] px-4">
       <Helmet>
         <title>Start free with SourceTrack | SourceTrack</title>
         <meta name="description" content="Create a free SourceTrack account and start tracking attribution across 9 models in under 3 minutes." />
@@ -99,7 +99,7 @@ export default function Signup() {
           <p className="text-st-gray dark:text-gray-400 mt-2">Create your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white dark:bg-[#1A1F1F] shadow-[0_18px_50px_rgba(18,16,12,0.10)] border border-[#DDE4E4] dark:border-white/10 rounded-2xl p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-[#1A1F1F] shadow-[0_18px_50px_rgba(18,16,12,0.10)] border border-[#E7E0D2] dark:border-white/10 rounded-2xl p-6 space-y-4">
           {error && (
             <div className="bg-red-50 dark:bg-red-900/20 text-red-600 text-sm p-3 rounded">{error}</div>
           )}

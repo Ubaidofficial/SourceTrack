@@ -63,7 +63,7 @@ const CATEGORIES = [
 export default function PublicIntegrations() {
   return (
     <MarketingPage seo={SEO} hero={HERO}>
-      <section className="py-[96px] bg-[#F7FAFA]">
+      <section className="py-[96px] bg-[#F7F4ED]">
         <div className="max-w-[1320px] mx-auto px-8">
           
           <div className="space-y-[72px]">
@@ -71,7 +71,7 @@ export default function PublicIntegrations() {
               <div key={catIdx} className="border-b border-[rgba(18,16,12,.06)] pb-12 last:border-0 last:pb-0">
                 <div className="max-w-[720px] mb-8">
                   <SectionKicker label={cat.title} />
-                  <p className="mt-2 text-[#586464] text-base leading-[1.5]">
+                  <p className="mt-2 text-[#6E675C] text-base leading-[1.5]">
                     {cat.desc}
                   </p>
                 </div>
@@ -81,7 +81,7 @@ export default function PublicIntegrations() {
                     <div key={itemIdx} className="bg-white border border-[rgba(18,16,12,.06)] rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
                       <div className="text-3xl mb-4">{item.icon}</div>
                       <h3 className="text-base font-bold text-st-black mb-1">{item.name}</h3>
-                      <p className="text-sm text-[#586464] leading-[1.45]">{item.desc}</p>
+                      <p className="text-sm text-[#6E675C] leading-[1.45]">{item.desc}</p>
                     </div>
                   ))}
                 </div>
@@ -91,7 +91,7 @@ export default function PublicIntegrations() {
 
           <div className="mt-16 bg-white border border-[rgba(18,16,12,.08)] rounded-2xl p-8 max-w-[800px] mx-auto text-center shadow-sm">
             <h3 className="text-lg font-bold text-st-black mb-2">Need a custom backend connection?</h3>
-            <p className="text-sm text-[#586464] leading-relaxed mb-6">
+            <p className="text-sm text-[#6E675C] leading-relaxed mb-6">
               Our developer documentation details how to send conversion events directly from your server, database, or CRM using the offline conversion endpoints.
             </p>
             <div className="flex justify-center gap-4">

@@ -10,9 +10,9 @@ export default function ComparisonTable({ rows }) {
     <div className="overflow-x-auto -mx-2 px-2">
       <div className="overflow-hidden rounded-[32px] bg-white border border-[rgba(18,16,12,.10)] shadow-[0_24px_80px_rgba(18,16,12,.12)]" style={{ minWidth }}>
         {rows.map((row, i) => (
-          <div key={i} className={`grid border-b border-[#E5ECEC] last:border-0 ${i === 0 ? 'bg-st-black text-white' : ''}`} style={{ gridTemplateColumns }}>
+          <div key={i} className={`grid border-b border-[#F1EDE3] last:border-0 ${i === 0 ? 'bg-st-black text-white' : ''}`} style={{ gridTemplateColumns }}>
             {row.map((cell, j) => (
-              <div key={j} className={`p-[18px_22px] min-h-[62px] flex items-center border-r border-[#E5ECEC] last:border-r-0 font-extrabold tracking-[-0.02em] text-sm ${i === 0 ? 'border-white/10' : ''}`}>
+              <div key={j} className={`p-[18px_22px] min-h-[62px] flex items-center border-r border-[#F1EDE3] last:border-r-0 font-extrabold tracking-[-0.02em] text-sm ${i === 0 ? 'border-white/10' : ''}`}>
                 {cell}
               </div>
             ))}

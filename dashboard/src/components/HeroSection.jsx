@@ -14,7 +14,7 @@ export default function HeroSection({
 }) {
   return (
     <section className="relative overflow-hidden py-[82px] md:pb-[100px]" style={{
-      background: 'radial-gradient(circle at 88% 18%, rgba(210,236,42,.52), transparent 24%), radial-gradient(circle at 22% 6%, rgba(210,236,42,.12), transparent 26%), linear-gradient(180deg, #FFFFFF 0%, #F8FBFB 100%)',
+      background: 'radial-gradient(circle at 88% 18%, rgba(210,236,42,.52), transparent 24%), radial-gradient(circle at 22% 6%, rgba(210,236,42,.12), transparent 26%), linear-gradient(180deg, #FFFFFF 0%, #F7F4ED 100%)',
     }}>
       <div className="absolute inset-0 pointer-events-none" style={{
         backgroundImage: 'linear-gradient(rgba(18,16,12,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(18,16,12,.045) 1px, transparent 1px)',
@@ -41,7 +41,7 @@ export default function HeroSection({
               )}
             </h1>
 
-            <p className="mt-7 max-w-[640px] text-[#586464] text-xl leading-[1.55] tracking-[-0.025em]">{sub}</p>
+            <p className="mt-7 max-w-[640px] text-[#6E675C] text-xl leading-[1.55] tracking-[-0.025em]">{sub}</p>
 
             <div className="flex flex-wrap gap-[14px] mt-[34px]">
               <Link to={primaryHref} className="inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full bg-st-lime text-st-black text-[15px] font-extrabold tracking-[-0.025em] shadow-[0_18px_52px_rgba(210,236,42,0.28)] hover:bg-[#BCD41C] transition-all hover:-translate-y-px">
@@ -54,7 +54,7 @@ export default function HeroSection({
               )}
             </div>
 
-            <div className="flex flex-wrap gap-x-[18px] gap-y-[14px] mt-[30px] text-[#586464] text-[13px] font-extrabold">
+            <div className="flex flex-wrap gap-x-[18px] gap-y-[14px] mt-[30px] text-[#6E675C] text-[13px] font-extrabold">
               {proofs.map((p, i) => (
                 <span key={i} className="inline-flex items-center gap-2 before:content-[''] before:w-[7px] before:h-[7px] before:rounded-full before:bg-st-lime">{p}</span>
               ))}

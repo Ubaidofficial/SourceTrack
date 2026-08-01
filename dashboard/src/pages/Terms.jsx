@@ -19,7 +19,7 @@ export default function Terms() {
     <MarketingPage seo={SEO} hero={HERO}>
       <section className="py-[80px] bg-white text-st-black">
         <div className="max-w-[720px] mx-auto px-8">
-          <div className="prose prose-slate max-w-none text-base leading-[1.65] text-[#586464] space-y-8 font-sans">
+          <div className="prose prose-slate max-w-none text-base leading-[1.65] text-[#6E675C] space-y-8 font-sans">
             
             <div>
               <span className="text-xs uppercase tracking-widest font-extrabold text-st-black block mb-2">Notice</span>

@@ -69,7 +69,7 @@ export default function DocsLayout({ children, isDeveloper = false }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F9FAFB] dark:bg-dark-bg text-gray-900 dark:text-dark-primary transition-colors duration-150">
+    <div className="min-h-screen flex flex-col bg-[#F7F4ED] dark:bg-dark-bg text-gray-900 dark:text-dark-primary transition-colors duration-150">
       <MarketingHeader themed />
 
       {/* Main layout container */}

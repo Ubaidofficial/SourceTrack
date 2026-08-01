@@ -4,9 +4,9 @@
 
 @layer base {
   :root {
-    --bg-page: #F9FAFB;
+    --bg-page: #F7F4ED;
     --bg-card: #FFFFFF;
-    --bg-subtle: #F3F4F6;
+    --bg-subtle: #F7F4ED;
   }
   .dark {
     --bg-page: #0F1010;
@@ -44,11 +44,11 @@
     box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
   }
 
-  /* Primary dark text token (#E8E9EB, never pure white). Pair with a
+  /* Primary dark text token (#F1EDE3, never pure white). Pair with a
      light-mode color class, e.g. `text-st-black text-dark-primary`. The
      59 existing dark:text-white sites are NOT migrated here (separate PR). */
   .dark .text-dark-primary {
-    color: #E8E9EB;
+    color: #F1EDE3;
   }
 }
 

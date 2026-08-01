@@ -20,15 +20,15 @@ export default function DoNotSell() {
     <MarketingPage seo={SEO} hero={HERO}>
       <section className="py-[80px] bg-white text-st-black">
         <div className="max-w-[720px] mx-auto px-8">
-          <div className="rounded-2xl border border-dashed border-[rgba(18,16,12,.25)] bg-[#F7FAFA] p-5 mb-8">
+          <div className="rounded-2xl border border-dashed border-[rgba(18,16,12,.25)] bg-[#F7F4ED] p-5 mb-8">
             <span className="text-xs uppercase tracking-widest font-extrabold text-st-black block mb-1">Draft</span>
-            <p className="text-sm text-[#586464] leading-[1.6]">
+            <p className="text-sm text-[#6E675C] leading-[1.6]">
               Plain-language overview for the private beta, pending legal review. It is not formal legal advice or a
               certification.
             </p>
           </div>
 
-          <div className="text-base leading-[1.65] text-[#586464] space-y-8 font-sans">
+          <div className="text-base leading-[1.65] text-[#6E675C] space-y-8 font-sans">
             <div>
               <h2 className="text-2xl font-black tracking-[-0.05em] text-st-black mb-4">We don’t sell or share your data</h2>
               <p>

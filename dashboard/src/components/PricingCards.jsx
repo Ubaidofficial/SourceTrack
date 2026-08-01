@@ -67,12 +67,12 @@ export default function PricingCards() {
           )}
           <h3 className="text-[28px] font-bold tracking-[-0.055em] mt-[18px]" style={p.featured ? { color: '#fff' } : {}}>{p.name}</h3>
           <div className="mt-[18px] mb-2 text-[52px] leading-none font-black tracking-[-0.07em]">
-            {p.price}<span className={`text-[15px] tracking-[-0.02em] ${p.featured ? 'text-[#CBD4D4]' : 'text-[#6E7979]'}`}>{p.period}</span>
+            {p.price}<span className={`text-[15px] tracking-[-0.02em] ${p.featured ? 'text-[#D6CDBB]' : 'text-[#6E675C]'}`}>{p.period}</span>
           </div>
-          <p className={p.featured ? 'text-[#CBD4D4]' : 'text-[#657070]'}>{p.desc}</p>
+          <p className={p.featured ? 'text-[#D6CDBB]' : 'text-[#6E675C]'}>{p.desc}</p>
           <ul className="mt-6 mb-6 grid gap-3 flex-1 list-none p-0">
             {p.features.map((f, j) => (
-              <li key={j} className={`font-bold text-sm before:content-['✓'] before:mr-[9px] before:font-black ${p.featured ? 'text-[#CBD4D4] before:text-[#D2EC2A]' : 'text-[#566161] before:text-[#12100C]'}`}>{f}</li>
+              <li key={j} className={`font-bold text-sm before:content-['✓'] before:mr-[9px] before:font-black ${p.featured ? 'text-[#D6CDBB] before:text-[#D2EC2A]' : 'text-[#6E675C] before:text-[#12100C]'}`}>{f}</li>
             ))}
           </ul>
           <Link to={p.href} className={`mt-auto inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full text-[15px] font-extrabold tracking-[-0.025em] transition-all hover:-translate-y-px ${
@@ -80,7 +80,7 @@ export default function PricingCards() {
           }`}>
             {p.cta}
           </Link>
-          {!p.featured && <p className="mt-2 text-center text-[12px] font-bold text-[#8A9B9B]">No card required.</p>}
+          {!p.featured && <p className="mt-2 text-center text-[12px] font-bold text-[#A39B8C]">No card required.</p>}
         </article>
       ))}
     </div>
