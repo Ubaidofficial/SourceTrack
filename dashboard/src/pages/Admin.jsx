@@ -486,7 +486,7 @@ export default function Admin() {
               />
               <button onClick={loadSiteDetail}
                 disabled={siteDetailLoading || !siteDetailKey}
-                className="px-4 py-2 bg-[#12100C] hover:bg-[#171B1B] dark:bg-st-lime dark:hover:bg-st-lime-dark text-white dark:text-st-black rounded-lg text-sm font-medium disabled:opacity-50 flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-st-lime">
+                className="px-4 py-2 bg-[#12100C] hover:bg-[#241F17] dark:bg-st-lime dark:hover:bg-st-lime-dark text-white dark:text-st-black rounded-lg text-sm font-medium disabled:opacity-50 flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-st-lime">
                 <Search className="w-4 h-4" /> Lookup
               </button>
             </div>
@@ -539,7 +539,7 @@ export default function Admin() {
                   </div>
                   <div className="flex gap-2">
                     <input type="text" value={newNote} onChange={(e) => setNewNote(e.target.value)} placeholder="Add a new note..." className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" />
-                    <button onClick={handleAddNote} disabled={!newNote.trim()} className="px-4 py-2 bg-[#12100C] hover:bg-[#171B1B] text-white rounded-lg text-sm disabled:opacity-50">Add</button>
+                    <button onClick={handleAddNote} disabled={!newNote.trim()} className="px-4 py-2 bg-[#12100C] hover:bg-[#241F17] text-white rounded-lg text-sm disabled:opacity-50">Add</button>
                   </div>
                   <p className="text-[10px] text-st-gray mt-2 font-medium">⚠️ WARNING: Do not paste passwords, raw tokens, full site keys, webhook secrets, reset links, or private customer PII in these notes.</p>
                 </div>
@@ -713,7 +713,7 @@ export default function Admin() {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={handleQaSave} className="px-4 py-2 bg-[#12100C] hover:bg-[#171B1B] dark:bg-st-lime dark:hover:bg-st-lime-dark text-white dark:text-st-black rounded-lg text-sm focus-visible:ring-2 focus-visible:ring-st-lime">
+                  <button onClick={handleQaSave} className="px-4 py-2 bg-[#12100C] hover:bg-[#241F17] dark:bg-st-lime dark:hover:bg-st-lime-dark text-white dark:text-st-black rounded-lg text-sm focus-visible:ring-2 focus-visible:ring-st-lime">
                     Save
                   </button>
                   <button onClick={() => setQaFormMode(null)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-dark-border rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
@@ -757,7 +757,7 @@ export default function Admin() {
                           <div className="flex items-center gap-1 justify-end">
                             <button
                               onClick={() => { setQaFormMode('edit'); setQaFormData({ id: n.id, feature_key: n.feature_key, note_type: n.note_type, note_text: n.note_text }) }}
-                              className="p-1.5 text-st-gray dark:text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-[#2A2E2E] rounded transition-colors"
+                              className="p-1.5 text-st-gray dark:text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-[#241F17] rounded transition-colors"
                               title="Edit"
                             >
                               <Edit3 className="w-3.5 h-3.5" />

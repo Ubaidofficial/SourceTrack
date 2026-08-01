@@ -68,7 +68,7 @@ const MetricTile = ({
         ? 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-100 dark:border-green-900/30'
         : isNeg
           ? 'bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 border border-red-100 dark:border-red-900/20'
-          : 'bg-gray-50 text-st-gray dark:bg-[#252929] dark:text-gray-400 border border-gray-200 dark:border-dark-border'
+          : 'bg-gray-50 text-st-gray dark:bg-[#1B1811] dark:text-gray-400 border border-gray-200 dark:border-dark-border'
       return (
         <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold leading-none shadow-sm ${pillBg} ${delta.color}`}>
           <span>{delta.arrow}</span>
@@ -84,7 +84,7 @@ const MetricTile = ({
         ? 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-100 dark:border-green-900/30'
         : isNeg
           ? 'bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 border border-red-100 dark:border-red-900/20'
-          : 'bg-gray-50 text-st-gray dark:bg-[#252929] dark:text-gray-400 border border-gray-200 dark:border-dark-border'
+          : 'bg-gray-50 text-st-gray dark:bg-[#1B1811] dark:text-gray-400 border border-gray-200 dark:border-dark-border'
       return (
         <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold leading-none shadow-sm ${pillBg}`}>
           <span>{isPos ? '▲' : isNeg ? '▼' : '—'}</span>

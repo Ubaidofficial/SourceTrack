@@ -39,7 +39,7 @@ function eventBadgeClass(event, isConversion) {
   if (event === '$pageview') return 'bg-blue-100 text-blue-700'
   if (event === 'install_verified') return 'bg-purple-100 text-purple-700'
   if (event === 'outbound_click') return 'bg-amber-100 text-amber-700'
-  return 'bg-gray-100 dark:bg-[#252929] text-gray-700'
+  return 'bg-gray-100 dark:bg-[#1B1811] text-gray-700'
 }
 
 function normalizeEventName(eventName = '') {
@@ -173,7 +173,7 @@ export default function EventDebugger({ isEmbedded = false }) {
         )
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-[#252929] text-gray-600">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-[#1B1811] text-gray-600">
             <XCircle className="w-3.5 h-3.5" />
             Never seen events
           </span>
@@ -215,7 +215,7 @@ export default function EventDebugger({ isEmbedded = false }) {
         <button
           onClick={fetchAll}
           disabled={loading || !site}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-[#1A1D1D] border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] disabled:opacity-50"
+          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-[#1B1811] border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-[#241F17] disabled:opacity-50"
         >
           <RefreshCw className={`w-4 h-4 ${loading || refreshing ? 'animate-spin' : ''}`} />
           Refresh
@@ -223,7 +223,7 @@ export default function EventDebugger({ isEmbedded = false }) {
       </div>
       )}
 
-      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-5">
+      <div className="bg-white dark:bg-[#1B1811] rounded-xl shadow-sm border border-gray-200 dark:border-[#3D3830] p-5">
         <div className="flex items-center gap-2 mb-3">
           <Bug className="w-4 h-4 text-gray-700" />
           <h3 className="text-sm font-semibold text-gray-700">Health</h3>
@@ -231,11 +231,11 @@ export default function EventDebugger({ isEmbedded = false }) {
 
         <div className="flex flex-wrap items-center gap-4">
           {loading ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-[#252929] text-gray-500">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-[#1B1811] text-gray-500">
               <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Checking health…
             </span>
           ) : !health ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-[#252929] text-gray-500">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-[#1B1811] text-gray-500">
               <XCircle className="w-3.5 h-3.5" /> No health data — install the tracker to begin monitoring
             </span>
           ) : statusChip()}
@@ -271,11 +271,11 @@ export default function EventDebugger({ isEmbedded = false }) {
       )}
 
       {edge && (edge.multiple_domains || edge.ai_without_utm > 0 || edge.utm_without_ai > 0) && (
-        <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-5">
+        <div className="bg-white dark:bg-[#1B1811] rounded-xl shadow-sm border border-gray-200 dark:border-[#3D3830] p-5">
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Edge Cases</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {edge.multiple_domains && (
-              <div className="bg-gray-50 dark:bg-[#111414] rounded-lg p-3">
+              <div className="bg-gray-50 dark:bg-[#12100C] rounded-lg p-3">
                 <p className="text-xs text-st-gray">Multiple Domains</p>
                 <p className="text-lg font-semibold text-st-black">{edge.domain_count}</p>
                 <p className="text-xs text-st-gray dark:text-gray-400 mt-1 truncate">{edge.domains?.slice(0, 3).join(', ')}</p>
@@ -300,7 +300,7 @@ export default function EventDebugger({ isEmbedded = false }) {
       )}
 
       {hygiene && hygiene.issues && hygiene.issues.length > 0 && (
-        <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-5">
+        <div className="bg-white dark:bg-[#1B1811] rounded-xl shadow-sm border border-gray-200 dark:border-[#3D3830] p-5">
           <div className="flex items-center gap-2 mb-3">
             <Shield className="w-4 h-4 text-amber-500" />
             <h3 className="text-sm font-semibold text-gray-700">Data Quality</h3>
@@ -315,7 +315,7 @@ export default function EventDebugger({ isEmbedded = false }) {
                   ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 text-red-800'
                   : issue.severity === 'medium'
                     ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 text-amber-800'
-                    : 'bg-gray-50 dark:bg-[#111414] border border-gray-200 dark:border-[#333838] text-gray-700'
+                    : 'bg-gray-50 dark:bg-[#12100C] border border-gray-200 dark:border-[#3D3830] text-gray-700'
               }`}>
                 <p className="font-medium">{issue.message}</p>
                 <p className="text-xs mt-1 opacity-75">{issue.detail}</p>
@@ -327,7 +327,7 @@ export default function EventDebugger({ isEmbedded = false }) {
 
       {/* Conversion Deduplication Card */}
       {dedupe && (
-        <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-5">
+        <div className="bg-white dark:bg-[#1B1811] rounded-xl shadow-sm border border-gray-200 dark:border-[#3D3830] p-5">
           <div className="flex items-center gap-2 mb-3">
             <Shield className="w-4 h-4 text-green-600 dark:text-green-400" />
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Conversion Deduplication</h3>
@@ -353,7 +353,7 @@ export default function EventDebugger({ isEmbedded = false }) {
                 <span>Window: <strong className="text-gray-700 dark:text-gray-300">{dedupe.dedupe_window_hours} hours</strong></span>
               </div>
             )}
-            <div className="flex flex-col gap-1 text-xs text-st-gray dark:text-gray-500 mt-2 pt-2 border-t border-gray-100 dark:border-[#2A2E2E]">
+            <div className="flex flex-col gap-1 text-xs text-st-gray dark:text-gray-500 mt-2 pt-2 border-t border-gray-100 dark:border-[#3D3830]">
               <p>Duplicate conversions are blocked using order_id when available. Raw identifiers are not shown for privacy.</p>
               <p className="italic opacity-85">Recent duplicate activity may reset after deploys.</p>
             </div>
@@ -361,8 +361,8 @@ export default function EventDebugger({ isEmbedded = false }) {
         </div>
       )}
 
-      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] overflow-hidden">
-        <div className="p-5 border-b border-gray-100 dark:border-[#2A2E2E] space-y-4">
+      <div className="bg-white dark:bg-[#1B1811] rounded-xl shadow-sm border border-gray-200 dark:border-[#3D3830] overflow-hidden">
+        <div className="p-5 border-b border-gray-100 dark:border-[#3D3830] space-y-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Database className="w-4 h-4 text-gray-700" />
@@ -484,7 +484,7 @@ export default function EventDebugger({ isEmbedded = false }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 dark:border-[#2A2E2E] bg-gray-50">
+                <tr className="border-b border-gray-100 dark:border-[#3D3830] bg-gray-50">
                   <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Event</th>
                   <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Time</th>
                   <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Distinct ID</th>
@@ -507,7 +507,7 @@ export default function EventDebugger({ isEmbedded = false }) {
                   <tr
                     key={`${e.timestamp}-${e.event}-${i}`}
                     onClick={() => setSelectedEvent(e)}
-                    className="border-b border-gray-50 hover:bg-gray-50 dark:hover:bg-[#252929] cursor-pointer"
+                    className="border-b border-gray-50 hover:bg-gray-50 dark:hover:bg-[#241F17] cursor-pointer"
                   >
                     <td className="py-2 px-4">
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${eventBadgeClass(e.event, e.is_conversion)}`}>
@@ -545,10 +545,10 @@ export default function EventDebugger({ isEmbedded = false }) {
       {selectedEvent && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/20" onClick={() => setSelectedEvent(null)}>
           <div
-            className="h-full w-full max-w-xl bg-white dark:bg-[#1A1D1D] shadow-xl overflow-y-auto"
+            className="h-full w-full max-w-xl bg-white dark:bg-[#1B1811] shadow-xl overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 bg-white dark:bg-[#1A1D1D] border-b border-gray-200 dark:border-[#333838] p-5 flex items-start justify-between">
+            <div className="sticky top-0 bg-white dark:bg-[#1B1811] border-b border-gray-200 dark:border-[#3D3830] p-5 flex items-start justify-between">
               <div>
                 <p className="text-xs text-st-gray">Event details</p>
                 <h3 className="text-lg font-semibold text-st-black">{selectedEvent.event}</h3>
@@ -556,7 +556,7 @@ export default function EventDebugger({ isEmbedded = false }) {
               </div>
               <button
                 onClick={() => setSelectedEvent(null)}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2A2E2E] text-st-gray"
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#241F17] text-st-gray"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -610,7 +610,7 @@ export default function EventDebugger({ isEmbedded = false }) {
                   ['Browser', selectedEvent.browser_name ? `${selectedEvent.browser_name} ${selectedEvent.browser_version || ''}`.trim() : null],
                   ['OS', selectedEvent.os_name ? `${selectedEvent.os_name} ${selectedEvent.os_version || ''}`.trim() : null]
                 ].map(([label, value]) => (
-                  <div key={label} className="rounded-lg bg-gray-50 dark:bg-[#111414] p-3">
+                  <div key={label} className="rounded-lg bg-gray-50 dark:bg-[#12100C] p-3">
                     <p className="text-xs text-st-gray">{label}</p>
                     <p className="mt-1 text-gray-800 break-words">{value ?? '—'}</p>
                   </div>

@@ -121,7 +121,7 @@ export default function Landing() {
       </section>
 
       {/* Before / After Attribution Comparison */}
-      <section className="py-[96px] bg-[#0E1111] text-white border-b border-white/10">
+      <section className="py-[96px] bg-[#12100C] text-white border-b border-white/10">
         <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8">
           <MarketingBeforeAfter mode="default" showToggle={true} />
         </div>
@@ -376,7 +376,7 @@ export default function Landing() {
               </div>
             ))}
           </div>
-          <Link to="/pricing" className="mt-8 inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full bg-st-black text-white text-[15px] font-extrabold tracking-[-0.025em] hover:bg-[#171B1B] transition-all hover:-translate-y-px">
+          <Link to="/pricing" className="mt-8 inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full bg-st-black text-white text-[15px] font-extrabold tracking-[-0.025em] hover:bg-[#241F17] transition-all hover:-translate-y-px">
             See full pricing →
           </Link>
         </div>

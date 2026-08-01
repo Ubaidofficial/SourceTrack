@@ -82,7 +82,7 @@ const CollapsibleRow = ({
         onClick={onToggle || undefined}
       >
         <div className="flex items-start gap-3 min-w-0">
-          <div className="p-2 bg-gray-50 dark:bg-[#1a1d1d] text-gray-500 dark:text-gray-400 rounded-lg mt-0.5 shrink-0">
+          <div className="p-2 bg-gray-50 dark:bg-[#1B1811] text-gray-500 dark:text-gray-400 rounded-lg mt-0.5 shrink-0">
             <Icon className="w-4 h-4" />
           </div>
           <div className="min-w-0">
@@ -106,7 +106,7 @@ const CollapsibleRow = ({
           {onToggle && (
             <button
               onClick={onToggle}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-[#1a1d1d] rounded-lg transition-colors text-gray-400"
+              className="p-1 hover:bg-gray-100 dark:hover:bg-[#241F17] rounded-lg transition-colors text-gray-400"
             >
               {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
@@ -771,7 +771,7 @@ export default function Integrations() {
       )}
 
       {/* Status Overview (Simplified status rail with proper hierarchy) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-[#161919]/50 border border-gray-200 dark:border-gray-800/80 rounded-xl p-4 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-[#1B1811]/50 border border-gray-200 dark:border-gray-800/80 rounded-xl p-4 shadow-sm">
         {/* Primary Status */}
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-xl shrink-0 ${isVerified ? 'bg-green-500/10 text-green-500' : 'bg-amber-500/10 text-amber-500'}`}>
@@ -830,7 +830,7 @@ export default function Integrations() {
 
       {/* Strong Setup Card (When Pending) */}
       {!isVerified && (
-        <div className="p-6 bg-gradient-to-br from-st-black to-[#1a1d1d] dark:from-[#161919] dark:to-[#1a1d1d] border border-st-lime/30 dark:border-st-lime/20 rounded-2xl shadow-lg relative overflow-hidden">
+        <div className="p-6 bg-gradient-to-br from-st-black to-[#1B1811] dark:from-[#1B1811] dark:to-[#1B1811] border border-st-lime/30 dark:border-st-lime/20 rounded-2xl shadow-lg relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-st-lime/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2">
@@ -879,7 +879,7 @@ export default function Integrations() {
             title="Core Tracking"
             subtitle="Tracking script and site verification"
             className="border-gray-200 dark:border-gray-800/80 shadow-none"
-            headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-200 dark:border-gray-800/80"
+            headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#1B1811]/50 border-b border-gray-200 dark:border-gray-800/80"
             bodyClassName="p-4 pt-3"
           >
             <div className="space-y-1">
@@ -983,7 +983,7 @@ export default function Integrations() {
           title="Revenue Connections"
           subtitle="Stitch transaction, checkout, and email events back to user journeys"
           className="border-gray-200 dark:border-gray-800/80 shadow-none"
-          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-200 dark:border-gray-800/80"
+          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#1B1811]/50 border-b border-gray-200 dark:border-gray-800/80"
           bodyClassName="p-4 pt-3"
         >
           <div className="space-y-1">
@@ -1057,7 +1057,7 @@ export default function Integrations() {
                 </div>
 
                 {stripeConnected ? (
-                  <div className="space-y-3 bg-gray-50 dark:bg-[#1a1d1d] border border-gray-100 dark:border-gray-800 rounded-lg p-4">
+                  <div className="space-y-3 bg-gray-50 dark:bg-[#1B1811] border border-gray-100 dark:border-gray-800 rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Stripe Webhook Secret</p>
@@ -1089,7 +1089,7 @@ export default function Integrations() {
                         onChange={e => setStripeSecret(e.target.value)}
                         placeholder="whsec_..."
                         disabled={isPreview || stripeSubmitting}
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1d1d] text-st-black dark:text-dark-primary rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-st-black/20"
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1B1811] text-st-black dark:text-dark-primary rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-st-black/20"
                       />
                     </div>
                     <button
@@ -1187,7 +1187,7 @@ export default function Integrations() {
                 </div>
 
                 {shopifyConnected ? (
-                  <div className="space-y-3 bg-gray-50 dark:bg-[#1a1d1d] border border-gray-100 dark:border-gray-800 rounded-lg p-4">
+                  <div className="space-y-3 bg-gray-50 dark:bg-[#1B1811] border border-gray-100 dark:border-gray-800 rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Shopify Webhook Secret</p>
@@ -1219,7 +1219,7 @@ export default function Integrations() {
                         onChange={e => setShopifySecret(e.target.value)}
                         placeholder="Paste webhook secret key"
                         disabled={isPreview || shopifySubmitting}
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1d1d] text-st-black dark:text-dark-primary rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-st-black/20"
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1B1811] text-st-black dark:text-dark-primary rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-st-black/20"
                       />
                     </div>
                     <button
@@ -1367,7 +1367,7 @@ export default function Integrations() {
                         <p className="text-xs text-st-gray dark:text-gray-400 font-light leading-relaxed">
                           Query parameters supported by the pixel endpoint:
                         </p>
-                        <div className="bg-gray-50 dark:bg-[#111414] rounded-lg p-3 border border-gray-100 dark:border-[#2A2E2E]">
+                        <div className="bg-gray-50 dark:bg-[#12100C] rounded-lg p-3 border border-gray-100 dark:border-[#3D3830]">
                           <div className="grid grid-cols-2 gap-x-6 gap-y-1">
                             {[
                               ['site_key', 'Your site key (required)'],
@@ -1380,7 +1380,7 @@ export default function Integrations() {
                               ['val', 'Numeric value (for conversions)'],
                             ].map(([k, v]) => (
                               <div key={k} className="flex items-start gap-1.5">
-                                <code className="text-[10px] font-mono text-st-black dark:text-dark-primary bg-gray-200 dark:bg-[#2A2E2E] px-1 py-0.5 rounded shrink-0">{k}</code>
+                                <code className="text-[10px] font-mono text-st-black dark:text-dark-primary bg-gray-200 dark:bg-[#1B1811] px-1 py-0.5 rounded shrink-0">{k}</code>
                                 <span className="text-[10px] text-st-gray dark:text-gray-400">{v}</span>
                               </div>
                             ))}
@@ -1402,7 +1402,7 @@ export default function Integrations() {
           title="Ad Cost Sync"
           subtitle="Synchronize advertising costs and impressions to calculate true ROAS"
           className="border-gray-200 dark:border-gray-800/80 shadow-none"
-          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-200 dark:border-gray-800/80"
+          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#1B1811]/50 border-b border-gray-200 dark:border-gray-800/80"
           bodyClassName="p-4 pt-3"
         >
           <div className="space-y-1">
@@ -1479,7 +1479,7 @@ export default function Integrations() {
           title="SEO Revenue"
           subtitle="Map search query traffic and click-share estimated revenue"
           className="border-gray-200 dark:border-gray-800/80 shadow-none"
-          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-200 dark:border-gray-800/80"
+          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#1B1811]/50 border-b border-gray-200 dark:border-gray-800/80"
           bodyClassName="p-4 pt-3"
         >
           <div className="space-y-1">
@@ -1594,7 +1594,7 @@ export default function Integrations() {
                               <select
                                 value={selectedProperty}
                                 onChange={e => setSelectedProperty(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-200 dark:border-[#2A2C30] bg-white dark:bg-[#161719] text-st-black dark:text-dark-primary rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-st-black/20"
+                                className="w-full px-3 py-2 border border-gray-200 dark:border-[#3D3830] bg-white dark:bg-[#12100C] text-st-black dark:text-dark-primary rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-st-black/20"
                               >
                                 <option value="">-- Choose verified property URL --</option>
                                 {gscPropertiesData.properties.map(p => (
@@ -1735,7 +1735,7 @@ export default function Integrations() {
           title="Advanced Domains & Routing"
           subtitle="Managed proxy domains and cross-domain tracking setup"
           className="border-gray-200 dark:border-gray-800/80 shadow-none"
-          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-200 dark:border-gray-800/80"
+          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#1B1811]/50 border-b border-gray-200 dark:border-gray-800/80"
           bodyClassName="p-4 pt-3"
         >
           <div className="space-y-1">
@@ -1789,7 +1789,7 @@ export default function Integrations() {
           title="Developer Options"
           subtitle="Advanced custom integrations, conversion webhooks, and raw API access"
           className="border-gray-200 dark:border-gray-800/80 shadow-none"
-          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-200 dark:border-gray-800/80"
+          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#1B1811]/50 border-b border-gray-200 dark:border-gray-800/80"
           bodyClassName="p-4 pt-3"
         >
           <div className="space-y-1">

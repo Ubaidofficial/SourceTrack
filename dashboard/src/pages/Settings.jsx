@@ -652,7 +652,7 @@ export default function Settings() {
           indentation, so the diff is the scaffolding only and not an 800-line reindent. */}
       {activeTab === 'general' && (<>
       {/* ── Plan & Billing ─────────────────────────────────────────────── */}
-      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6">
+      <section className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-gray-800 rounded-xl p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CreditCard className="w-4 h-4 text-st-gray dark:text-gray-400" />
@@ -676,7 +676,7 @@ export default function Settings() {
       </section>
 
       {/* ── General ───────────────────────────────────────────────────── */}
-      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+      <section className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">General</h3>
         <form onSubmit={handleSave} className="space-y-3">
           <div>
@@ -686,7 +686,7 @@ export default function Settings() {
               value={name}
               onChange={e => setName(e.target.value)}
               disabled={isPreview}
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1B1811] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
               placeholder="My Website"
             />
           </div>
@@ -697,7 +697,7 @@ export default function Settings() {
               value={domain}
               onChange={e => setDomain(e.target.value)}
               disabled={isPreview}
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1B1811] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
               placeholder="yoursite.com"
             />
           </div>
@@ -716,7 +716,7 @@ export default function Settings() {
       </section>
 
       {/* ── Reporting & Tracking (Timezone & Path Exclusions) ────────── */}
-      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+      <section className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Globe className="w-4 h-4 text-st-gray dark:text-gray-400" />
           <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Reporting &amp; Tracking</h3>
@@ -735,7 +735,7 @@ export default function Settings() {
               value={timezone}
               onChange={e => setTimezone(e.target.value)}
               disabled={isPreview}
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1B1811] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
             >
               <option value="UTC">UTC (Coordinated Universal Time)</option>
               <option value="America/New_York">America/New_York (EST/EDT)</option>
@@ -761,7 +761,7 @@ export default function Settings() {
               onChange={e => setExcludedPaths(e.target.value)}
               disabled={isPreview}
               placeholder="/admin/*, /staging/*"
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1B1811] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
             />
           </div>
 
@@ -780,7 +780,7 @@ export default function Settings() {
       </section>
 
       {/* ── Support & Feedback ────────────────────────────────────────── */}
-      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-3">
+      <section className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-3">
         <div className="flex items-center gap-2">
           <HelpCircle className="w-4 h-4 text-st-gray dark:text-gray-400" />
           <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Support & Feedback</h3>
@@ -797,7 +797,7 @@ export default function Settings() {
 
       {activeTab === 'tracking' && (<>
       {/* ── Custom Tracking Domain ───────────────────────────────────── */}
-      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+      <section className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Globe className="w-4 h-4 text-st-gray dark:text-gray-400" />
@@ -859,7 +859,7 @@ export default function Settings() {
                 onChange={e => setProxyDomain(e.target.value)}
                 placeholder="track.yourdomain.com"
                 disabled={proxyLoading || isPreview}
-                className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+                className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1B1811] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
               />
               {isPreview ? (
                 <span className="text-xs text-st-gray italic self-center">Hidden in Support Preview</span>
@@ -876,7 +876,7 @@ export default function Settings() {
           </form>
         ) : (
           <div className="space-y-4">
-            <div className="bg-gray-50 dark:bg-[#202222] border border-gray-100 dark:border-gray-800 rounded-xl p-4 space-y-3">
+            <div className="bg-gray-50 dark:bg-[#1B1811] border border-gray-100 dark:border-gray-800 rounded-xl p-4 space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                 <div>
                   <span className="block text-st-gray dark:text-gray-400 font-medium mb-1">DNS Record Type</span>
@@ -932,7 +932,7 @@ export default function Settings() {
             )}
 
             {proxyConfig.status === 'active' && (
-              <div className="bg-gray-50 dark:bg-[#202222] border border-gray-100 dark:border-gray-800 rounded-xl p-4 space-y-2">
+              <div className="bg-gray-50 dark:bg-[#1B1811] border border-gray-100 dark:border-gray-800 rounded-xl p-4 space-y-2">
                 <span className="block text-xs font-semibold text-st-black dark:text-dark-primary">Your first-party tracking snippet:</span>
                 <div className="flex items-center gap-2 bg-gray-200 dark:bg-gray-700 rounded-lg p-2">
                   <code className="font-mono text-xs text-st-black dark:text-dark-primary break-all flex-1 select-all">
@@ -969,7 +969,7 @@ export default function Settings() {
       </section>
 
       {/* ── Cookieless Tracking ───────────────────────────────────────── */}
-      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+      <section className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-st-gray dark:text-gray-400" />
           <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Cookieless Tracking</h3>
@@ -1023,7 +1023,7 @@ export default function Settings() {
       </section>
 
       {/* ── Custom URL Parameters ─────────────────────────────────────── */}
-      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+      <section className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Link className="w-4 h-4 text-st-gray dark:text-gray-400" />
           <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Custom URL Parameters</h3>
@@ -1039,7 +1039,7 @@ export default function Settings() {
             value={newParam}
             onChange={e => setNewParam(e.target.value)}
             placeholder="e.g. affiliate"
-            className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+            className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1B1811] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
             disabled={customParamsSaving || isPreview}
           />
           {!isPreview && (
@@ -1080,7 +1080,7 @@ export default function Settings() {
       </section>
 
       {/* ── Cross-Domain Tracking ─────────────────────────────────────── */}
-      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+      <section className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
           <svg className="w-4 h-4 text-st-gray dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -1100,7 +1100,7 @@ export default function Settings() {
               onChange={e => setCrossDomainDomains(e.target.value)}
               disabled={isPreview}
               placeholder="e.g. app.example.com, checkout.example.com"
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1B1811] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
             />
             <p className="text-[10px] text-st-gray dark:text-gray-400">
               Comma-separated list of target domains (maximum 20). No protocols, wildcards, or paths.
@@ -1115,7 +1115,7 @@ export default function Settings() {
               onChange={e => setCrossDomainCookieDomain(e.target.value)}
               disabled={isPreview}
               placeholder="e.g. .example.com"
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1B1811] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
             />
             <p className="text-[10px] text-st-gray dark:text-gray-400">
               Must start with a leading dot and match or be a parent domain of your primary site domain. Enables fallback storage continuity.
@@ -1139,7 +1139,7 @@ export default function Settings() {
 
       {activeTab === 'attribution' && (<>
       {/* ── Attribution Window ────────────────────────────────────────── */}
-      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+      <section className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-st-gray dark:text-gray-400" />
           <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Attribution Window</h3>
@@ -1153,7 +1153,7 @@ export default function Settings() {
             value={attrWindow}
             onChange={e => setAttrWindow(Number(e.target.value))}
             disabled={isPreview}
-            className="px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+            className="px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1B1811] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
           >
             <option value={1}>1 day</option>
             <option value={7}>7 days</option>
@@ -1180,7 +1180,7 @@ export default function Settings() {
       </section>
 
       {/* ── Privacy & Data Retention ──────────────────────────────────── */}
-      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-6">
+      <section className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-6">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-st-gray dark:text-gray-400" />
           <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Privacy &amp; Data</h3>
@@ -1198,7 +1198,7 @@ export default function Settings() {
               value={retentionDays}
               onChange={e => setRetentionDays(Number(e.target.value))}
               disabled={isPreview}
-              className="px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+              className="px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1B1811] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
             >
               <option value={0}>Keep forever</option>
               <option value={30}>30 days</option>
@@ -1261,7 +1261,7 @@ export default function Settings() {
       {activeTab === 'advanced' && (<>
       {/* ── Server API Tokens ─────────────────────────────────────────── */}
       {!isPreview && (
-      <section id="api-tokens" className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4 scroll-mt-20">
+      <section id="api-tokens" className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4 scroll-mt-20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Key className="w-4 h-4 text-st-gray dark:text-gray-400" />
@@ -1407,7 +1407,7 @@ export default function Settings() {
       )}
 
       {/* ── UTM Builder ────────────────────────────────────────────────── */}
-      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+      <section className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Link className="w-4 h-4 text-st-gray dark:text-gray-400" />
           <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">UTM Builder</h3>
@@ -1418,7 +1418,7 @@ export default function Settings() {
 
       {/* ── Danger Zone (Account Deletion) ────────────────────────────── */}
       {!isPreview && (
-      <section className="bg-white dark:bg-[#1A1C1C] border border-red-200 dark:border-red-900/40 rounded-xl p-6 space-y-4">
+      <section className="bg-white dark:bg-[#1B1811] border border-red-200 dark:border-red-900/40 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-red-500" />
           <h3 className="text-sm font-bold text-red-600 dark:text-red-400">Danger Zone</h3>
@@ -1462,7 +1462,7 @@ export default function Settings() {
       {/* ── Create Token Modal ────────────────────────────────────────── */}
       {newTokenModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-gray-800 rounded-xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
               <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Generate Server API Token</h3>
               {!createdToken && (

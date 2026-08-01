@@ -29,7 +29,7 @@ function CoverageRing({ pct }) {
       <circle
         cx="40" cy="40" r={RING_R}
         fill="none" strokeWidth="8"
-        className="stroke-gray-200 dark:stroke-[#2A2E2E]"
+        className="stroke-gray-200 dark:stroke-[#3D3830]"
       />
       <circle
         cx="40" cy="40" r={RING_R}
@@ -62,7 +62,7 @@ export default function AttributionCoverageCard({ siteKey }) {
   const animatedPct = useCountUp(shouldAnimate ? stat.coverage_pct : null)
 
   const Shell = ({ children }) => (
-    <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-5 shadow-sm">
+    <div className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-[#3D3830] rounded-xl p-5 shadow-sm">
       <div className="flex items-center gap-2 mb-1">
         <Crosshair className="w-4 h-4 text-gray-600 dark:text-gray-400" />
         <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">Attribution coverage</h3>
@@ -124,7 +124,7 @@ export default function AttributionCoverageCard({ siteKey }) {
         health metric — not your credited-channel mix.
       </p>
 
-      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-[#2A2E2E]">
+      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-[#3D3830]">
         <p className="text-xs text-gray-500 dark:text-gray-400">
           <span className="font-semibold text-st-black dark:text-dark-primary tabular-nums">{stat.tagged_pct}%</span>{' '}
           of conversions arrived with a tagged link (UTM or click ID).

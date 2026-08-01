@@ -167,7 +167,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
 
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-5 shadow-sm flex items-center justify-center min-h-[150px]">
+      <div className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-[#3D3830] rounded-xl p-5 shadow-sm flex items-center justify-center min-h-[150px]">
         <div className="flex flex-col items-center gap-2">
           <RefreshCw className="w-6 h-6 animate-spin text-st-gray dark:text-gray-400" />
           <p className="text-sm text-gray-600 dark:text-gray-400">Loading setup diagnostics...</p>
@@ -178,7 +178,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
 
   if (error || !diagnostics) {
     return (
-      <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-5 shadow-sm">
+      <div className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-[#3D3830] rounded-xl p-5 shadow-sm">
         <div className="flex items-start gap-3 text-amber-600 dark:text-amber-400">
           {isAuthError ? (
             <Info className="w-5 h-5 flex-shrink-0 mt-0.5 text-amber-500" />
@@ -196,7 +196,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
             </p>
             <button
               onClick={() => refetch()}
-              className="mt-3 px-3 py-1.5 text-xs font-semibold bg-gray-100 dark:bg-[#252929] hover:bg-gray-200 dark:hover:bg-[#333838] rounded-lg transition-colors flex items-center gap-1.5 text-gray-700 dark:text-gray-300"
+              className="mt-3 px-3 py-1.5 text-xs font-semibold bg-gray-100 dark:bg-[#1B1811] hover:bg-gray-200 dark:hover:bg-[#241F17] rounded-lg transition-colors flex items-center gap-1.5 text-gray-700 dark:text-gray-300"
             >
               <RefreshCw className="w-3.5 h-3.5" /> {isAuthError ? 'Check Again' : 'Retry'}
             </button>
@@ -298,9 +298,9 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
       : 'text-red-600 dark:text-red-400'
 
   return (
-    <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-5 shadow-sm space-y-4">
+    <div className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-[#3D3830] rounded-xl p-5 shadow-sm space-y-4">
       {/* 1. Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 dark:border-[#2A2E2E] pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 dark:border-[#3D3830] pb-4">
         <div className="flex items-start gap-3">
           <div className={`p-2 rounded-lg ${
             statusConfig.severity === 'success' ? 'bg-green-50 text-green-600 dark:bg-green-950/30 dark:text-green-400' :
@@ -330,7 +330,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
             <>
               <button
                 onClick={() => navigate('/snippet')}
-                className="px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-[#252929] hover:bg-gray-200 dark:hover:bg-[#333838] border border-gray-200 dark:border-white/5 rounded-lg transition-colors"
+                className="px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-[#1B1811] hover:bg-gray-200 dark:hover:bg-[#241F17] border border-gray-200 dark:border-white/5 rounded-lg transition-colors"
               >
                 Snippet Code
               </button>
@@ -340,7 +340,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
           <button
             onClick={() => refetch()}
             disabled={isFetching}
-            className="px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-[#252929] hover:bg-gray-200 dark:hover:bg-[#333838] border border-gray-200 dark:border-white/5 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1"
+            className="px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-[#1B1811] hover:bg-gray-200 dark:hover:bg-[#241F17] border border-gray-200 dark:border-white/5 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1"
           >
             <RefreshCw className={`w-3 h-3 ${isFetching ? 'animate-spin' : ''}`} />
             Verify Now
@@ -350,7 +350,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
 
       {/* Composite health score — only once the questionnaire is complete */}
       {questionnaireComplete ? (
-        <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-gray-50 dark:bg-[#252929]/40 border border-gray-100 dark:border-[#2A2E2E]">
+        <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-gray-50 dark:bg-[#1B1811]/40 border border-gray-100 dark:border-[#3D3830]">
           <div className="flex items-baseline gap-1">
             <span className={`text-4xl font-black tabular-nums ${scoreColorClass}`}>{healthScore}</span>
             <span className="text-sm font-semibold text-gray-400 dark:text-gray-500">/100</span>
@@ -365,7 +365,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
           </div>
         </div>
       ) : (
-        <p className="text-xs text-gray-500 dark:text-gray-400 p-4 rounded-xl bg-gray-50 dark:bg-[#252929]/40 border border-gray-100 dark:border-[#2A2E2E]">
+        <p className="text-xs text-gray-500 dark:text-gray-400 p-4 rounded-xl bg-gray-50 dark:bg-[#1B1811]/40 border border-gray-100 dark:border-[#3D3830]">
           Answer the questions above to see your health score.
         </p>
       )}
@@ -373,7 +373,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
       {/* 2. Setup Checks Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         {displayChecks.map((check, i) => (
-          <div key={i} className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-gray-50 dark:bg-[#252929]/30 border border-gray-100 dark:border-transparent">
+          <div key={i} className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-gray-50 dark:bg-[#1B1811]/30 border border-gray-100 dark:border-transparent">
             <span className="font-medium text-gray-600 dark:text-gray-400">{check.label}</span>
             <div className="flex items-center gap-1.5">
               <span className={`w-2 h-2 rounded-full ${
@@ -392,13 +392,13 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
       {/* C4: the 30-day count, truthfully labelled. doctor_pageviews_30d counts $pageview ONLY, so
           this says "Pageviews", not "Events". Floor caveat: we cannot see what a blocker dropped. */}
       {typeof pageviews_30d === 'number' && (
-        <div className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-gray-50 dark:bg-[#252929]/30 border border-gray-100 dark:border-transparent">
+        <div className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-gray-50 dark:bg-[#1B1811]/30 border border-gray-100 dark:border-transparent">
           <span className="font-medium text-gray-600 dark:text-gray-400">Pageviews received (last 30 days)</span>
           <span className="font-semibold text-st-black dark:text-dark-primary tabular-nums">{pageviews_30d.toLocaleString()}</span>
         </div>
       )}
       {privacy_suppression && typeof privacy_suppression.suppressed_count === 'number' && privacy_suppression.suppressed_count > 0 && (
-        <div className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-gray-50 dark:bg-[#252929]/30 border border-gray-100 dark:border-transparent">
+        <div className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-gray-50 dark:bg-[#1B1811]/30 border border-gray-100 dark:border-transparent">
           <span className="font-medium text-gray-600 dark:text-gray-400">Privacy signals honored (GPC/DNT), last 30 days</span>
           <span className="font-semibold text-st-black dark:text-dark-primary tabular-nums">at least {privacy_suppression.suppressed_count.toLocaleString()} browser-days</span>
         </div>
@@ -430,7 +430,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
 
       {/* Verify a Live Pageview Token UX */}
       {mode === 'snippet' && (
-        <div className="pt-3 border-t border-gray-200 dark:border-[#2A2E2E] space-y-2.5">
+        <div className="pt-3 border-t border-gray-200 dark:border-[#3D3830] space-y-2.5">
           <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300">Verify a live pageview</h4>
 
           {!diagnostics?.domain_match?.registered_domain ? (
@@ -464,7 +464,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
                     type="button"
                     onClick={() => refetch()}
                     disabled={isFetching}
-                    className="px-3 py-2 bg-gray-200 dark:bg-[#252929] hover:bg-gray-300 dark:hover:bg-[#333838] text-gray-700 dark:text-gray-300 text-xs font-bold rounded-lg transition-colors border border-gray-200 dark:border-white/5 flex items-center justify-center gap-1"
+                    className="px-3 py-2 bg-gray-200 dark:bg-[#1B1811] hover:bg-gray-300 dark:hover:bg-[#241F17] text-gray-700 dark:text-gray-300 text-xs font-bold rounded-lg transition-colors border border-gray-200 dark:border-white/5 flex items-center justify-center gap-1"
                   >
                     <RefreshCw className={`w-3 h-3 ${isFetching ? 'animate-spin' : ''}`} />
                     Check now
@@ -500,7 +500,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
 
       {/* Browser Reachability Check */}
       {mode === 'snippet' && (
-        <div className="pt-3 border-t border-gray-200 dark:border-[#2A2E2E]">
+        <div className="pt-3 border-t border-gray-200 dark:border-[#3D3830]">
           <details className="group" onToggle={(e) => {
             if (e.target.open && reachability === 'not_checked') {
               checkBrowserReachability()
@@ -510,7 +510,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
               <span>Dashboard connection check</span>
               <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
             </summary>
-            <div className="mt-3 p-3 bg-gray-50 dark:bg-[#1E2121]/50 border border-gray-200 dark:border-transparent rounded-lg text-xs space-y-2">
+            <div className="mt-3 p-3 bg-gray-50 dark:bg-[#1B1811]/50 border border-gray-200 dark:border-transparent rounded-lg text-xs space-y-2">
               <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-normal font-sans">
                 Tests whether <strong>this dashboard</strong> can reach the SourceTrack API. It does not test your website visitors&apos; tracker connection or any content-security-policy on your site.
               </p>
@@ -554,7 +554,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
 
 
       {/* 5. Technical Details Accordion */}
-      <div className="border-t border-gray-200 dark:border-[#2A2E2E] pt-3">
+      <div className="border-t border-gray-200 dark:border-[#3D3830] pt-3">
         <button
           onClick={() => setAccordionOpen(!accordionOpen)}
           className="w-full flex items-center justify-between text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-dark-text transition-colors"
@@ -564,7 +564,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
         </button>
 
         {accordionOpen && (
-          <div className="mt-3 p-3 bg-gray-50 dark:bg-[#1E2121]/50 border border-gray-200 dark:border-transparent rounded-lg text-[11px] font-sans text-gray-600 dark:text-gray-400 space-y-2 leading-relaxed">
+          <div className="mt-3 p-3 bg-gray-50 dark:bg-[#1B1811]/50 border border-gray-200 dark:border-transparent rounded-lg text-[11px] font-sans text-gray-600 dark:text-gray-400 space-y-2 leading-relaxed">
             <div className="grid grid-cols-2 gap-y-1.5 border-b border-gray-100 dark:border-gray-800 pb-2">
               <div>Last Seen Event</div>
               <div className="font-semibold text-st-black dark:text-dark-primary">{tracker_install.last_event_name || 'None'}</div>

@@ -197,11 +197,11 @@ export default function Dashboard() {
         </div>
         {!previewMode && (
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] text-st-gray dark:text-gray-300 text-xs">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-[#1B1811] border border-gray-200 dark:border-[#3D3830] text-st-gray dark:text-gray-300 text-xs">
               <Users className="w-3.5 h-3.5" />
               Recent visitors (5m): {liveCount}
             </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] text-st-gray dark:text-gray-300 text-xs">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-[#1B1811] border border-gray-200 dark:border-[#3D3830] text-st-gray dark:text-gray-300 text-xs">
               <RefreshCw className="w-3 h-3" />
               Updated {freshnessLabel}
             </div>
@@ -228,7 +228,7 @@ export default function Dashboard() {
               cold-start affordance, not permanent furniture. Cheap: reuses hasConversions/hasTraffic
               from the dashboard payload already fetched (no new pipe). */}
           {!previewMode && site && !hasHistoricalData({ hasConversions, hasTraffic, totalConversions, trafficSources, trafficTopPages }) && (
-            <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-3">
+            <div className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-[#3D3830] rounded-xl p-4 space-y-3">
               <div>
                 <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">Your install is live — here are events as they arrive</h3>
                 <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">Reports fill in as data accrues. This live feed is a floor of what we received — ad blockers and privacy settings can hide arrivals we never see.</p>
@@ -266,7 +266,7 @@ export default function Dashboard() {
               {trafficUnavailable ? (
                 <QueryError isError error={summaryError} onRetry={refetchSummary} />
               ) : showEmptyState ? (
-                <div className="bg-white dark:bg-[#1A1D1D] rounded-2xl border border-gray-200 dark:border-[#2A2E2E] p-12 text-center flex flex-col items-center justify-center space-y-6">
+                <div className="bg-white dark:bg-[#1B1811] rounded-2xl border border-gray-200 dark:border-[#3D3830] p-12 text-center flex flex-col items-center justify-center space-y-6">
                   <div>
                     <Users className="w-16 h-16 text-gray-200 mx-auto mb-4" />
                     {/* design.md §19.3 verbatim. Was "No attribution data yet", which reads as a
@@ -291,7 +291,7 @@ export default function Dashboard() {
                 /* ── STATE (b0): the conversion read FAILED. Not the same as "no
                    conversions" — telling a user to configure conversions they already
                    have is the §6 fake-empty-state violation (#278 / #413 shape). ── */
-                <div className="bg-white dark:bg-[#1A1D1D] rounded-2xl border border-gray-200 dark:border-[#2A2E2E] p-6">
+                <div className="bg-white dark:bg-[#1B1811] rounded-2xl border border-gray-200 dark:border-[#3D3830] p-6">
                   <p className="text-sm text-st-gray dark:text-gray-400">
                     Conversion data is temporarily unavailable. This is a loading problem on our side — your tracking and your recorded conversions are unaffected.
                   </p>
@@ -299,7 +299,7 @@ export default function Dashboard() {
               ) : !hasConversions ? (
                 /* ── STATE (b): traffic exists, zero conversion events ─────────── */
                 <>
-                  <div className="bg-white dark:bg-[#1A1D1D] rounded-2xl border border-gray-200 dark:border-[#2A2E2E] p-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div className="bg-white dark:bg-[#1B1811] rounded-2xl border border-gray-200 dark:border-[#3D3830] p-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex items-start gap-3">
                       <Zap className="w-5 h-5 text-st-black dark:text-dark-primary shrink-0 mt-0.5" />
                       <div>
@@ -348,8 +348,8 @@ export default function Dashboard() {
 
                   {/* Command Center Nav */}
                   <div className="flex flex-wrap gap-2">
-                    <button onClick={() => navigate('/analytics')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Analytics <ArrowRight className="w-3 h-3" /></button>
-                    <button onClick={() => navigate('/setup?tab=conversions')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Set up conversions <ArrowRight className="w-3 h-3" /></button>
+                    <button onClick={() => navigate('/analytics')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#3D3830] bg-white dark:bg-[#1B1811] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Analytics <ArrowRight className="w-3 h-3" /></button>
+                    <button onClick={() => navigate('/setup?tab=conversions')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#3D3830] bg-white dark:bg-[#1B1811] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Set up conversions <ArrowRight className="w-3 h-3" /></button>
                   </div>
 
                   {/* Top Sources + Top Pages — Analytics traffic data path */}
@@ -445,10 +445,10 @@ export default function Dashboard() {
 
               {/* Command Center Nav */}
               <div className="flex flex-wrap gap-2">
-                <button onClick={() => navigate('/analytics')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Analytics <ArrowRight className="w-3 h-3" /></button>
-                <button onClick={() => navigate('/app/attribution')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Attribution <ArrowRight className="w-3 h-3" /></button>
-                <button onClick={() => navigate('/leads')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Leads <ArrowRight className="w-3 h-3" /></button>
-                <button onClick={() => navigate('/app/integrations')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Integrations <ArrowRight className="w-3 h-3" /></button>
+                <button onClick={() => navigate('/analytics')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#3D3830] bg-white dark:bg-[#1B1811] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Analytics <ArrowRight className="w-3 h-3" /></button>
+                <button onClick={() => navigate('/app/attribution')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#3D3830] bg-white dark:bg-[#1B1811] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Attribution <ArrowRight className="w-3 h-3" /></button>
+                <button onClick={() => navigate('/leads')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#3D3830] bg-white dark:bg-[#1B1811] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Leads <ArrowRight className="w-3 h-3" /></button>
+                <button onClick={() => navigate('/app/integrations')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#3D3830] bg-white dark:bg-[#1B1811] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Integrations <ArrowRight className="w-3 h-3" /></button>
               </div>
 
               {/* Performance Trend Chart.
@@ -462,7 +462,7 @@ export default function Dashboard() {
                 subtitle={`Last ${timeRange} days • ${site?.timezone || 'UTC'}`}
                 action={kpis.bounce_rate != null && (
                   <div
-                    className="flex items-baseline gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 dark:bg-[#1A1D1D] border border-gray-200 dark:border-dark-border"
+                    className="flex items-baseline gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 dark:bg-[#1B1811] border border-gray-200 dark:border-dark-border"
                     title="Bounce rate — share of sessions with only one page or action, over the selected range."
                   >
                     <span className="text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Bounce rate</span>
@@ -673,9 +673,9 @@ function DashboardWidgetCard({ report, site }) {
   const sizeClass = sizeClasses[report.dashboard_size] || sizeClasses.medium
 
   return (
-    <div className={`bg-gray-50 dark:bg-[#111414] rounded-lg p-4 text-left border border-gray-100 dark:border-[#2A2E2E] hover:border-gray-300 dark:hover:border-gray-600 transition-colors flex flex-col justify-between ${sizeClass}`}>
+    <div className={`bg-gray-50 dark:bg-[#12100C] rounded-lg p-4 text-left border border-gray-100 dark:border-[#3D3830] hover:border-gray-300 dark:hover:border-gray-600 transition-colors flex flex-col justify-between ${sizeClass}`}>
       <div>
-        <div className="flex items-start justify-between gap-2 border-b border-gray-100 dark:border-[#2A2E2E] pb-2">
+        <div className="flex items-start justify-between gap-2 border-b border-gray-100 dark:border-[#3D3830] pb-2">
           <div className="min-w-0">
             <h4 className="text-xs font-semibold text-st-black dark:text-dark-primary truncate" title={report.name}>{report.name}</h4>
             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[9px] text-st-gray dark:text-gray-400 mt-0.5">
@@ -756,7 +756,7 @@ function DashboardWidgetCard({ report, site }) {
               <span className="text-[10px] text-st-gray dark:text-gray-400">{metricDef.label}</span>
             </div>
 
-            <div className="space-y-1.5 pt-2 border-t border-gray-100/50 dark:border-[#2A2E2E]/50">
+            <div className="space-y-1.5 pt-2 border-t border-gray-100/50 dark:border-[#3D3830]/50">
               {results.slice(0, 5).map((r, i) => {
                 const mk = cfg.metric || 'revenue'
                 const val = r[mk] || r.revenue || r.conversions || r.sessions || 0

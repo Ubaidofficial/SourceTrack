@@ -600,15 +600,15 @@ export default function Campaigns() {
             <input
               type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder={`Filter by ${DIMENSIONS.find(d => d.key === activeDim)?.label?.toLowerCase() || 'name'}...`}
-              className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-dark-border-strong bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime"
+              className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-dark-border-strong bg-white dark:bg-[#1B1811]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime"
             />
           </div>
 
-          <div className="flex bg-gray-100 dark:bg-[#181B1B] rounded-lg p-1">
+          <div className="flex bg-gray-100 dark:bg-[#1B1811] rounded-lg p-1">
             {DATE_RANGES.map(dr => (
               <button key={dr.label} onClick={() => setDateRange(dr.days)}
                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  dateRange === dr.days ? 'bg-white dark:bg-[#252929] text-st-black dark:text-dark-primary shadow-sm' : 'text-st-gray dark:text-gray-400 hover:text-gray-700 dark:hover:text-dark-text'
+                  dateRange === dr.days ? 'bg-white dark:bg-[#1B1811] text-st-black dark:text-dark-primary shadow-sm' : 'text-st-gray dark:text-gray-400 hover:text-gray-700 dark:hover:text-dark-text'
                 }`}>
                 {dr.label}
               </button>
@@ -616,7 +616,7 @@ export default function Campaigns() {
           </div>
 
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-dark-border-strong bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
+            className="px-3 py-2 border border-gray-300 dark:border-dark-border-strong bg-white dark:bg-[#1B1811]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
             <option value="all">All Status</option>
             <option value="active">Active</option>
             <option value="low">Low Volume</option>
@@ -744,7 +744,7 @@ export default function Campaigns() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-[#181B1B]/40">
+                  <tr className="border-b border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-[#1B1811]/40">
                     <th className="text-left py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                       {DIMENSIONS.find(d => d.key === activeDim)?.label || 'Name'}
                     </th>
@@ -1012,11 +1012,11 @@ export default function Campaigns() {
       {selectedCampaign && (
         <div className="fixed inset-0 z-50 bg-black/50 flex justify-end animate-fade-in" onClick={() => setSelectedCampaign(null)}>
           <div
-            className="bg-white dark:bg-[#1A1D1D] shadow-2xl w-full md:max-w-2xl lg:max-w-3xl h-full overflow-hidden flex flex-col transform transition-transform duration-300 ease-in-out"
+            className="bg-white dark:bg-[#1B1811] shadow-2xl w-full md:max-w-2xl lg:max-w-3xl h-full overflow-hidden flex flex-col transform transition-transform duration-300 ease-in-out"
             onClick={e => e.stopPropagation()}
           >
             {/* Slide-over Header */}
-            <div className="px-6 py-4 border-b border-gray-100 dark:border-[#2A2E2E] flex items-center justify-between flex-shrink-0 bg-gray-50/50 dark:bg-[#151818]/50">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-[#3D3830] flex items-center justify-between flex-shrink-0 bg-gray-50/50 dark:bg-[#1B1811]/50">
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-base font-bold text-st-black dark:text-dark-primary">Campaign Details</h2>
@@ -1058,15 +1058,15 @@ export default function Campaigns() {
               {/* UTM Details */}
               <DashboardCard title="UTM Parameters" subtitle="Captured UTM metadata">
                 <div className="grid grid-cols-2 gap-4 text-xs font-mono">
-                  <div className="p-2 bg-gray-50 dark:bg-[#151818] rounded-lg">
+                  <div className="p-2 bg-gray-50 dark:bg-[#1B1811] rounded-lg">
                     <span className="text-st-gray dark:text-gray-400 block text-[10px]">utm_source</span>
                     <span className="text-st-black dark:text-dark-primary">{selectedCampaign.source || '—'}</span>
                   </div>
-                  <div className="p-2 bg-gray-50 dark:bg-[#151818] rounded-lg">
+                  <div className="p-2 bg-gray-50 dark:bg-[#1B1811] rounded-lg">
                     <span className="text-st-gray dark:text-gray-400 block text-[10px]">utm_medium</span>
                     <span className="text-st-black dark:text-dark-primary">{selectedCampaign.medium || '—'}</span>
                   </div>
-                  <div className="p-2 bg-gray-50 dark:bg-[#151818] rounded-lg col-span-2">
+                  <div className="p-2 bg-gray-50 dark:bg-[#1B1811] rounded-lg col-span-2">
                     <span className="text-st-gray dark:text-gray-400 block text-[10px]">utm_campaign</span>
                     <span className="text-st-black dark:text-dark-primary">{selectedCampaign.name}</span>
                   </div>
@@ -1235,7 +1235,7 @@ export default function Campaigns() {
                       <h4 className="text-xs font-semibold text-st-black uppercase tracking-wider">Preview Ingest Batch ({parsedRows.length} rows)</h4>
                       <div className="border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden max-h-48 overflow-y-auto bg-white dark:bg-dark-card">
                         <table className="w-full text-xs text-left">
-                          <thead className="bg-gray-50 dark:bg-[#181B1B]/40 border-b border-gray-200 dark:border-dark-border sticky top-0">
+                          <thead className="bg-gray-50 dark:bg-[#1B1811]/40 border-b border-gray-200 dark:border-dark-border sticky top-0">
                             <tr>
                               <th className="py-2 px-3 font-semibold text-st-gray dark:text-gray-400 w-24">Date</th>
                               <th className="py-2 px-3 font-semibold text-st-gray dark:text-gray-400 w-20">Platform</th>
@@ -1289,7 +1289,7 @@ export default function Campaigns() {
                   ) : (
                     <div className="border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden bg-white dark:bg-dark-card">
                       <table className="w-full text-xs text-left">
-                        <thead className="bg-gray-50 dark:bg-[#181B1B]/40 border-b border-gray-200 dark:border-dark-border">
+                        <thead className="bg-gray-50 dark:bg-[#1B1811]/40 border-b border-gray-200 dark:border-dark-border">
                           <tr>
                             <th className="py-2.5 px-4 font-semibold text-st-gray dark:text-gray-400">Date / Time</th>
                             <th className="py-2.5 px-4 font-semibold text-st-gray dark:text-gray-400">Sync Type</th>

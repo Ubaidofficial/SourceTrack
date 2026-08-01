@@ -4,7 +4,7 @@ export default function FilterBar({ dateButtons = [], activeDate, onDateChange, 
   return (
     <div className="flex items-center gap-3 flex-wrap">
       {dateButtons && dateButtons.length > 0 && (
-        <div className="inline-flex p-0.5 bg-gray-100 dark:bg-[#181B1B] border border-gray-200 dark:border-dark-border rounded-lg">
+        <div className="inline-flex p-0.5 bg-gray-100 dark:bg-[#1B1811] border border-gray-200 dark:border-dark-border rounded-lg">
           {dateButtons.map((d) => {
             const isActive = activeDate === d.key
             return (
@@ -13,7 +13,7 @@ export default function FilterBar({ dateButtons = [], activeDate, onDateChange, 
                 onClick={() => onDateChange?.(d.key)}
                 className={`px-3 py-1 text-xs font-semibold rounded-md transition-all duration-150 focus-visible:ring-1 focus-visible:ring-st-lime focus-visible:outline-none ${
                   isActive
-                    ? 'bg-white dark:bg-[#252929] text-st-black dark:text-dark-primary shadow-sm'
+                    ? 'bg-white dark:bg-[#1B1811] text-st-black dark:text-dark-primary shadow-sm'
                     : 'text-gray-600 dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text'
                 }`}
               >

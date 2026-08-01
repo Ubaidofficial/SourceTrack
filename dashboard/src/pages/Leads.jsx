@@ -276,8 +276,8 @@ export default function Leads() {
   // Canonical 4-state status vocabulary (matches lead_qualifications.status + the
   // CHECK constraint). `lead` is the null/unmarked fallback (curStatus || 'lead').
   const STATUS_CHIP = {
-    lead:        { bg: 'bg-gray-50 text-gray-500 dark:bg-[#181B1B]/40 dark:text-gray-400 border border-gray-200 dark:border-dark-border', label: 'Unqualified' },
-    unqualified: { bg: 'bg-gray-50 text-gray-500 dark:bg-[#181B1B]/40 dark:text-gray-400 border border-gray-200 dark:border-dark-border', label: 'Unqualified' },
+    lead:        { bg: 'bg-gray-50 text-gray-500 dark:bg-[#1B1811]/40 dark:text-gray-400 border border-gray-200 dark:border-dark-border', label: 'Unqualified' },
+    unqualified: { bg: 'bg-gray-50 text-gray-500 dark:bg-[#1B1811]/40 dark:text-gray-400 border border-gray-200 dark:border-dark-border', label: 'Unqualified' },
     qualified:   { bg: 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-100 dark:border-green-900/30', label: 'Qualified' },
     mql:         { bg: 'bg-blue-50 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30',  label: 'MQL' },
     sql:         { bg: 'bg-purple-50 text-purple-600 dark:bg-purple-950/20 dark:text-purple-400 border border-purple-100 dark:border-purple-900/30', label: 'SQL' }
@@ -340,25 +340,25 @@ export default function Leads() {
           <input
             type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search by name, email, visitor ID, source, or campaign..."
-            className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-dark-border-strong bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime"
+            className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-dark-border-strong bg-white dark:bg-[#1B1811]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime"
           />
         </div>
         <select value={filterAI} onChange={e => setFilterAI(e.target.value)}
-          className="px-3 py-2 border border-gray-300 dark:border-dark-border-strong bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
+          className="px-3 py-2 border border-gray-300 dark:border-dark-border-strong bg-white dark:bg-[#1B1811]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
           <option value="all">All Sources</option>
           <option value="ai">AI Sources</option>
           <option value="non-ai">Non-AI Sources</option>
         </select>
         <select value={attributionModel} onChange={e => setAttributionModel(e.target.value)}
-          className="px-3 py-2 border border-gray-300 dark:border-dark-border-strong bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
+          className="px-3 py-2 border border-gray-300 dark:border-dark-border-strong bg-white dark:bg-[#1B1811]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
           <option value="first_touch">First Touch</option>
           <option value="last_touch">Last Touch</option>
         </select>
-        <div className="flex bg-gray-100 dark:bg-[#181B1B] rounded-lg p-1">
+        <div className="flex bg-gray-100 dark:bg-[#1B1811] rounded-lg p-1">
           {DATE_RANGES.map(dr => (
             <button key={dr.label} onClick={() => setDateRange(dr.days)}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                dateRange === dr.days ? 'bg-white dark:bg-[#252929] text-st-black dark:text-dark-primary shadow-sm' : 'text-st-gray dark:text-gray-400 hover:text-gray-700 dark:hover:text-dark-text'
+                dateRange === dr.days ? 'bg-white dark:bg-[#1B1811] text-st-black dark:text-dark-primary shadow-sm' : 'text-st-gray dark:text-gray-400 hover:text-gray-700 dark:hover:text-dark-text'
               }`}>
               {dr.label}
             </button>
@@ -514,7 +514,7 @@ export default function Leads() {
                     <tr
                       key={i}
                       onClick={() => openJourney(lead)}
-                      className={`border-b border-gray-100/80 dark:border-dark-border hover:bg-gray-50/50 dark:hover:bg-dark-hover/40 transition-colors cursor-pointer${isSelected ? ' bg-st-lime/5 dark:bg-[#1E2318]' : ''}`}
+                      className={`border-b border-gray-100/80 dark:border-dark-border hover:bg-gray-50/50 dark:hover:bg-dark-hover/40 transition-colors cursor-pointer${isSelected ? ' bg-st-lime/5' : ''}`}
                     >
                       <td className="py-2.5 px-3 w-8" onClick={e => e.stopPropagation()}>
                         <input

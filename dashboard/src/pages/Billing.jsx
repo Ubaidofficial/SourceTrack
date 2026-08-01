@@ -184,7 +184,7 @@ export default function Billing() {
       )}
 
       {/* ── Current Plan Card ─────────────────────────────────────────────── */}
-      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+      <section className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
           <CreditCard className="w-4 h-4 text-st-gray dark:text-gray-400" />
           <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Current Plan</h3>
@@ -272,7 +272,7 @@ export default function Billing() {
           </div>
 
           {/* ── Early Bird Founding Offer ──────────────────────────────────── */}
-          <div className={`rounded-xl border p-5 ${earlyBirdPriceId ? 'border-st-lime/40 dark:border-st-lime/30 bg-st-lime/5' : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1C1C]'}`}>
+          <div className={`rounded-xl border p-5 ${earlyBirdPriceId ? 'border-st-lime/40 dark:border-st-lime/30 bg-st-lime/5' : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1B1811]'}`}>
             <div className="flex items-center gap-2 mb-3">
               <span className="text-[9px] font-bold uppercase tracking-wider bg-st-lime text-black px-1.5 py-0.5 rounded-full">
                 Founding Offer
@@ -306,7 +306,7 @@ export default function Billing() {
               <div key={p.key} className={`rounded-xl border p-5 flex flex-col justify-between ${
                 p.highlight
                   ? 'border-st-lime/40 dark:border-st-lime/40 bg-st-lime/5'
-                  : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1C1C]'
+                  : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1B1811]'
               }`}>
                 <div>
                   <div className="flex items-center justify-between">
@@ -340,7 +340,7 @@ export default function Billing() {
 
       {/* ── Downgrade option for paid plans ───────────────────────────────── */}
       {isPaid && (
-        <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6">
+        <section className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-gray-800 rounded-xl p-6">
           <h3 className="text-sm font-bold text-st-black dark:text-dark-primary mb-1">Change or Cancel Plan</h3>
           <p className="text-xs text-st-gray dark:text-gray-400 mb-4">
             Upgrade, downgrade, update payment details, or cancel — all from your Stripe billing portal.

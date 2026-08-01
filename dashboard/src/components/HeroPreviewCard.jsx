@@ -6,10 +6,10 @@ export default function HeroPreviewCard() {
       {/* Background ambient glow */}
       <div className="absolute right-[30px] top-[20px] w-[320px] h-[320px] rounded-full bg-st-lime opacity-[0.24] blur-[48px]" />
 
-      <div className="relative rounded-[32px] bg-[#0D1010] p-3 shadow-[0_30px_90px_rgba(18,16,12,.30)] border border-white/10" style={{ transform: 'rotate(-0.8deg)' }}>
-        <div className="overflow-hidden min-h-[460px] rounded-[22px] bg-[#121616] border border-[#2D3333]">
+      <div className="relative rounded-[32px] bg-[#12100C] p-3 shadow-[0_30px_90px_rgba(18,16,12,.30)] border border-white/10" style={{ transform: 'rotate(-0.8deg)' }}>
+        <div className="overflow-hidden min-h-[460px] rounded-[22px] bg-[#12100C] border border-[#3D3830]">
           {/* Header */}
-          <div className="h-[48px] grid grid-cols-[80px_1fr_auto] items-center gap-2 px-4 bg-[#171B1B] text-[#F7F4ED] border-b border-white/10 text-xs font-bold">
+          <div className="h-[48px] grid grid-cols-[80px_1fr_auto] items-center gap-2 px-4 bg-[#1B1811] text-[#F7F4ED] border-b border-white/10 text-xs font-bold">
             <div className="flex gap-[6px]">
               <span className="w-2.5 h-2.5 rounded-full bg-[#C4381C]" />
               <span className="w-2.5 h-2.5 rounded-full bg-[#FF7A33]" />
@@ -23,25 +23,25 @@ export default function HeroPreviewCard() {
 
           <div className="p-3 grid grid-cols-2 gap-3 text-white">
             {/* KPI Cards */}
-            <div className="bg-[#181D1D] border border-[#2D3333] rounded-2xl p-3">
+            <div className="bg-[#1B1811] border border-[#3D3830] rounded-2xl p-3">
               <div className="text-[#A39B8C] text-[10px] font-extrabold uppercase tracking-wider">Attributed Revenue</div>
               <div className="mt-1 text-2xl font-black tracking-tight text-white">$18,420</div>
               <div className="mt-1 text-[#D2EC2A] text-[10px] font-bold">Sample dataset</div>
             </div>
 
-            <div className="bg-[#181D1D] border border-[#2D3333] rounded-2xl p-3">
+            <div className="bg-[#1B1811] border border-[#3D3830] rounded-2xl p-3">
               <div className="text-[#A39B8C] text-[10px] font-extrabold uppercase tracking-wider">Top Source</div>
               <div className="mt-1 text-2xl font-black tracking-tight text-[#D2EC2A]">ChatGPT</div>
               <div className="mt-1 text-[#A39B8C] text-[10px] font-bold">AI referral channel</div>
             </div>
 
             {/* Example Journey Panel */}
-            <div className="col-span-2 bg-[#181D1D] border border-[#2D3333] rounded-2xl p-3.5">
+            <div className="col-span-2 bg-[#1B1811] border border-[#3D3830] rounded-2xl p-3.5">
               <div className="text-[#A39B8C] text-[10px] font-extrabold uppercase tracking-wider mb-2">Example Journey Map</div>
               <div className="flex flex-wrap items-center gap-1.5 text-xs text-[#E7E0D2] font-bold">
-                <span className="px-2 py-1 rounded bg-[#2D3333] border border-white/5">ChatGPT</span>
+                <span className="px-2 py-1 rounded bg-[#1B1811] border border-white/5">ChatGPT</span>
                 <span className="text-st-lime font-black">→</span>
-                <span className="px-2 py-1 rounded bg-[#2D3333] border border-white/5">/pricing</span>
+                <span className="px-2 py-1 rounded bg-[#1B1811] border border-white/5">/pricing</span>
                 <span className="text-st-lime font-black">→</span>
                 <span className="px-2 py-1 rounded bg-[#D2EC2A]/20 text-st-lime border border-[#D2EC2A]/20">checkout ($120.00)</span>
               </div>
@@ -49,7 +49,7 @@ export default function HeroPreviewCard() {
             </div>
 
             {/* Sample Source Table */}
-            <div className="col-span-2 bg-[#181D1D] border border-[#2D3333] rounded-2xl p-3">
+            <div className="col-span-2 bg-[#1B1811] border border-[#3D3830] rounded-2xl p-3">
               <div className="text-[#A39B8C] text-[10px] font-extrabold uppercase tracking-wider mb-2">Sample Channel Breakdown</div>
               <div className="grid gap-1.5">
                 {[
@@ -57,7 +57,7 @@ export default function HeroPreviewCard() {
                   ['Google Ads', 'Paid Search', '$6,200'],
                   ['Meta Ads', 'Paid Social', '$5,820'],
                 ].map((row, i) => (
-                  <div key={i} className="flex justify-between items-center py-1 border-b border-[#2D3333] last:border-0 text-xs font-bold">
+                  <div key={i} className="flex justify-between items-center py-1 border-b border-[#3D3830] last:border-0 text-xs font-bold">
                     <div className="flex flex-col">
                       <span className="text-[#E7E0D2]">{row[0]}</span>
                       <span className="text-[#6E675C] text-[9px] font-normal">{row[1]}</span>

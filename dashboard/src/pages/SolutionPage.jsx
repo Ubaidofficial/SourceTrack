@@ -12,7 +12,7 @@ const FadeUp = Reveal
 function FAQItem({ q, a }) {
   const [open, setOpen] = useState(false)
   return (
-    <div className={`rounded-2xl border transition-colors ${open ? 'border-white/15 bg-[#111414]' : 'border-white/8 bg-[#111414]'}`}>
+    <div className={`rounded-2xl border transition-colors ${open ? 'border-white/15 bg-[#12100C]' : 'border-white/8 bg-[#12100C]'}`}>
       <button onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left">
         <span className="text-sm font-semibold text-white leading-snug">{q}</span>
         <span className={`shrink-0 text-white/40 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
@@ -35,7 +35,7 @@ function Nav() {
     return () => window.removeEventListener('scroll', fn)
   }, [])
   return (
-    <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#0C0E0E]/95 backdrop-blur border-b border-white/5' : ''}`}>
+    <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#12100C]/95 backdrop-blur border-b border-white/5' : ''}`}>
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <LogoFullDark className="h-8 w-auto" />
@@ -59,7 +59,7 @@ export default function SolutionPage({ data }) {
   } = data
 
   return (
-    <div className="bg-[#0C0E0E] text-white min-h-screen font-sans antialiased">
+    <div className="bg-[#12100C] text-white min-h-screen font-sans antialiased">
       <style>{`
         @keyframes fade-in-up { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: translateY(0) } }
         @keyframes glow-pulse { 0%,100% { opacity: 0.4 } 50% { opacity: 0.7 } }
@@ -154,7 +154,7 @@ export default function SolutionPage({ data }) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {features.items.map((f, i) => (
               <FadeUp key={f.title} delay={(i % 3) * 80}>
-                <div className="rounded-2xl border border-white/8 bg-[#111414] p-6 hover:border-white/15 hover:-translate-y-0.5 transition-all group h-full">
+                <div className="rounded-2xl border border-white/8 bg-[#12100C] p-6 hover:border-white/15 hover:-translate-y-0.5 transition-all group h-full">
                   <div className="text-3xl mb-4 group-hover:scale-110 transition-transform duration-200 inline-block">{f.icon}</div>
                   <h3 className="text-base font-bold text-white mb-2">{f.title}</h3>
                   <p className="text-sm text-white/45 leading-relaxed">{f.body}</p>
@@ -187,7 +187,7 @@ export default function SolutionPage({ data }) {
                       <h3 className="text-base font-bold text-white mb-1">{step.title}</h3>
                       <p className="text-sm text-white/45 mb-3 leading-relaxed">{step.body}</p>
                       {step.code && (
-                        <pre className="bg-[#0F1212] border border-white/8 rounded-xl p-4 text-xs text-green-400 font-mono overflow-x-auto whitespace-pre">
+                        <pre className="bg-[#12100C] border border-white/8 rounded-xl p-4 text-xs text-green-400 font-mono overflow-x-auto whitespace-pre">
                           {step.code}
                         </pre>
                       )}

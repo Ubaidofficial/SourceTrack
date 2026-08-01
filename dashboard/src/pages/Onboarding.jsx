@@ -389,7 +389,7 @@ export default function Onboarding() {
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 placeholder="ex: google.com"
-                className="w-full px-4 py-3 bg-white dark:bg-[#1A1F1F] text-[#12100C] dark:text-dark-primary placeholder:text-[#A39B8C] border border-[#D6CDBB] dark:border-white/15 rounded-xl text-sm outline-none focus:ring-2 focus:ring-st-lime focus:border-st-lime"
+                className="w-full px-4 py-3 bg-white dark:bg-[#1B1811] text-[#12100C] dark:text-dark-primary placeholder:text-[#A39B8C] border border-[#D6CDBB] dark:border-white/15 rounded-xl text-sm outline-none focus:ring-2 focus:ring-st-lime focus:border-st-lime"
               />
               <p className="text-xs text-st-gray dark:text-gray-400 mt-1">We'll use this URL to personalize your set up process</p>
               {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
@@ -478,10 +478,10 @@ export default function Onboarding() {
                     disabled={conv.disabled}
                     className={`flex items-start gap-3 p-4 rounded-lg border-2 text-left transition-colors ${
                       conv.disabled
-                        ? 'border-gray-100 dark:border-[#2A2E2E] bg-gray-50 dark:bg-[#111414] opacity-40 cursor-not-allowed'
+                        ? 'border-gray-100 dark:border-[#3D3830] bg-gray-50 dark:bg-[#12100C] opacity-40 cursor-not-allowed'
                         : selected
                         ? 'border-st-lime bg-st-lime/10 dark:bg-st-lime/10'
-                        : 'border-gray-200 dark:border-[#454949] bg-white dark:bg-[#252A29] hover:border-gray-300 dark:hover:border-[#555A5A]'
+                        : 'border-gray-200 dark:border-[#3D3830] bg-white dark:bg-[#1B1811] hover:border-gray-300 dark:hover:border-[#565045]'
                     }`}
                   >
                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
@@ -567,7 +567,7 @@ export default function Onboarding() {
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="rounded-lg border border-gray-200 dark:border-[#2A2E2E] p-3 space-y-2 text-xs">
+                <div className="rounded-lg border border-gray-200 dark:border-[#3D3830] p-3 space-y-2 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-gray-600 dark:text-gray-400">Script detected</span>
                     <span className={`font-semibold ${scriptDetected === 'detected' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
@@ -753,7 +753,7 @@ export default function Onboarding() {
           </>
         )}
 
-        <div className="bg-[#F7F4ED] dark:bg-[#252A29] border border-[#E7E0D2] dark:border-white/10 rounded-xl p-4 relative">
+        <div className="bg-[#F7F4ED] dark:bg-[#1B1811] border border-[#E7E0D2] dark:border-white/10 rounded-xl p-4 relative">
           <pre className="text-xs text-[#12100C] dark:text-gray-200 overflow-x-auto whitespace-pre-wrap break-all pr-24">{snippet || 'Loading script...'}</pre>
           <button
             onClick={handleCopySnippet}
@@ -851,7 +851,7 @@ export default function Onboarding() {
   // users, even when they are mid-setup or already complete.
   if (statusLoading) {
     return (
-      <div className="min-h-screen bg-[#F7F4ED] dark:bg-[#2B302F] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F7F4ED] dark:bg-[#1B1811] flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black dark:border-st-lime" />
       </div>
     )
@@ -863,7 +863,7 @@ export default function Onboarding() {
   const phaseIdx = step <= 2 ? 0 : step <= 4 ? 1 : 2
 
   return (
-    <div className="min-h-screen bg-[#F7F4ED] dark:bg-[#2B302F] text-[#12100C] dark:text-dark-primary flex flex-col">
+    <div className="min-h-screen bg-[#F7F4ED] dark:bg-[#1B1811] text-[#12100C] dark:text-dark-primary flex flex-col">
       {/* Header — brand left, stepper centered (desktop), logout right */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-6 px-6 lg:px-12 py-8">
         <div className="dark:hidden"><LogoFull className="h-8 w-auto" /></div>

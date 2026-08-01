@@ -66,7 +66,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F7F4ED] dark:bg-[#2B302F] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#F7F4ED] dark:bg-[#1B1811] px-4">
       <Helmet>
         <title>Log in to SourceTrack | SourceTrack</title>
         <meta name="description" content="Sign in to your SourceTrack attribution dashboard." />
@@ -80,7 +80,7 @@ export default function Login() {
           <p className="text-st-gray dark:text-gray-400 mt-2">Sign in to your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white dark:bg-[#1A1F1F] shadow-[0_18px_50px_rgba(18,16,12,0.10)] border border-[#E7E0D2] dark:border-white/10 rounded-2xl p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-[#1B1811] shadow-[0_18px_50px_rgba(18,16,12,0.10)] border border-[#E7E0D2] dark:border-white/10 rounded-2xl p-6 space-y-4">
           {error && (
             <div className="bg-red-50 dark:bg-red-900/20 text-red-600 text-sm p-3 rounded">{error}</div>
           )}
@@ -101,7 +101,7 @@ export default function Login() {
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-            <div className="relative flex justify-center text-xs"><span className="bg-white dark:bg-[#1A1F1F] px-2 text-st-gray">or</span></div>
+            <div className="relative flex justify-center text-xs"><span className="bg-white dark:bg-[#1B1811] px-2 text-st-gray">or</span></div>
           </div>
 
           <div>
@@ -111,7 +111,7 @@ export default function Login() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2.5 bg-white dark:bg-[#252A29] text-[#12100C] dark:text-dark-primary border border-gray-300 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-st-lime focus:border-st-lime outline-none"
+              className="w-full px-3 py-2.5 bg-white dark:bg-[#1B1811] text-[#12100C] dark:text-dark-primary border border-gray-300 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-st-lime focus:border-st-lime outline-none"
             />
           </div>
 
@@ -127,7 +127,7 @@ export default function Login() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2.5 bg-white dark:bg-[#252A29] text-[#12100C] dark:text-dark-primary border border-gray-300 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-st-lime focus:border-st-lime outline-none"
+              className="w-full px-3 py-2.5 bg-white dark:bg-[#1B1811] text-[#12100C] dark:text-dark-primary border border-gray-300 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-st-lime focus:border-st-lime outline-none"
             />
           </div>
 

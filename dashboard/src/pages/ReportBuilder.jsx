@@ -2358,7 +2358,7 @@ export default function ReportBuilder() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-[#181B1B]/40">
+                        <tr className="border-b border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-[#1B1811]/40">
                           <th className="text-left py-2.5 px-4 text-st-gray dark:text-gray-400 font-semibold text-xs uppercase tracking-wider">
                             {getDimensionLabel(groupBy) || 'Dimension'}
                           </th>

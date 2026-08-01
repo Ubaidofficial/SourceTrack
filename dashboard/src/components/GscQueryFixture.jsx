@@ -14,10 +14,10 @@ export default function GscQueryFixture() {
   return (
     <div className="relative">
       <div className="absolute left-[24px] top-[18px] w-[300px] h-[300px] rounded-full bg-st-lime opacity-[0.18] blur-[48px]" />
-      <div className="relative rounded-[28px] bg-[#0D1010] p-3 border border-white/10 shadow-[0_24px_80px_rgba(18,16,12,.22)]">
-        <div className="overflow-hidden rounded-[20px] bg-[#121616] border border-[#2D3333]">
+      <div className="relative rounded-[28px] bg-[#12100C] p-3 border border-white/10 shadow-[0_24px_80px_rgba(18,16,12,.22)]">
+        <div className="overflow-hidden rounded-[20px] bg-[#12100C] border border-[#3D3830]">
           {/* Header */}
-          <div className="h-[44px] flex items-center justify-between px-4 bg-[#171B1B] border-b border-white/10">
+          <div className="h-[44px] flex items-center justify-between px-4 bg-[#1B1811] border-b border-white/10">
             <span className="text-[#F7F4ED] text-xs font-bold">Search Console — top queries</span>
             <span className="inline-flex items-center gap-1.5 rounded-full py-1 px-2.5 bg-[#D2EC2A]/10 text-st-lime text-[10px] font-black uppercase tracking-wider">
               Sample data
@@ -28,7 +28,7 @@ export default function GscQueryFixture() {
           <div className="p-3 overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="text-[#6E675C] border-b border-[#2D3333] text-[10px] font-black uppercase tracking-wider">
+                <tr className="text-[#6E675C] border-b border-[#3D3830] text-[10px] font-black uppercase tracking-wider">
                   <th className="py-2 pr-2">Query</th>
                   <th className="py-2 px-2 text-right">Clicks</th>
                   <th className="py-2 px-2 text-right">Impr.</th>
@@ -38,7 +38,7 @@ export default function GscQueryFixture() {
               </thead>
               <tbody>
                 {QUERIES.map((q) => (
-                  <tr key={q.query} className="border-b border-[#202525] last:border-0 text-[#E7E0D2] font-bold">
+                  <tr key={q.query} className="border-b border-[#3D3830] last:border-0 text-[#E7E0D2] font-bold">
                     <td className="py-2.5 pr-2 font-mono text-[11px] text-white truncate max-w-[180px]">{q.query}</td>
                     <td className="py-2.5 px-2 text-right tabular-nums">{q.clicks}</td>
                     <td className="py-2.5 px-2 text-right tabular-nums text-[#A39B8C]">{q.impr}</td>

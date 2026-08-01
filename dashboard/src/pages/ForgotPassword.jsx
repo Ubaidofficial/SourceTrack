@@ -28,7 +28,7 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F7F4ED] dark:bg-[#2B302F] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#F7F4ED] dark:bg-[#1B1811] px-4">
       <Helmet>
         <title>Reset your password | SourceTrack</title>
         <meta name="description" content="Request a password reset link for your SourceTrack account." />
@@ -41,7 +41,7 @@ export default function ForgotPassword() {
           <p className="text-st-gray dark:text-gray-400 mt-2">Reset your password</p>
         </div>
 
-        <div className="bg-white dark:bg-[#1A1F1F] shadow-[0_18px_50px_rgba(18,16,12,0.10)] border border-[#E7E0D2] dark:border-white/10 rounded-2xl p-6 space-y-4">
+        <div className="bg-white dark:bg-[#1B1811] shadow-[0_18px_50px_rgba(18,16,12,0.10)] border border-[#E7E0D2] dark:border-white/10 rounded-2xl p-6 space-y-4">
           {error && (
             <div className="bg-red-50 dark:bg-red-900/20 text-red-600 text-sm p-3 rounded">{error}</div>
           )}
@@ -68,7 +68,7 @@ export default function ForgotPassword() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-white dark:bg-[#252A29] text-[#12100C] dark:text-dark-primary border border-gray-300 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-st-lime focus:border-st-lime outline-none"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-[#1B1811] text-[#12100C] dark:text-dark-primary border border-gray-300 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-st-lime focus:border-st-lime outline-none"
                 />
               </div>
 
