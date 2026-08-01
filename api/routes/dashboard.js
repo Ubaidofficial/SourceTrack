@@ -12,11 +12,19 @@ import { normalizeSource } from '../lib/source-normalizer.js'
 // PR2 refund-aware reads. (A) A refund (conversion_type='refund') is a NEGATIVE-value
 // row; its revenue must net (SUM keeps it) but it must NOT ADD to any conversion
 // COUNT — the original purchase is still the conversion that happened. (B) An
-// UNRESOLVED refund (custom_properties.refund_attribution='unresolved', written by
-// nightly-attribution.js) has a phantom distinct_id → NULL first_touch → 'direct';
-// its revenue is routed to this explicit line instead of debiting 'direct' (or any
-// acquiring source) it never earned.
+// refund is NEVER attributed to a source (founder decision 2026-08-01) — its revenue is
+// routed to this explicit line instead of debiting 'direct', or any acquiring source, that
+// it never earned. Both markers nightly-attribution.js writes land here:
+//   'unattributed' — the original IS known; we deliberately do not debit it. Attribution is a
+//                    model output, so inheriting it would turn one uncertain credit into an
+//                    equal-and-opposite uncertain debit and double the error instead of
+//                    cancelling it.
+//   'unresolved'   — the original could not be identified at all (no payment_intent,
+//                    subscription-mode refund, failed lookup). A real data gap, kept distinct
+//                    because it is diagnosable and 'unattributed' is not.
+// The distinction is preserved in the data and collapsed only here, at presentation.
 const UNATTRIBUTED_REFUNDS = 'Unattributed refunds'
+const isUnattributedRefundMark = (m) => m === 'unattributed' || m === 'unresolved'
 
 
 
@@ -209,7 +217,11 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       // PR2 (A)/(B): a refund nets revenue but never adds to a COUNT; an unresolved
       // refund's revenue is bucketed separately (not onto 'direct'/any source).
       const isRefund = r.conversion_type === 'refund'
-      const isUnresolvedRefund = isRefund && r.custom_properties?.refund_attribution === 'unresolved'
+      // Belt-and-braces: `isRefund &&` alone would be enough now that EVERY refund is
+      // unattributed, but the marker check stays so a row written by an older nightly (or a
+      // future refund that legitimately carries a source) is still routed on what it says,
+      // not on its type alone.
+      const isUnresolvedRefund = isRefund && isUnattributedRefundMark(r.custom_properties?.refund_attribution)
 
       totalRevenue += val
       // Push even when r.currency is null: an undenominated revenue row is exactly what makes

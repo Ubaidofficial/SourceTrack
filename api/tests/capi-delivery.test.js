@@ -9,6 +9,9 @@ import {
   sendMetaCAPI, sendMicrosoftConversion, dispatchCapi, encryptCapiToken
 } from '../lib/conversion-sync.js'
 import { logCapiDelivery, CAPI_DELIVERY_COLUMNS } from '../lib/capi-deliveries.js'
+// The suppression lookup memoises per (site, key). Without a reset between tests the first
+// answer would leak into every later one and a suppressed-case test could pass vacuously.
+import { __resetSuppressionCache } from '../lib/erasure-suppression.js'
 
 function withFetch(stub, fn) {
   const orig = global.fetch
@@ -20,9 +23,23 @@ const resp = (status, body = {}) => ({
   json: async () => body, text: async () => JSON.stringify(body),
   headers: { get: () => null }
 })
-function mockSupabase() {
+// dispatchCapi now runs an erasure-suppression check before any sender fires, so the stub has to
+// answer BOTH shapes: the capi_deliveries insert, and the erasure_suppression select chain
+// (.select().eq().contains().limit()). `suppressed` drives what that select returns.
+//
+// This is not mock-padding to keep a test green — it is the fail-closed guard behaving correctly.
+// Before this stub existed the select threw, isErasureSuppressed caught it, treated suppression
+// state as unknown and refused to send. That is the designed outcome for an unreachable check;
+// the stub supplies the reachable-and-clean case so the delivery-logging assertions can run.
+function mockSupabase({ suppressed = false } = {}) {
   const inserts = []
-  return { inserts, from: () => ({ insert: (row) => { inserts.push(row); return Promise.resolve({ error: null }) } }) }
+  const rows = suppressed ? [{ id: 'sup1' }] : []
+  return {
+    inserts,
+    from: (table) => table === 'erasure_suppression'
+      ? { select: () => ({ eq: () => ({ contains: () => ({ limit: () => Promise.resolve({ data: rows, error: null }) }) }) }) }
+      : { insert: (row) => { inserts.push(row); return Promise.resolve({ error: null }) } }
+  }
 }
 
 // ── Encryption fail-safe ────────────────────────────────────────────────────

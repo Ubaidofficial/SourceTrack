@@ -45,11 +45,15 @@ test('refund (negative value) → PERSISTED: record built with conversion_value=
   assert.equal(record.conversion_value, -40, 'the NEGATIVE value is persisted (so the Supabase SUM nets)')
   assert.equal(record.conversion_type, 'refund', 'conversion_type preserved')
   assert.equal(record.conversion_event_id, 're_evt_nightly_1')
-  assert.equal(record.touchpoint_count, 0, 'no journey → empty touchpoints (handled without throwing)')
-  // No touchpoints → attribution resolves to null/direct (nets into the Direct bucket at site level).
-  assert.equal(record.first_touch_source, null, 'no touchpoints → first-touch source null')
-  assert.equal(record.last_touch_source, null, 'no touchpoints → last-touch source null')
-  assert.deepEqual(record.linear_attribution, [], 'empty linear attribution, no throw')
+  // Every attribution DESCRIPTOR is cleared on a refund (PR 4/5 — refunds are never attributed to
+  // a source). Previously this asserted touchpoint_count === 0 and linear_attribution === [], the
+  // values the refund's own empty window derived. Those are now null: a refund makes no attribution
+  // claim at all, and "0 touchpoints" / "[]" are claims. The negative value still persists, which
+  // is the part that has to survive — see nightly-refund-unattributed.test.js for the policy suite.
+  assert.equal(record.touchpoint_count, null, 'descriptor cleared — the refund asserts no journey')
+  assert.equal(record.first_touch_source, null, 'no source claimed for a refund')
+  assert.equal(record.last_touch_source, null)
+  assert.equal(record.linear_attribution, null, 'descriptor cleared, not an empty-array claim')
 })
 
 test('non-refund negative (type=purchase, value=-5) → STILL SKIPPED (invalid)', async (t) => {

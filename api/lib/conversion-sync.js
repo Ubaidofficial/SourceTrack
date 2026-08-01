@@ -5,6 +5,7 @@ import { logCapiDelivery } from './capi-deliveries.js'
 // OAuth refresh; CAPI shares that one implementation rather than re-deriving it.
 import { refreshAccessToken } from './google-ads.js'
 import { normalizeCurrencyCode, hasKnownCurrency } from './currency.js'
+import { isErasureSuppressed, logSuppressionBlocked } from './erasure-suppression.js'
 
 // Emit `{ [field]: 'XXX' }` for a known currency, or `{}` — the field is OMITTED — when the unit
 // is unknown. Each platform names the field differently, hence the parameter.
@@ -592,6 +593,43 @@ export async function dispatchCapi(supabase, site, evt) {
   // rather than silent.
   if (Number(evt.conversion_value) !== 0 && !hasKnownCurrency(evt.currency)) {
     console.warn(`[capi] suppressed all senders for event ${eventRef || '(no ref)'} on site ${site.id}: revenue event has no usable currency code`)
+    return
+  }
+
+  // ERASURE-SUPPRESSION GATE — the LAST point at which this is still recoverable.
+  //
+  // Every other suppression call site (PR 2) guards a Supabase write, where a miss is repairable:
+  // the row is ours, and a later erasure or the PR 3 re-sweep can still delete it. This one is
+  // different in kind. Once a conversion reaches Meta, Google, GA4, TikTok or LinkedIn it is in a
+  // third party's ledger, under their retention, and NO sweep of ours can reach it. There is no
+  // "clean up afterwards" for an egress — so the check has to happen before the send, not after.
+  //
+  // Placed here rather than in the six senders because dispatchCapi is the single choke point for
+  // all of them (the money-truth gate above uses the same property), so one gate cannot be
+  // bypassed by a sender added later. Checked ONCE per event, not per platform: six identical
+  // lookups would only multiply the cost of the same answer.
+  //
+  // Keys mirror what the senders actually transmit — the subject id and the email they hash into
+  // user_data (sendMetaCAPI :152, sendGoogleConversion :271, sendLinkedInConversion :336,
+  // sendGA4Conversion :412, sendTikTokConversion :487). isErasureSuppressed treats them as an OR,
+  // so either one being suppressed stops all six.
+  //
+  // FAIL CLOSED, inherited rather than reimplemented: isErasureSuppressed already returns true
+  // when the lookup itself is degraded. For a Supabase write that means "skip a row we could
+  // re-add later"; here it means "do not put an erased person's data somewhere we can never
+  // retract it". Refusing to send on an unknown suppression state is the only safe direction, and
+  // the cost of being wrong is one missing ad-platform conversion — recoverable by a re-send,
+  // unlike the opposite error.
+  const suppressed = await isErasureSuppressed(supabase, {
+    siteId: site.id,
+    subjectId: evt.distinct_id || evt.anonymous_id || null,
+    email: evt.email || null
+  })
+  if (suppressed) {
+    logSuppressionBlocked('capi_dispatch', { siteId: site.id, subjectId: evt.distinct_id || evt.anonymous_id || null })
+    // Not written to capi_deliveries, matching the money-truth gate directly above: this is a
+    // no-attempt skip for all six platforms, and six `failed` rows would read in the UI as six
+    // broken integrations rather than one deliberate suppression.
     return
   }
 

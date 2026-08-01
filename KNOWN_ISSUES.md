@@ -2049,3 +2049,62 @@ The failing tests *could* have been made green by teaching ~10 files' mocks abou
 **Why the trigger is an API endpoint and not the cron itself:** verified on production 2026-08-01 via Railway variable **names** (values never read) — `TINYBIRD_ADMIN_TOKEN` is present on `SourceTrack-Api` and **absent** from both `sourcetrack-health` and `nightly-attribution`, which carry only the read token. So no cron can perform the delete. The alternative was granting the health monitor delete rights on the event store; expanding a read-only monitor's blast radius is the wrong direction given why §0 exists.
 
 **Residual exposure, stated rather than implied:** up to ~35 minutes (5-minute eligibility + the `*/30` cadence) where late-delivered events sit in Tinybird before removal. This is a latency reduction, not elimination. The sweep covers **Tinybird events only** — it does not re-run the Supabase deletes. Anything already sent to an ad platform via CAPI is **unrecoverable by any sweep**. And crons are `restartPolicyType: NEVER`, so a crashed health run pushes the sweep out another 30 minutes.
+
+### Refunds are NEVER attributed to a source; CAPI egress is suppression-gated (2026-08-01, PR 4/5 — two founder decisions, reasoning recorded)
+
+**Decision 1 — a refund does not debit the source that won the sale.** This REVERSES KI-62 Step C,
+which copied the original conversion's attribution onto the refund verbatim so the reversal netted
+against the acquiring source. The reversal is not a bug fix; both designs are defensible and the
+old one was chosen deliberately, so the reasoning is recorded rather than the conclusion alone.
+
+Attribution on the original is a **model output**, not an observation. The refund is a certain fact
+— known amount, known date — but which channel should absorb it is exactly as uncertain as the
+original credit was. Inheriting turns one uncertain credit into an equal-and-opposite uncertain
+debit against the same channel, so a mis-attributed sale becomes a mis-attributed sale **and** a
+mis-attributed refund: the error doubles instead of cancelling. Site-level revenue still nets
+exactly, which is the part that was never in doubt.
+
+**What changed in the data, not just the read path.** The nightly now CLEARS the attribution
+descriptor columns on a refund (`ATTRIBUTION_DESCRIPTOR_FIELDS`, formerly `REFUND_INHERITED_FIELDS`)
+rather than only marking it. A marker in `custom_properties` protects only readers that know to
+check it; every other reader sums `first_touch_source` directly and would have believed whatever the
+refund's own later window derived — which collapses to **Direct**, the one source it certainly did
+not come from. Nulling makes the row honest at the data layer. **This is why `analytics.js` needed a
+change too:** its `revenueBySource` loop does `r.first_touch_source || 'Direct'`, so a cleared refund
+would have fallen straight through the default into Direct. It now routes refunds to the same
+explicit "Unattributed refunds" line `dashboard.js` uses.
+
+**Two markers, deliberately not merged.** `'unattributed'` = the original IS known and we decline to
+debit it. `'unresolved'` = the original could not be identified at all (no `payment_intent`,
+subscription-mode refund). Only the second is a diagnosable data gap; collapsing them would erase
+the actionable one. Same reasoning that kept `'partial'` separate from `'unknown'` in
+`collapseCurrencies()` (#532). Both bucket to one line at presentation.
+
+**Removed, not left dormant:** the per-refund Supabase lookup that fetched the original's
+attribution, its `resolveOriginal` injection seam, and `defaultResolveOriginalAttribution`. Nothing
+is copied now, so the read was pure cost on the money rail. A test asserts the refund path performs
+zero such reads, because a discarded-but-still-executed lookup is exactly what survives a refactor.
+
+**Decision 2 — CAPI egress is now suppression-gated, built before volume rather than after.** Every
+other erasure-suppression call site (PR 2) guards a Supabase write, where a miss is repairable: the
+row is ours, and a later erasure or the PR 3 re-sweep still reaches it. An ad-platform send is
+different in kind — once a conversion reaches Meta, Google, GA4, TikTok or LinkedIn it sits in a
+third party's ledger under their retention, and **no sweep of ours can retract it**. There is no
+"clean up afterwards" for an egress, so the check happens before the send.
+
+Gated in `dispatchCapi`, the single choke point for all six senders, immediately after the existing
+money-truth gate and before the senders array — so a sender added later cannot bypass it. Checked
+**once per event, not per platform** (six identical lookups for one answer). Keys are the subject id
+and the email the senders actually hash into `user_data`; `isErasureSuppressed` ORs them.
+
+**Fail-closed is inherited, not reimplemented** — `isErasureSuppressed` already returns true on a
+degraded lookup. For a Supabase write that means skipping a row that can be re-added; here it means
+refusing to put an erased person's data somewhere unrecallable. The cost of being wrong in that
+direction is one missing ad-platform conversion, recoverable by a re-send; the opposite error is not
+recoverable at all. **A no-attempt suppression writes no `capi_deliveries` rows**, matching the
+money-truth gate — six `failed` rows would read in the UI as six broken integrations rather than one
+deliberate block.
+
+**Residual, stated rather than implied:** this stops FUTURE sends. Anything already delivered to an
+ad platform before the erasure remains out of reach — that is a property of CAPI, not a gap here,
+and no suppression list can change it.
