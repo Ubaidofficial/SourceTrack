@@ -59,7 +59,7 @@ export default function AuthConfirm() {
 
   if (!error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F4ED] dark:bg-[#2B302F]">
+      <div className="min-h-screen flex items-center justify-center bg-[#F7F4ED] dark:bg-[#1B1811]">
         <Helmet>
           <title>Confirming | SourceTrack</title>
           <meta name="robots" content="noindex, nofollow" />
@@ -74,7 +74,7 @@ export default function AuthConfirm() {
   const requestLabel = isRecovery ? 'Request a new reset link' : 'Back to sign in'
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F7F4ED] dark:bg-[#2B302F] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#F7F4ED] dark:bg-[#1B1811] px-4">
       <Helmet>
         <title>Link expired | SourceTrack</title>
         <meta name="robots" content="noindex, nofollow" />
@@ -86,7 +86,7 @@ export default function AuthConfirm() {
           <p className="text-st-gray dark:text-gray-400 mt-2">Link expired or invalid</p>
         </div>
 
-        <div className="bg-white dark:bg-[#1A1F1F] shadow-[0_18px_50px_rgba(18,16,12,0.10)] border border-[#E7E0D2] dark:border-white/10 rounded-2xl p-6 space-y-4">
+        <div className="bg-white dark:bg-[#1B1811] shadow-[0_18px_50px_rgba(18,16,12,0.10)] border border-[#E7E0D2] dark:border-white/10 rounded-2xl p-6 space-y-4">
           <p className="text-sm text-st-gray dark:text-gray-400">
             This link has expired or has already been used. Request a new one and we&rsquo;ll email you a fresh link.
           </p>

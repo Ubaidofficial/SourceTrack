@@ -294,7 +294,7 @@ export default function Setup() {
               </div>
 
               {site?.domain && (
-                <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-[#1E2121]/50 border border-gray-200 dark:border-transparent rounded-lg text-xs">
+                <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-[#1B1811]/50 border border-gray-200 dark:border-transparent rounded-lg text-xs">
                   <span className="font-semibold text-gray-700 dark:text-gray-300">Registered Domain:</span>
                   <span className="font-mono text-st-black dark:text-dark-primary select-all">{site.domain}</span>
                   {detectionLoading && (
@@ -406,7 +406,7 @@ export default function Setup() {
               )}
 
               {/* Platform Guides */}
-              <div className="bg-gray-50 dark:bg-[#1E2121]/50 border border-gray-200 dark:border-transparent rounded-xl p-4">
+              <div className="bg-gray-50 dark:bg-[#1B1811]/50 border border-gray-200 dark:border-transparent rounded-xl p-4">
                 <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">CMS platform guides</p>
                 <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
                   {[
@@ -442,7 +442,7 @@ export default function Setup() {
               </div>
 
               {/* Privacy Reminder */}
-              <div className="bg-gray-50/50 dark:bg-[#1E2121]/30 border border-gray-200 dark:border-transparent rounded-xl p-4">
+              <div className="bg-gray-50/50 dark:bg-[#1B1811]/30 border border-gray-200 dark:border-transparent rounded-xl p-4">
                 <div className="flex items-start gap-2.5">
                   <span className="text-gray-500 mt-0.5 text-sm">🔒</span>
                   <div className="flex-1 text-xs text-st-gray dark:text-gray-400">
@@ -726,7 +726,7 @@ export default function Setup() {
                     to: '/settings'
                   }
                 ].map(card => (
-                  <div key={card.title} className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
+                  <div key={card.title} className="border border-gray-200 dark:border-[#3D3830] rounded-xl p-4 space-y-2">
                     <div className="flex items-center gap-2">
                       <card.icon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                       <h4 className="text-xs font-bold text-st-black dark:text-dark-primary">{card.title}</h4>
@@ -752,7 +752,7 @@ export default function Setup() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Card 1 */}
-                <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
+                <div className="border border-gray-200 dark:border-[#3D3830] rounded-xl p-4 space-y-2">
                   <h4 className="text-xs font-bold text-st-black dark:text-dark-primary">Attribution & UTM Parameters</h4>
                   <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
                     SourceTrack resolves campaign attribution using UTM parameters and click-IDs. Learn about the campaign URL syntax rules.
@@ -763,7 +763,7 @@ export default function Setup() {
                 </div>
 
                 {/* Card 2 */}
-                <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
+                <div className="border border-gray-200 dark:border-[#3D3830] rounded-xl p-4 space-y-2">
                   <h4 className="text-xs font-bold text-st-black dark:text-dark-primary font-sans">Report Builder Basics</h4>
                   <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
                     Once tracking events arrive, use the Report Builder to organize metrics by channel group-bys, models, and campaign names.
@@ -774,7 +774,7 @@ export default function Setup() {
                 </div>
 
                 {/* Card 3 */}
-                <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
+                <div className="border border-gray-200 dark:border-[#3D3830] rounded-xl p-4 space-y-2">
                   <h4 className="text-xs font-bold text-st-black dark:text-dark-primary font-sans">Google Ads GCLID Ingestion</h4>
                   <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
                     Learn how auto-tagging routes ad clicks from Google Search campaigns directly into your visitor journeys.
@@ -785,7 +785,7 @@ export default function Setup() {
                 </div>
 
                 {/* Card 4 */}
-                <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
+                <div className="border border-gray-200 dark:border-[#3D3830] rounded-xl p-4 space-y-2">
                   <h4 className="text-xs font-bold text-st-black dark:text-dark-primary font-sans">Troubleshooting Diagnostic Issues</h4>
                   <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
                     See explanations for common Tracking Doctor errors, wrong domain warnings, or missing telemetry messages.
@@ -796,7 +796,7 @@ export default function Setup() {
                 </div>
 
                 {/* Card 5 — Install the script */}
-                <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
+                <div className="border border-gray-200 dark:border-[#3D3830] rounded-xl p-4 space-y-2">
                   <div className="flex items-center gap-2">
                     <Code className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                     <h4 className="text-xs font-bold text-st-black dark:text-dark-primary">Install SourceTrack script</h4>
@@ -810,7 +810,7 @@ export default function Setup() {
                 </div>
 
                 {/* Card 6 — Track first conversion */}
-                <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
+                <div className="border border-gray-200 dark:border-[#3D3830] rounded-xl p-4 space-y-2">
                   <div className="flex items-center gap-2">
                     <Rocket className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                     <h4 className="text-xs font-bold text-st-black dark:text-dark-primary">Track your first conversion</h4>
@@ -824,7 +824,7 @@ export default function Setup() {
                 </div>
 
                 {/* Card 7 — Attribute revenue */}
-                <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
+                <div className="border border-gray-200 dark:border-[#3D3830] rounded-xl p-4 space-y-2">
                   <div className="flex items-center gap-2">
                     <DollarSign className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                     <h4 className="text-xs font-bold text-st-black dark:text-dark-primary">Attribute revenue</h4>
@@ -838,7 +838,7 @@ export default function Setup() {
                 </div>
 
                 {/* Card 8 — UTM link builder */}
-                <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
+                <div className="border border-gray-200 dark:border-[#3D3830] rounded-xl p-4 space-y-2">
                   <div className="flex items-center gap-2">
                     <Link2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                     <h4 className="text-xs font-bold text-st-black dark:text-dark-primary">UTM link builder</h4>

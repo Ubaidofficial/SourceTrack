@@ -48,7 +48,7 @@ export default function HeroSection({
                 {primaryCta}
               </Link>
               {secondaryCta && (
-                <Link to={secondaryHref} className="inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full bg-st-black text-white text-[15px] font-extrabold tracking-[-0.025em] hover:bg-[#171B1B] transition-all hover:-translate-y-px">
+                <Link to={secondaryHref} className="inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full bg-st-black text-white text-[15px] font-extrabold tracking-[-0.025em] hover:bg-[#241F17] transition-all hover:-translate-y-px">
                   {secondaryCta}
                 </Link>
               )}

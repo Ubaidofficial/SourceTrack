@@ -81,7 +81,7 @@ export default function SEORevenue() {
               setDays(Number(e.target.value))
               setSelectedPagePath(null)
             }}
-            className="px-3 py-1.5 bg-[#1A1D1D] border border-[#2A2E2E] text-white rounded-lg text-xs font-semibold focus:outline-none"
+            className="px-3 py-1.5 bg-[#1B1811] border border-[#3D3830] text-white rounded-lg text-xs font-semibold focus:outline-none"
           >
             <option value={7}>Last 7 days</option>
             <option value={30}>Last 30 days</option>
@@ -89,7 +89,7 @@ export default function SEORevenue() {
           </select>
           <button
             onClick={() => refetch()}
-            className="p-1.5 bg-[#1A1D1D] hover:bg-[#242829] border border-[#2A2E2E] rounded-lg text-st-gray hover:text-white transition-colors"
+            className="p-1.5 bg-[#1B1811] hover:bg-[#241F17] border border-[#3D3830] rounded-lg text-st-gray hover:text-white transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -139,7 +139,7 @@ export default function SEORevenue() {
 
       {/* KPI Tiles */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-[#1A1D1D] border border-[#2A2E2E] rounded-xl px-4 py-3">
+        <div className="bg-[#1B1811] border border-[#3D3830] rounded-xl px-4 py-3">
           <div className="flex items-center gap-2 mb-1">
             <Award className="w-4 h-4 text-st-lime" />
             <p className="text-[11px] text-st-gray font-medium uppercase tracking-wider">Organic Search Conversions</p>
@@ -148,7 +148,7 @@ export default function SEORevenue() {
           <p className="text-[10px] text-st-gray mt-0.5">First-touch organic conversions</p>
         </div>
 
-        <div className="bg-[#1A1D1D] border border-[#2A2E2E] rounded-xl px-4 py-3">
+        <div className="bg-[#1B1811] border border-[#3D3830] rounded-xl px-4 py-3">
           <div className="flex items-center gap-2 mb-1">
             <DollarSign className="w-4 h-4 text-orange-400" />
             <p className="text-[11px] text-st-gray font-medium uppercase tracking-wider">Organic Search Revenue</p>
@@ -166,7 +166,7 @@ export default function SEORevenue() {
           )}
         </div>
 
-        <div className="bg-[#1A1D1D] border border-[#2A2E2E] rounded-xl px-4 py-3">
+        <div className="bg-[#1B1811] border border-[#3D3830] rounded-xl px-4 py-3">
           <div className="flex items-center gap-2 mb-1">
             <MousePointer className="w-4 h-4 text-blue-400" />
             <p className="text-[11px] text-st-gray font-medium uppercase tracking-wider">GSC Organic Clicks</p>
@@ -181,8 +181,8 @@ export default function SEORevenue() {
       {/* Report Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Landing Pages Table (Primary) */}
-        <div className="lg:col-span-2 bg-[#1A1D1D] border border-[#2A2E2E] rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#2A2E2E] flex items-center justify-between">
+        <div className="lg:col-span-2 bg-[#1B1811] border border-[#3D3830] rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#3D3830] flex items-center justify-between">
             <h3 className="text-sm font-semibold text-white">Top Organic Landing Pages</h3>
             <span className="text-[10px] text-st-gray uppercase tracking-wider">SourceTrack + GSC</span>
           </div>
@@ -193,7 +193,7 @@ export default function SEORevenue() {
             ) : (
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-[#2A2E2E] text-st-gray text-[10px] uppercase tracking-wider">
+                  <tr className="border-b border-[#3D3830] text-st-gray text-[10px] uppercase tracking-wider">
                     <th className="py-2.5 px-4 font-medium">Landing Page Path</th>
                     <th className="py-2.5 px-3 font-medium text-right">Conversions</th>
                     <th className="py-2.5 px-3 font-medium text-right">Revenue</th>
@@ -207,7 +207,7 @@ export default function SEORevenue() {
                     <tr
                       key={page.page_path}
                       onClick={() => setSelectedPagePath(page.page_path)}
-                      className={`border-b border-[#2A2E2E]/60 last:border-0 hover:bg-[#242829] cursor-pointer transition-colors text-xs ${
+                      className={`border-b border-[#3D3830]/60 last:border-0 hover:bg-[#241F17] cursor-pointer transition-colors text-xs ${
                         selectedPagePath === page.page_path ? 'bg-st-lime/5 border-l-2 border-l-st-lime' : ''
                       }`}
                     >
@@ -230,7 +230,7 @@ export default function SEORevenue() {
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
                           selectedPagePath === page.page_path
                             ? 'bg-st-lime text-black'
-                            : 'bg-[#2a2e2e] text-st-gray hover:text-white'
+                            : 'bg-[#1B1811] text-st-gray hover:text-white'
                         }`}>
                           Queries
                         </span>
@@ -244,8 +244,8 @@ export default function SEORevenue() {
         </div>
 
         {/* Associated Queries Side panel (Secondary) */}
-        <div className="bg-[#1A1D1D] border border-[#2A2E2E] rounded-xl overflow-hidden flex flex-col">
-          <div className="px-4 py-3 border-b border-[#2A2E2E]">
+        <div className="bg-[#1B1811] border border-[#3D3830] rounded-xl overflow-hidden flex flex-col">
+          <div className="px-4 py-3 border-b border-[#3D3830]">
             <h3 className="text-sm font-semibold text-white">Associated Queries</h3>
             <p className="text-[10px] text-st-gray mt-0.5">
               {selectedPagePath ? `Landing Page: ${selectedPagePath}` : 'Select a landing page on the left to view queries'}
@@ -255,7 +255,7 @@ export default function SEORevenue() {
           <div className="flex-1 overflow-y-auto max-h-[600px]">
             {!selectedPagePath ? (
               <div className="text-center py-20 px-4">
-                <Search className="w-10 h-10 text-[#2A2E2E] mx-auto mb-3" />
+                <Search className="w-10 h-10 text-[#1B1811] mx-auto mb-3" />
                 <p className="text-xs font-semibold text-white">No Page Selected</p>
                 <p className="text-[11px] text-st-gray mt-1">Select a landing page path from the table to distribute organic conversions to GSC keywords.</p>
               </div>
@@ -264,9 +264,9 @@ export default function SEORevenue() {
                 No Search Console keywords linked to this path. Verify GSC property domain settings.
               </p>
             ) : (
-              <div className="divide-y divide-[#2A2E2E]/60">
+              <div className="divide-y divide-[#3D3830]/60">
                 {selectedPageQueries.map(q => (
-                  <div key={q.query} className="p-4 space-y-2 hover:bg-[#242829]/30 transition-colors">
+                  <div key={q.query} className="p-4 space-y-2 hover:bg-[#241F17]/30 transition-colors">
                     <div className="flex items-start justify-between gap-2">
                       <p className="text-xs font-semibold text-white font-mono break-all" title={q.query}>
                         {q.query}

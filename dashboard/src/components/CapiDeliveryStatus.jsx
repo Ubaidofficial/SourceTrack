@@ -88,7 +88,7 @@ export default function CapiDeliveryStatus({ siteKey }) {
   const stallingPlatforms = [...new Set(stalling.map(r => PLATFORM_LABEL[r.platform] || r.platform))]
 
   const Shell = ({ children }) => (
-    <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-5 shadow-sm">
+    <div className="bg-white dark:bg-[#1B1811] border border-gray-200 dark:border-[#3D3830] rounded-xl p-5 shadow-sm">
       <div className="flex items-center gap-2 mb-1">
         <Send className="w-4 h-4 text-gray-600 dark:text-gray-400" />
         <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">CAPI Delivery Status</h3>
@@ -157,7 +157,7 @@ export default function CapiDeliveryStatus({ siteKey }) {
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-xs text-left border-collapse">
             <thead>
-              <tr className="text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-[#2A2E2E]">
+              <tr className="text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-[#3D3830]">
                 <th className="py-2 pr-3 font-medium">Platform</th>
                 <th className="py-2 pr-3 font-medium">Event ref</th>
                 <th className="py-2 pr-3 font-medium">Status</th>
@@ -171,7 +171,7 @@ export default function CapiDeliveryStatus({ siteKey }) {
                 const hasError = !!r.error_message
                 const isOpen = expanded === r.id
                 return (
-                  <tr key={r.id} className="border-b border-gray-50 dark:border-[#222626] align-top">
+                  <tr key={r.id} className="border-b border-gray-50 dark:border-[#3D3830] align-top">
                     <td className="py-2 pr-3">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium">
                         {PLATFORM_LABEL[r.platform] || r.platform}

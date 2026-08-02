@@ -69,11 +69,11 @@ export default function AttributionPage() {
         </div>
         {!previewMode && (
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] text-st-gray dark:text-gray-300 text-xs">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-[#1B1811] border border-gray-200 dark:border-[#3D3830] text-st-gray dark:text-gray-300 text-xs">
               <Users className="w-3.5 h-3.5" />
               Recent visitors (5m): {liveCount}
             </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] text-st-gray dark:text-gray-300 text-xs">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-[#1B1811] border border-gray-200 dark:border-[#3D3830] text-st-gray dark:text-gray-300 text-xs">
               <RefreshCw className="w-3 h-3" />
               Updated {freshnessLabel}
             </div>

@@ -9,9 +9,9 @@
     --bg-subtle: #F7F4ED;
   }
   .dark {
-    --bg-page: #0F1010;
-    --bg-card: #141515;
-    --bg-subtle: #1A1C1C;
+    --bg-page: #12100C;
+    --bg-card: #1B1811;
+    --bg-subtle: #241F17;
     color-scheme: dark;
   }
   *, *::before, *::after {

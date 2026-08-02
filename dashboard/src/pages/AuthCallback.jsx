@@ -83,7 +83,7 @@ export default function AuthCallback() {
   }, [user, loading, isTimeout, navigate])
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#0E1513]">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#12100C]">
       <Helmet>
         <title>Signing in | SourceTrack</title>
         <meta name="robots" content="noindex, nofollow" />
