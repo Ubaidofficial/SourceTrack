@@ -93,8 +93,17 @@ const allSchemas = [orgSchema, ...structuredData];
         })(window,document,'script','dataLayer', gtmId);
       </script>
     )}
-    <!-- favicon -->
-    <link rel="shortcut icon" href={config.site.favicon} />
+    {/* Icons — the SourceTrack mark, ported from dashboard/src/components/Logo.jsx
+        (LogoIcon), replacing the vendor theme's purple AI-sparkle PNG.
+        Size-split on purpose: the full mark's 2.8/80 strokes render sub-pixel at
+        16px and mush into a blob, so 16px gets a simplified glyph — same lime
+        tile, same two journey nodes, ring and cursor dropped. 32px and up carry
+        the full geometry verbatim. */}
+    <link rel="icon" type="image/svg+xml" href={config.site.favicon} />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <!-- theme meta -->
     <meta name="theme-name" content="sourcetrack-astro" />
     <meta name="msapplication-TileColor" content="#000000" />
