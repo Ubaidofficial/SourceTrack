@@ -37,6 +37,8 @@ const pages = [
   { path: "/docs/install", conversions: "7", revenue: "$840", clicks: "631" },
   { path: "/blog/ai-referral-tracking", conversions: "5", revenue: "$600", clicks: "418" },
 ];
+
+const totalOrganicRevenue = `$${pages.reduce((sum, p) => sum + Number(p.revenue.replace(/[$,]/g, "")), 0).toLocaleString()}`;
 ---
 
 <div class="relative z-1 overflow-hidden rounded-[20px] border border-[#3D3830] bg-[#12100C]">
@@ -51,6 +53,12 @@ const pages = [
       class="inline-flex flex-shrink-0 items-center rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-primary"
       >Sample data</span
     >
+  </div>
+
+  <!-- Hero summary header line -->
+  <div class="flex items-center justify-between border-b border-[#3D3830] bg-[#18150F] px-4 py-3">
+    <span class="text-xs font-bold uppercase tracking-wider text-[#A79E8C]">Est. Organic Revenue</span>
+    <span class="text-2xl font-black tracking-tight text-primary">{totalOrganicRevenue}</span>
   </div>
 
   <!-- Landing-page table -->

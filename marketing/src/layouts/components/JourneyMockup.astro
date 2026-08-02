@@ -150,8 +150,24 @@ const sessions = [
           <div class="grid grid-cols-2 gap-2">
             {
               stats.map((s) => (
-                <div class="rounded-xl border border-[#3D3830] bg-[#241F17] p-2.5 text-center">
-                  <p class="truncate text-lg font-bold text-white">{s.value}</p>
+                <div
+                  class:list={[
+                    "rounded-xl border p-2.5 text-center transition-colors",
+                    s.label === "Revenue"
+                      ? "border-primary/40 bg-primary/10 shadow-[0_0_12px_rgba(212,246,46,0.08)]"
+                      : "border-[#3D3830] bg-[#241F17]",
+                  ]}
+                >
+                  <p
+                    class:list={[
+                      "truncate font-bold tracking-tight",
+                      s.label === "Revenue"
+                        ? "text-xl font-black text-primary"
+                        : "text-base font-semibold text-[#A79E8C]",
+                    ]}
+                  >
+                    {s.value}
+                  </p>
                   <p class="mt-0.5 text-[10px] uppercase tracking-wider text-[#A79E8C]">{s.label}</p>
                 </div>
               ))

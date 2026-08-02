@@ -72,8 +72,13 @@ const rows = [
     </div>
 
     {
-      rows.map((r) => (
-        <div class="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 border-t border-[#3D3830] py-2.5 text-xs font-bold">
+      rows.map((r, i) => (
+        <div
+          class:list={[
+            "grid grid-cols-[1fr_auto_auto] items-center gap-x-4 border-t border-[#3D3830] py-2.5 text-xs font-bold transition-colors",
+            i === 0 ? "rounded-xl border-primary/30 bg-primary/8 px-2" : "",
+          ]}
+        >
           <span class="flex min-w-0 items-center gap-2 text-[#F6F3EB]">
             <span
               class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg border border-white/10 bg-[#241F17]"
