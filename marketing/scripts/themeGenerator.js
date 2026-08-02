@@ -136,6 +136,26 @@ function generateThemeCSS() {
 
     cssLines.push("}");
 
+    // Dark mode overrides.
+    //
+    // Tailwind v4 compiles every token utility to var(--color-<key>) — verified:
+    // `.bg-body{background-color:var(--color-body)}`. So re-declaring the SAME
+    // variable names under the theme attribute flips every existing utility at
+    // runtime, with no `dark:` variant needed on any element. The `@theme` block
+    // above also emits --color-darkmode-* (the upstream theme's convention); that
+    // form would require a dark: twin on each of the ~459 token-utility usages,
+    // which is why the override below is what actually drives dark mode here.
+    //
+    // Selector is `:root[data-theme="dark"]` (0,2,0) so it outranks `@theme`'s
+    // `:root` (0,1,0) regardless of emitted source order.
+    if (themeConfig.colors.darkmode) {
+      cssLines.push("", '/* === Dark mode — toggled by data-theme on <html> === */');
+      cssLines.push(':root[data-theme="dark"] {');
+      addColorsToCss(cssLines, themeConfig.colors.darkmode.theme_color || {});
+      addColorsToCss(cssLines, themeConfig.colors.darkmode.text_color || {});
+      cssLines.push("}");
+    }
+
     // Ensure output directory exists
     const outputDir = path.dirname(outputPath);
     if (!fs.existsSync(outputDir)) {

@@ -2,6 +2,14 @@
 @plugin "@tailwindcss/forms";
 @plugin "@tailwindcss/typography";
 
+/* Bind the `dark:` variant to the theme attribute instead of the OS preference.
+   Tailwind v4 defaults `dark:` to @media (prefers-color-scheme: dark), which would
+   ignore the toggle and desync from it (user picks light, OS is dark → element
+   still flips). Structural colours don't need `dark:` at all — they flip via the
+   :root[data-theme="dark"] variable overrides in generated-theme.css — but this
+   keeps any explicit `dark:` usage keyed to the same source of truth. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* Auto-generated theme from "theme.json"*/
 @import "./generated-theme.css";
 

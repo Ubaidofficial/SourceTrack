@@ -20,6 +20,27 @@
         "text_dark": "#161310",
         "text_light": "#6E675C"
       }
+    },
+    "darkmode": {
+      "theme_color": {
+        "primary": "#D2EC2A",
+        "secondary": "#BCD41C",
+        "accent-warm": "#F2A93B",
+        "spend": "#FF7A33",
+        "primary-dark": "#12100C",
+        "body": "#12100C",
+        "border": "#302B22",
+        "light": "#F6F3EB",
+        "gray": "#A79E8C",
+        "dark": "#12100C",
+        "dark_gray": "#302B22",
+        "card": "#1B1811"
+      },
+      "text_color": {
+        "text": "#F6F3EB",
+        "text_dark": "#161310",
+        "text_light": "#A79E8C"
+      }
     }
   },
   "fonts": {
