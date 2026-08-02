@@ -418,8 +418,7 @@ const iconPaths: Record<string, string> = {
     if (!header || !navMenu || !menuToggle) return;
 
     // ── Active state ────────────────────────────────────────────────────────
-    // Keep active classes in sync with the current URL when the header
-    // persists across view-transition navigations (transition:persist).
+    // Keep active classes in sync with the current URL.
     const currentPath = (() => {
       const p = window.location.pathname;
       return p === "/" ? "/" : p.replace(/\/$/, "");
@@ -533,7 +532,6 @@ const iconPaths: Record<string, string> = {
 
     menuToggle.addEventListener("click", handleMenuToggle);
     window.addEventListener("resize", handleResize);
-    window.scroll(0, 0);
 
     // ── Cleanup before view-transition swap ──────────────────────────────────
     const cleanup = () => {
