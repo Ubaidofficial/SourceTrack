@@ -650,8 +650,8 @@ router.get('/feature-status', async (req, res) => {
         { name: 'offline conversions', status: 'live', notes: 'POST /api/conversion/offline with external_id support', verification_method: 'code-audit' },
         { name: 'pipeline stages', status: 'live', notes: 'lead_created/qualified/opportunity/closed_won from offline conversions', verification_method: 'code-audit' },
         { name: 'webhooks', status: 'live', notes: 'Best-effort outbound webhooks on conversion events', verification_method: 'code-audit' },
-        { name: 'integrations', status: 'internal-only', notes: 'UI uses placeholder cards. No live integrations beyond the tracker snippet.', verification_method: 'code-audit' },
-        { name: 'consent/privacy', status: 'not_implemented', notes: 'No consent enforcement pipeline. Product does not claim consent awareness.', verification_method: 'code-audit' },
+        { name: 'integrations', status: 'live', notes: 'Corrected 2026-08-02 — the prior internal-only/"placeholder cards" note was false. /api/integrations is mounted with Stripe + Shopify connect, proxy-domain create/verify/delete, API keys and settings; GSC, ad-platforms and CAPI routers are mounted alongside it.', verification_method: 'code-audit' },
+        { name: 'consent/privacy', status: 'live', notes: 'Corrected 2026-08-02 — the prior not_implemented note was false. GPC/DNT suppression runs via handlePrivacySuppression (wired in api/index.js); gdprRouter serves DELETE /visitor (Art.17), GET /subject (Art.15), DELETE /account, PUT /retention and GET /export.', verification_method: 'code-audit' },
         { name: 'deduplication', status: 'not_implemented', notes: 'ATTRIBUTION.md Part 10 rules defined but no enforcement in code.', verification_method: 'code-audit' },
         { name: 'widgetized dashboard', status: 'dormant', notes: 'Code was built in Session 2 but replaced by fixed card grid in Session 31. Add-to-Dashboard button disabled. Dashboard.jsx has zero widget rendering.', verification_method: 'code-audit' },
         { name: 'multi-dashboard', status: 'dormant', notes: 'Session 2 implementation replaced. Current Dashboard is a single Performance Overview page. No dashboard CRUD, selector, or switching.', verification_method: 'code-audit' },
@@ -688,11 +688,16 @@ router.post('/feature-status/recheck', async (req, res) => {
   const probes = {
     attribution_route: routeExists('attribution.js'),
     ai_analytics_route: routeExists('ai-analytics.js'),
+    ai_chat_route: routeExists('ai-chat.js'),
     offline_conversion_route: routeExists('conversion-offline.js'),
     webhook_lib: routeExists('../lib/webhook.js'),
     saved_reports_route: routeExists('saved-reports.js'),
     dashboard_route: routeExists('dashboard.js'),
-    onboarding_route: routeExists('onboarding.js')
+    onboarding_route: routeExists('onboarding.js'),
+    integrations_route: routeExists('integrations.js'),
+    gsc_route: routeExists('google-search-console.js'),
+    gdpr_route: routeExists('gdpr.js'),
+    privacy_suppression_lib: routeExists('../lib/privacy-suppression.js')
   }
 
   // Derive statuses from probes + existing truth
@@ -703,14 +708,15 @@ router.post('/feature-status/recheck', async (req, res) => {
     { name: 'last_touch_non_direct', status: probes.attribution_route ? 'live' : 'dormant', notes: 'Probed: attribution route exists (non-direct models added Session 54)', verification_method: 'server-probe' },
     { name: 'LTV', status: probes.attribution_route ? 'live' : 'dormant', notes: 'Probed: attribution route exists (LTV metric in engine)', verification_method: 'server-probe' },
     { name: 'AI Analytics', status: probes.ai_analytics_route ? 'live' : 'dormant', notes: `Probed: ai-analytics route ${probes.ai_analytics_route ? 'exists' : 'not found'}`, verification_method: 'server-probe' },
+    { name: 'AI Chat', status: probes.ai_chat_route ? 'live' : 'dormant', notes: `Probed: ai-chat route ${probes.ai_chat_route ? 'exists' : 'not found'}`, verification_method: 'server-probe' },
     { name: 'offline conversions', status: probes.offline_conversion_route ? 'live' : 'dormant', notes: `Probed: offline conversion route ${probes.offline_conversion_route ? 'exists' : 'not found'}`, verification_method: 'server-probe' },
     { name: 'pipeline stages', status: probes.dashboard_route ? 'live' : 'dormant', notes: 'Probed: dashboard route exists (pipeline stages query)', verification_method: 'server-probe' },
     { name: 'webhooks', status: probes.webhook_lib ? 'live' : 'dormant', notes: `Probed: webhook lib ${probes.webhook_lib ? 'exists' : 'not found'}`, verification_method: 'server-probe' },
-    { name: 'integrations', status: 'internal-only', notes: 'Probed: UI uses placeholder cards (static truth)', verification_method: 'server-probe' },
-    { name: 'consent/privacy', status: 'not_implemented', notes: 'Probed: no consent middleware found', verification_method: 'server-probe' },
-    { name: 'deduplication', status: 'not_implemented', notes: 'Probed: ATTRIBUTION.md rules defined but no code enforcement', verification_method: 'server-probe' },
-    { name: 'widgetized dashboard', status: 'dormant', notes: 'Probed: no widget rendering in Dashboard.jsx', verification_method: 'server-probe' },
-    { name: 'multi-dashboard', status: 'dormant', notes: 'Probed: single Performance Overview page only', verification_method: 'server-probe' },
+    { name: 'integrations', status: probes.integrations_route && probes.gsc_route ? 'live' : 'internal-only', notes: `Probed: integrations route ${probes.integrations_route ? 'exists' : 'not found'}, GSC route ${probes.gsc_route ? 'exists' : 'not found'}`, verification_method: 'server-probe' },
+    { name: 'consent/privacy', status: probes.gdpr_route && probes.privacy_suppression_lib ? 'live' : 'not_implemented', notes: `Probed: gdpr route ${probes.gdpr_route ? 'exists' : 'not found'}, privacy-suppression lib ${probes.privacy_suppression_lib ? 'exists' : 'not found'}`, verification_method: 'server-probe' },
+    { name: 'deduplication', status: 'not_implemented', notes: 'Static: no probe runs for this entry — status is a hand-audited assertion, not a measurement', verification_method: 'static-truth' },
+    { name: 'widgetized dashboard', status: 'dormant', notes: 'Static: no probe runs for this entry — no widget rendering in Dashboard.jsx as of the last hand audit', verification_method: 'static-truth' },
+    { name: 'multi-dashboard', status: 'dormant', notes: 'Static: no probe runs for this entry — single Performance Overview page as of the last hand audit', verification_method: 'static-truth' },
     { name: 'linear attribution', status: probes.attribution_route ? 'live' : 'dormant', notes: 'Probed: attribution route exists — linear model re-enabled via getLinearAttribution', verification_method: 'server-probe' },
     { name: 'saved reports', status: probes.saved_reports_route ? 'live' : 'partial', notes: `Probed: saved-reports route ${probes.saved_reports_route ? 'exists — backend persisted' : 'not found — localStorage only'}`, verification_method: 'server-probe' },
     { name: 'period-over-period comparison', status: probes.dashboard_route ? 'partial' : 'not_implemented', notes: 'Probed: dashboard KPI deltas exist, Report Builder lacks compare', verification_method: 'server-probe' }
@@ -738,11 +744,15 @@ router.post('/feature-status/recheck', async (req, res) => {
     { name: 'period-over-period comparison', status: 'partial' }
   ]
 
+  // Match by name, not by index: the two arrays have drifted in length before
+  // (AI Chat was missing from `features`), and an index lookup then compares
+  // unrelated features and invents diffs.
+  const prevByName = new Map(prevFeatures.map((p) => [p.name, p.status]))
   const diffs = []
-  features.forEach((f, i) => {
-    const prev = prevFeatures[i]
-    if (prev && prev.status !== f.status) {
-      diffs.push({ feature: f.name, previous: prev.status, current: f.status })
+  features.forEach((f) => {
+    const prev = prevByName.get(f.name)
+    if (prev && prev !== f.status) {
+      diffs.push({ feature: f.name, previous: prev, current: f.status })
     }
   })
 
