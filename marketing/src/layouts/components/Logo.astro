@@ -11,7 +11,17 @@ const h = parseInt(String(logo_height || 0), 10) || 0;
 const logoPath = src ?? logo;
 ---
 
-<a href="/" class="navbar-brand inline-block">
+{/* Mark + wordmark lockup. The mark is inlined here rather than set as config.site.logo on
+    purpose: config.site.logo takes the <ImageMod> branch below, which REPLACES the text
+    instead of pairing with it, and an image also escapes .navbar-brand's colour — which is
+    what makes the wordmark theme-responsive in the first place. Inlining keeps the text as
+    text and adds the mark beside it.
+    The mark carries its own ink background, so it needs no theme variant; the one exception
+    is dark mode, where that background (#12100C) equals the body colour and the square would
+    otherwise vanish, leaving two floating discs. The dark-only border rect holds the
+    silhouette using the existing --color-border token. Same geometry as
+    dashboard/src/components/Logo.jsx and both favicon.svg files. */}
+<a href="/" class="navbar-brand inline-flex items-center gap-2.5">
   {
     logoPath ? (
       <ImageMod
@@ -23,10 +33,26 @@ const logoPath = src ?? logo;
         loading="eager"
         style={`height:${h}px;width:${w}px`}
       />
-    ) : logo_text ? (
-      logo_text
     ) : (
-      title
+      <>
+        <svg class="h-8 w-8 shrink-0" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+          <rect x="4" y="4" width="72" height="72" rx="18" fill="#12100C" />
+          <rect
+            x="5"
+            y="5"
+            width="70"
+            height="70"
+            rx="17"
+            fill="none"
+            stroke="#302B22"
+            stroke-width="2"
+            class="hidden dark:block"
+          />
+          <circle cx="54" cy="26" r="14" fill="#D2EC2A" />
+          <circle cx="24" cy="56" r="8" fill="#D2EC2A" />
+        </svg>
+        <span>{logo_text || title}</span>
+      </>
     )
   }
 </a>

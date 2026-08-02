@@ -16,6 +16,7 @@
     "qa:env-safety": "node scripts/qa-env-safety.mjs && npm run qa:secrets",
     "qa:secrets": "node scripts/check-secret-safety.js",
     "qa:marketing:html": "node scripts/qa-marketing-html.mjs marketing/dist",
+    "icons": "node scripts/generate-app-icons.mjs",
     "qa:static": "npm run qa:env-safety && node scripts/qa-release-readiness.mjs && node scripts/qa-static-launch-check.mjs",
     "qa:smoke": "node scripts/qa-runtime-smoke.mjs",
     "qa:edge": "node scripts/qa-edge-cases.mjs",
@@ -43,6 +44,7 @@
     "@ghostery/adblocker": "^2.18.1",
     "@playwright/test": "1.61.0",
     "esbuild": "^0.24.0",
-    "nodemon": "^3.1.4"
+    "nodemon": "^3.1.4",
+    "sharp": "^0.35.3"
   }
 }
