@@ -39,37 +39,37 @@ const lead = {
 <div class="mx-auto w-full max-w-[880px]">
   <div class="grid gap-4 md:grid-cols-[1fr_auto_1fr] md:items-center">
     <!-- BEFORE — generic analytics. Muted on purpose: this is the state being escaped. -->
-    <div class="rounded-[24px] border border-[#2D3333] bg-[#121616] p-4">
+    <div class="rounded-[24px] border border-[#3D3830] bg-[#1B1811] p-4">
       <div class="mb-3 flex items-center justify-between gap-2">
-        <span class="text-[11px] font-extrabold uppercase tracking-wider text-[#9DA7A7]">
+        <span class="text-[11px] font-extrabold uppercase tracking-wider text-[#A79E8C]">
           Most analytics tools
         </span>
         <span
-          class="inline-flex items-center rounded-full bg-white/5 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-[#9DA7A7]"
+          class="inline-flex items-center rounded-full bg-white/5 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-[#A79E8C]"
         >
           Sample data
         </span>
       </div>
 
-      <div class="rounded-2xl border border-[#2D3333] bg-[#181D1D] p-4">
-        <div class="text-[10px] font-extrabold uppercase tracking-wider text-[#9DA7A7]">Source</div>
+      <div class="rounded-2xl border border-[#3D3830] bg-[#241F17] p-4">
+        <div class="text-[10px] font-extrabold uppercase tracking-wider text-[#A79E8C]">Source</div>
         <div class="mt-1 flex items-center gap-2">
-          <span class="h-2 w-2 rounded-full bg-[#6B7676]" aria-hidden="true"></span>
-          <span class="text-xl font-black tracking-tight text-[#9DA7A7]">Direct / Unknown</span>
+          <span class="h-2 w-2 rounded-full bg-[#7C7568]" aria-hidden="true"></span>
+          <span class="text-xl font-black tracking-tight text-[#A79E8C]">Direct / Unknown</span>
         </div>
         <div class="mt-4 grid grid-cols-2 gap-3 text-xs">
           <div>
-            <div class="text-[10px] uppercase tracking-wider text-[#6B7676]">Landing page</div>
-            <div class="mt-0.5 font-bold text-[#C7CFCF]">{lead.page}</div>
+            <div class="text-[10px] uppercase tracking-wider text-[#7C7568]">Landing page</div>
+            <div class="mt-0.5 font-bold text-[#D5D0C3]">{lead.page}</div>
           </div>
           <div>
-            <div class="text-[10px] uppercase tracking-wider text-[#6B7676]">Value</div>
-            <div class="mt-0.5 font-bold text-[#C7CFCF]">{lead.value}</div>
+            <div class="text-[10px] uppercase tracking-wider text-[#7C7568]">Value</div>
+            <div class="mt-0.5 font-bold text-[#D5D0C3]">{lead.value}</div>
           </div>
         </div>
       </div>
 
-      <p class="mt-3 text-xs leading-relaxed text-[#9DA7A7]">
+      <p class="mt-3 text-xs leading-relaxed text-[#A79E8C]">
         No referrer to read, so the visit lands in a catch-all bucket. The channel that actually
         produced it is not recorded.
       </p>
@@ -91,7 +91,7 @@ const lead = {
     </div>
 
     <!-- AFTER — SourceTrack. The same lead, attributed. -->
-    <div class="relative rounded-[24px] border border-primary/25 bg-[#121616] p-4">
+    <div class="relative rounded-[24px] border border-primary/25 bg-[#1B1811] p-4">
       <div
         class="absolute -right-4 -top-6 h-[140px] w-[140px] rounded-full bg-primary opacity-[0.18] blur-[42px]"
         aria-hidden="true"
@@ -99,7 +99,7 @@ const lead = {
       </div>
 
       <div class="relative mb-3 flex items-center justify-between gap-2">
-        <span class="text-[11px] font-extrabold uppercase tracking-wider text-[#F5F8F8]">
+        <span class="text-[11px] font-extrabold uppercase tracking-wider text-[#F6F3EB]">
           SourceTrack
         </span>
         <span
@@ -109,30 +109,30 @@ const lead = {
         </span>
       </div>
 
-      <div class="relative rounded-2xl border border-primary/20 bg-[#181D1D] p-4">
-        <div class="text-[10px] font-extrabold uppercase tracking-wider text-[#9DA7A7]">Source</div>
+      <div class="relative rounded-2xl border border-primary/20 bg-[#241F17] p-4">
+        <div class="text-[10px] font-extrabold uppercase tracking-wider text-[#A79E8C]">Source</div>
         <div class="mt-1 flex items-center gap-2">
           <span class="h-2 w-2 rounded-full bg-primary" aria-hidden="true"></span>
           <span class="text-xl font-black tracking-tight text-white">ChatGPT</span>
           <span
-            class="inline-flex items-center rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#C7CFCF]"
+            class="inline-flex items-center rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#D5D0C3]"
           >
             AI Search
           </span>
         </div>
         <div class="mt-4 grid grid-cols-2 gap-3 text-xs">
           <div>
-            <div class="text-[10px] uppercase tracking-wider text-[#6B7676]">Landing page</div>
-            <div class="mt-0.5 font-bold text-[#C7CFCF]">{lead.page}</div>
+            <div class="text-[10px] uppercase tracking-wider text-[#7C7568]">Landing page</div>
+            <div class="mt-0.5 font-bold text-[#D5D0C3]">{lead.page}</div>
           </div>
           <div>
-            <div class="text-[10px] uppercase tracking-wider text-[#6B7676]">Value</div>
+            <div class="text-[10px] uppercase tracking-wider text-[#7C7568]">Value</div>
             <div class="mt-0.5 font-bold text-white">{lead.value}</div>
           </div>
         </div>
       </div>
 
-      <p class="relative mt-3 text-xs leading-relaxed text-[#C7CFCF]">
+      <p class="relative mt-3 text-xs leading-relaxed text-[#D5D0C3]">
         The AI referrer is recognised, so the visit is reported against the channel that produced
         it instead of a catch-all.
       </p>

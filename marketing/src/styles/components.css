@@ -219,10 +219,17 @@
 .footer-title {
   @apply uppercase text-[11vw] whitespace-nowrap overflow-hidden text-center;
   font-size: 12.5cqw;
+  /* Theme-responsive, and no longer purple. The old stops were hardcoded
+     `#0e0912 23.53% -> rgba(255,255,255,.1) 100%`: #0e0912 is hue 273 (a design.md 3.4/3.8
+     purple violation) and, being fixed ink, it sat at 1.04:1 on the dark body (#12100C) —
+     the whole wordmark was invisible in dark mode, and its top stop faded out in light mode
+     too. var(--color-text) is rebound per theme in generated-theme.css, so the base stop is
+     now #161310 on light and #F6F3EB on dark; the top stop fades the same colour out rather
+     than fading toward a fixed white. */
   background: linear-gradient(
     0deg,
-    #0e0912 23.53%,
-    rgba(255, 255, 255, 0.1) 100%
+    var(--color-text) 23.53%,
+    color-mix(in srgb, var(--color-text) 10%, transparent) 100%
   );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;

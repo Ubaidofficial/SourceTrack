@@ -37,8 +37,17 @@
   );
 }
 
+/* The two stops were hardcoded #0e0912 -> #22162b, hue 273 and 274 — the last live purple
+   gradient in the marketing CSS (design.md 3.4/3.8). Remapped to the warm dark token pair
+   already used by bg-gradient-black-grid below, which is the same visual role. One utility,
+   so this reaches every call site at once: .btn-dark, IconBox, PricingCard, Pricing.tsx,
+   Integration.tsx, OpenPositions.tsx and 404.astro. */
 @utility bg-gradient-dark {
-  background: linear-gradient(180deg, #0e0912 0%, #22162b 100%);
+  background: linear-gradient(
+    180deg,
+    var(--color-dark) 0%,
+    var(--color-dark-gray) 100%
+  );
 }
 
 @utility bg-gradient-black-grid {
@@ -62,11 +71,17 @@
   -webkit-text-fill-color: transparent;
 }
 
+/* The dark stop was rgba(25, 20, 29, 0.3) — hue 273, the THIRD live purple, and the one that
+   no hex grep could ever find because it is written in decimal rgba(). The minifier emits it
+   as #19141d4d, which is how it surfaced: it was visible in the SERVED stylesheet while
+   `grep -ri 19141d` over the whole tree, and `git log -S 19141d`, both returned nothing.
+   rgba(18, 16, 12, .3) is #12100C — the warm ink already paired with this lime stop
+   (rgba(210,236,42,.3) is --color-primary at 30%). Live on BlogCard and IntegrationList hover. */
 @utility bg-radial-accent-dark {
   background: radial-gradient(
     163.24% 100% at 50% 100%,
     rgba(210, 236, 42, 0.3) 0%,
-    rgba(25, 20, 29, 0.3) 42.49%
+    rgba(18, 16, 12, 0.3) 42.49%
   );
 }
 

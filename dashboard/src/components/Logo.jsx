@@ -1,43 +1,70 @@
 // SourceTrack logo system — inline SVG components.
-// Colors: #12100C (dark ring/cursor), #D2EC2A (lime accent/path/nodes),
-//         #FFFFFF (reverse). On LogoIcon the lime square inverts this: every
-//         mark element is ink, since lime-on-lime would be invisible.
 //
-// Concept: circular tracking ring, integrated cursor pointer, subtle journey
-// path with 2 nodes (source + conversion), "SourceTrack" wordmark.
+// Mark (BRAND_v2.md §1 / design.md v1.3 §3.1, word-for-word): "two lime discs on a warm-ink
+// rounded square, large disc upper-right, small disc lower-left". Two elements on a square.
+//
+// This replaces a mark that was never built to that spec: a circular tracking ring, a journey
+// arc, two nodes and a cursor-pointer — five to six elements — and, on the app-icon and both
+// favicon sets, with the colours INVERTED (lime square, ink mark) against a spec that calls for
+// an ink square carrying lime discs. Both faults are corrected here.
+//
+// Colours: #12100C warm ink (square), #D2EC2A lime (discs), #302B22 dark-mode border token.
+//
+// The square is #12100C, which is also the dark-mode body colour — on a dark surface it would
+// vanish and the mark would read as two floating discs, a different silhouette than in light
+// mode. The `hidden dark:block` border rect holds the shape in dark mode using the existing
+// --color-border token. It is dropped from LogoIcon on purpose: LogoIcon is the app-icon
+// artwork and must stay byte-identical to the favicon SVGs, which render on browser chrome
+// rather than on our own page and so have no theme to respond to.
 
-// ── Core mark (no text) — used for favicon, app icon, small spots ─────────────
+const INK = '#12100C'
+const LIME = '#D2EC2A'
+
+// The mark's artwork in an 80-unit box, shared by every export so the geometry cannot drift
+// between them again (the two favicon.svg files had already diverged from each other — r=24 vs
+// r=20, different arc and cursor paths — from being traced separately).
+function MarkArtwork({ withDarkBorder = true }) {
+  return (
+    <>
+      <rect x="4" y="4" width="72" height="72" rx="18" fill={INK} />
+      {withDarkBorder && (
+        <rect
+          x="5"
+          y="5"
+          width="70"
+          height="70"
+          rx="17"
+          fill="none"
+          stroke="#302B22"
+          strokeWidth="2"
+          className="hidden dark:block"
+        />
+      )}
+      <circle cx="54" cy="26" r="14" fill={LIME} />
+      <circle cx="24" cy="56" r="8" fill={LIME} />
+    </>
+  )
+}
+
+// ── Core mark (no text) — auth pages, small spots ────────────────────────────
 export function LogoMark({ className = 'w-9 h-9' }) {
   return (
-    <svg className={className} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Outer tracking ring */}
-      <circle cx="32" cy="32" r="28" stroke="#12100C" strokeWidth="3.5" fill="none" />
-      {/* Journey path — arc from source to conversion */}
-      <path d="M18 44 Q 32 12 46 24" stroke="#D2EC2A" strokeWidth="3" strokeLinecap="round" fill="none" />
-      {/* Source node */}
-      <circle cx="18" cy="44" r="4.5" fill="#D2EC2A" />
-      {/* Conversion node */}
-      <circle cx="46" cy="24" r="5" fill="#D2EC2A" />
-      {/* Cursor/pointer — integrated into ring at 45° */}
-      <path d="M44 14 L38 6 L34 12 Z" fill="#12100C" />
+    <svg className={className} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <MarkArtwork />
     </svg>
   )
 }
 
 // ── Full logo — mark + "SourceTrack" wordmark (default dark on light) ────────
+// scale(0.6) maps the shared 80-unit artwork onto the 48px lockup height, so the mark here is
+// the same geometry as LogoMark rather than a second hand-drawn copy of it.
 export function LogoFull({ className = 'h-9 w-auto' }) {
   return (
     <svg className={className} viewBox="0 0 228 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Mark */}
-      <g transform="translate(0, 0)">
-        <circle cx="24" cy="24" r="20" stroke="#12100C" strokeWidth="2.5" fill="none" />
-        <path d="M12 32 Q 24 8 36 18" stroke="#D2EC2A" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-        <circle cx="12" cy="32" r="3.5" fill="#D2EC2A" />
-        <circle cx="36" cy="18" r="3.8" fill="#D2EC2A" />
-        <path d="M34 10 L28 2 L26 8 Z" fill="#12100C" />
+      <g transform="scale(0.6)">
+        <MarkArtwork />
       </g>
-      {/* Wordmark */}
-      <text x="56" y="32" fontFamily="'Switzer', 'Inter', system-ui, sans-serif" fontSize="24" fontWeight="900" fill="#12100C" letterSpacing="-0.06em">
+      <text x="56" y="32" fontFamily="'Switzer', 'Inter', system-ui, sans-serif" fontSize="24" fontWeight="900" fill={INK} letterSpacing="-0.06em">
         SourceTrack
       </text>
     </svg>
@@ -45,15 +72,16 @@ export function LogoFull({ className = 'h-9 w-auto' }) {
 }
 
 // ── Full logo (light on dark) — for dark backgrounds ────────────────────────
+// Kept, not retired: five files import it, and some of those surfaces (MarketingFooter,
+// SolutionPage) are dark regardless of the app theme, so collapsing this into LogoFull via
+// `currentColor` would resolve wrong on exactly those. Now that the mark is a self-contained
+// ink square, the ONLY difference from LogoFull is the wordmark fill — the mark no longer
+// differs at all, where previously the ring and cursor were re-coloured too.
 export function LogoFullDark({ className = 'h-9 w-auto' }) {
   return (
     <svg className={className} viewBox="0 0 228 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <g transform="translate(0, 0)">
-        <circle cx="24" cy="24" r="20" stroke="#FFFFFF" strokeWidth="2.5" fill="none" />
-        <path d="M12 32 Q 24 8 36 18" stroke="#D2EC2A" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-        <circle cx="12" cy="32" r="3.5" fill="#D2EC2A" />
-        <circle cx="36" cy="18" r="3.8" fill="#D2EC2A" />
-        <path d="M34 10 L28 2 L26 8 Z" fill="#FFFFFF" />
+      <g transform="scale(0.6)">
+        <MarkArtwork />
       </g>
       <text x="56" y="32" fontFamily="'Switzer', 'Inter', system-ui, sans-serif" fontSize="24" fontWeight="900" fill="#FFFFFF" letterSpacing="-0.06em">
         SourceTrack
@@ -62,22 +90,12 @@ export function LogoFullDark({ className = 'h-9 w-auto' }) {
   )
 }
 
-// ── App icon — lime background square, mark reversed for white on lime ───────
+// ── App icon — the canonical artwork the favicon sets are generated from ─────
+// No dark-mode border: see the note at the top of this file.
 export function LogoIcon({ className = 'w-12 h-12' }) {
   return (
     <svg className={className} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Lime app-icon background */}
-      <rect x="4" y="4" width="72" height="72" rx="18" fill="#D2EC2A" />
-      {/* Ring */}
-      <circle cx="40" cy="40" r="24" stroke="#12100C" strokeWidth="2.8" fill="none" />
-      {/* Journey path */}
-      <path d="M22 50 Q 40 14 54 30" stroke="#12100C" strokeWidth="2.8" strokeLinecap="round" fill="none" />
-      {/* Source node */}
-      <circle cx="22" cy="50" r="4.5" fill="#12100C" />
-      {/* Conversion node — ink, not lime: this mark sits on the lime square */}
-      <circle cx="54" cy="30" r="5" fill="#12100C" />
-      {/* Cursor */}
-      <path d="M52 18 L44 8 L40 14 Z" fill="#12100C" />
+      <MarkArtwork withDarkBorder={false} />
     </svg>
   )
 }

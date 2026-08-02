@@ -69,12 +69,12 @@ const sessions = [
   </div>
 
   <div
-    class="relative rounded-[28px] border border-white/10 bg-[#0D1010] p-3 shadow-[0_30px_90px_rgba(31,35,35,.30)]"
+    class="relative rounded-[28px] border border-white/10 bg-[#12100C] p-3 shadow-[0_30px_90px_rgba(31,35,35,.30)]"
   >
-    <div class="overflow-hidden rounded-[20px] border border-[#2D3333] bg-[#121616]">
+    <div class="overflow-hidden rounded-[20px] border border-[#3D3830] bg-[#1B1811]">
       <!-- Window chrome -->
       <div
-        class="grid h-[48px] grid-cols-[80px_1fr_auto] items-center gap-2 border-b border-white/10 bg-[#171B1B] px-4 text-xs font-bold text-[#F5F8F8]"
+        class="grid h-[48px] grid-cols-[80px_1fr_auto] items-center gap-2 border-b border-white/10 bg-[#1B1811] px-4 text-xs font-bold text-[#F6F3EB]"
       >
         <div class="flex gap-[6px]">
           <span class="h-2.5 w-2.5 rounded-full bg-[#C4381C]"></span>
@@ -88,11 +88,11 @@ const sessions = [
         >
       </div>
 
-      <div class="grid gap-px bg-[#2D3333] md:grid-cols-5">
+      <div class="grid gap-px bg-[#3D3830] md:grid-cols-5">
         <!-- ── Profile rail ── -->
-        <div class="space-y-4 bg-[#141918] p-4 md:col-span-2">
+        <div class="space-y-4 bg-[#18150F] p-4 md:col-span-2">
           <div>
-            <p class="text-[10px] uppercase tracking-wider text-[#9DA7A7]">Profile</p>
+            <p class="text-[10px] uppercase tracking-wider text-[#A79E8C]">Profile</p>
             <div class="mt-2 flex items-center gap-2.5">
               <div class="relative flex-shrink-0">
                 <div
@@ -102,7 +102,7 @@ const sessions = [
                 </div>
                 <!-- Qualified badge — an ABSENT badge means "not qualified", so it is never a default -->
                 <span
-                  class="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#22C55E] ring-2 ring-[#141918]"
+                  class="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#D2EC2A] ring-2 ring-[#18150F]"
                   title="Qualification: QUALIFIED"
                 >
                   <svg viewBox="0 0 24 24" class="h-2.5 w-2.5" fill="none" stroke="white" stroke-width="4">
@@ -112,14 +112,14 @@ const sessions = [
               </div>
               <div class="min-w-0">
                 <h3 class="break-all font-mono text-base font-bold leading-tight text-white">a4f2c9e1</h3>
-                <p class="mt-0.5 text-[10px] text-[#9DA7A7]">Anonymous visitor · no cookie set</p>
+                <p class="mt-0.5 text-[10px] text-[#A79E8C]">Anonymous visitor · no cookie set</p>
               </div>
             </div>
           </div>
 
           <!-- Attribution trail -->
-          <div class="rounded-xl border border-[#2D3333] bg-[#181D1D] p-3">
-            <p class="mb-2 text-[10px] uppercase tracking-wider text-[#9DA7A7]">Attribution trail</p>
+          <div class="rounded-xl border border-[#3D3830] bg-[#241F17] p-3">
+            <p class="mb-2 text-[10px] uppercase tracking-wider text-[#A79E8C]">Attribution trail</p>
             <div class="flex flex-wrap items-center gap-1">
               {
                 trail.map((chip, i) => (
@@ -129,14 +129,14 @@ const sessions = [
                         "inline-flex max-w-[110px] items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium",
                         chip.tone === "revenue"
                           ? "border-primary/40 bg-primary/15 text-primary"
-                          : "border-[#3A4040] bg-[#202625] text-[#DDE5E5]",
+                          : "border-[#454038] bg-[#2B261E] text-[#F6F3EB]",
                         chip.tone === "mono" ? "font-mono" : "",
                       ]}
                     >
                       <span class="truncate">{chip.label}</span>
                     </span>
                     {i < trail.length - 1 && (
-                      <svg viewBox="0 0 24 24" class="h-2.5 w-2.5 flex-shrink-0 text-[#5A6363]" fill="none" stroke="currentColor" stroke-width="3">
+                      <svg viewBox="0 0 24 24" class="h-2.5 w-2.5 flex-shrink-0 text-[#696258]" fill="none" stroke="currentColor" stroke-width="3">
                         <path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
                       </svg>
                     )}
@@ -150,9 +150,9 @@ const sessions = [
           <div class="grid grid-cols-2 gap-2">
             {
               stats.map((s) => (
-                <div class="rounded-xl border border-[#2D3333] bg-[#181D1D] p-2.5 text-center">
+                <div class="rounded-xl border border-[#3D3830] bg-[#241F17] p-2.5 text-center">
                   <p class="truncate text-lg font-bold text-white">{s.value}</p>
-                  <p class="mt-0.5 text-[10px] uppercase tracking-wider text-[#9DA7A7]">{s.label}</p>
+                  <p class="mt-0.5 text-[10px] uppercase tracking-wider text-[#A79E8C]">{s.label}</p>
                 </div>
               ))
             }
@@ -160,11 +160,11 @@ const sessions = [
         </div>
 
         <!-- ── Session timeline ── -->
-        <div class="bg-[#121616] p-4 md:col-span-3">
+        <div class="bg-[#1B1811] p-4 md:col-span-3">
           <div class="mb-3 flex flex-wrap items-center gap-2">
-            <span class="rounded-full bg-white px-3 py-1 text-[11px] font-medium text-[#121616]">All (5)</span>
-            <span class="rounded-full bg-[#202625] px-3 py-1 text-[11px] font-medium text-[#9DA7A7]">Conversions (1)</span>
-            <span class="rounded-full bg-[#202625] px-3 py-1 text-[11px] font-medium text-[#9DA7A7]">AI Touches (1)</span>
+            <span class="rounded-full bg-white px-3 py-1 text-[11px] font-medium text-[#1B1811]">All (5)</span>
+            <span class="rounded-full bg-[#2B261E] px-3 py-1 text-[11px] font-medium text-[#A79E8C]">Conversions (1)</span>
+            <span class="rounded-full bg-[#2B261E] px-3 py-1 text-[11px] font-medium text-[#A79E8C]">AI Touches (1)</span>
           </div>
 
           <div class="space-y-2">
@@ -173,14 +173,14 @@ const sessions = [
                 <div
                   class:list={[
                     "rounded-xl border p-3",
-                    s.converted ? "border-primary/40 bg-primary/8" : "border-[#2D3333] bg-[#181D1D]",
+                    s.converted ? "border-primary/40 bg-primary/8" : "border-[#3D3830] bg-[#241F17]",
                   ]}
                 >
                   <div class="flex items-start gap-3">
                     <div
                       class:list={[
                         "mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
-                        s.converted ? "bg-primary text-[#121616]" : "bg-[#2D3333] text-[#DDE5E5]",
+                        s.converted ? "bg-primary text-[#1B1811]" : "bg-[#3D3830] text-[#F6F3EB]",
                       ]}
                     >
                       #{s.index}
@@ -188,8 +188,8 @@ const sessions = [
 
                     <div class="min-w-0 flex-1">
                       <div class="flex flex-wrap items-center gap-2">
-                        <span class="text-xs font-semibold text-[#F5F8F8]">Session {s.index}</span>
-                        <span class="truncate rounded bg-[#2D3333] px-1.5 py-0.5 text-[10px] font-medium text-[#9DA7A7]">
+                        <span class="text-xs font-semibold text-[#F6F3EB]">Session {s.index}</span>
+                        <span class="truncate rounded bg-[#3D3830] px-1.5 py-0.5 text-[10px] font-medium text-[#A79E8C]">
                           {s.source}
                         </span>
                         {s.converted && (
@@ -201,7 +201,7 @@ const sessions = [
                           </span>
                         )}
                       </div>
-                      <div class="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-[#7E8888]">
+                      <div class="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-[#908778]">
                         <span>{s.when}</span>
                         <span>·</span>
                         <span>{s.duration}</span>
@@ -209,8 +209,8 @@ const sessions = [
 
                       <div class="mt-2 space-y-1">
                         {s.events.map((e) => (
-                          <div class="flex items-center gap-2 text-[11px] text-[#DDE5E5]">
-                            <span class="h-1 w-1 flex-shrink-0 rounded-full bg-[#5A6363]" />
+                          <div class="flex items-center gap-2 text-[11px] text-[#F6F3EB]">
+                            <span class="h-1 w-1 flex-shrink-0 rounded-full bg-[#696258]" />
                             <span class="truncate font-mono">{e}</span>
                           </div>
                         ))}
