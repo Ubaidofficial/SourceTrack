@@ -1,0 +1,169 @@
+---
+// Attribution model comparison — the mockup for key-features.md feature 2
+// ("Compare First-Touch, Last-Touch, and Multi-Touch views").
+//
+// Replaces public/images/features/feature-2.png, which was the PowerAI TEMPLATE's stock
+// "Integration" spider diagram — Figma, Framer, Slack and Telegram marks orbiting a violet
+// sparkle. It depicted neither attribution nor this product.
+//
+// ── WHICH PRODUCT SURFACE THIS DRAWS, AND WHY IT IS NOT THE OBVIOUS ONE ──────────────
+// This is dashboard/src/pages/ReportBuilder.jsx, NOT the Attribution page.
+//
+// That is a truth constraint, not a layout preference. AttributionPage.jsx renders a static
+// "First-touch attribution" LABEL rather than a dropdown, and says why in its own comment at
+// :119 — "the multi-touch read is on a dead store and returns 100% Direct; a model selector
+// here would ship a lie." Drawing a model switcher onto that page would be marketing a
+// control the page deliberately does not have.
+//
+// The switcher that IS real lives in ReportBuilder.jsx:41-46, and the six pills below are
+// that list verbatim, in its order. Feature 2's copy is defensible because of that surface.
+//
+// ── THE CAPTIONS ARE QUOTED, NOT WRITTEN ────────────────────────────────────────────
+// Each model's one-liner is copied verbatim from dashboard/src/lib/attributionModels.js
+// (MODEL_SUMMARY), which is itself a condensation of ConversionExplanationModal.jsx's
+// long-form copy written against the engine's real behaviour. Nothing here is invented. If a
+// model's semantics change, that file changes and this one follows it — a marketing caption
+// that drifts from the engine is a §6 truth defect, not a copy nit.
+//
+// ── ONE CONVERSION, THREE WAYS ──────────────────────────────────────────────────────
+// The journey drawn here is the SAME journey JourneyMockup.astro renders further down this
+// page: ChatGPT (Jul 12) -> Direct (Jul 15) -> Google Ads (Jul 18, converted), $240. Reusing
+// it is the point — the reader meets one conversion twice and sees that the models disagree
+// about who earned it, which is exactly what the copy claims ("which channels create
+// awareness and which close deals"). Two panels inventing two different journeys would just
+// look like filler.
+//
+// The splits are arithmetic, not decoration: single-touch models put the whole $240 on one
+// channel; linear divides it three ways at $80. Sample data, badged as such — a drawing of
+// the product, not a claim about anyone's data (§6).
+//
+// Brand marks are the committed local files (see AiSourceLedgerMockup.astro for why the
+// OpenAI mark is inline while the rest are <img>). "Direct" and "Organic" are channels
+// rather than companies, so they carry no mark — the same rule DashboardMockup.astro
+// already applies.
+const models = [
+  "First Touch",
+  "Last Touch",
+  "First Touch (Non-Direct)",
+  "Last Touch (Non-Direct)",
+  "Linear",
+  "Time Decay (7-day half-life)",
+];
+
+const comparisons = [
+  {
+    model: "First Touch",
+    summary: "100% credit to the first source this visitor ever arrived from.",
+    segments: [{ label: "ChatGPT", value: "$240", width: "100%", tone: "primary" }],
+  },
+  {
+    model: "Last Touch",
+    summary: "100% credit to the source on the page at the moment of conversion.",
+    segments: [{ label: "Google Ads", value: "$240", width: "100%", tone: "warm" }],
+  },
+  {
+    model: "Linear",
+    summary: "Credit split equally across every touchpoint in the journey.",
+    segments: [
+      { label: "ChatGPT", value: "$80", width: "33.34%", tone: "primary" },
+      { label: "Direct", value: "$80", width: "33.33%", tone: "muted" },
+      { label: "Google Ads", value: "$80", width: "33.33%", tone: "warm" },
+    ],
+  },
+];
+
+// Bar fills. Theme tokens where one exists — both --color-primary and --color-accent-warm
+// are declared identically under :root and :root[data-theme="dark"] in generated-theme.css,
+// so these resolve the same in either site theme and follow a future palette change.
+// The muted tone has no token; it is the literal DashboardMockup.astro and
+// DirectRescueMockup.astro already use for de-emphasised text. Direct is deliberately the
+// muted one: it is the touch that carries no source information.
+const toneFill: Record<string, string> = {
+  primary: "var(--color-primary)",
+  warm: "var(--color-accent-warm)",
+  muted: "#7C7568",
+};
+---
+
+<div class="relative z-1 overflow-hidden rounded-[20px] border border-[#3D3830] bg-[#12100C]">
+  <!-- Header -->
+  <div
+    class="flex h-[44px] items-center justify-between gap-2 border-b border-white/10 bg-[#1B1811] px-4"
+  >
+    <span class="truncate text-xs font-bold text-[#F6F3EB]">SourceTrack — Report Builder</span>
+    <span
+      class="inline-flex flex-shrink-0 items-center rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-primary"
+      >Sample data</span
+    >
+  </div>
+
+  <!-- Model selector: ReportBuilder's real six -->
+  <div class="border-b border-[#3D3830] px-4 pb-4 pt-3.5">
+    <div class="mb-2 text-[10px] font-black uppercase tracking-wider text-[#7C7568]">
+      Attribution model
+    </div>
+    <div class="flex flex-wrap gap-1.5">
+      {
+        models.map((m) => (
+          <span
+            class:list={[
+              "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold",
+              m === "Linear"
+                ? "border-primary/40 bg-primary/15 text-primary"
+                : "border-[#454038] bg-[#241F17] text-[#A79E8C]",
+            ]}
+          >
+            {m}
+          </span>
+        ))
+      }
+    </div>
+  </div>
+
+  <!-- One conversion, three ways -->
+  <div class="px-4 pb-4 pt-3.5">
+    <div class="mb-3 flex items-baseline justify-between gap-2">
+      <span class="text-[10px] font-black uppercase tracking-wider text-[#7C7568]">
+        One conversion, three models
+      </span>
+      <span class="text-[10px] font-bold tabular-nums text-[#A79E8C]">
+        $240 · 3 touchpoints
+      </span>
+    </div>
+
+    <div class="grid gap-3.5">
+      {
+        comparisons.map((c) => (
+          <div>
+            <div class="mb-1.5 text-[11px] font-black text-[#F6F3EB]">{c.model}</div>
+
+            <div class="flex h-2.5 overflow-hidden rounded-full bg-[#241F17]" aria-hidden="true">
+              {c.segments.map((s) => (
+                <span
+                  class="h-full"
+                  style={`width:${s.width};background:${toneFill[s.tone]}`}
+                />
+              ))}
+            </div>
+
+            <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+              {c.segments.map((s) => (
+                <span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-[#D5D0C3]">
+                  <span
+                    class="h-1.5 w-1.5 flex-shrink-0 rounded-full"
+                    style={`background:${toneFill[s.tone]}`}
+                    aria-hidden="true"
+                  />
+                  {s.label}
+                  <span class="tabular-nums text-[#A79E8C]">{s.value}</span>
+                </span>
+              ))}
+            </div>
+
+            <p class="mt-1.5 text-[10px] leading-normal text-[#7C7568]">{c.summary}</p>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</div>

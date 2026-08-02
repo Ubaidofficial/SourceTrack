@@ -1,0 +1,117 @@
+---
+// AI referral source ledger — the mockup for key-features.md feature 1
+// ("See which AI search tools and referrers drive leads and revenue").
+//
+// Replaces public/images/features/feature-1.png, which was the PowerAI TEMPLATE's stock
+// "User Data Analytics" chart: a generic line-over-bars with years on the x-axis and "2.8M"
+// on a tooltip. Nothing in it was this product, and none of it could be corrected by editing
+// text, because it was pixels. Same reasoning as DashboardMockup.astro: built as markup so
+// the labels stay greppable, it inherits real brand tokens instead of the template's violet,
+// and it cannot silently drift out of date the way a screenshot does.
+//
+// ── WHY A LEDGER AND NOT ANOTHER BEFORE/AFTER ────────────────────────────────────────
+// This section sits at homepage position 3, ABOVE both JourneyShowcase and
+// DirectRescueShowcase. The hero's JourneyTrail already opens ChatGPT -> converted, and
+// DirectRescueShowcase already runs the full "logged as Direct, it was actually ChatGPT"
+// argument. A third before/after here would be the same story told three times in one
+// scroll. So this panel shows the one thing neither of those shows: the RANKED source
+// breakdown with a revenue column — which is bullet 2's claim ("stitches consideration
+// phase AI chats to actual Stripe revenue") rather than bullet 1's detection claim.
+//
+// ── THE NUMBERS ARE ILLUSTRATIVE, AND THEY RECONCILE ─────────────────────────────────
+// Sample data, badged as such in the header — a drawing of the product, never a claim about
+// anyone's data (§6: never present sample figures as if they were real).
+//
+// They are also internally consistent, deliberately, so a reader who adds them up is not
+// caught out:
+//   • leads: 38 + 12 + 11 + 6 = 67, and 67 / 318 = 21.1% -> the footer's "21% of conversions".
+//     318 is DashboardMockup.astro's Conversions KPI on this same page.
+//   • ChatGPT's $3,840 is DashboardMockup's ChatGPT revenue row, unchanged, so the two
+//     panels on one page agree rather than quietly contradicting.
+// If you change a figure here, re-check both relationships. A mockup whose own arithmetic
+// does not close is exactly the kind of detail this product cannot afford to get wrong.
+//
+// ── MARKS ────────────────────────────────────────────────────────────────────────────
+// Real brand logos, ported from dashboard/src/lib/brandLogos.jsx and committed locally at
+// public/images/logos/. No favicon service is contacted at runtime — a privacy-first
+// product must not make a third-party request per logo.
+//
+// OpenAI's is INLINE rather than an <img> for the same reason it is inline in
+// DashboardMockup.astro and JourneyTrail.astro: openai.svg is monochrome and painted with
+// fill="currentColor", which an <img> cannot inherit — loaded as an image it would resolve
+// to black and vanish against this dark panel. The other three are multicolour and
+// self-contained, so they load from their committed files.
+const rows = [
+  { source: "ChatGPT", mark: "openai", leads: "38", revenue: "$3,840" },
+  { source: "Perplexity", mark: "perplexity", leads: "12", revenue: "$1,180" },
+  { source: "Gemini", mark: "gemini", leads: "11", revenue: "$1,020" },
+  { source: "Claude", mark: "anthropic", leads: "6", revenue: "$610" },
+];
+---
+
+<div class="relative z-1 overflow-hidden rounded-[20px] border border-[#3D3830] bg-[#12100C]">
+  <!-- Header -->
+  <div
+    class="flex h-[44px] items-center justify-between gap-2 border-b border-white/10 bg-[#1B1811] px-4"
+  >
+    <span class="truncate text-xs font-bold text-[#F6F3EB]">AI referral sources</span>
+    <span
+      class="inline-flex flex-shrink-0 items-center rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-primary"
+      >Sample data</span
+    >
+  </div>
+
+  <!-- Ledger -->
+  <div class="p-4">
+    <div
+      class="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 pb-2 text-[10px] font-black uppercase tracking-wider text-[#7C7568]"
+    >
+      <span>Source</span>
+      <span class="text-right">Leads</span>
+      <span class="text-right">Revenue</span>
+    </div>
+
+    {
+      rows.map((r) => (
+        <div class="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 border-t border-[#3D3830] py-2.5 text-xs font-bold">
+          <span class="flex min-w-0 items-center gap-2 text-[#F6F3EB]">
+            <span
+              class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg border border-white/10 bg-[#241F17]"
+              aria-hidden="true"
+            >
+              {r.mark === "openai" ? (
+                <svg viewBox="0 0 24 24" class="h-3.5 w-3.5">
+                  <path d="M22.28 9.82a5.97 5.97 0 0 0-.51-4.91 6.04 6.04 0 0 0-6.5-2.9A6.07 6.07 0 0 0 4.98 4.18a5.97 5.97 0 0 0-3.98 2.9 6.05 6.05 0 0 0 .74 7.1 5.97 5.97 0 0 0 .51 4.91 6.04 6.04 0 0 0 6.5 2.9 5.97 5.97 0 0 0 4.5 2.01 6.04 6.04 0 0 0 5.79-4.23 5.97 5.97 0 0 0 3.98-2.9 6.04 6.04 0 0 0-.74-7.05zm-9.06 12.66a4.48 4.48 0 0 1-2.87-1.04l.14-.08 4.78-2.76a.78.78 0 0 0 .39-.68v-6.74l2.02 1.17a.07.07 0 0 1 .04.05v5.58a4.5 4.5 0 0 1-4.5 4.5zM3.56 18.16a4.47 4.47 0 0 1-.54-3.02l.14.08 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.07.07 0 0 1-.03.06l-4.83 2.79a4.5 4.5 0 0 1-6.14-1.63zM2.3 7.7a4.47 4.47 0 0 1 2.36-1.97V11.39a.77.77 0 0 0 .39.68l5.81 3.36-2.02 1.16a.07.07 0 0 1-.07 0l-4.83-2.8a4.5 4.5 0 0 1-1.64-6.14zm16.6 3.86l-5.84-3.39 2.02-1.16a.07.07 0 0 1 .07 0l4.83 2.79a4.5 4.5 0 0 1-.68 8.12v-5.69a.77.77 0 0 0-.4-.67zm2-3.02l-.14-.08-4.77-2.78a.78.78 0 0 0-.78 0L9.36 9.05V6.72a.07.07 0 0 1 .03-.06l4.83-2.79a4.5 4.5 0 0 1 6.68 4.66zM8.26 12.65l-2.02-1.17a.07.07 0 0 1-.04-.06V5.85a4.5 4.5 0 0 1 7.38-3.46l-.14.08-4.78 2.76a.78.78 0 0 0-.39.68zm1.1-2.37l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z" fill="#F6F3EB" />
+                </svg>
+              ) : (
+                <img
+                  src={`/images/logos/${r.mark}.svg`}
+                  alt=""
+                  width="14"
+                  height="14"
+                  class="h-3.5 w-3.5"
+                  loading="lazy"
+                  decoding="async"
+                />
+              )}
+            </span>
+            <span class="truncate">{r.source}</span>
+          </span>
+          <span class="text-right tabular-nums text-[#D5D0C3]">{r.leads}</span>
+          <span class="text-right tabular-nums text-primary">{r.revenue}</span>
+        </div>
+      ))
+    }
+  </div>
+
+  <!-- Footer callout -->
+  <div class="mx-4 mb-4 rounded-2xl border border-[#3D3830] bg-[#241F17] p-3.5">
+    <div class="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-[#A79E8C]">
+      AI attribution
+    </div>
+    <p class="text-[11px] font-semibold leading-normal text-[#E7E0D2]">
+      AI referrals drove <span class="font-black text-primary">21%</span> of conversions this
+      period — most analytics label these as direct traffic.
+    </p>
+  </div>
+</div>

@@ -1,5 +1,8 @@
 ---
 import Badge from "@/components/Badge.astro";
+import AiSourceLedgerMockup from "@/components/AiSourceLedgerMockup.astro";
+import ModelCompareMockup from "@/components/ModelCompareMockup.astro";
+import SeoRevenueMockup from "@/components/SeoRevenueMockup.astro";
 import theme from "@/config/theme.json";
 
 interface Props {
@@ -102,15 +105,12 @@ const uid = `kf-${Math.random().toString(36).slice(2, 8)}`;
                         </linearGradient>
                       </defs>
                     </svg>
-                    <img
-                      src={feature.image}
-                      alt="Feature"
-                      width={570}
-                      height={360}
-                      class="rounded-3xl object-cover relative z-1"
-                      loading="lazy"
-                      onerror="this.style.display='none'"
-                    />
+                    {/* Each feature names its mockup by key in key-features.md; this maps
+                        the key to a component and holds no copy of its own, so the content
+                        file stays the single place any of this section's words live. */}
+                    {feature.mockup === "ai-sources" && <AiSourceLedgerMockup />}
+                    {feature.mockup === "model-compare" && <ModelCompareMockup />}
+                    {feature.mockup === "seo-revenue" && <SeoRevenueMockup />}
                     <svg
                       class="absolute bottom-0 left-0"
                       width="301"

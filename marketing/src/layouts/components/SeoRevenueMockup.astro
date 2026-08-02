@@ -1,0 +1,96 @@
+---
+// Search Console organic revenue — the mockup for key-features.md feature 3
+// ("Search Console SEO Revenue Signals").
+//
+// Replaces public/images/features/feature-3.png, which was the PowerAI TEMPLATE's stock
+// "Income Overview" panel: violet progress bars against Mon-Thu and a "$128,653k" figure.
+// It was not this product, and its numbers were not anyone's.
+//
+// ── CHROME PORTED, COLUMNS RE-KEYED ─────────────────────────────────────────────────
+// The panel chrome follows dashboard/src/components/GscQueryFixture.jsx, but the columns
+// deliberately do NOT. That fixture renders Search Console's QUERY table (query / clicks /
+// impressions / CTR / position) and carries no revenue column at all — which does not match
+// this feature's copy, whose whole claim is "match organic landing pages and date ranges
+// against revenue webhooks."
+//
+// The surface that actually makes that claim is dashboard/src/pages/SEORevenue.jsx, and it is
+// LANDING-PAGE keyed: Landing Page Path / Conversions / Revenue / GSC Clicks / Impressions
+// (:197-202). These four columns are that table, trimmed to what stays legible at this card's
+// width. Impressions is the column dropped — it is the least load-bearing for the copy.
+//
+// ── THE TRUTH LABEL IS NOT A FOOTNOTE ───────────────────────────────────────────────
+// Revenue here is ESTIMATED, and the panel has to say so. §6: query-level revenue is matched
+// by landing page + date range and must carry the truth label; never imply exact
+// query -> customer attribution. The real page carries the same disclosure in its "Aggregated
+// Data Notice" (SEORevenue.jsx:314), and the column header says "Est. Revenue" rather than
+// "Revenue" for the same reason. Removing either would make this mockup a claim the product
+// itself refuses to make.
+//
+// ── THE NUMBERS ─────────────────────────────────────────────────────────────────────
+// Sample data, badged as such — a drawing of the product, not a claim about anyone's data.
+// Internally consistent by construction: revenue is conversions x $120, and the click counts
+// are GscQueryFixture's own (1,284 / 942 / 631 / 418) so the two panels do not invent two
+// different sets of traffic for the same site.
+const pages = [
+  { path: "/blog/attribution-guide", conversions: "18", revenue: "$2,160", clicks: "1,284" },
+  { path: "/compare/ga4", conversions: "12", revenue: "$1,440", clicks: "942" },
+  { path: "/docs/install", conversions: "7", revenue: "$840", clicks: "631" },
+  { path: "/blog/ai-referral-tracking", conversions: "5", revenue: "$600", clicks: "418" },
+];
+---
+
+<div class="relative z-1 overflow-hidden rounded-[20px] border border-[#3D3830] bg-[#12100C]">
+  <!-- Header -->
+  <div
+    class="flex h-[44px] items-center justify-between gap-2 border-b border-white/10 bg-[#1B1811] px-4"
+  >
+    <span class="truncate text-xs font-bold text-[#F6F3EB]">
+      Search Console — organic revenue
+    </span>
+    <span
+      class="inline-flex flex-shrink-0 items-center rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-primary"
+      >Sample data</span
+    >
+  </div>
+
+  <!-- Landing-page table -->
+  <div class="overflow-x-auto p-4">
+    <table class="w-full text-left text-xs">
+      <thead>
+        <tr
+          class="border-b border-[#3D3830] text-[10px] font-black uppercase tracking-wider text-[#7C7568]"
+        >
+          <th class="py-2 pr-2 font-black">Landing page</th>
+          <th class="py-2 px-2 text-right font-black">Conv.</th>
+          <th class="py-2 px-2 text-right font-black">Est. revenue</th>
+          <th class="py-2 pl-2 text-right font-black">GSC clicks</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          pages.map((p) => (
+            <tr class="border-b border-[#3D3830] font-bold last:border-0">
+              <td class="max-w-[150px] truncate py-2.5 pr-2 font-mono text-[11px] text-[#F6F3EB]">
+                {p.path}
+              </td>
+              <td class="py-2.5 px-2 text-right tabular-nums text-[#D5D0C3]">{p.conversions}</td>
+              <td class="py-2.5 px-2 text-right tabular-nums text-primary">{p.revenue}</td>
+              <td class="py-2.5 pl-2 text-right tabular-nums text-[#A79E8C]">{p.clicks}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Truth label — §6, and the product's own disclosure -->
+  <div class="mx-4 mb-4 rounded-2xl border border-[#3D3830] bg-[#241F17] p-3.5">
+    <div class="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-[#A79E8C]">
+      Estimated
+    </div>
+    <p class="text-[10px] leading-normal text-[#A79E8C]">
+      Matched by landing page and date range. Search Console reports aggregate query data, not
+      user-level query&nbsp;&rarr;&nbsp;customer identity.
+    </p>
+  </div>
+</div>
