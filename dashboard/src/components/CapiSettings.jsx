@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchApi } from '../lib/api'
+import { useSite } from '../contexts/SiteContext'
 import StatusBadge from './StatusBadge'
 import { MetaLogo, GoogleLogo, GoogleAnalyticsLogo, TikTokLogo, LinkedInLogo } from '../lib/brandLogos'
 
@@ -98,13 +99,17 @@ function CapiCard({ platform, st, badge, children }) {
 //   3. grant + action id     -> forwarding
 // State 2 is the one that matters: showing it as "Connected" would claim a forwarding path
 // that sendGoogleConversion does not have (it no-ops without a conversion action).
-function GoogleAdsCard({ platform, status, siteKey, onChanged }) {
+function GoogleAdsCard({ platform, status, siteKey, onChanged, isPreview }) {
   const [actionId, setActionId] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const st = status?.[platform.key] || {}
 
   async function connect() {
+    // Gated even though the request itself is a GET: it redirects to Google's consent
+    // screen and, on return, binds an ad account to the CUSTOMER's site. Same class of
+    // action as the writes below.
+    if (isPreview) return
     setBusy(true); setMsg('')
     try {
       const res = await fetchApi(`/integrations/ad-platforms/google/auth-url?site_key=${siteKey}`)
@@ -119,6 +124,7 @@ function GoogleAdsCard({ platform, status, siteKey, onChanged }) {
   }
 
   async function saveActionId() {
+    if (isPreview) return
     setBusy(true); setMsg('')
     try {
       const res = await fetchApi(`/integrations/capi/google?site_key=${siteKey}`, {
@@ -131,6 +137,7 @@ function GoogleAdsCard({ platform, status, siteKey, onChanged }) {
   }
 
   async function stopForwarding() {
+    if (isPreview) return
     // Deliberately explicit: this does NOT revoke the Google account connection, because
     // that same connection powers ad-cost import. Revoking lives on the Campaigns surface.
     if (!window.confirm('Stop forwarding conversions to Google Ads? Your Google Ads account stays connected for ad-cost import.')) return
@@ -158,10 +165,14 @@ function GoogleAdsCard({ platform, status, siteKey, onChanged }) {
             Connect your Google Ads account to upload offline conversions. Uses the same
             connection as ad-cost import — connect once.
           </p>
-          <button onClick={connect} disabled={busy}
-            className="text-xs px-3 py-1.5 bg-st-black dark:bg-white text-white dark:text-st-black rounded font-semibold disabled:opacity-50">
-            {busy ? 'Connecting…' : 'Connect Google Ads'}
-          </button>
+          {isPreview ? (
+            <div className="text-xs text-st-gray italic">Connecting an ad account is hidden in Support Preview</div>
+          ) : (
+            <button onClick={connect} disabled={busy}
+              className="text-xs px-3 py-1.5 bg-st-black dark:bg-white text-white dark:text-st-black rounded font-semibold disabled:opacity-50">
+              {busy ? 'Connecting…' : 'Connect Google Ads'}
+            </button>
+          )}
         </div>
       )}
 
@@ -173,11 +184,16 @@ function GoogleAdsCard({ platform, status, siteKey, onChanged }) {
           </p>
           <input type="text" inputMode="numeric" placeholder="Conversion action ID" value={actionId}
             onChange={e => setActionId(e.target.value)}
-            className="w-full text-xs px-2 py-1.5 border border-gray-200 dark:border-dark-border rounded bg-white dark:bg-dark-card" />
-          <button onClick={saveActionId} disabled={busy || !actionId.trim()}
-            className="text-xs px-3 py-1.5 bg-st-black dark:bg-white text-white dark:text-st-black rounded font-semibold disabled:opacity-50">
-            {busy ? 'Saving…' : 'Enable forwarding'}
-          </button>
+            disabled={isPreview}
+            className="w-full text-xs px-2 py-1.5 border border-gray-200 dark:border-dark-border rounded bg-white dark:bg-dark-card disabled:opacity-60 disabled:cursor-not-allowed" />
+          {isPreview ? (
+            <div className="text-xs text-st-gray italic">Forwarding changes are hidden in Support Preview</div>
+          ) : (
+            <button onClick={saveActionId} disabled={busy || !actionId.trim()}
+              className="text-xs px-3 py-1.5 bg-st-black dark:bg-white text-white dark:text-st-black rounded font-semibold disabled:opacity-50">
+              {busy ? 'Saving…' : 'Enable forwarding'}
+            </button>
+          )}
         </div>
       )}
 
@@ -185,7 +201,11 @@ function GoogleAdsCard({ platform, status, siteKey, onChanged }) {
         <div className="text-[11px] text-st-gray dark:text-gray-400 space-y-1">
           {st.customer_id ? <div>Customer ID: <span className="font-mono">{st.customer_id}</span></div> : null}
           <div>Conversion action: <span className="font-mono">{st.conversion_action_id}</span></div>
-          <button onClick={stopForwarding} disabled={busy} className="mt-2 text-[11px] text-red-600 dark:text-red-400 hover:underline disabled:opacity-50">Stop forwarding</button>
+          {isPreview ? (
+            <div className="mt-2 text-xs text-st-gray italic">Forwarding changes are hidden in Support Preview</div>
+          ) : (
+            <button onClick={stopForwarding} disabled={busy} className="mt-2 text-[11px] text-red-600 dark:text-red-400 hover:underline disabled:opacity-50">Stop forwarding</button>
+          )}
         </div>
       )}
 
@@ -194,7 +214,7 @@ function GoogleAdsCard({ platform, status, siteKey, onChanged }) {
   )
 }
 
-function PlatformCard({ platform, status, siteKey, onChanged }) {
+function PlatformCard({ platform, status, siteKey, onChanged, isPreview }) {
   const [fields, setFields] = useState({})
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
@@ -203,6 +223,7 @@ function PlatformCard({ platform, status, siteKey, onChanged }) {
   const set = (k, v) => setFields(f => ({ ...f, [k]: v }))
 
   async function save() {
+    if (isPreview) return
     setBusy(true); setMsg('')
     try {
       const body = { token: fields.token || '' }
@@ -214,6 +235,7 @@ function PlatformCard({ platform, status, siteKey, onChanged }) {
   }
 
   async function disconnect() {
+    if (isPreview) return
     if (!window.confirm(`Disconnect ${platform.label}? This removes the stored token.`)) return
     setBusy(true); setMsg('')
     try {
@@ -231,21 +253,31 @@ function PlatformCard({ platform, status, siteKey, onChanged }) {
       {st.connected ? (
         <div className="text-[11px] text-st-gray dark:text-gray-400 space-y-1">
           {platform.idFields.map(f => st[f.name] ? <div key={f.name}>{f.label}: <span className="font-mono">{st[f.name]}</span></div> : null)}
-          <button onClick={disconnect} disabled={busy} className="mt-2 text-[11px] text-red-600 dark:text-red-400 hover:underline disabled:opacity-50">Disconnect</button>
+          {isPreview ? (
+            <div className="mt-2 text-xs text-st-gray italic">Disconnecting is hidden in Support Preview</div>
+          ) : (
+            <button onClick={disconnect} disabled={busy} className="mt-2 text-[11px] text-red-600 dark:text-red-400 hover:underline disabled:opacity-50">Disconnect</button>
+          )}
         </div>
       ) : (
         <div className="space-y-2">
           {platform.idFields.map(f => (
             <input key={f.name} type="text" placeholder={f.label} value={fields[f.name] || ''}
               onChange={e => set(f.name, e.target.value)}
-              className="w-full text-xs px-2 py-1.5 border border-gray-200 dark:border-dark-border rounded bg-white dark:bg-dark-card" />
+              disabled={isPreview}
+              className="w-full text-xs px-2 py-1.5 border border-gray-200 dark:border-dark-border rounded bg-white dark:bg-dark-card disabled:opacity-60 disabled:cursor-not-allowed" />
           ))}
           <input type="password" placeholder={platform.tokenLabel} value={fields.token || ''}
             onChange={e => set('token', e.target.value)}
-            className="w-full text-xs px-2 py-1.5 border border-gray-200 dark:border-dark-border rounded bg-white dark:bg-dark-card" />
-          <button onClick={save} disabled={busy} className="text-xs px-3 py-1.5 bg-st-black dark:bg-white text-white dark:text-st-black rounded font-semibold disabled:opacity-50">
-            {busy ? 'Saving…' : 'Connect'}
-          </button>
+            disabled={isPreview}
+            className="w-full text-xs px-2 py-1.5 border border-gray-200 dark:border-dark-border rounded bg-white dark:bg-dark-card disabled:opacity-60 disabled:cursor-not-allowed" />
+          {isPreview ? (
+            <div className="text-xs text-st-gray italic">Connecting is hidden in Support Preview</div>
+          ) : (
+            <button onClick={save} disabled={busy} className="text-xs px-3 py-1.5 bg-st-black dark:bg-white text-white dark:text-st-black rounded font-semibold disabled:opacity-50">
+              {busy ? 'Saving…' : 'Connect'}
+            </button>
+          )}
         </div>
       )}
       {msg && <p className="text-[11px] text-st-gray dark:text-gray-400 mt-2">{msg}</p>}
@@ -255,6 +287,12 @@ function PlatformCard({ platform, status, siteKey, onChanged }) {
 
 export default function CapiSettings({ site }) {
   const siteKey = site?.site_key
+  // Derived from the context, not the `site` prop: this component is reachable in support
+  // preview (Integrations.jsx renders it behind the plan gate only), and the context is the
+  // same source Settings.jsx and Integrations.jsx read. Threaded to both cards so the file
+  // reads the context once.
+  const { activeSite } = useSite()
+  const isPreview = activeSite?.support_preview || false
   const { data, refetch } = useQuery({
     queryKey: ['capi-status', siteKey],
     queryFn: () => fetchApi(`/integrations/capi/status?site_key=${siteKey}`),
@@ -271,8 +309,8 @@ export default function CapiSettings({ site }) {
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         {PLATFORMS.map(p => p.oauth
-          ? <GoogleAdsCard key={p.key} platform={p} status={status} siteKey={siteKey} onChanged={refetch} />
-          : <PlatformCard key={p.key} platform={p} status={status} siteKey={siteKey} onChanged={refetch} />
+          ? <GoogleAdsCard key={p.key} platform={p} status={status} siteKey={siteKey} onChanged={refetch} isPreview={isPreview} />
+          : <PlatformCard key={p.key} platform={p} status={status} siteKey={siteKey} onChanged={refetch} isPreview={isPreview} />
         )}
       </div>
     </div>

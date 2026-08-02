@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { X, Bell, TrendingUp, EyeOff, Activity } from 'lucide-react'
 import { fetchApi } from '../lib/api'
+import { useSite } from '../contexts/SiteContext'
 
 // Icon per anomaly type. Unknown types fall back to a generic bell.
 const TYPE_ICON = {
@@ -26,11 +27,17 @@ function relativeTime(value) {
 
 export default function AlertDrawer({ isOpen, onClose, siteKey, alerts = [] }) {
   const queryClient = useQueryClient()
+  // Above the `!isOpen` early return — hooks cannot sit behind a conditional return.
+  // Derived locally rather than taken from Layout (its only caller, which already computes
+  // isPreview) so the gate travels with the component if it is ever mounted elsewhere.
+  const { activeSite } = useSite()
+  const isPreview = activeSite?.support_preview || false
   const [dismissingId, setDismissingId] = useState(null)
 
   if (!isOpen) return null
 
   async function handleDismiss(id) {
+    if (isPreview) return
     if (!siteKey) return
     setDismissingId(id)
     try {
@@ -87,13 +94,19 @@ export default function AlertDrawer({ isOpen, onClose, siteKey, alerts = [] }) {
                     </div>
                   </div>
                   <div className="flex justify-end">
-                    <button
-                      onClick={() => handleDismiss(alert.id)}
-                      disabled={dismissingId === alert.id}
-                      className="text-[11px] font-medium text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-hover transition-colors disabled:opacity-50"
-                    >
-                      {dismissingId === alert.id ? 'Dismissing…' : 'Dismiss'}
-                    </button>
+                    {/* Short copy because it repeats once per alert card — the same string
+                        Settings.jsx:1165 uses where the blocked action needs no elaboration. */}
+                    {isPreview ? (
+                      <span className="text-[11px] text-st-gray italic">Hidden in Support Preview</span>
+                    ) : (
+                      <button
+                        onClick={() => handleDismiss(alert.id)}
+                        disabled={dismissingId === alert.id}
+                        className="text-[11px] font-medium text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-hover transition-colors disabled:opacity-50"
+                      >
+                        {dismissingId === alert.id ? 'Dismissing…' : 'Dismiss'}
+                      </button>
+                    )}
                   </div>
                 </div>
               )
