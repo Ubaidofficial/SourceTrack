@@ -2,7 +2,7 @@
 import AnimatedButton from "@/components/AnimatedButton.astro";
 import HeroShape from "@/components/shape/HeroShape";
 import { markdownify } from "@/lib/utils/textConverter";
-import DashboardMockup from "./DashboardMockup.astro";
+import JourneyTrail from "./JourneyTrail.astro";
 interface Props {
   data: any;
 }
@@ -15,7 +15,13 @@ const { data } = Astro.props;
   <div class="main-container">
     <div class="container px-0">
       <div class="container-padding-y pb-0 px-0">
-        <div class="flex justify-center items-center flex-col text-center px-4">
+        <!-- Editorial two-column: copy left, resolved journey right.
+             Single column below md with the copy first, matching how
+             WhyChooseUs/KeyFeatures stack. -->
+        <div class="grid items-center gap-10 px-4 md:grid-cols-12 md:gap-12">
+          <div
+            class="flex flex-col items-start text-left md:col-span-7"
+          >
           <!-- BADGE -->
           {
             data.badge?.enable && (
@@ -44,13 +50,13 @@ const { data } = Astro.props;
             set:html={markdownify(data.title).__html}
           />
           <!-- CONTENT -->
-          <p id="hero-content" class="text-lg sm:w-3/5">
+          <p id="hero-content" class="text-lg">
             {data.content}
           </p>
           <!-- BUTTONS -->
           <div
             id="hero-buttons"
-            class="mt-10 flex items-center gap-5 flex-wrap justify-center"
+            class="mt-10 flex items-center gap-5 flex-wrap justify-start"
           >
             {
               data.button_dark?.enable && (
@@ -73,14 +79,12 @@ const { data } = Astro.props;
               )
             }
           </div>
-        </div>
+          </div>
 
-        <!-- IMAGE -->
-        <div
-          id="hero-image"
-          class="mt-30 bg-dark/45 backdrop-blur-2xl p-5 relative z-1"
-        >
-          <DashboardMockup />
+          <!-- RESOLVED JOURNEY -->
+          <div id="hero-journey" class="relative z-1 md:col-span-5">
+            <JourneyTrail />
+          </div>
         </div>
       </div>
     </div>
@@ -103,7 +107,7 @@ const { data } = Astro.props;
     const title = document.getElementById("hero-title");
     const content = document.getElementById("hero-content");
     const buttons = document.getElementById("hero-buttons");
-    const heroImage = document.getElementById("hero-image");
+    const heroJourney = document.getElementById("hero-journey");
     const heroShape = document.getElementById("hero-shape");
     if (badge) {
       badge.style.opacity = "0";
@@ -137,13 +141,26 @@ const { data } = Astro.props;
         { ...smooth, duration: 0.5, delay: 0.6 },
       );
     }
-    if (heroImage) {
-      heroImage.style.opacity = "0";
+    if (heroJourney) {
+      heroJourney.style.opacity = "0";
       animate(
-        heroImage,
+        heroJourney,
         { opacity: [0, 1], transform: ["translateY(40px)", "translateY(0)"] },
         { ...smooth, duration: 1.2, delay: 0.4 },
       );
+      // The trail resolves one touchpoint at a time. Same fail-open contract as
+      // every other element here: opacity is set from JS and animated straight
+      // back, so with no JS (or no animation) the full trail is already visible.
+      // Nothing is gated behind the motion — it only replays what is on screen.
+      const steps = heroJourney.querySelectorAll<HTMLElement>(".journey-step");
+      steps.forEach((step, i) => {
+        step.style.opacity = "0";
+        animate(
+          step,
+          { opacity: [0, 1], transform: ["translateY(8px)", "translateY(0)"] },
+          { ...smooth, duration: 0.4, delay: 0.7 + i * 0.15 },
+        );
+      });
     }
     if (heroShape) {
       heroShape.style.opacity = "0";

@@ -4,7 +4,7 @@
     "base_url": "https://www.sourcetrack.ai",
     "base_path": "/",
     "trailing_slash": false,
-    "favicon": "/images/favicon.png",
+    "favicon": "/favicon.svg",
     "logo": "",
     "logo_width": "140",
     "logo_height": "40",

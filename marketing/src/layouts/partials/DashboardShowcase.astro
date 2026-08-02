@@ -1,0 +1,46 @@
+---
+// Section wrapper for DashboardMockup, which used to sit inside the hero.
+// Follows JourneyShowcase.astro / DirectRescueShowcase.astro exactly:
+// showcase wrapper (main-container > container > container-padding-*, badge + h2)
+// embedding its mockup, so the homepage's vertical rhythm is unchanged.
+import DashboardMockup from "@/components/DashboardMockup.astro";
+import Badge from "@/components/Badge.astro";
+---
+
+<section class="relative overflow-hidden">
+  <div class="main-container">
+    <div class="container">
+      <div class="container-padding-y container-padding-x">
+        <div class="mb-10 text-center">
+          <Badge>Attribution</Badge>
+          <h2 class="text-h2 font-medium lg:w-3/5 mx-auto">
+            Every conversion, attributed
+          </h2>
+        </div>
+
+        {/* revealOnScroll, not the hero's immediate animate(). This section is
+            below the fold, which is precisely the case revealOnScroll.ts exists
+            for — and its viewport-checked sweep means the mockup cannot be
+            stranded invisible if the observer never fires. */}
+        <div id="dashboard-showcase" class="relative z-1">
+          <DashboardMockup />
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { revealOnScroll } from "@/lib/revealOnScroll";
+  function initDashboardShowcase() {
+    const el = document.getElementById("dashboard-showcase");
+    if (el) {
+      revealOnScroll(
+        el,
+        { opacity: [0, 1], transform: ["translateY(40px)", "translateY(0)"] },
+        { duration: 0.8, ease: "easeInOut" },
+      );
+    }
+  }
+  document.addEventListener("astro:page-load", initDashboardShowcase);
+</script>

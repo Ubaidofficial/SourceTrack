@@ -1,0 +1,109 @@
+---
+// Hero journey trail — the headline's claim, demonstrated.
+//
+// Standalone component per the codebase convention (DashboardMockup.astro,
+// JourneyMockup.astro are each their own file, consumed by a parent section).
+//
+// VERTICAL dot-line-dot on purpose: this mirrors the product's own journey view
+// (dashboard/src/components/JourneyModal.jsx renders a vertical numbered timeline),
+// so the hero previews real product visual language rather than borrowing the
+// marketing-only chip+arrow strip from JourneyMockup.astro.
+//
+// COMPLETE AT FRAME 0: no opacity is baked into the markup. The entrance animation
+// in Hero.astro sets opacity from JS and immediately animates it back, so a visitor
+// with JS disabled — or one whose animation never runs — sees the whole resolved
+// trail. The motion replays information already on screen; it never gates it.
+//
+// BRAND MARKS, NOT COLOURED DOTS: named sources carry their real logo, ported from
+// dashboard/src/lib/brandLogos.jsx (already shipping on the app's Landing page) and
+// committed locally at public/images/logos/. No favicon service is contacted at
+// runtime — a privacy-first product must not make a third-party request per logo.
+// Unnamed nodes (a page view, the conversion itself) keep the dot treatment.
+//
+// The OpenAI mark is INLINE rather than an <img>: it is monochrome and has to follow
+// the light/dark toggle via currentColor, which an <img> cannot inherit. Google's is
+// multicolour and theme-independent, so it loads from the committed file.
+//
+// Colours are theme tokens (bg-card, border-border, text-text, text-text-light,
+// bg-primary), so the trail follows the dark-mode toggle from #570 with no dark:.
+
+const steps = [
+  { label: "ChatGPT", meta: "First touch · AI referral", mark: "openai" },
+  { label: "/pricing", meta: "Read the plans", mark: "dot" },
+  { label: "Google — branded search", meta: "Came back by name", mark: "google" },
+  { label: "Converted", meta: "Attributed to ChatGPT", mark: "revenue" },
+];
+---
+
+<div
+  id="journey-trail"
+  class="rounded-2xl border border-border bg-card p-6 sm:p-7"
+>
+  <p
+    class="mb-5 text-[10px] font-extrabold uppercase tracking-wider text-text-light"
+  >
+    One visitor, resolved
+  </p>
+
+  <ol class="relative">
+    {
+      steps.map((step, i) => (
+        <li class="journey-step relative flex gap-4 pb-6 last:pb-0">
+          {i < steps.length - 1 && (
+            <span
+              class="absolute left-[9px] top-5 -bottom-0.5 w-px bg-border"
+              aria-hidden="true"
+            />
+          )}
+
+          {/* Fixed 20px marker slot so logos and dots share one baseline and the
+              connector line stays centred regardless of which is rendered. */}
+          <span
+            class="relative z-1 mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center"
+            aria-hidden="true"
+          >
+            {step.mark === "openai" && (
+              <svg viewBox="0 0 24 24" class="h-4 w-4 text-text">
+                <path
+                  d="M22.28 9.82a5.97 5.97 0 0 0-.51-4.91 6.04 6.04 0 0 0-6.5-2.9A6.07 6.07 0 0 0 4.98 4.18a5.97 5.97 0 0 0-3.98 2.9 6.05 6.05 0 0 0 .74 7.1 5.97 5.97 0 0 0 .51 4.91 6.04 6.04 0 0 0 6.5 2.9 5.97 5.97 0 0 0 4.5 2.01 6.04 6.04 0 0 0 5.79-4.23 5.97 5.97 0 0 0 3.98-2.9 6.04 6.04 0 0 0-.74-7.05zm-9.06 12.66a4.48 4.48 0 0 1-2.87-1.04l.14-.08 4.78-2.76a.78.78 0 0 0 .39-.68v-6.74l2.02 1.17a.07.07 0 0 1 .04.05v5.58a4.5 4.5 0 0 1-4.5 4.5zM3.56 18.16a4.47 4.47 0 0 1-.54-3.02l.14.08 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.07.07 0 0 1-.03.06l-4.83 2.79a4.5 4.5 0 0 1-6.14-1.63zM2.3 7.7a4.47 4.47 0 0 1 2.36-1.97V11.39a.77.77 0 0 0 .39.68l5.81 3.36-2.02 1.16a.07.07 0 0 1-.07 0l-4.83-2.8a4.5 4.5 0 0 1-1.64-6.14zm16.6 3.86l-5.84-3.39 2.02-1.16a.07.07 0 0 1 .07 0l4.83 2.79a4.5 4.5 0 0 1-.68 8.12v-5.69a.77.77 0 0 0-.4-.67zm2-3.02l-.14-.08-4.77-2.78a.78.78 0 0 0-.78 0L9.36 9.05V6.72a.07.07 0 0 1 .03-.06l4.83-2.79a4.5 4.5 0 0 1 6.68 4.66zM8.26 12.65l-2.02-1.17a.07.07 0 0 1-.04-.06V5.85a4.5 4.5 0 0 1 7.38-3.46l-.14.08-4.78 2.76a.78.78 0 0 0-.39.68zm1.1-2.37l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z"
+                  fill="currentColor"
+                />
+              </svg>
+            )}
+            {step.mark === "google" && (
+              <img
+                src="/images/logos/google.svg"
+                alt=""
+                width="16"
+                height="16"
+                class="h-4 w-4"
+                loading="eager"
+                decoding="async"
+              />
+            )}
+            {step.mark === "dot" && (
+              <span class="h-2.5 w-2.5 rounded-full bg-border" />
+            )}
+            {step.mark === "revenue" && (
+              <span class="h-2.5 w-2.5 rounded-full bg-primary" />
+            )}
+          </span>
+
+          <div class="min-w-0">
+            <p
+              class:list={[
+                "text-sm leading-tight font-semibold",
+                step.mark === "revenue" ? "text-primary" : "text-text",
+              ]}
+            >
+              {step.label}
+            </p>
+            <p class="mt-0.5 text-xs leading-tight text-text-light">
+              {step.meta}
+            </p>
+          </div>
+        </li>
+      ))
+    }
+  </ol>
+</div>
