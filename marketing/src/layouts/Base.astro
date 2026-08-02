@@ -48,6 +48,41 @@ const allSchemas = [orgSchema, ...structuredData];
 <!doctype html>
 <html lang="en">
   <head>
+    {/* Theme bootstrap — MUST stay the first element in <head>.
+
+        Plain inline <script> on purpose: it is parser-blocking and runs before
+        the stylesheet below is applied, so data-theme is on <html> before the
+        first paint. A `type="module"` script (or anything deferred/async) would
+        run after paint and produce a flash of the wrong theme on every load.
+
+        Also re-applies on astro:after-swap: ClientRouter replaces the document
+        on client-side navigation, which drops attributes set on <html>. */}
+    <script is:inline>
+      (function () {
+        var KEY = "theme";
+        function resolve() {
+          try {
+            var stored = localStorage.getItem(KEY);
+            if (stored === "dark" || stored === "light") return stored;
+          } catch (e) {}
+          try {
+            return window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+          } catch (e) {
+            return "light";
+          }
+        }
+        function apply() {
+          document.documentElement.setAttribute("data-theme", resolve());
+        }
+        apply();
+        if (!window.__stThemeBound) {
+          window.__stThemeBound = true;
+          document.addEventListener("astro:after-swap", apply);
+        }
+      })();
+    </script>
     <!-- Google Tag Manager -->
     {gtmEnabled && (
       <script is:inline define:vars={{ gtmId }}>
@@ -66,7 +101,7 @@ const allSchemas = [orgSchema, ...structuredData];
     <meta
       name="theme-color"
       media="(prefers-color-scheme: dark)"
-      content="#000"
+      content="#12100C"
     />
     <meta name="generator" content={Astro.generator} />
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
