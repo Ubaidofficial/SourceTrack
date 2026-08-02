@@ -2,14 +2,13 @@
 # Banner
 banner:
   title: |
-    Know Which Sources Bring Leads —
+    ChatGPT is sending you customers.
     <br/>
-    <mark>And Which Bring Revenue.</mark>
-  content: "Founder-simple multi-touch attribution. See which search queries, ads, and AI search tools (ChatGPT, Claude, Perplexity) drive signups and actual subscriptions — one script, no CRM."
+    <mark>Your analytics calls it direct.</mark>
+  content: "Every conversion carries its full path — first touch to payment, including the AI tools your analytics can't see. One script tag."
   badge:
     enable: true
     label: Privacy-First Cookieless Engine
-  image: "/images/banner.png"
   button_dark:
     enable: true
     label: "Explore Documentation"

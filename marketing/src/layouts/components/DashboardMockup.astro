@@ -16,10 +16,14 @@
 // EVERY NUMBER HERE IS ILLUSTRATIVE and the card says so in its own header badge. It is a
 // drawing of the product, not a claim about anyone's data (§6: never present sample
 // figures as if they were real).
+// `mark` carries the real brand logo for named sources — ported from
+// dashboard/src/lib/brandLogos.jsx and committed at public/images/logos/, never
+// fetched from a favicon service at runtime. "Organic" is a channel rather than a
+// company, so it has no mark and keeps its text label.
 const rows = [
-  { source: "ChatGPT", channel: "AI Search", value: "$3,840" },
-  { source: "Google Ads", channel: "Paid Search", value: "$6,200" },
-  { source: "Organic", channel: "Search", value: "$5,820" },
+  { source: "ChatGPT", channel: "AI Search", value: "$3,840", mark: "openai" },
+  { source: "Google Ads", channel: "Paid Search", value: "$6,200", mark: "google" },
+  { source: "Organic", channel: "Search", value: "$5,820", mark: null },
 ];
 ---
 
@@ -31,17 +35,17 @@ const rows = [
   </div>
 
   <div
-    class="relative rounded-[32px] border border-white/10 bg-[#0D1010] p-3 shadow-[0_30px_90px_rgba(31,35,35,.30)]"
+    class="relative rounded-[32px] border border-white/10 bg-[#12100C] p-3 shadow-[0_30px_90px_rgba(31,35,35,.30)]"
     style="transform: rotate(-0.8deg)"
   >
-    <div class="overflow-hidden rounded-[22px] border border-[#2D3333] bg-[#121616]">
+    <div class="overflow-hidden rounded-[22px] border border-[#3D3830] bg-[#1B1811]">
       <!-- Header -->
       <div
-        class="grid h-[48px] grid-cols-[80px_1fr_auto] items-center gap-2 border-b border-white/10 bg-[#171B1B] px-4 text-xs font-bold text-[#F5F8F8]"
+        class="grid h-[48px] grid-cols-[80px_1fr_auto] items-center gap-2 border-b border-white/10 bg-[#1B1811] px-4 text-xs font-bold text-[#F6F3EB]"
       >
         <div class="flex gap-[6px]">
-          <span class="h-2.5 w-2.5 rounded-full bg-[#E54545]"></span>
-          <span class="h-2.5 w-2.5 rounded-full bg-[#FF8800]"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-[#C4381C]"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-[#FF7A33]"></span>
           <span class="h-2.5 w-2.5 rounded-full bg-primary"></span>
         </div>
         <span class="truncate">SourceTrack — Attribution</span>
@@ -53,26 +57,38 @@ const rows = [
 
       <!-- KPI row: the four labels that matter for attribution -->
       <div class="grid grid-cols-2 gap-3 p-3 text-white">
-        <div class="rounded-2xl border border-[#2D3333] bg-[#181D1D] p-3">
-          <div class="text-[10px] font-extrabold uppercase tracking-wider text-[#9DA7A7]">Visitors</div>
+        <div class="rounded-2xl border border-[#3D3830] bg-[#241F17] p-3">
+          <div class="text-[10px] font-extrabold uppercase tracking-wider text-[#A79E8C]">Visitors</div>
           <div class="mt-1 text-2xl font-black tracking-tight text-white">12,480</div>
         </div>
-        <div class="rounded-2xl border border-[#2D3333] bg-[#181D1D] p-3">
-          <div class="text-[10px] font-extrabold uppercase tracking-wider text-[#9DA7A7]">Conversions</div>
+        <div class="rounded-2xl border border-[#3D3830] bg-[#241F17] p-3">
+          <div class="text-[10px] font-extrabold uppercase tracking-wider text-[#A79E8C]">Conversions</div>
           <div class="mt-1 text-2xl font-black tracking-tight text-white">318</div>
         </div>
 
         <!-- Revenue by source -->
-        <div class="col-span-2 rounded-2xl border border-[#2D3333] bg-[#181D1D] p-3">
-          <div class="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-[#9DA7A7]">
+        <div class="col-span-2 rounded-2xl border border-[#3D3830] bg-[#241F17] p-3">
+          <div class="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-[#A79E8C]">
             Revenue by source
           </div>
           <div class="grid gap-1.5">
             {
               rows.map((r) => (
-                <div class="flex items-center justify-between border-b border-[#2D3333] py-1 text-xs font-bold last:border-0">
-                  <span class="text-[#DDE5E5]">{r.source}</span>
-                  <span class="text-[#9DA7A7]">{r.channel}</span>
+                <div class="flex items-center justify-between border-b border-[#3D3830] py-1 text-xs font-bold last:border-0">
+                  <span class="flex items-center gap-1.5 text-[#F6F3EB]">
+                    <span class="flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center" aria-hidden="true">
+                      {r.mark === "openai" && (
+                        <svg viewBox="0 0 24 24" class="h-3.5 w-3.5">
+                          <path d="M22.28 9.82a5.97 5.97 0 0 0-.51-4.91 6.04 6.04 0 0 0-6.5-2.9A6.07 6.07 0 0 0 4.98 4.18a5.97 5.97 0 0 0-3.98 2.9 6.05 6.05 0 0 0 .74 7.1 5.97 5.97 0 0 0 .51 4.91 6.04 6.04 0 0 0 6.5 2.9 5.97 5.97 0 0 0 4.5 2.01 6.04 6.04 0 0 0 5.79-4.23 5.97 5.97 0 0 0 3.98-2.9 6.04 6.04 0 0 0-.74-7.05zm-9.06 12.66a4.48 4.48 0 0 1-2.87-1.04l.14-.08 4.78-2.76a.78.78 0 0 0 .39-.68v-6.74l2.02 1.17a.07.07 0 0 1 .04.05v5.58a4.5 4.5 0 0 1-4.5 4.5zM3.56 18.16a4.47 4.47 0 0 1-.54-3.02l.14.08 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.07.07 0 0 1-.03.06l-4.83 2.79a4.5 4.5 0 0 1-6.14-1.63zM2.3 7.7a4.47 4.47 0 0 1 2.36-1.97V11.39a.77.77 0 0 0 .39.68l5.81 3.36-2.02 1.16a.07.07 0 0 1-.07 0l-4.83-2.8a4.5 4.5 0 0 1-1.64-6.14zm16.6 3.86l-5.84-3.39 2.02-1.16a.07.07 0 0 1 .07 0l4.83 2.79a4.5 4.5 0 0 1-.68 8.12v-5.69a.77.77 0 0 0-.4-.67zm2-3.02l-.14-.08-4.77-2.78a.78.78 0 0 0-.78 0L9.36 9.05V6.72a.07.07 0 0 1 .03-.06l4.83-2.79a4.5 4.5 0 0 1 6.68 4.66zM8.26 12.65l-2.02-1.17a.07.07 0 0 1-.04-.06V5.85a4.5 4.5 0 0 1 7.38-3.46l-.14.08-4.78 2.76a.78.78 0 0 0-.39.68zm1.1-2.37l2.6-1.5 2.6 1.5v3l-2.6 1.5-2.6-1.5z" fill="currentColor"/>
+                        </svg>
+                      )}
+                      {r.mark === "google" && (
+                        <img src="/images/logos/google.svg" alt="" width="14" height="14" class="h-3.5 w-3.5" decoding="async" />
+                      )}
+                    </span>
+                    {r.source}
+                  </span>
+                  <span class="text-[#A79E8C]">{r.channel}</span>
                   <span class="text-primary">{r.value}</span>
                 </div>
               ))
@@ -81,17 +97,17 @@ const rows = [
         </div>
 
         <!-- AI-referral share -->
-        <div class="col-span-2 rounded-2xl border border-[#2D3333] bg-[#181D1D] p-3.5">
-          <div class="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-[#9DA7A7]">
+        <div class="col-span-2 rounded-2xl border border-[#3D3830] bg-[#241F17] p-3.5">
+          <div class="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-[#A79E8C]">
             AI-referral share
           </div>
           <div class="flex items-center gap-3">
-            <div class="h-2 flex-1 overflow-hidden rounded-full bg-[#2D3333]">
+            <div class="h-2 flex-1 overflow-hidden rounded-full bg-[#3D3830]">
               <div class="h-full rounded-full bg-primary" style="width:24%"></div>
             </div>
             <span class="text-sm font-black text-primary">24%</span>
           </div>
-          <div class="mt-2 text-[10px] text-[#9DA7A7]">
+          <div class="mt-2 text-[10px] text-[#A79E8C]">
             ChatGPT, Claude and Perplexity, separated from direct traffic
           </div>
         </div>
