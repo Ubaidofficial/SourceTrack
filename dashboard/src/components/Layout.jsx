@@ -105,7 +105,18 @@ export default function Layout({ children }) {
   }
 
   if (location.pathname === '/onboarding') {
-    return <>{children}</>
+    // Onboarding deliberately renders without chrome. The support-preview banner is the one
+    // exception: it is the only signal that the admin is looking at someone else's
+    // workspace, so dropping it here left the single route where preview was invisible.
+    // Banner only — no header, nav or sidebar.
+    return (
+      <>
+        {isPreview && (
+          <SupportModeBanner siteName={activeSite?.name} siteDomain={activeSite?.domain} />
+        )}
+        {children}
+      </>
+    )
   }
 
   const handleSignOut = async () => {

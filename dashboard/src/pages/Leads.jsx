@@ -68,7 +68,10 @@ function loadColumnPref() {
 }
 
 export default function Leads() {
-  const { site } = useActiveSite()
+  // activeSite alongside site — useActiveSite reads SiteContext, so this is the same
+  // derivation Settings.jsx:27-29 and Integrations.jsx:128-129 use, without a second hook.
+  const { site, activeSite } = useActiveSite()
+  const isPreview = activeSite?.support_preview || false
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -225,6 +228,9 @@ export default function Leads() {
   }
 
   const handleBulkStatusChange = async (newStatus) => {
+    // Guard here as well as on the buttons: this writes once PER SELECTED LEAD, so an
+    // ungated call in preview is the widest-blast-radius write on the customer surface.
+    if (isPreview) return
     try {
       await Promise.all(
         Array.from(selectedLeads).map(leadId =>
@@ -681,10 +687,19 @@ export default function Leads() {
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-st-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 text-xs font-medium">
           <span>{selectedLeads.size} selected</span>
           <div className="w-px h-4 bg-gray-700" />
-          <button onClick={() => handleBulkStatusChange('qualified')} className="hover:text-st-lime transition-colors">Mark Qualified</button>
-          <button onClick={() => handleBulkStatusChange('mql')} className="hover:text-st-lime transition-colors">Mark MQL</button>
-          <button onClick={() => handleBulkStatusChange('sql')} className="hover:text-st-lime transition-colors">Mark SQL</button>
-          <button onClick={() => handleBulkStatusChange('unqualified')} className="hover:text-st-lime transition-colors">Mark Unqualified</button>
+          {/* Export stays live in preview — it is a read, and preview is read-only, not
+              no-op. Only the four status writes are replaced. Muted grey rather than
+              Settings' text-st-gray because this bar sits on solid black. */}
+          {isPreview ? (
+            <span className="text-gray-400 italic">Marking leads is hidden in Support Preview</span>
+          ) : (
+            <>
+              <button onClick={() => handleBulkStatusChange('qualified')} className="hover:text-st-lime transition-colors">Mark Qualified</button>
+              <button onClick={() => handleBulkStatusChange('mql')} className="hover:text-st-lime transition-colors">Mark MQL</button>
+              <button onClick={() => handleBulkStatusChange('sql')} className="hover:text-st-lime transition-colors">Mark SQL</button>
+              <button onClick={() => handleBulkStatusChange('unqualified')} className="hover:text-st-lime transition-colors">Mark Unqualified</button>
+            </>
+          )}
           <div className="w-px h-4 bg-gray-700" />
           <button onClick={handleExportSelected} className="text-st-lime hover:underline">Export CSV</button>
         </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getJourney, fetchApi } from '../lib/api'
+import { useSite } from '../contexts/SiteContext'
 import {
   Clock, Globe, MousePointerClick, User, Bot, MapPin,
   Download, X, ChevronDown, ChevronRight, Zap, ArrowRight,
@@ -121,6 +122,11 @@ function truncateUrl(urlStr, maxLen = 50) {
 }
 
 export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose, onQualified }) {
+  // Derived here rather than passed in: this modal has four call sites (Leads, Dashboard,
+  // AttributionPage, LeadDetail), and a prop would have to be threaded correctly through
+  // every one of them to hold.
+  const { activeSite } = useSite()
+  const isPreview = activeSite?.support_preview || false
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(null)
@@ -225,7 +231,11 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
               <span className="text-xs text-st-gray dark:text-gray-400 font-medium">Status:</span>
               <select
                 value={statusValue}
+                disabled={isPreview}
                 onChange={async (e) => {
+                  // Before setStatusValue, not after: returning later would leave the
+                  // dropdown showing a status that was never persisted.
+                  if (isPreview) return
                   const newStatus = e.target.value
                   setStatusValue(newStatus)
                   try {
@@ -240,13 +250,19 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                     console.error("Failed to update status from journey modal", err)
                   }
                 }}
-                className="text-xs font-semibold px-2 py-1 rounded-lg border border-gray-300 dark:border-dark-border-strong bg-white dark:bg-dark-bg text-st-black dark:text-dark-primary cursor-pointer focus:outline-none"
+                className="text-xs font-semibold px-2 py-1 rounded-lg border border-gray-300 dark:border-dark-border-strong bg-white dark:bg-dark-bg text-st-black dark:text-dark-primary cursor-pointer focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <option value="unqualified">Unqualified</option>
                 <option value="qualified">Qualified</option>
                 <option value="mql">MQL</option>
                 <option value="sql">SQL</option>
               </select>
+              {/* The select stays rendered rather than replaced — the current status is real
+                  data worth reading in support. Only the write is removed. Same treatment as
+                  the attribution-window select in Settings.jsx:1150-1165. */}
+              {isPreview && (
+                <span className="text-xs text-st-gray italic">Status changes are hidden in Support Preview</span>
+              )}
             </div>
 
             <button onClick={onClose} className="p-1.5 text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text rounded-lg hover:bg-gray-100 dark:hover:bg-dark-hover">
