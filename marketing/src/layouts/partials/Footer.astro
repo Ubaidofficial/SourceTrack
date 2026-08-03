@@ -70,7 +70,10 @@ const { footer_company, footer_legal, footer_resource } = menu;
         <h1 class="footer-title leading-tight">{config.site.logo_text}</h1>
       </div>
       <div class="flex justify-between lg:-translate-y-12 items-center flex-col sm:flex-row gap-y-6 py-6">
-        <p class="text-text text-sm" set:html={markdownify(copyright).__html} />
+        <div>
+          <p class="text-text text-sm" set:html={markdownify(copyright).__html} />
+          <p class="text-xs text-gray/60 mt-1">Product visuals shown use illustrative data.</p>
+        </div>
         <Social source={social.main} className="social-icons" />
       </div>
     </div>

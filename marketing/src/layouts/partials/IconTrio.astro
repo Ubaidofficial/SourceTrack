@@ -1,0 +1,68 @@
+---
+// IconTrio partial — 3 key architectural guarantees:
+// 1. Cookieless by default (localStorage by default, first-party cookie on domain opt-in)
+// 2. Privacy-first, no fingerprinting (GPC/DNT honored, no LLM data feeding)
+// 3. One script, no CRM (5-minute single tag installation)
+//
+// Copy checked against GTM §5.1 constraints — NO "GDPR compliant" anywhere.
+---
+
+<section class="py-20 relative overflow-hidden">
+  <div class="main-container">
+    <div class="container px-4">
+      <div class="mb-12 text-center">
+        <div class="bg-gradient-primary p-px inline-block rounded-full mb-2">
+          <div class="bg-gradient-black-grid px-4 py-1.5 rounded-full">
+            <span class="gradient-text-primary">Architectural Principles</span>
+          </div>
+        </div>
+        <h2 class="text-h2 font-medium lg:w-3/5 mx-auto">
+          Built for privacy, speed, and founder simplicity
+        </h2>
+      </div>
+
+      <div class="grid gap-6 md:grid-cols-3 max-w-[1000px] mx-auto">
+        <!-- Card 1: Cookieless -->
+        <div class="rounded-3xl border border-[#3D3830] bg-[#1B1811] p-6 relative">
+          <div class="flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 text-primary mb-5">
+            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-[#F6F3EB] mb-2">Cookieless by default</h3>
+          <p class="text-sm text-[#A79E8C] leading-relaxed">
+            First-party identity uses localStorage by default. No third-party cookies, no cross-site tracking, and DNT/GPC headers are honored out of the box.
+          </p>
+        </div>
+
+        <!-- Card 2: Privacy-first -->
+        <div class="rounded-3xl border border-primary/30 bg-[#1B1811] p-6 relative shadow-[0_0_30px_rgba(212,246,46,0.06)]">
+          <div class="flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/40 bg-primary/20 text-primary mb-5">
+            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-white mb-2">Privacy-first model</h3>
+          <p class="text-sm text-[#D5D0C3] leading-relaxed">
+            No browser or device fingerprinting. Your visitor analytics data is never sent to LLMs or third-party AI training models. Core data stored in the EU.
+          </p>
+        </div>
+
+        <!-- Card 3: One script, no CRM -->
+        <div class="rounded-3xl border border-[#3D3830] bg-[#1B1811] p-6 relative">
+          <div class="flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 text-primary mb-5">
+            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-[#F6F3EB] mb-2">One script, zero CRM maze</h3>
+          <p class="text-sm text-[#A79E8C] leading-relaxed">
+            A single 5-minute script tag on your site. No data warehouse setup, no complex tag-manager maze, and no mandatory CRM integration.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
