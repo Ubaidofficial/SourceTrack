@@ -19,8 +19,10 @@
 // phase AI chats to actual Stripe revenue") rather than bullet 1's detection claim.
 //
 // ── THE NUMBERS ARE ILLUSTRATIVE, AND THEY RECONCILE ─────────────────────────────────
-// Sample data, badged as such in the header — a drawing of the product, never a claim about
-// anyone's data (§6: never present sample figures as if they were real).
+// Sample data — a drawing of the product, never a claim about anyone's data (§6: never present
+// sample figures as if they were real). Disclosed once per page in the footer ("Product visuals
+// shown use illustrative data."), never as a per-card badge: design.md §29.8, the pattern #581
+// shipped and key-features-mockups.test.js pins.
 //
 // They are also internally consistent, deliberately, so a reader who adds them up is not
 // caught out:
@@ -47,6 +49,36 @@ const rows = [
   { source: "Gemini", mark: "gemini", leads: "11", revenue: "$1,020" },
   { source: "Claude", mark: "anthropic", leads: "6", revenue: "$610" },
 ];
+
+// ── WHAT THE MOTION MAY AND MAY NOT DEPICT ───────────────────────────────────────────
+// The rows above are the settled, ranked reading order, and the count-up targets below are
+// PARSED from those exact strings rather than restated as numbers. Two reasons, and the second
+// is the load-bearing one:
+//
+//   1. key-features-mockups.test.js reads this file as TEXT, matching the quoted lead and
+//      revenue fields above to reconcile 38+12+11+6=67 against DashboardMockup's 318
+//      conversions and the footer's 21%. Restating them as numbers would break that pinning
+//      while changing nothing a visitor sees.
+//
+//      That regex counts every match in the file, not just the array — so do not spell either
+//      field name followed by a quoted figure anywhere in this comment block. Writing one out
+//      as an example here made the file parse as five rows and reddened the test; the shape is
+//      described in prose for that reason, not for style.
+//
+//   2. The reveal staggers DOWN the existing order and the figures count up to their own
+//      values. It deliberately does NOT animate rows sorting themselves into rank — nothing
+//      here computes a ranking, so a sort animation would have to start from a scrambled order
+//      that exists nowhere in the data, and design.md §37.1's product-mechanic row bars motion
+//      that dramatises a mechanic the component does not perform. Stagger depicts ranked
+//      reading order, which is true; re-sorting would depict a computation, which is not.
+//
+// Making the ranking genuinely computed (numbers, a sort, a derived 21%) is a real improvement
+// and is logged as separate future work — it is a data change, not a motion change, and belongs
+// in a PR that updates the pinning tests alongside it.
+const counts = rows.map((r) => ({
+  leads: Number(r.leads.replace(/,/g, "")),
+  revenue: Number(r.revenue.replace(/[$,]/g, "")),
+}));
 ---
 
 <div class="relative z-1 overflow-hidden rounded-[20px] border border-[#3D3830] bg-[#12100C]">
@@ -70,6 +102,7 @@ const rows = [
     {
       rows.map((r, i) => (
         <div
+          data-ledger-row
           class:list={[
             "grid grid-cols-[1fr_auto_auto] items-center gap-x-4 border-t border-[#3D3830] py-2.5 text-xs font-bold transition-colors",
             i === 0 ? "rounded-xl border-primary/30 bg-primary/8 px-2" : "",
@@ -102,8 +135,19 @@ const rows = [
             )}
             <span class="truncate">{r.source}</span>
           </span>
-          <span class="text-right tabular-nums text-[#D5D0C3]">{r.leads}</span>
-          <span class="text-right tabular-nums text-primary">{r.revenue}</span>
+          <span
+            class="text-right tabular-nums text-[#D5D0C3]"
+            data-ledger-count
+            data-count-final={r.leads}
+            data-count-to={counts[i].leads}
+            data-count-delay={i * 80}>{r.leads}</span>
+          <span
+            class="text-right tabular-nums text-primary"
+            data-ledger-count
+            data-count-final={r.revenue}
+            data-count-to={counts[i].revenue}
+            data-count-prefix="$"
+            data-count-delay={i * 80}>{r.revenue}</span>
         </div>
       ))
     }
@@ -120,3 +164,36 @@ const rows = [
     </p>
   </div>
 </div>
+
+<script>
+  import { countUp } from "@/lib/countUp";
+  import { revealOnScroll } from "@/lib/revealOnScroll";
+
+  // Both helpers query ALL matches, per #582 — this panel renders once on the homepage today,
+  // but KeyFeatures.astro also imports it, so reviving that partial would put two on the page
+  // and a first-match-only binding would leave the second one dead.
+  //
+  // revealOnScroll owns the row hide at runtime rather than baking opacity:0 into the markup
+  // (#530), and carries the viewport-checked sweep that recovers a row a dead observer would
+  // otherwise strand invisible. The figures use countUp instead, whose failure mode is the
+  // opposite and benign: the true number is already in the DOM, so nothing firing means no
+  // animation rather than no data.
+  function initLedgerMotion() {
+    const ease = [0.22, 0.72, 0.28, 1] as const; // design.md §37.1 standard easing
+    document.querySelectorAll<HTMLElement>("[data-ledger-row]").forEach((row, i) => {
+      revealOnScroll(
+        row,
+        { opacity: [0, 1], transform: ["translateY(8px)", "translateY(0)"] },
+        { duration: 0.4, ease, delay: i * 0.08 },
+      );
+    });
+    countUp("[data-ledger-count]");
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initLedgerMotion);
+  } else {
+    initLedgerMotion();
+  }
+  document.addEventListener("astro:after-swap", initLedgerMotion);
+</script>
