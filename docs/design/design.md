@@ -44,9 +44,11 @@ This version expands the prior V1.1 design system with the missing product surfa
 - v1.4: §23 Feature Flag Map gains two rows for the above — one for the connection-action capability
   itself, one restating that ad-platform financial actions stay prohibited, so this table remains
   authoritative on the point rather than requiring a cross-reference to §26 to resolve it.
-- v1.4 (2026-08-03), doc-drift fix: §25.1's canonical Stitch prompt cited lime as `#C8F000`, the
-  pre-v1.3 value. Corrected to `#D2EC2A` to match §3.1. No rule changed — the prompt was quoting a
-  token that had already been retired.
+- v1.4 (2026-08-03), doc-drift fix: §25.1's canonical Stitch prompt was still quoting three retired
+  pre-v1.3 values — lime `#C8F000`, off-white `#F5F4F0`, and "Inter-style typography". All three
+  corrected to match §3.1: `#D2EC2A`, `#F7F4ED` (bone), and Geist. No rule changed — the prompt was
+  quoting tokens v1.3 had already replaced, and a generation prompt that names retired tokens
+  reintroduces them on every run.
 - v1.4 (2026-08-03): §2.6 adds an **accent-density ceiling** (lime ≤ ~15% of a screen, never a
   full-bleed wash or glow behind primary content, computed-contrast check when lime sits behind body
   text). Motivated by a confirmed live violation on the marketing hero — **open, not yet fixed**; see
@@ -2554,7 +2556,7 @@ For every future component, design these states where relevant:
 
 Use this prompt for new design generation:
 
-> Design SourceTrack as a premium 2026 attribution and lightweight analytics product for founders and marketers. It should feel calmer than GA4, lighter than Cometly/Usermaven, as simple as DataFast/PiQo, and more distinctive through AI attribution, SEO revenue signals, source chips, analytics charts, top pages, and conversion story panels. Use warm off-white surfaces (#F5F4F0), white cards, subtle borders, lime (#D2EC2A) as signal only, compact data density, premium Inter-style typography, and custom-feeling charts. Avoid generic admin dashboards, purple gradients, decorative blobs, glassmorphism, enterprise BI clutter, and fake data.
+> Design SourceTrack as a premium 2026 attribution and lightweight analytics product for founders and marketers. It should feel calmer than GA4, lighter than Cometly/Usermaven, as simple as DataFast/PiQo, and more distinctive through AI attribution, SEO revenue signals, source chips, analytics charts, top pages, and conversion story panels. Use warm off-white surfaces (#F7F4ED), white cards, subtle borders, lime (#D2EC2A) as signal only, compact data density, premium Geist typography, and custom-feeling charts. Avoid generic admin dashboards, purple gradients, decorative blobs, glassmorphism, enterprise BI clutter, and fake data.
 
 ### 25.2 Consolidation prompt
 
