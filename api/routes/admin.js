@@ -638,7 +638,7 @@ router.get('/feature-status', async (req, res) => {
   return res.json({
     success: true,
     data: {
-      last_verified: '2026-05-02T00:00:00.000Z',
+      last_verified: '2026-08-03T00:00:00.000Z',
       features: [
         { name: 'first_touch', status: 'live', notes: 'Cookie-backed, reads first_touch_source from conversion events', verification_method: 'code-audit' },
         { name: 'last_touch', status: 'live', notes: 'Reads utm_source on conversion event', verification_method: 'code-audit' },
@@ -652,12 +652,12 @@ router.get('/feature-status', async (req, res) => {
         { name: 'webhooks', status: 'live', notes: 'Best-effort outbound webhooks on conversion events', verification_method: 'code-audit' },
         { name: 'integrations', status: 'live', notes: 'Corrected 2026-08-02 — the prior internal-only/"placeholder cards" note was false. /api/integrations is mounted with Stripe + Shopify connect, proxy-domain create/verify/delete, API keys and settings; GSC, ad-platforms and CAPI routers are mounted alongside it.', verification_method: 'code-audit' },
         { name: 'consent/privacy', status: 'live', notes: 'Corrected 2026-08-02 — the prior not_implemented note was false. GPC/DNT suppression runs via handlePrivacySuppression (wired in api/index.js); gdprRouter serves DELETE /visitor (Art.17), GET /subject (Art.15), DELETE /account, PUT /retention and GET /export.', verification_method: 'code-audit' },
-        { name: 'deduplication', status: 'not_implemented', notes: 'ATTRIBUTION.md Part 10 rules defined but no enforcement in code.', verification_method: 'code-audit' },
-        { name: 'widgetized dashboard', status: 'dormant', notes: 'Code was built in Session 2 but replaced by fixed card grid in Session 31. Add-to-Dashboard button disabled. Dashboard.jsx has zero widget rendering.', verification_method: 'code-audit' },
+        { name: 'deduplication', status: 'partial', notes: 'Corrected 2026-08-03 — the prior not_implemented note was false. ATTRIBUTION.md:479-481 on-site dedup IS enforced: api/routes/conversion.js:347-356 keys on external_event_id across two layers (in-memory NodeCache + the durable revenue_idempotency_keys table). Partial, not live: offline dedup (ATTRIBUTION.md:483-490) is incomplete and ad-platform dedup (:492-499) is explicitly roadmap. Keyless conversions are deliberately not deduped — no stable key.', verification_method: 'code-audit' },
+        { name: 'widgetized dashboard', status: 'dormant', notes: 'Note corrected 2026-08-03 — "Dashboard.jsx has zero widget rendering" was false. Dashboard.jsx:586-599 renders a Pinned Reports widget grid via DashboardWidgetCard (:621), gated by hasFeature(plan, dashboard_widgets) — plan-features.js:77, true for every paid plan. Pin/unpin is live at ReportBuilder.jsx:871-882. Status stays dormant because the Session 2 DRAG-AND-DROP widget canvas is what was retired; pinned-report widgets are a different, shipped feature.', verification_method: 'code-audit' },
         { name: 'multi-dashboard', status: 'dormant', notes: 'Session 2 implementation replaced. Current Dashboard is a single Performance Overview page. No dashboard CRUD, selector, or switching.', verification_method: 'code-audit' },
         { name: 'linear attribution', status: 'live', notes: 'Pre-aggregated linear model live via getLinearAttribution. Reads linear_attribution JSONB from attributed_conversions.', verification_method: 'code-audit' },
         { name: 'saved reports', status: 'live', notes: 'Backend persisted since #81/#84/#85: saved_reports table with RLS, full CRUD via /api/saved-reports (mounted in api/index.js). Cross-device.', verification_method: 'code-audit' },
-        { name: 'period-over-period comparison', status: 'partial', notes: 'Dashboard KPI cards have delta comparisons via overview API *_prev fields. Report Builder has no compare feature.', verification_method: 'code-audit' }
+        { name: 'period-over-period comparison', status: 'live', notes: 'Corrected 2026-08-03 — the prior "Report Builder has no compare feature" note was false, and partial understated it. Dashboard KPI cards carry deltas via the overview API *_prev fields (dashboard.js:451-476), AND Report Builder has a working compare: state at ReportBuilder.jsx:506, user-reachable toggle at :2378, prior-period query at :708, KPI delta render at :2350-2367 labelled "vs previous period".', verification_method: 'code-audit' }
       ]
     },
     error: null
@@ -714,35 +714,73 @@ router.post('/feature-status/recheck', async (req, res) => {
     { name: 'webhooks', status: probes.webhook_lib ? 'live' : 'dormant', notes: `Probed: webhook lib ${probes.webhook_lib ? 'exists' : 'not found'}`, verification_method: 'server-probe' },
     { name: 'integrations', status: probes.integrations_route && probes.gsc_route ? 'live' : 'internal-only', notes: `Probed: integrations route ${probes.integrations_route ? 'exists' : 'not found'}, GSC route ${probes.gsc_route ? 'exists' : 'not found'}`, verification_method: 'server-probe' },
     { name: 'consent/privacy', status: probes.gdpr_route && probes.privacy_suppression_lib ? 'live' : 'not_implemented', notes: `Probed: gdpr route ${probes.gdpr_route ? 'exists' : 'not found'}, privacy-suppression lib ${probes.privacy_suppression_lib ? 'exists' : 'not found'}`, verification_method: 'server-probe' },
-    { name: 'deduplication', status: 'not_implemented', notes: 'Static: no probe runs for this entry — status is a hand-audited assertion, not a measurement', verification_method: 'static-truth' },
-    { name: 'widgetized dashboard', status: 'dormant', notes: 'Static: no probe runs for this entry — no widget rendering in Dashboard.jsx as of the last hand audit', verification_method: 'static-truth' },
+    { name: 'deduplication', status: 'partial', notes: 'Static: no probe runs for this entry — on-site dedup enforced at conversion.js:347-356; offline incomplete, ad-platform roadmap', verification_method: 'static-truth' },
+    { name: 'widgetized dashboard', status: 'dormant', notes: 'Static: no probe runs for this entry — the Session 2 drag-and-drop canvas is retired; the pinned-report widgets that DO render (Dashboard.jsx:586-599) are a separate shipped feature', verification_method: 'static-truth' },
     { name: 'multi-dashboard', status: 'dormant', notes: 'Static: no probe runs for this entry — single Performance Overview page as of the last hand audit', verification_method: 'static-truth' },
     { name: 'linear attribution', status: probes.attribution_route ? 'live' : 'dormant', notes: 'Probed: attribution route exists — linear model re-enabled via getLinearAttribution', verification_method: 'server-probe' },
     { name: 'saved reports', status: probes.saved_reports_route ? 'live' : 'partial', notes: `Probed: saved-reports route ${probes.saved_reports_route ? 'exists — backend persisted' : 'not found — localStorage only'}`, verification_method: 'server-probe' },
-    { name: 'period-over-period comparison', status: probes.dashboard_route ? 'partial' : 'not_implemented', notes: 'Probed: dashboard KPI deltas exist, Report Builder lacks compare', verification_method: 'server-probe' }
+    { name: 'period-over-period comparison', status: probes.dashboard_route ? 'live' : 'not_implemented', notes: 'Probed: dashboard route exists (KPI *_prev deltas). Report Builder compare is hand-audited, not probed — ReportBuilder.jsx:506/:708/:2378', verification_method: 'server-probe' }
   ]
 
-  // Compare with previous state (from query or default)
-  const prevFeatures = [
+  // ── The previous state is READ, not hardcoded ────────────────────────────────────────
+  // This array used to BE the comparison baseline, and it never moved. #574 corrected the
+  // GET endpoint's statuses but left this list untouched, so every recheck re-reported the
+  // same five diffs forever — integrations internal-only -> live, consent/privacy
+  // not_implemented -> live, saved reports partial -> live, AI Analytics/AI Chat live ->
+  // dormant. Changes that had already happened, announced as if new, on every single run.
+  // A diff list that cannot reach empty carries no information.
+  //
+  // It is now the FIRST-RUN SEED only. The real baseline is the most recent persisted
+  // recheck, read from admin_audit_log.metadata below — the same jsonb column this handler
+  // already writes on every run, so nothing here needs new schema.
+  const SEED_BASELINE = [
     { name: 'first_touch', status: 'live' },
     { name: 'last_touch', status: 'live' },
     { name: 'first_touch_non_direct', status: 'live' },
     { name: 'last_touch_non_direct', status: 'live' },
     { name: 'LTV', status: 'live' },
-    { name: 'AI Analytics', status: 'live' },
-    { name: 'AI Chat', status: 'live' },
+    { name: 'AI Analytics', status: 'dormant' },
+    { name: 'AI Chat', status: 'dormant' },
     { name: 'offline conversions', status: 'live' },
     { name: 'pipeline stages', status: 'live' },
     { name: 'webhooks', status: 'live' },
-    { name: 'integrations', status: 'internal-only' },
-    { name: 'consent/privacy', status: 'not_implemented' },
-    { name: 'deduplication', status: 'not_implemented' },
+    { name: 'integrations', status: 'live' },
+    { name: 'consent/privacy', status: 'live' },
+    { name: 'deduplication', status: 'partial' },
     { name: 'widgetized dashboard', status: 'dormant' },
     { name: 'multi-dashboard', status: 'dormant' },
     { name: 'linear attribution', status: 'live' },
-    { name: 'saved reports', status: 'partial' },
-    { name: 'period-over-period comparison', status: 'partial' }
+    { name: 'saved reports', status: 'live' },
+    { name: 'period-over-period comparison', status: 'live' }
   ]
+  // Seeded to the 2026-08-03 hand-verified state above, NOT the pre-#574 values it used to
+  // hold. A seed that lags the GET endpoint makes the very first recheck on a fresh database
+  // announce changes that happened months ago — the same false signal this whole fix removes,
+  // just fired once instead of forever. Keep this in step with the GET array when a status
+  // legitimately changes.
+
+  // Most recent persisted recheck wins; the seed is used only when none exists yet.
+  // Best-effort by design: makeAuditLogger swallows write failures, so if the previous
+  // run's insert never landed, this reads the run before it and the diff is computed
+  // against that instead. That degrades to a stale-but-real baseline, never to a fabricated
+  // one — which is why `baseline_source` is returned rather than left implicit.
+  let prevFeatures = SEED_BASELINE
+  let baselineSource = 'seed:first-run'
+  try {
+    const { data: priorRows } = await getSupabase()
+      .from('admin_audit_log')
+      .select('metadata, created_at')
+      .eq('action', 'recheck_features')
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    const prior = priorRows?.[0]
+    const priorFeatures = prior?.metadata?.features
+    if (Array.isArray(priorFeatures) && priorFeatures.length) {
+      prevFeatures = priorFeatures
+      baselineSource = `prior-recheck:${prior.created_at}`
+    }
+  } catch { /* unreadable audit log — fall back to the seed rather than inventing a baseline */ }
 
   // Match by name, not by index: the two arrays have drifted in length before
   // (AI Chat was missing from `features`), and an index lookup then compares
@@ -756,7 +794,16 @@ router.post('/feature-status/recheck', async (req, res) => {
     }
   })
 
-  logAction('recheck_features', 'feature_status', null, { probe_results: probes, diffs, rechecked_at: now })
+  // Awaited, unlike every other logAction call here: this write IS the next run's baseline,
+  // so a recheck fired immediately after this one must not race it and re-read the older row.
+  // Only {name, status} is persisted — that is all prevByName consumes, it keeps the jsonb
+  // small, and it matches SEED_BASELINE's shape exactly so both paths feed the same lookup.
+  await logAction('recheck_features', 'feature_status', null, {
+    probe_results: probes,
+    diffs,
+    rechecked_at: now,
+    features: features.map((f) => ({ name: f.name, status: f.status }))
+  })
 
   return res.json({
     success: true,
@@ -764,7 +811,10 @@ router.post('/feature-status/recheck', async (req, res) => {
       last_verified: now,
       features,
       diffs,
-      probes
+      probes,
+      // Whether `diffs` was computed against a real prior run or the first-run seed. Without
+      // this the reader cannot tell a genuine status change from a seed-comparison artifact.
+      baseline_source: baselineSource
     },
     error: null
   })
