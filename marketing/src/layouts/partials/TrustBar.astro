@@ -1,7 +1,25 @@
 ---
 // TrustBar partial — "Works with" integration logos strip + generic incoming webhook reframe.
 // Uses real SVGs from /public/images/integrations/ (Stripe, Shopify, GTM, WordPress, Webflow, Framer).
-// Reframed: Includes incoming webhook receiver (Calendly, forms, chat, CRMs) per Item 1.
+// Reframed: Includes incoming webhook receiver (forms, chat, CRMs) per Item 1.
+//
+// ── TWO MECHANISMS, AND THE COPY MUST NOT MERGE THEM ────────────────────────────────
+// Scheduling used to sit inside the webhook sentence, which told visitors to configure a
+// webhook for something the tracker already does unaided. Embedded Calendly and Cal.com
+// bookings are detected by the shipped tracker (tracker/tracker.js:1202-1238) and, since
+// #592, promoted to a real $conversion with conversion_type 'meeting'. Before #592 this
+// claim would have been false in effect — detection happened but nothing read the event —
+// which is why the reframe was held back until that landed.
+//
+// "EMBEDDED" IS LOAD-BEARING, NOT FILLER. Calendly detection reads origin-validated
+// postMessage from the embedded iframe; Cal.com hooks window.Cal only when the embed
+// snippet is on the page. A link-only flow that redirects the visitor to calendly.com is
+// NOT auto-detected — it stays UTM passthrough (tracker.js:1161-1163). Unqualified
+// "Calendly bookings are detected automatically" would be false for every link-only
+// customer, so the qualifier must survive copy edits. GTM §5.1 / design.md §29.7.
+//
+// The "chat" mention in this line is the INCOMING-WEBHOOK claim and is deliberately
+// untouched here — feat/chat-tracking-phase1 edits that clause. See this PR's body.
 const integrations = [
   { name: "Stripe", logo: "/images/integrations/stripe.svg" },
   { name: "Shopify", logo: "/images/integrations/shopify.svg" },
@@ -41,7 +59,7 @@ const integrations = [
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
           <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
         </svg>
-        <span>Works with any tool that can send a webhook — scheduling (Calendly), forms, chat, and CRMs</span>
+        <span>Embedded Calendly and Cal.com bookings are detected automatically — plus any tool that can send a webhook: forms, chat, and CRMs</span>
       </div>
     </div>
   </div>
