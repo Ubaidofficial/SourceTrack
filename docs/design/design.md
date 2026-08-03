@@ -1,6 +1,6 @@
 # SourceTrack - Complete Design & Product Spec
 
-**Version:** 1.3 Four-hue palette, chart honesty, motion, and data-poor mode
+**Version:** 1.4 Agentic setup actions, accent-density ceiling, container variety, illustrative-data disclosure, brand-asset authenticity
 **Base spec:** V1 Final, June 2026 + V1.1 design expansion
 **Status:** Source of truth for product design, Stitch generation, implementation planning, public website direction, internal Ops Console design, and support-preview safety rules.
 
@@ -44,6 +44,33 @@ This version expands the prior V1.1 design system with the missing product surfa
 - v1.4: §23 Feature Flag Map gains two rows for the above — one for the connection-action capability
   itself, one restating that ad-platform financial actions stay prohibited, so this table remains
   authoritative on the point rather than requiring a cross-reference to §26 to resolve it.
+- v1.4 (2026-08-03), doc-drift fix: §25.1's canonical Stitch prompt cited lime as `#C8F000`, the
+  pre-v1.3 value. Corrected to `#D2EC2A` to match §3.1. No rule changed — the prompt was quoting a
+  token that had already been retired.
+- v1.4 (2026-08-03): §2.6 adds an **accent-density ceiling** (lime ≤ ~15% of a screen, never a
+  full-bleed wash or glow behind primary content, computed-contrast check when lime sits behind body
+  text). Motivated by a confirmed live violation on the marketing hero — **open, not yet fixed**; see
+  the note in §2.6.
+- v1.4 (2026-08-03): §2.7 adds **container-shape variety** — consecutive sections may not repeat the
+  identical container treatment. PR #583 is named as the shipped reference implementation.
+- v1.4 (2026-08-03): §29.8 codifies the **illustrative-data disclosure** pattern already shipped in
+  PR #581 — one small muted footer line per page, never a per-card badge — and §26 gains the
+  corresponding removal bullet. The rule existed nowhere in this doc before v1.4; it is codified now
+  so the per-card badges cannot be silently reintroduced. Enforced by
+  `api/tests/key-features-mockups.test.js` and `api/tests/direct-rescue-mockup-fixture.test.js`.
+- v1.4 (2026-08-03): §35.4 adds **brand-asset authenticity** — never reconstruct, approximate, or
+  extract-and-repurpose a third-party mark; use a plain text label instead. Motivated by two incidents
+  on 2026-08-03; resolution for issue #577 was a plain "Perplexity" text label (PR #583).
+- v1.4 (2026-08-03): §37.1 gains a **duration-less motion row** for scroll-bound progress fills. Every
+  prior row in that table specifies a fixed duration, so PR #582's scroll-scrubbed JourneyMockup trail
+  had no citable precedent. §37.2/§37.3 were checked against that implementation and already covered
+  it correctly — **no change was needed there**, only the missing row.
+- v1.4, **OPEN — founder decision required, deliberately not settled here:** glassmorphism. §25.1
+  lists it under "avoid" as an AI-generation guardrail; §26, the master V1 prohibited list, does not
+  address it in either direction. Needed call: a full V1-wide ban, or a guardrail scoped to
+  AI-generated mockups only. Raised when a "liquid glass" card technique was considered and retracted
+  without a clear answer either way. Until this is answered, treat §25.1 as binding on generation and
+  do not read it as a V1-wide product ban.
 
 ---
 
@@ -189,6 +216,45 @@ Secondary metrics like sessions, pageviews, clicks, impressions, CTR, position, 
 Analytics is not an afterthought.
 
 Analytics components must be polished, compact, and useful. They should include traffic trends, top pages, source analytics, conversion events, devices, countries, browsers, recent activity, sparklines, inline bars, and Report Builder analytics templates.
+
+### 2.6 Accent-density ceiling
+
+Lime is a **signal**, and a signal stops signalling once it covers the screen. §3.1 already says the
+warmth lives in the neutrals rather than the accent; this is the quantitative form of that rule.
+
+> Lime may cover at most **~15% of any single screen's visible area**, and **never as a full-bleed
+> background wash or glow behind primary content**. Acceptable uses: a badge, a button, a highlighted
+> line, a chart's winning data point. If lime sits behind body text, **verify computed WCAG AA
+> contrast before shipping — do not eyeball it.**
+
+Note that §29.2 permits "soft lime glow behind the product preview" — behind the *product preview*, a
+bounded object, is not the same as behind the page. A glow that reads as page background violates this
+ceiling regardless of how soft it is.
+
+**Open violation (confirmed via screenshot, 2026-08-03) — not yet fixed.** The live marketing hero's
+background glow covers roughly 70–80% of visible area, and white text sits on a bright-lime highlight
+block at a computed contrast below AA. This is the motivating case for the rule and is tracked as a
+follow-up task; it is recorded here as an open defect, not as a shipped example.
+
+### 2.7 Container-shape variety
+
+> **Consecutive sections must not repeat the identical container treatment back-to-back.**
+
+A page built from one repeated card shape reads as a template regardless of how good the individual
+card is. Vary the frame, not just the contents.
+
+**Reference implementation — PR #583, merged 2026-08-03.** Cite this ordering when building new
+marketing sections:
+
+| Order | Section | Container treatment |
+|---|---|---|
+| 1 | Hero | Window-frame card |
+| 2 | TrustBar | Full-bleed contrast band |
+| 3 | DirectRescueShowcase | Full-bleed dark section |
+| 4 | JourneyShowcase | Window-frame mockup |
+| 5 | ProofStrip | Frameless grid with accent border |
+| 6 | IconTrio | Single divided feature band — **not** three discrete cards |
+| 7 | ComparisonTable | Table card |
 
 ---
 
@@ -2488,7 +2554,7 @@ For every future component, design these states where relevant:
 
 Use this prompt for new design generation:
 
-> Design SourceTrack as a premium 2026 attribution and lightweight analytics product for founders and marketers. It should feel calmer than GA4, lighter than Cometly/Usermaven, as simple as DataFast/PiQo, and more distinctive through AI attribution, SEO revenue signals, source chips, analytics charts, top pages, and conversion story panels. Use warm off-white surfaces (#F5F4F0), white cards, subtle borders, lime (#C8F000) as signal only, compact data density, premium Inter-style typography, and custom-feeling charts. Avoid generic admin dashboards, purple gradients, decorative blobs, glassmorphism, enterprise BI clutter, and fake data.
+> Design SourceTrack as a premium 2026 attribution and lightweight analytics product for founders and marketers. It should feel calmer than GA4, lighter than Cometly/Usermaven, as simple as DataFast/PiQo, and more distinctive through AI attribution, SEO revenue signals, source chips, analytics charts, top pages, and conversion story panels. Use warm off-white surfaces (#F5F4F0), white cards, subtle borders, lime (#D2EC2A) as signal only, compact data density, premium Inter-style typography, and custom-feeling charts. Avoid generic admin dashboards, purple gradients, decorative blobs, glassmorphism, enterprise BI clutter, and fake data.
 
 ### 25.2 Consolidation prompt
 
@@ -2625,6 +2691,7 @@ Remove from active V1 UI:
 - backlink tool
 - URL inspection
 - live map
+- per-card "Sample data" badges on marketing mockups — disclosure is one footer line per page, see §29.8
 
 ### 26.1 Lead intelligence & enrichment — not built, not planned pre-paid-beta
 
@@ -2855,6 +2922,30 @@ Avoid:
 - perfect attribution
 - exact keyword-to-customer attribution
 - exact AI prompt attribution
+
+### 29.8 Illustrative-data disclosure
+
+§29.4 and §29.5 already require fixture data on every marketing mockup. This section governs how that
+is *disclosed*.
+
+> Illustrative/sample data on marketing mockups is disclosed via **ONE small muted-text line per
+> page** (e.g. in the page footer), **never a per-card badge.**
+
+Per-card badges compete visually with real content and read as a defensive sticker rather than a quiet
+disclosure. One line, stated once, is both more honest and less noisy — it discloses the page rather
+than apologising for each card.
+
+This does not weaken §6 data-truth or the fake-data prohibitions in §26. Disclosure is in addition to
+using fixture data, never a substitute for it, and never a licence to show a number the product cannot
+produce.
+
+**Shipped implementation — PR #581 (Option A), 2026-08-03.** Per-card "Sample data" pills were removed
+from all six homepage mockup components and replaced with a single footer line:
+*"Product visuals shown use illustrative data."* (`marketing/src/layouts/partials/Footer.astro`).
+
+**Enforced in CI.** `api/tests/key-features-mockups.test.js` asserts the per-card badge is **absent**
+and the footer line is **present**; `api/tests/direct-rescue-mockup-fixture.test.js` asserts the same
+for the DirectRescue mockup. A reintroduced badge fails the build.
 
 ---
 
@@ -3384,6 +3475,29 @@ a confident narrated number we cannot verify is worse than no number, and that i
 not a capability gap. Seeing it on a competitor's site is expected; treating that as a reason to
 reconsider is the mistake this note exists to prevent.
 
+### 35.4 Brand-asset authenticity (asset sourcing)
+
+§35.3 item 3 governs whether a third-party mark may be used at all. This governs where it comes from
+when it may.
+
+> **Never reconstruct, approximate, or extract-and-repurpose a brand asset or logo when the official
+> source is blocked or unavailable. Use a plain text label instead.** When sourcing IS available,
+> confirm the URL is the **company's own domain** — not an aggregator, icon library, or resale site.
+
+A blocked press kit is a signal to stop, not a puzzle to route around. An approximated mark is a
+misrepresentation of someone else's identity even when the approximation is well-intentioned, and a
+plain text label is always a correct, shippable answer — it costs a little polish and no exposure.
+
+**Two motivating incidents, 2026-08-03:**
+
+- An agent hit a 403 on an official press-kit link, then extracted a single letterform from an
+  unrelated animated SVG and fabricated a `viewBox` around it to stand in for the real mark. Fabricating
+  a mark from unrelated art is the failure mode this rule names explicitly, because it does not look
+  like copying at the moment it is done.
+- Issue #577's Perplexity mark was a **generic hexagon approximation**, not sourced from
+  `perplexity.ai`. No official brand page exists there — confirmed via search — which under this rule
+  means the answer was a text label from the start. **Resolution: replaced with a plain text label
+  "Perplexity" (PR #583).**
 
 ---
 
@@ -3469,8 +3583,16 @@ Motion signals quality when it is restrained and signals AI-generated filler whe
 | Theme switch | Background and text colour transition | 350ms |
 | Nav hairline | Appears only once scrolled past 8px | 300ms |
 | Loader | The two-dot drift — the only permitted loop | 1.6s loop |
+| Scroll-scrubbed connector/progress fill | Fill proportional to scroll position within the element's own viewport window, latching at 100% and never resetting on re-scroll | Bound to scroll, not time — must still render fully revealed under `prefers-reduced-motion` |
 
 Standard easing: `cubic-bezier(.22,.72,.28,1)`.
+
+The scroll-scrubbed row is the one **duration-less** entry in this table: its progress is a function of
+scroll position, not elapsed time, so a fixed duration cannot describe it. It is still bound by §37.2
+and §37.3 — latching at 100% is what satisfies "reveals fire **once**", and the reduced-motion
+requirement is not relaxed by the absence of a duration. Reference implementation: the JourneyMockup
+attribution trail, PR #582, verified with a 5-step visual check (4-frame progress burst, settled-state
+idempotency, reduced-motion, dark/light, single-trigger non-replay).
 
 ### 37.2 Forbidden
 
