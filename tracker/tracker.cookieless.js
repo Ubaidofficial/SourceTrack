@@ -999,6 +999,98 @@
   }
   _tryRegisterCalCom()
 
+  // ─── Chat Lead Capture Detection ───────────────────────────────────────────
+  // Cookieless parity with tracker.js. Read the long-form rationale there; the
+  // rules are identical and non-negotiable:
+  //   • NO callback payload is ever forwarded — no email, no name, and above all
+  //     no visitor message content. Every callback takes ZERO parameters so the
+  //     provider's argument is never bound to a name.
+  //   • Signal is lead capture, not chat start.
+  //   • Crisp's user:email:changed also fires on a programmatic
+  //     $crisp.push(["set","user:email",...]), so it is gated behind visitor
+  //     engagement (chat:initiated / chat:opened) in this page load.
+  //   • Tawk.to is deliberately absent — deferred to Phase 2.
+  //
+  // COOKIELESS-SPECIFIC: no provider cookie is read or written to enrich a chat
+  // event. This build reads no cookies at all and that must not change here —
+  // Intercom, Crisp and Tawk all set their own first-party cookies, and none of
+  // them is touched. Identity comes solely from our server-issued AID/SID.
+  //
+  // NOTE — deliberate deviation from the booking block above: these callbacks
+  // also check _consentGiven, which the cookieless booking callbacks do not.
+  // send() already blocks a withdrawn-consent visitor either way, but without the
+  // early return our callback would still EXECUTE inside the chat widget on every
+  // email entry. Chat is more PII-sensitive than booking; the callback should not
+  // run at all. Do not "restore parity" by deleting these checks.
+
+  function _sendChatLeadCaptured(provider, eventType) {
+    var data = {
+      site_key: K,
+      event: 'chat_lead_captured',
+      anonymous_id: AID,
+      session_id: SID,
+      page_url: location.href,
+      cookieless: true,
+      properties: {
+        event_type: 'chat_lead_captured',
+        chat_provider: provider,
+        chat_detection_method: 'browser_embed_event',
+        chat_event_type: eventType,
+        page_url: location.href,
+        page_path: location.pathname
+      }
+    }
+    AID ? send('/api/track', data) : _q.push({ ep: '/api/track', data: data })
+  }
+
+  // ── Intercom — best-effort Messenger API detection ──────────────────────────
+  var _icRetries = 0
+  var _icMaxRetries = 10
+  function _tryRegisterIntercom() {
+    if (typeof window.Intercom === 'function') {
+      try {
+        window.Intercom('onUserEmailSupplied', function () {
+          if (_consentGiven === false) return
+          if (isExcluded()) return
+          if (!_dedupeBookingEvent('intercom', 'user_email_supplied')) return
+          _sendChatLeadCaptured('intercom', 'user_email_supplied')
+        })
+      } catch (_) {}
+      return
+    }
+    _icRetries++
+    if (_icRetries < _icMaxRetries) {
+      setTimeout(_tryRegisterIntercom, 500)
+    }
+  }
+  _tryRegisterIntercom()
+
+  // ── Crisp — best-effort Web SDK detection ───────────────────────────────────
+  var _crispEngaged = false
+  var _crispRetries = 0
+  var _crispMaxRetries = 10
+  function _tryRegisterCrisp() {
+    if (window.$crisp && typeof window.$crisp.push === 'function') {
+      try {
+        window.$crisp.push(['on', 'chat:initiated', function () { _crispEngaged = true }])
+        window.$crisp.push(['on', 'chat:opened', function () { _crispEngaged = true }])
+        window.$crisp.push(['on', 'user:email:changed', function () {
+          if (_consentGiven === false) return
+          if (isExcluded()) return
+          if (!_crispEngaged) return  // programmatic set, not a visitor-entered lead
+          if (!_dedupeBookingEvent('crisp', 'user_email_changed')) return
+          _sendChatLeadCaptured('crisp', 'user_email_changed')
+        }])
+      } catch (_) {}
+      return
+    }
+    _crispRetries++
+    if (_crispRetries < _crispMaxRetries) {
+      setTimeout(_tryRegisterCrisp, 500)
+    }
+  }
+  _tryRegisterCrisp()
+
   sendPageview()  // queued until fetchId() resolves
   fetchId()
 })()

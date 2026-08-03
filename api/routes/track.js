@@ -332,6 +332,40 @@ export async function track(req, res) {
       booking_page_path = validatePathname(p.page_path)
     }
 
+    // Ingest-side sanitization for chat lead capture detection metadata.
+    // Mirrors the booking block above exactly. This is an ALLOWLIST: anything the
+    // client sends that is not enumerated here is dropped, so a compromised or
+    // modified tracker cannot widen the schema. Chat callbacks sit next to visitor
+    // message content in the browser, so the server must not depend on the client
+    // being well-behaved.
+    let chat_provider = null
+    let chat_detection_method = null
+    let chat_event_type = null
+    let chat_page_path = null
+
+    if (req.body?.event === 'chat_lead_captured') {
+      const p = req.body.properties || {}
+
+      if (typeof p.chat_provider === 'string') {
+        const cp = p.chat_provider.trim().toLowerCase()
+        // Tawk.to deliberately absent — Phase 2. Adding it here without the
+        // tracker-side work would accept a provider we never emit.
+        if (['intercom', 'crisp'].includes(cp)) chat_provider = cp
+      }
+
+      if (typeof p.chat_detection_method === 'string') {
+        const cdm = p.chat_detection_method.trim().toLowerCase()
+        if (cdm === 'browser_embed_event') chat_detection_method = cdm
+      }
+
+      if (typeof p.chat_event_type === 'string') {
+        const cet = p.chat_event_type.trim()
+        if (['user_email_supplied', 'user_email_changed'].includes(cet)) chat_event_type = cet
+      }
+
+      chat_page_path = validatePathname(p.page_path)
+    }
+
     // Pageview quota claim — 140G-4.
     // Only true $pageview events consume monthly quota. Custom events, conversions,
     // and outbound clicks are excluded. Claim happens here (after all filtering/validation)
@@ -422,9 +456,24 @@ export async function track(req, res) {
         booking_event_type: booking_event_type,
         page_path: booking_page_path
       } : {}),
+      ...(req.body?.event === 'chat_lead_captured' ? {
+        event_type: 'chat_lead_captured',
+        chat_provider: chat_provider,
+        chat_detection_method: chat_detection_method,
+        chat_event_type: chat_event_type,
+        page_path: chat_page_path
+      } : {}),
       // Feature: custom event properties — any object passed as `properties` is spread
-      // Excluded for form_submit and booking_scheduled (fixed schemas, no passthrough)
-      ...((req.body?.event === 'form_submit' || req.body?.event === 'booking_scheduled')
+      // Excluded for form_submit, booking_scheduled and chat_lead_captured (fixed
+      // schemas, no passthrough).
+      //
+      // ⚠️ chat_lead_captured MUST stay in this condition. Without it the entire raw
+      // client `properties` object lands in custom_properties unfiltered — and for a
+      // chat event that is the exact PII path the allowlist above exists to close
+      // (email, name, message text). The allowlist alone does NOT protect this: it
+      // only decides which TYPED columns are populated, it does not stop the bag.
+      // Removing 'chat_lead_captured' here silently reopens the hole.
+      ...((req.body?.event === 'form_submit' || req.body?.event === 'booking_scheduled' || req.body?.event === 'chat_lead_captured')
         ? {}
         : req.body.properties && typeof req.body.properties === 'object' && !Array.isArray(req.body.properties)
           ? { custom_properties: req.body.properties }
