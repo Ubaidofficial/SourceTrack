@@ -67,6 +67,10 @@ This version expands the prior V1.1 design system with the missing product surfa
   prior row in that table specifies a fixed duration, so PR #582's scroll-scrubbed JourneyMockup trail
   had no citable precedent. §37.2/§37.3 were checked against that implementation and already covered
   it correctly — **no change was needed there**, only the missing row.
+- v1.4 (2026-08-03): §37.1 gains the **product-mechanic animation** row — motion on a marketing mockup
+  must depict a real, verifiable product behaviour, never decoration disconnected from what the product
+  does. It is a constraint on the other §37.1 rows rather than a new motion type. JourneyTrail (PR #571)
+  and ModelCompareMockup (PR #576) are named as the compliant-before-the-rule reference implementations.
 - v1.4, **OPEN — founder decision required, deliberately not settled here:** glassmorphism. §25.1
   lists it under "avoid" as an AI-generation guardrail; §26, the master V1 prohibited list, does not
   address it in either direction. Needed call: a full V1-wide ban, or a guardrail scoped to
@@ -3586,6 +3590,7 @@ Motion signals quality when it is restrained and signals AI-generated filler whe
 | Nav hairline | Appears only once scrolled past 8px | 300ms |
 | Loader | The two-dot drift — the only permitted loop | 1.6s loop |
 | Scroll-scrubbed connector/progress fill | Fill proportional to scroll position within the element's own viewport window, latching at 100% and never resetting on re-scroll | Bound to scroll, not time — must still render fully revealed under `prefers-reduced-motion` |
+| Product-mechanic animation | Motion depicts a real, verifiable product behaviour — attribution stitching, credit redistribution across touch models, a revenue or count figure resolving to its actual computed value — never decorative particles, glows, or abstract motion disconnected from what the product does | Duration per whichever row above the motion is built from; must remain fully legible and complete under `prefers-reduced-motion`, and the story the motion tells must be factually true of the underlying data, not illustrative-only, unless it carries the §29.8 illustrative-data disclosure |
 
 Standard easing: `cubic-bezier(.22,.72,.28,1)`.
 
@@ -3595,6 +3600,27 @@ and §37.3 — latching at 100% is what satisfies "reveals fire **once**", and t
 requirement is not relaxed by the absence of a duration. Reference implementation: the JourneyMockup
 attribution trail, PR #582, verified with a 5-step visual check (4-frame progress burst, settled-state
 idempotency, reduced-motion, dark/light, single-trigger non-replay).
+
+**The product-mechanic row is a constraint on the other rows, not a tenth kind of motion.** A count-up
+is permitted by the KPI row; what this row adds is that the number must count up to a value the product
+actually computed. It is the §37 opening line — "the distinction is whether the motion tells you
+something" — made testable for marketing mockups, where the temptation to animate for its own sake is
+strongest and where nothing on screen is a live reading. Decorative motion is not merely weaker here,
+it is a truth problem: motion that dramatises a mechanic the product does not have is a claim, and §6
+governs claims.
+
+Reference implementations, both already compliant before this row existed:
+
+- **JourneyTrail** (Hero, PR #571) — the dot-to-dot trail *is* the first-touch-to-converted mechanic
+  playing out. Remove the animation and you remove the explanation, which is the test: decorative
+  motion can be deleted with no loss of meaning.
+- **ModelCompareMockup** (PR #576) — one real $240 conversion redistributing across three real
+  attribution models with the real arithmetic (100% / 100% / 33-33-33), captions quoted verbatim from
+  `MODEL_SUMMARY` in `attributionModels.js`. The verbatim coupling is enforced by
+  `api/tests/key-features-mockups.test.js`, so the depicted mechanic cannot drift from the shipped one
+  without reddening CI.
+
+Cite these two the way §2.7 cites PR #583: as the shape to match, not as a style to admire.
 
 ### 37.2 Forbidden
 
