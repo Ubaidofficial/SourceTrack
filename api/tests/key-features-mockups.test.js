@@ -206,3 +206,19 @@ test('each mockup is imported by the section that renders it', () => {
     assert.match(SECTION, new RegExp(`<${name}\\s*/>`), `${name} must be rendered — an unrendered mockup is dead code`)
   }
 })
+
+// ── Multi-instance binding regression test ────────────────────────────────────
+
+test('JourneyMockup script queries all trail instances on page (querySelectorAll, not querySelector)', () => {
+  const journey = read(join(COMPONENTS, 'JourneyMockup.astro'))
+  const script = journey.slice(journey.lastIndexOf('<script>'))
+
+  assert.ok(
+    script.includes('querySelectorAll'),
+    'JourneyMockup script must use querySelectorAll for [data-journey-trail] to bind every instance on the page'
+  )
+  assert.ok(
+    !/document\.querySelector\(\s*["']\[data-journey-trail\]["']\s*\)/.test(script),
+    'JourneyMockup script must not use querySelector for [data-journey-trail] — querySelector binds only the first instance'
+  )
+})
