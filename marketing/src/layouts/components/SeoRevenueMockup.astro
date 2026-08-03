@@ -27,7 +27,10 @@
 // itself refuses to make.
 //
 // ── THE NUMBERS ─────────────────────────────────────────────────────────────────────
-// Sample data, badged as such — a drawing of the product, not a claim about anyone's data.
+// Sample data — a drawing of the product, not a claim about anyone's data. Disclosed once per
+// page in the footer ("Product visuals shown use illustrative data."), never as a per-card
+// badge: design.md §29.8, the pattern #581 shipped and key-features-mockups.test.js pins.
+//
 // Internally consistent by construction: revenue is conversions x $120, and the click counts
 // are GscQueryFixture's own (1,284 / 942 / 631 / 418) so the two panels do not invent two
 // different sets of traffic for the same site.
@@ -38,7 +41,11 @@ const pages = [
   { path: "/blog/ai-referral-tracking", conversions: "5", revenue: "$600", clicks: "418" },
 ];
 
-const totalOrganicRevenue = `$${pages.reduce((sum, p) => sum + Number(p.revenue.replace(/[$,]/g, "")), 0).toLocaleString()}`;
+const totalOrganicRevenueValue = pages.reduce(
+  (sum, p) => sum + Number(p.revenue.replace(/[$,]/g, "")),
+  0,
+);
+const totalOrganicRevenue = `$${totalOrganicRevenueValue.toLocaleString()}`;
 ---
 
 <div class="relative z-1 overflow-hidden rounded-[20px] border border-[#3D3830] bg-[#12100C]">
@@ -54,7 +61,16 @@ const totalOrganicRevenue = `$${pages.reduce((sum, p) => sum + Number(p.revenue.
   <!-- Hero summary header line -->
   <div class="flex items-center justify-between border-b border-[#3D3830] bg-[#18150F] px-4 py-3">
     <span class="text-xs font-bold uppercase tracking-wider text-[#A79E8C]">Est. Organic Revenue</span>
-    <span class="text-2xl font-black tracking-tight text-primary">{totalOrganicRevenue}</span>
+    <!-- The count-up is the point of this figure: it is a reduce() over the rows below, not a
+         typed-in total, and #585's product-mechanic row asks the motion to show the mechanic
+         rather than decorate it. The server renders the settled value, so a visitor with no JS,
+         reduced motion, or a dead observer reads $5,040 and never a zero (§6). -->
+    <span
+      class="text-2xl font-black tracking-tight text-primary tabular-nums"
+      data-seo-revenue-total
+      data-count-final={totalOrganicRevenue}
+      data-count-to={totalOrganicRevenueValue}
+      data-count-prefix="$">{totalOrganicRevenue}</span>
   </div>
 
   <!-- Landing-page table -->
@@ -98,3 +114,20 @@ const totalOrganicRevenue = `$${pages.reduce((sum, p) => sum + Number(p.revenue.
     </p>
   </div>
 </div>
+
+<script>
+  import { countUp } from "@/lib/countUp";
+
+  // querySelectorAll inside countUp, per #582 — this panel renders once on the homepage today,
+  // but KeyFeatures.astro also imports it, so reviving that partial would put two on the page.
+  function initSeoRevenueCount() {
+    countUp("[data-seo-revenue-total]");
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initSeoRevenueCount);
+  } else {
+    initSeoRevenueCount();
+  }
+  document.addEventListener("astro:after-swap", initSeoRevenueCount);
+</script>
