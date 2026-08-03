@@ -526,6 +526,120 @@ export async function track(req, res) {
       }
     }
 
+    // ─── Confirmed-booking auto-promotion ──────────────────────────────────────
+    // Mirrors the form_submit path above. Until this shipped, booking_scheduled was
+    // WRITE-ONLY: the tracker detected embedded Calendly/Cal.com bookings, this route
+    // sanitized and stored them, and then nothing read them — no pipe filtered the event,
+    // no route queried it, no dashboard surface rendered it. A confirmed booking is one of
+    // the strongest lead signals a B2B site produces, and it was landing in a store nothing
+    // asked about.
+    //
+    // Forward-only by construction: promotion can only fire on an inbound event and there is
+    // no backfill path. Nothing to backfill regardless — a live count confirmed zero
+    // booking_scheduled events across all sites, ever, so this cannot move any existing
+    // customer's conversion count, lead total, or model output.
+    if (req.body?.event === 'booking_scheduled') {
+      const isIgnore = req.body.properties?.ignore_conversion === true
+
+      // No isLeadForm analogue, deliberately. isLeadForm exists because a raw form submit is
+      // ambiguous — it might be a login, a search box or an internal admin form — so the form
+      // path has to INFER intent from shape. A booking carries no such ambiguity: the gate is
+      // simply that the ingest allowlist above accepted a provider, which happens only for
+      // calendly/calcom paired with a recognised browser_embed_event. A spoofed or unrecognised
+      // payload leaves booking_provider null and never reaches this branch.
+      if (!isIgnore && booking_provider) {
+        const anonId = req.body.anonymous_id || uuidv4()
+
+        // incomingIsExplicit = TRUE here, where the form path passes false. A provider callback
+        // is the provider telling us the booking completed, not an inference we drew from markup
+        // — that is what "explicit" means in this cache. The consequence is deliberate: Rule 1
+        // (auto-promotions yield to any recent conversion on the same visitor+page) would
+        // otherwise DROP a booking that happened on a page which also has a lead form, losing
+        // the stronger of the two signals to the weaker one.
+        //
+        // Under the current rules this call cannot return true — Rule 2's isIncomingRich is
+        // satisfied by any non-'form' type. It is still called rather than skipped so that a
+        // future change to shared-dedupe-cache.js governs this path too, instead of a booking
+        // silently bypassing dedupe logic everything else obeys.
+        const isDup = checkIsDuplicate(req.site.id, anonId, req.body.page_url, true, 'meeting', 0, false)
+        if (isDup) logOutcome('dedup-skipped', ' stage=booking_conversion')
+        if (!isDup) {
+          // Monthly conversion METER — fail-open, metering only, never refuses the write.
+          // Same contract as the form path: a meter failure must not cost a real conversion.
+          try {
+            await claimConversionUsage(req.site)
+          } catch (limitErr) {
+            console.error('[track] conversion meter failed, continuing (metering must never block revenue):', limitErr.message || limitErr)
+          }
+
+          // Registering as explicit 'meeting' is what makes a trailing form_submit on the same
+          // page yield to this booking: that form arrives auto-promoted (explicit=false) and
+          // Rule 1 then suppresses it. Booking wins, and the pair does not double-count.
+          registerConversion(req.site.id, anonId, req.body.page_url, true, 'meeting', 0, false)
+
+          // conversion_type is 'meeting', NOT 'booking'. conversion-classifier.js's LEAD_TYPES
+          // contains meeting / book_demo / schedule_meeting and does NOT contain 'booking' —
+          // emitting 'booking' would write successfully, render a badge in Leads.jsx (which has
+          // one keyed 'booking'), and silently classify as 'other', so the conversion would
+          // never count as a lead. The badge makes the wrong value look correct, which is
+          // exactly why this is spelled out rather than left to the reader.
+          //
+          // No conversion_value: a booking carries no revenue, and the form path sets none
+          // either. Absent, never 0 — §6 forbids a fake zero standing in for "no data".
+          const conversionProps = {
+            site_id: req.site.id,
+            site_key: req.site.site_key,
+            anonymous_id: anonId,
+            user_id: typeof req.body.user_id === 'string' ? req.body.user_id.trim() : null,
+            is_conversion: true,
+            conversion_type: 'meeting',
+            booking_provider: booking_provider,
+            booking_detection_method: booking_detection_method,
+            booking_event_type: booking_event_type,
+            page_url: req.body.page_url,
+            page_path: booking_page_path || null,
+            referrer: req.body.referrer,
+            utm_source: normalizeUtm(req.body.utm_source),
+            utm_medium: normalizeUtm(req.body.utm_medium),
+            utm_campaign: normalizeUtm(req.body.utm_campaign),
+            utm_content: normalizeUtm(req.body.utm_content),
+            utm_term: normalizeUtm(req.body.utm_term),
+            ref_param: normalizeUtm(req.body.ref_param || req.body.ref),
+            source_param: normalizeUtm(req.body.source_param || req.body.source),
+            via_param: normalizeUtm(req.body.via_param || req.body.via),
+            first_touch_source: normalizeUtm(req.body.first_touch_source),
+            first_touch_medium: normalizeUtm(req.body.first_touch_medium),
+            first_touch_campaign: normalizeUtm(req.body.first_touch_campaign),
+            first_touch_timestamp: sanitizeClientTimestamp(req.body.first_touch_timestamp),
+            ...normalizeClickIds(req.body),
+            utm_id: normalizeUtm(req.body.utm_id),
+            st_campaign_id: normalizeUtm(req.body.st_campaign_id),
+            st_adgroup_id: normalizeUtm(req.body.st_adgroup_id),
+            st_ad_id: normalizeUtm(req.body.st_ad_id),
+            st_target_id: normalizeUtm(req.body.st_target_id),
+            st_network: sanitizeValueTrack(req.body.st_network),
+            st_device: sanitizeValueTrack(req.body.st_device),
+            st_matchtype: sanitizeValueTrack(req.body.st_matchtype),
+            st_verify: sanitizeVerificationToken(req.body.st_verify),
+            ai_source: enriched.ai_source,
+            device_type: enriched.device_type,
+            browser_name: enriched.browser_name,
+            browser_version: enriched.browser_version,
+            os_name: enriched.os_name,
+            os_version: enriched.os_version,
+            country: enriched.country,
+            server_timestamp: enriched.server_timestamp,
+            ingestion_method: 'server_routed',
+            ...customParams
+          }
+
+          // Tinybird is the sole writer, as on every other conversion rail here. No natural id
+          // on this path -> deriveEventId falls to a uuid, same as the form path.
+          dualWriteEvent({ distinctId: anonId, event: '$conversion', timestamp: clientTimestamp, properties: conversionProps })
+        }
+      }
+    }
+
     // Update telemetry metadata asynchronously & throttled (non-blocking)
     // We use req.site from auth middleware which caches basic details
     try {
