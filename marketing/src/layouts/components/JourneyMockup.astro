@@ -113,16 +113,22 @@ const sessions = [
             </div>
           </div>
 
-          <!-- Attribution trail -->
-          <div class="rounded-xl border border-[#3D3830] bg-[#241F17] p-3">
+          <!-- Attribution trail — scroll-scrubbed connector -->
+          <div class="rounded-xl border border-[#3D3830] bg-[#241F17] p-3" data-journey-trail>
             <p class="mb-2 text-[10px] uppercase tracking-wider text-[#A79E8C]">Attribution trail</p>
-            <div class="flex flex-wrap items-center gap-1">
+            <div class="relative flex flex-wrap items-center gap-1">
+              <!-- Connector line behind the chips — fills left-to-right with scroll -->
+              <div
+                class="pointer-events-none absolute left-0 top-1/2 h-[2px] w-full -translate-y-1/2 origin-left bg-primary/40"
+                data-trail-connector
+                style="transform: scaleX(0) translateY(-50%);"
+              ></div>
               {
                 trail.map((chip, i) => (
-                  <span class="flex items-center gap-1">
+                  <span class="relative flex items-center gap-1" data-trail-step>
                     <span
                       class:list={[
-                        "inline-flex max-w-[110px] items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium",
+                        "inline-flex max-w-[110px] items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium transition-opacity duration-300",
                         chip.tone === "revenue"
                           ? "border-primary/40 bg-primary/15 text-primary"
                           : "border-[#454038] bg-[#2B261E] text-[#F6F3EB]",
@@ -242,3 +248,93 @@ const sessions = [
     </div>
   </div>
 </div>
+
+<script>
+  import { scroll } from "motion";
+
+  function initTrailScrub() {
+    const trails = document.querySelectorAll<HTMLElement>("[data-journey-trail]");
+    if (!trails.length) return;
+
+    // §37.3: prefers-reduced-motion — render fully revealed immediately, no animation
+    const isReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    trails.forEach((trail) => {
+      const connectorEl = trail.querySelector<HTMLElement>("[data-trail-connector]");
+      const stepEls = trail.querySelectorAll<HTMLElement>("[data-trail-step]");
+      if (!connectorEl || !stepEls.length) return;
+
+      const connector: HTMLElement = connectorEl;
+      const steps: NodeListOf<HTMLElement> = stepEls;
+      const totalSteps = steps.length; // 4
+
+      if (isReducedMotion) {
+        connector.style.transform = "scaleX(1) translateY(-50%)";
+        steps.forEach((step) => {
+          step.style.opacity = "1";
+        });
+        return;
+      }
+
+      // Initial state: connector hidden, steps dimmed
+      connector.style.transform = "scaleX(0) translateY(-50%)";
+      steps.forEach((step) => {
+        step.style.opacity = "0.25";
+      });
+
+      // §37.2: reveals fire ONCE, never loop — latch at 100%
+      let latched = false;
+
+      function latchFinal() {
+        latched = true;
+        connector.style.transform = "scaleX(1) translateY(-50%)";
+        steps.forEach((step) => {
+          step.style.opacity = "1";
+        });
+      }
+
+      // scroll() from motion — callback form, scoped to this trail container
+      // offset: animation starts when container's top hits the bottom of the viewport,
+      //         ends when container's bottom reaches the center of the viewport
+      const cleanup = scroll(
+        (progress: number) => {
+          if (latched) return;
+
+          // Once we hit or pass 1.0, latch permanently (§37.2: no reset, no replay)
+          if (progress >= 1) {
+            latchFinal();
+            if (cleanup) cleanup();
+            return;
+          }
+
+          // Fill the connector line proportionally
+          connector.style.transform = `scaleX(${progress}) translateY(-50%)`;
+
+          // Light up steps sequentially at equal intervals
+          const stepThreshold = 1 / totalSteps;
+          steps.forEach((step, i) => {
+            const threshold = i * stepThreshold;
+            if (progress >= threshold) {
+              step.style.opacity = "1";
+            } else {
+              step.style.opacity = "0.25";
+            }
+          });
+        },
+        {
+          target: trail,
+          offset: ["start end", "end center"],
+        }
+      );
+    });
+  }
+
+  // Run on DOMContentLoaded for initial page load, and on astro:after-swap
+  // for View Transitions (if used)
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initTrailScrub);
+  } else {
+    initTrailScrub();
+  }
+  document.addEventListener("astro:after-swap", initTrailScrub);
+</script>
