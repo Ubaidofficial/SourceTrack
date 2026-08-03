@@ -5,7 +5,7 @@ banner:
     ChatGPT is sending you customers.
     <br/>
     <mark>Your analytics calls it direct.</mark>
-  content: "Every conversion carries its full path — first touch to payment, including the AI tools your analytics can't see. One script tag."
+  content: "Every conversion carries its full path, first touch to payment, including AI tools your analytics can't see. One script tag."
   badge:
     enable: true
     label: Privacy-First Cookieless Engine
