@@ -1,26 +1,19 @@
 ---
 import Base from "@/layouts/Base.astro";
 import Hero from "@/components/Hero.astro";
-import Statistics from "@/components/Statistics";
-import CallToAction from "@/partials/CallToAction.astro";
-import DashboardShowcase from "@/partials/DashboardShowcase.astro";
+import TrustBar from "@/partials/TrustBar.astro";
 import DirectRescueShowcase from "@/partials/DirectRescueShowcase.astro";
-import FAQ from "@/partials/FAQ";
-import Integration from "@/partials/Integration";
 import JourneyShowcase from "@/partials/JourneyShowcase.astro";
-import KeyFeatures from "@/partials/KeyFeatures.astro";
+import ProofStrip from "@/partials/ProofStrip.astro";
+import IconTrio from "@/partials/IconTrio.astro";
+import ComparisonTable from "@/partials/ComparisonTable.astro";
 import Pricing from "@/partials/Pricing";
-import WhyChooseUs from "@/partials/WhyChooseUs.astro";
+import FAQ from "@/partials/FAQ";
 import { getListPage } from "@/lib/contentParser";
 
 const homepage = await getListPage("homepage/-index.md");
-const key_features = await getListPage("sections/key-features.md");
-const whyChooseUs = await getListPage("sections/why-choose-us.md");
-const integration = await getListPage("sections/integration.md");
 const pricing = await getListPage("sections/pricing.md");
 const faq = await getListPage("sections/faq.md");
-const callToAction = await getListPage("sections/call-to-action.md");
-const statistics = await getListPage("sections/statistics.md");
 const { banner } = homepage.frontmatter;
 
 const softwareSchema = {
@@ -40,8 +33,7 @@ const softwareSchema = {
 };
 
 // Derived from the SAME faq_list the page renders. Google requires FAQPage markup to
-// match the visible content; this block previously hardcoded two questions that appeared
-// nowhere on the page, so the markup described a page that did not exist.
+// match the visible content.
 const faqSchema = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
@@ -58,14 +50,12 @@ const faqSchema = {
 
 <Base structuredData={[softwareSchema, faqSchema]}>
   <Hero data={banner} />
-  <DashboardShowcase />
-  <KeyFeatures data={key_features} />
-  <Statistics data={statistics} client:visible />
-  <WhyChooseUs data={whyChooseUs} />
-  <JourneyShowcase />
+  <TrustBar />
   <DirectRescueShowcase />
-  <Integration data={integration} client:visible />
+  <JourneyShowcase />
+  <ProofStrip />
+  <IconTrio />
+  <ComparisonTable />
   <Pricing data={pricing} client:visible />
   <FAQ data={faq} client:visible />
-  <CallToAction data={callToAction} />
 </Base>

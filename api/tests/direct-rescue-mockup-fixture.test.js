@@ -62,10 +62,8 @@ test('the section wrapper performs no data access either', () => {
   }
 })
 
-test('the fixture is labelled as sample data on BOTH cards (§6)', () => {
-  // Two cards, two badges — a visitor must not be able to read either side as real.
-  const badges = MOCKUP_BODY.match(/Sample data/g) || []
-  assert.ok(badges.length >= 2, `expected a "Sample data" badge on each card, found ${badges.length}`)
+test('the fixture carries no sample data badges (§6 Option A)', () => {
+  assert.ok(!MOCKUP_BODY.includes('Sample data'), 'DirectRescueMockup must not carry any "Sample data" badge')
 })
 
 test('the mockup carries an explicit not-a-customer disclaimer', () => {

@@ -1,0 +1,151 @@
+---
+// ComparisonTable partial — SourceTrack vs SourceLoop vs GA4 (Change 7).
+// Every cell verified against GTM §3 per-competitor truth table.
+// No competitor logos (design.md §35.3 compliant). Text column headers only.
+---
+
+<section class="py-20 relative overflow-hidden bg-[#12100C]/60 border-y border-white/5">
+  <div class="main-container">
+    <div class="container px-4">
+      <div class="mb-12 text-center">
+        <div class="bg-gradient-primary p-px inline-block rounded-full mb-2">
+          <div class="bg-gradient-black-grid px-4 py-1.5 rounded-full">
+            <span class="gradient-text-primary">Feature Comparison</span>
+          </div>
+        </div>
+        <h2 class="text-h2 font-medium lg:w-3/5 mx-auto">
+          How SourceTrack compares on attribution depth & privacy
+        </h2>
+        <p class="text-lg mt-4 lg:w-3/5 mx-auto text-gray">
+          Clean attribution, AI referrer detection, and organic revenue without heavy enterprise bloat.
+        </p>
+      </div>
+
+      <div class="overflow-x-auto max-w-[960px] mx-auto rounded-3xl border border-[#3D3830] bg-[#1B1811] p-2 sm:p-6 shadow-2xl">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr class="border-b border-[#3D3830] text-xs uppercase tracking-wider text-[#A79E8C]">
+              <th class="py-4 px-4 font-bold">Feature / Capability</th>
+              <th class="py-4 px-4 font-black text-primary text-base">SourceTrack</th>
+              <th class="py-4 px-4 font-bold text-[#F6F3EB]">SourceLoop</th>
+              <th class="py-4 px-4 font-bold text-[#A79E8C]">GA4</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#3D3830]">
+            <!-- Row 1: SEO Revenue -->
+            <tr class="hover:bg-white/[0.02] transition">
+              <td class="py-4 px-4 font-semibold text-[#F6F3EB]">
+                <div>SEO Organic Revenue Attribution</div>
+                <div class="text-xs font-normal text-[#A79E8C]">Match organic landing pages + dates to revenue</div>
+              </td>
+              <td class="py-4 px-4 font-black text-primary">
+                <span class="inline-flex items-center gap-1.5 text-primary">
+                  <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  <span>Yes (est. label)</span>
+                </span>
+              </td>
+              <td class="py-4 px-4 text-[#A79E8C]">No</td>
+              <td class="py-4 px-4 text-[#A79E8C]">No</td>
+            </tr>
+
+            <!-- Row 2: AI Referral Detection -->
+            <tr class="hover:bg-white/[0.02] transition">
+              <td class="py-4 px-4 font-semibold text-[#F6F3EB]">
+                <div>AI Search Referrer Detection</div>
+                <div class="text-xs font-normal text-[#A79E8C]">ChatGPT, Claude, Perplexity, Gemini, etc.</div>
+              </td>
+              <td class="py-4 px-4 font-black text-primary">
+                <span class="inline-flex items-center gap-1.5 text-primary">
+                  <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  <span>22 AI domains</span>
+                </span>
+              </td>
+              <td class="py-4 px-4 text-[#D5D0C3]">ChatGPT focus</td>
+              <td class="py-4 px-4 text-[#A79E8C]">Logged as Direct</td>
+            </tr>
+
+            <!-- Row 3: Multi-Touch Models -->
+            <tr class="hover:bg-white/[0.02] transition">
+              <td class="py-4 px-4 font-semibold text-[#F6F3EB]">
+                <div>Multi-Touch Attribution Models</div>
+                <div class="text-xs font-normal text-[#A79E8C]">First Touch, Last Touch, Linear, Time-Decay, W-Shaped</div>
+              </td>
+              <td class="py-4 px-4 font-black text-primary">
+                <span class="inline-flex items-center gap-1.5 text-primary">
+                  <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  <span>9 Models</span>
+                </span>
+              </td>
+              <td class="py-4 px-4 text-[#D5D0C3]">Multi-Touch</td>
+              <td class="py-4 px-4 text-[#A79E8C]">Last Click / Data-Driven</td>
+            </tr>
+
+            <!-- Row 4: Cookieless Default -->
+            <tr class="hover:bg-white/[0.02] transition">
+              <td class="py-4 px-4 font-semibold text-[#F6F3EB]">
+                <div>Cookieless-First Tracking</div>
+                <div class="text-xs font-normal text-[#A79E8C]">Default storage model for visitor journeys</div>
+              </td>
+              <td class="py-4 px-4 font-black text-primary">
+                <span class="inline-flex items-center gap-1.5 text-primary">
+                  <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  <span>localStorage Default</span>
+                </span>
+              </td>
+              <td class="py-4 px-4 text-[#D5D0C3]">Cookies + 13mo fallback</td>
+              <td class="py-4 px-4 text-[#A79E8C]">3rd / 1st Party Cookies</td>
+            </tr>
+
+            <!-- Row 5: Privacy Controls -->
+            <tr class="hover:bg-white/[0.02] transition">
+              <td class="py-4 px-4 font-semibold text-[#F6F3EB]">
+                <div>GPC & DNT Honor Controls</div>
+                <div class="text-xs font-normal text-[#A79E8C]">Respect browser privacy headers by default</div>
+              </td>
+              <td class="py-4 px-4 font-black text-primary">
+                <span class="inline-flex items-center gap-1.5 text-primary">
+                  <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  <span>Honored</span>
+                </span>
+              </td>
+              <td class="py-4 px-4 text-[#D5D0C3]">
+                <span class="inline-flex items-center gap-1 text-[#D5D0C3]">
+                  <svg class="h-4 w-4 text-emerald-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  <span>Honored</span>
+                </span>
+              </td>
+              <td class="py-4 px-4 text-[#A79E8C]">Consent Mode required</td>
+            </tr>
+
+            <!-- Row 6: CAPI (Server-Side) -->
+            <tr class="hover:bg-white/[0.02] transition">
+              <td class="py-4 px-4 font-semibold text-[#F6F3EB]">
+                <div>CAPI & Server-Side Egress</div>
+                <div class="text-xs font-normal text-[#A79E8C]">Direct server-side event sync to ad platforms</div>
+              </td>
+              <td class="py-4 px-4 font-semibold text-[#D5D0C3]">Beta (Stripe / Shopify)</td>
+              <td class="py-4 px-4 text-[#D5D0C3]">
+                <span class="inline-flex items-center gap-1 text-emerald-400">
+                  <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  <span>4-Platform CAPI</span>
+                </span>
+              </td>
+              <td class="py-4 px-4 text-[#A79E8C]">Server-Side GTAG</td>
+            </tr>
+
+            <!-- Row 7: Setup & CRM requirement -->
+            <tr class="hover:bg-white/[0.02] transition">
+              <td class="py-4 px-4 font-semibold text-[#F6F3EB]">
+                <div>Setup Complexity</div>
+                <div class="text-xs font-normal text-[#A79E8C]">Installation requirements</div>
+              </td>
+              <td class="py-4 px-4 font-black text-primary">Single script / GTM (5 mins)</td>
+              <td class="py-4 px-4 text-[#D5D0C3]">Script + CAPI setup</td>
+              <td class="py-4 px-4 text-[#A79E8C]">GTM + GTAG configuration</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>

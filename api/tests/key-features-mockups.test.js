@@ -61,10 +61,15 @@ test('no mockup performs data access — static fixture only (§29.5)', () => {
   }
 })
 
-test('every mockup is badged as sample data (§6)', () => {
+test('no mockup carries a sample data badge (§6 Option A)', () => {
   for (const [name, src] of ALL) {
-    assert.match(stripComments(src), /Sample data/, `${name} must carry a visible "Sample data" badge`)
+    assert.ok(!stripComments(src).includes('Sample data'), `${name} must not carry a visible "Sample data" badge`)
   }
+})
+
+test('footer contains illustrative data disclosure', () => {
+  const footer = read(join(REPO, 'marketing', 'src', 'layouts', 'partials', 'Footer.astro'))
+  assert.match(footer, /Product visuals shown use illustrative data\./)
 })
 
 test('no remote asset is referenced — brand marks are committed locally', () => {

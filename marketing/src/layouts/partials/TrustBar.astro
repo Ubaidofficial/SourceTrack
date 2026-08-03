@@ -1,0 +1,41 @@
+---
+// TrustBar partial — "Works with" integration logos strip.
+// Uses real SVGs from /public/images/integrations/ (Stripe, Shopify, GTM, WordPress, Webflow, Framer).
+// No fake customer logos, no fabricated claims (Change 5).
+const integrations = [
+  { name: "Stripe", logo: "/images/integrations/stripe.svg" },
+  { name: "Shopify", logo: "/images/integrations/shopify.svg" },
+  { name: "Google Tag Manager", logo: "/images/integrations/gtm.svg" },
+  { name: "WordPress", logo: "/images/integrations/wordpress.svg" },
+  { name: "Webflow", logo: "/images/integrations/webflow.svg" },
+  { name: "Framer", logo: "/images/integrations/framer.svg" },
+];
+---
+
+<section class="py-10 border-y border-white/5 bg-[#12100C]/50">
+  <div class="main-container">
+    <div class="container px-4 text-center">
+      <p class="text-xs font-bold uppercase tracking-widest text-[#7C7568] mb-6">
+        Works with your existing stack
+      </p>
+      <div class="flex flex-wrap items-center justify-center gap-8 md:gap-14 opacity-70 grayscale transition hover:grayscale-0">
+        {
+          integrations.map((item) => (
+            <div class="flex items-center gap-2 text-xs font-semibold text-[#A79E8C]">
+              <img
+                src={item.logo}
+                alt={item.name}
+                width="24"
+                height="24"
+                class="h-6 w-auto object-contain"
+                loading="lazy"
+                decoding="async"
+              />
+              <span>{item.name}</span>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </div>
+</section>
