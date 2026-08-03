@@ -1239,5 +1239,118 @@
   }
   _tryRegisterCalCom()
 
+  // ─── Chat Lead Capture Detection ───────────────────────────────────────────
+  // Emits chat_lead_captured through /api/track (NOT /api/conversion).
+  //
+  // NO CALLBACK PAYLOAD IS EVER FORWARDED. Not the email, not the name, and above
+  // all not visitor message content. Every callback below is declared with ZERO
+  // parameters on purpose, so the provider's argument is never even bound to a
+  // name — there is nothing in scope to leak. Do NOT "enrich" this with provider
+  // data; the event records THAT a lead was captured, never what was said.
+  //
+  // Signal choice: lead capture, not chat start. Opening a chat window is not a
+  // lead, and counting it as one would inflate the metric with idle curiosity.
+  //
+  // Intercom: Intercom('onUserEmailSupplied', fn) — documented to fire only when
+  //   a visitor enters their email INTO the Messenger. Registration-based, so it
+  //   cannot clobber a customer's own handler, and the documented callback takes
+  //   no arguments. A programmatic boot/update carrying an email does NOT fire
+  //   it, so no engagement guard is needed on this provider.
+  //
+  // Crisp: $crisp.push(["on","user:email:changed", fn]) — fires for BOTH a visitor
+  //   typing an email AND the site setting one programmatically via
+  //   $crisp.push(["set","user:email",...]). UNGUARDED, a logged-in page that
+  //   boots Crisp with the current user's email would emit a false capture on
+  //   every single page load — precisely the corruption that choosing lead-capture
+  //   over chat-start exists to avoid. GUARDED below: a change only counts after
+  //   visitor engagement in this page load (chat:initiated = "the first time the
+  //   user clicks on the chatbox", or chat:opened). Known residual: a programmatic
+  //   set occurring AFTER the visitor has opened the chatbox still passes. That is
+  //   narrow, deliberate, and accepted — do not widen the guard into reading the
+  //   email to compare values, which would defeat the no-payload rule above.
+  //
+  // Tawk.to is deliberately ABSENT — deferred to Phase 2. Its lead-capture hooks
+  //   (onPrechatSubmit/onOfflineSubmit) exist only when the customer has enabled
+  //   the pre-chat form, its callbacks are ASSIGNMENTS that would silently destroy
+  //   a customer's own handler, and its docs require registration before the widget
+  //   script loads — an ordering hazard the bounded-retry shape does not solve.
+  //   Do not add it here without solving all three.
+
+  function _sendChatLeadCaptured(provider, eventType) {
+    send('/api/track', {
+      site_key: K,
+      event: 'chat_lead_captured',
+      anonymous_id: AID,
+      session_id: SID,
+      page_url: location.href,
+      properties: {
+        event_type: 'chat_lead_captured',
+        chat_provider: provider,
+        chat_detection_method: 'browser_embed_event',
+        chat_event_type: eventType,
+        page_url: location.href,
+        page_path: location.pathname
+      }
+    })
+  }
+
+  // ── Intercom — best-effort Messenger API detection ──────────────────────────
+  // Same bounded-retry shape as Cal.com above. The standard Intercom snippet
+  // installs a queuing stub synchronously, so registration against it is safe
+  // before boot completes. Reuses _dedupeBookingEvent verbatim: its key is
+  // namespaced by provider, so chat and booking cannot collide in the shared map.
+  var _icRetries = 0
+  var _icMaxRetries = 10
+  function _tryRegisterIntercom() {
+    if (typeof window.Intercom === 'function') {
+      try {
+        window.Intercom('onUserEmailSupplied', function () {
+          if (_consentGiven === false) return
+          if (isExcluded()) return
+          if (!_dedupeBookingEvent('intercom', 'user_email_supplied')) return
+          _sendChatLeadCaptured('intercom', 'user_email_supplied')
+        })
+      } catch (_) {}
+      return
+    }
+    _icRetries++
+    if (_icRetries < _icMaxRetries) {
+      setTimeout(_tryRegisterIntercom, 500)
+    }
+    // Retry budget exhausted — Intercom not present on this page
+  }
+  _tryRegisterIntercom()
+
+  // ── Crisp — best-effort Web SDK detection ───────────────────────────────────
+  // $crisp is an array installed synchronously by the Crisp snippet, and .push
+  // is documented async-safe, so registration before load is fine.
+  var _crispEngaged = false
+  var _crispRetries = 0
+  var _crispMaxRetries = 10
+  function _tryRegisterCrisp() {
+    if (window.$crisp && typeof window.$crisp.push === 'function') {
+      try {
+        // Engagement guard — see the Crisp note above. Both callbacks take no
+        // arguments and record only a boolean; neither reads chat content.
+        window.$crisp.push(['on', 'chat:initiated', function () { _crispEngaged = true }])
+        window.$crisp.push(['on', 'chat:opened', function () { _crispEngaged = true }])
+        window.$crisp.push(['on', 'user:email:changed', function () {
+          if (_consentGiven === false) return
+          if (isExcluded()) return
+          if (!_crispEngaged) return  // programmatic set, not a visitor-entered lead
+          if (!_dedupeBookingEvent('crisp', 'user_email_changed')) return
+          _sendChatLeadCaptured('crisp', 'user_email_changed')
+        }])
+      } catch (_) {}
+      return
+    }
+    _crispRetries++
+    if (_crispRetries < _crispMaxRetries) {
+      setTimeout(_tryRegisterCrisp, 500)
+    }
+    // Retry budget exhausted — Crisp not present on this page
+  }
+  _tryRegisterCrisp()
+
   sendPageview()
 })()
