@@ -2,6 +2,12 @@
 
 **Date:** 2026-07-29 · **Main:** `53dc418` (post-#491) · **Verified at that ref**
 
+> **Newer state exists.** For launch-readiness as of 2026-08-04 (`main` `c00957b9`) read
+> [`../SESSION_HANDOFF_2026-08-04.md`](../SESSION_HANDOFF_2026-08-04.md) first. This file is
+> current only up to `53dc418`; it is not superseded wholesale — the marketing-site and Tinybird
+> sections below are still the record — but anything about open PRs, issues, or deployed commits
+> here is six days stale.
+
 > This file previously described a Supabase `createClient` / Railway fix and "T8 pricing tier
 > enforcement" as the next task, pointing at `~/Desktop/trackiq/api/index.js`. That was long
 > stale and is replaced wholesale.
