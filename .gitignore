@@ -63,3 +63,7 @@ semgrep.sarif
 trivy-report*.json
 snyk-report*.json
 npm-audit*.json
+
+# taste-skill (npx skills add) - agent skill files, not app code
+.agents/
+skills-lock.json

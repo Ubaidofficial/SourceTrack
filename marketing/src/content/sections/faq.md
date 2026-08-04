@@ -7,7 +7,7 @@ badge: Frequently Asked Questions
 faq_list:
   - question: Which attribution model does SourceTrack use?
     answer: >-
-      Whichever one you pick — the model is a lens on the same recorded journey, not a
+      Whichever one you pick. The model is a lens on the same recorded journey, not a
       different dataset. SourceTrack stores every touchpoint that led to a conversion, then
       splits the credit according to the model you select: First Touch, Last Touch, First or
       Last Touch excluding direct visits, Linear (equal credit to every touch), Time Decay
@@ -21,7 +21,7 @@ faq_list:
   - question: What does "cookieless" actually mean for someone visiting my site?
     answer: >-
       Nothing is written to their device. The cookieless tracker sets no cookies and uses no
-      localStorage or sessionStorage — there is nothing to clear and nothing to consent to
+      localStorage or sessionStorage, so there is nothing to clear and nothing to consent to
       storing. Instead the visitor ID is derived on our server as a salted SHA-256 hash and
       handed back to the page. It rotates every 24 hours; the session ID rotates hourly. The
       raw IP address is never stored, only the salted hash, which cannot be reversed back
@@ -35,7 +35,7 @@ faq_list:
   - question: Is the Stripe integration ready to use?
     answer: >-
       It is built, and it is in beta. You connect it yourself by adding a webhook endpoint in
-      your Stripe dashboard — this is not a one-click Stripe app and there is no listing in
+      your Stripe dashboard. This is not a one-click Stripe app, and there is no listing in
       the Stripe App Marketplace. Once connected, completed checkouts arrive as conversions
       with their real revenue attached and are attributed back to the source that brought the
       buyer, and refunds net against the original sale rather than leaving inflated revenue
@@ -50,7 +50,7 @@ faq_list:
       verified Search Console property, SourceTrack pulls daily query and landing-page
       performance and lines it up against the revenue landing on those same pages. The figure
       you get per query is an estimate, matched by landing page and date range, and it is
-      labelled as an estimate everywhere it appears — Google does not tell anyone which
+      labelled as an estimate everywhere it appears. Google does not tell anyone which
       specific search led to which specific customer, and a tool that shows you an exact
       number there is guessing without saying so. Manual syncs are verified working; the
       automated overnight sync is the part still settling down. When it fails, the connection
@@ -60,20 +60,20 @@ faq_list:
     answer: >-
       The privacy model does most of the work: no cookies, no fingerprinting, rotating
       identifiers, and no raw IP addresses in storage. On top of that there are working
-      endpoints for the three requests that actually arrive — a subject access request
+      endpoints for the three requests that actually arrive: a subject access request
       returning everything held about one visitor, an erasure request that deletes it, and a
       full workspace deletion that purges the account. Erasure reports what it actually
       removed rather than returning a generic success message. You can set your own retention
       period per site instead of inheriting ours. A Data Processing Agreement and the full
       subprocessor list are published on this site rather than available on request. What we
-      do not do is claim a certification we do not hold — this describes the controls that
+      do not do is claim a certification we do not hold. This describes the controls that
       exist, not a compliance guarantee for your particular setup.
 
   - question: What does it cost, and is there a trial?
     answer: >-
       Starter is $49/month and Growth is $79/month, plus a $99/year Founder rate for early
       adopters that stays locked at that price. Every new workspace starts on a 28-day trial
-      with no credit card required — the trial is a flag on your account rather than a Stripe
+      with no credit card required. The trial is a flag on your account rather than a Stripe
       subscription, so there is nothing to cancel and nothing charges when it ends. When it
       does end, tracking stops and your data stays where it is until you either upgrade or
       delete the workspace. The volume allowance for each plan is listed on the pricing page.
