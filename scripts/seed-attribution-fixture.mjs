@@ -215,7 +215,7 @@ async function main () {
   // is ST_Staging by confirming it holds the original de200000 fixture (prod holds 0) — a workspace
   // discriminator, not a write-target check. Pointed at a freshly created site it would find 0 events
   // and fail closed forever. GATE 1 above is what gates the actual write target. Do not "align" these.
-  const live = await assertStagingWorkspaceLive({ host, readToken: process.env.TINYBIRD_READ_TOKEN, siteId: FIXTURE_SITE_ID })
+  const live = await assertStagingWorkspaceLive({ host, readToken: process.env.TINYBIRD_READ_TOKEN })
   if (!live.ok) { console.error(live.reason); process.exit(3) }
   console.log(`[seed] staging workspace CONFIRMED — de200000 fixture holds ${live.count} events.`)
 

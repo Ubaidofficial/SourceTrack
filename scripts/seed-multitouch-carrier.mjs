@@ -115,7 +115,7 @@ async function main () {
   const gate = assertStagingSeedTarget({ appendToken: process.env.TINYBIRD_APPEND_TOKEN, siteId: SITE_ID, targetingStaging: TARGETING_STAGING })
   if (!gate.ok) { console.error(gate.reason); process.exit(3) }
   // GATE 2 (live): the target workspace must already hold the de200000 fixture — prod has no such site.
-  const live = await assertStagingWorkspaceLive({ host, readToken: process.env.TINYBIRD_READ_TOKEN, siteId: SITE_ID })
+  const live = await assertStagingWorkspaceLive({ host, readToken: process.env.TINYBIRD_READ_TOKEN })
   if (!live.ok) { console.error(live.reason); process.exit(3) }
   console.log(`[seed] staging workspace CONFIRMED — de200000 fixture holds ${live.count} events (prod SourceTrack has none).`)
 
