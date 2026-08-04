@@ -1,0 +1,90 @@
+---
+// Three-step "how it works" — design.md §29.2 ("clear three-step explanation") and §29.3
+// position 3 (Track -> Connect -> Know). Mirrors JourneyShowcase / DirectRescueShowcase
+// conventions exactly (main-container > container > container-padding-*, badge + h2 + lede)
+// so the homepage's vertical rhythm is unchanged.
+//
+// §35.3 logged this as validated twice over — SourceLoop's Track/Measure/Act and Sleek's
+// numbered 01/02/03 — and recorded that the validation raises the PRIORITY of building ours
+// without changing the spec. So the step names are design.md's own (Track / Connect / Know),
+// not a copy of either competitor's wording.
+//
+// ── WHAT THE COPY MAY AND MAY NOT CLAIM (§6, §29.7) ─────────────────────────────────
+// The Track step once ended "— no consent banner needed in most jurisdictions." That was
+// DELETED, not softened. It is a legal determination about consent law, the same class
+// GTM:178 already bans for "GDPR compliant" ("compliance is a legal determination we have
+// not obtained") — and arguably a stronger claim, since it tells the reader they may skip
+// a control their own counsel might require. There is no hedged version of it that is safe
+// to ship; the cookieless mechanism is described factually and the reader draws their own
+// conclusion. Do not reinstate it in any form.
+// Every step describes something that SHIPS today: the one-line script, the webhook/CRM
+// connection, and source-attributed conversions in the reporting. There is deliberately no
+// step promising cost/ROAS figures, predictions, or recommendations — cost-derived metrics
+// are hidden unless ad-cost data exists for the range, so a step implying they always appear
+// would misdescribe the product. Register follows GTM §1.2's voice rule: specific and
+// practitioner-plain, no superlatives, no "AI-powered".
+//
+// NO FIXTURE DATA HERE ON PURPOSE. This section carries no numbers at all, so it needs no
+// "Sample data" badge — there is nothing a visitor could mistake for a measurement. That is
+// why the fixture guard test covers the hero callout and not this file.
+const steps = [
+  {
+    n: "01",
+    title: "Track",
+    body:
+      "Add one script to your site. It records visits without cookies and keeps the click IDs " +
+      "ad platforms send you.",
+  },
+  {
+    n: "02",
+    title: "Connect",
+    body:
+      "Point your Stripe or Shopify webhook at SourceTrack, or post conversions from your own " +
+      "backend. That is what ties a payment back to the visit that produced it.",
+  },
+  {
+    n: "03",
+    title: "Know",
+    body:
+      "Every conversion carries the source, campaign and landing page it came from, so you can " +
+      "open any number and read the path behind it.",
+  },
+];
+---
+
+<section class="relative overflow-hidden">
+  <div class="main-container">
+    <div class="container">
+      <div class="container-padding-y container-padding-x">
+        <div class="mb-10 text-center">
+          <div class="bg-gradient-primary p-px inline-block rounded-full mb-2">
+            <div class="bg-gradient-black-grid px-4 py-1.5 rounded-full">
+              <span class="gradient-text-primary">How it works</span>
+            </div>
+          </div>
+          <h2 class="text-h2 font-medium lg:w-3/5 mx-auto">
+            Three steps, then the reporting is yours
+          </h2>
+          <p class="text-lg mt-4 lg:w-3/5 mx-auto">
+            Install once, connect the system that already knows about your revenue, and every
+            conversion arrives with its source attached.
+          </p>
+        </div>
+
+        <ol class="mx-auto grid w-full max-w-[1000px] gap-4 md:grid-cols-3">
+          {
+            steps.map((step) => (
+              <li class="rounded-[24px] border border-[#2D3333] bg-[#121616] p-6">
+                <div class="flex items-baseline gap-3">
+                  <span class="text-2xl font-black tracking-tight text-primary">{step.n}</span>
+                  <h3 class="text-xl font-black tracking-tight text-white">{step.title}</h3>
+                </div>
+                <p class="mt-3 text-sm leading-relaxed text-[#C7CFCF]">{step.body}</p>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>

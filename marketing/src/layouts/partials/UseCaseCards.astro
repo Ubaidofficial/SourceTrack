@@ -1,0 +1,86 @@
+---
+// Use-case cards — design.md §29.3 position 4, immediately after "How it works" and above
+// Pricing. Mirrors JourneyShowcase / DirectRescueShowcase section conventions so the
+// homepage's vertical rhythm is unchanged.
+//
+// PROMOTION, NOT CONSTRUCTION. All five destinations already exist and are live; before this
+// section the homepage linked to NONE of them, so five real pages sat behind the header
+// dropdown and two footer links with no entry point from the page most visitors land on.
+// This section builds no new pages and makes no new claims — it surfaces what shipped.
+//
+// Titles match menu.json's Solutions children verbatim. If a solutions page is renamed or
+// added, both lists have to move together; the guard test asserts every href here resolves
+// to a real page file, so a rename breaks CI instead of shipping a 404 on the homepage.
+//
+// Each blurb describes the attribution problem that segment has, in the practitioner-plain
+// register GTM §1.2 requires. No numbers, no outcome promises, no "increase revenue by" —
+// so there is nothing here that needs a fixture label or that could read as a measurement.
+const useCases = [
+  {
+    title: "SaaS & B2B",
+    href: "/solutions/saas",
+    body: "Trials and subscriptions convert weeks after the first click. Keep the whole path, not the last touch.",
+  },
+  {
+    title: "eCommerce & DTC",
+    href: "/solutions/ecommerce",
+    body: "Tie paid, organic and AI-referred visits to real orders, with refunds netted back out.",
+  },
+  {
+    title: "Lead Generation",
+    href: "/solutions/lead-gen",
+    body: "Forms and booked calls carry their source through to your CRM instead of arriving unattributed.",
+  },
+  {
+    title: "Agencies & Portfolio",
+    href: "/solutions/agency",
+    body: "Every client site in one place, each with its own reporting and its own data boundary.",
+  },
+  {
+    title: "Shopify Stores",
+    href: "/solutions/shopify",
+    body: "Storefront visits and paid orders stitched by the same visitor id, straight from the order webhook.",
+  },
+];
+---
+
+<section class="relative overflow-hidden">
+  <div class="main-container">
+    <div class="container">
+      <div class="container-padding-y container-padding-x">
+        <div class="mb-10 text-center">
+          <div class="bg-gradient-primary p-px inline-block rounded-full mb-2">
+            <div class="bg-gradient-black-grid px-4 py-1.5 rounded-full">
+              <span class="gradient-text-primary">Who it is for</span>
+            </div>
+          </div>
+          <h2 class="text-h2 font-medium lg:w-3/5 mx-auto">
+            The same question, in five different shapes
+          </h2>
+          <p class="text-lg mt-4 lg:w-3/5 mx-auto">
+            Which source produced this customer? What changes between these is the conversion
+            being attributed and how long the path takes.
+          </p>
+        </div>
+
+        <div class="mx-auto grid w-full max-w-[1100px] gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {
+            useCases.map((useCase) => (
+              <a
+                href={useCase.href}
+                class="group rounded-[24px] border border-[#2D3333] bg-[#121616] p-6 transition-colors hover:border-primary/40 focus-visible:border-primary/40"
+              >
+                <h3 class="text-lg font-black tracking-tight text-white">{useCase.title}</h3>
+                <p class="mt-2 text-sm leading-relaxed text-[#C7CFCF]">{useCase.body}</p>
+                <span class="mt-4 inline-flex items-center gap-1 text-xs font-extrabold uppercase tracking-wider text-primary">
+                  See how
+                  <span aria-hidden="true" class="transition-transform group-hover:translate-x-0.5">&rarr;</span>
+                </span>
+              </a>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

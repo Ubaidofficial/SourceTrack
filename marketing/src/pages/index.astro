@@ -7,6 +7,8 @@ import JourneyShowcase from "@/partials/JourneyShowcase.astro";
 import ProofStrip from "@/partials/ProofStrip.astro";
 import IconTrio from "@/partials/IconTrio.astro";
 import ComparisonTable from "@/partials/ComparisonTable.astro";
+import HowItWorksShowcase from "@/partials/HowItWorksShowcase.astro";
+import UseCaseCards from "@/partials/UseCaseCards.astro";
 import Pricing from "@/partials/Pricing";
 import FAQ from "@/partials/FAQ";
 import { getListPage } from "@/lib/contentParser";
@@ -56,6 +58,13 @@ const faqSchema = {
   <ProofStrip />
   <IconTrio />
   <ComparisonTable />
+  {/* §29.3 order: the product-preview cluster above (DirectRescue -> Journey ->
+      ProofStrip -> IconTrio -> ComparisonTable), then how-it-works (3), then
+      use-case cards (4), then pricing (5). The two land together because the spec
+      pairs them: an explainer that ends without telling the reader which of them it
+      applies to is half the sequence. */}
+  <HowItWorksShowcase />
+  <UseCaseCards />
   <Pricing data={pricing} client:visible />
   <FAQ data={faq} client:visible />
 </Base>

@@ -1,0 +1,63 @@
+---
+// Hero stat callout — the §10.4 "AI Attribution Hero" SHAPE (one plain-English headline plus
+// 3-5 AI source chips), borrowed for the marketing hero and bounded by §26.
+//
+// ── WHY THERE IS NO SECOND SENTENCE ─────────────────────────────────────────────────
+// §10.4's own example reads: "AI tools influenced 42 leads this month. ChatGPT and Perplexity
+// were the strongest sources." The first sentence is a count. The SECOND ranks the sources and
+// therefore reads as a narrated insight about the data — which is the shape §26 rules out
+// (LLM analyzer, fake recommendations) and CLAUDE.md §6 rules out for good (no LLM-narrated
+// freeform revenue/attribution numbers, marketing site included). So this ships the count and
+// the source chips, and stops. The chips are a set, deliberately unordered and unranked; no
+// chip is styled as "strongest", and there is no delta, arrow, or trend claim.
+//
+// Also absent by rule: no model version labels (§26), no CTA. §10.4's "View AI sources" CTA
+// targets an in-app screen; the hero already carries two buttons, and a third pointing at a
+// login wall would be worse than none.
+//
+// ── STATIC FIXTURE MARKUP (§29.5) ───────────────────────────────────────────────────
+// Numbers and chip names are hardcoded below and nothing here reads a data source of any kind
+// — no network access, no data client, no query helper, no real customer data. Same
+// construction as DashboardMockup.astro / DirectRescueMockup.astro, which this sits directly
+// above. The guard test greps this whole FILE for data-access tokens, comments included, so a
+// commented-out one would be caught too — which is why none are spelled out literally here.
+//
+// DISCLOSURE IS THE INLINE LINE PLUS THE PAGE FOOTER, NEVER A PER-CARD BADGE. This component
+// originally carried a "Sample data" pill. §29.8 — codified in #584 after this was written, from
+// the pattern #581 shipped — bans per-card badges outright: one small muted footer line per page
+// ("Product visuals shown use illustrative data.", Footer.astro:75) is the whole disclosure, and
+// a pill competes with real content while reading as a defensive sticker.
+//
+// The "Illustrative example, not a customer's data" sentence below STAYS. That is not a badge and
+// it is the same construction DirectRescueMockup uses, pinned by direct-rescue-mockup-fixture
+// .test.js, which asserts the badge is absent AND that sentence is present. A specific figure in
+// a hero is exactly what a visitor would otherwise read as a live measurement (§6).
+const LEAD_COUNT = 42;
+const AI_SOURCES = ["ChatGPT", "Perplexity", "Claude", "Gemini"];
+---
+
+<div class="mx-auto mt-8 w-full max-w-[560px]">
+  <div class="rounded-[20px] border border-[#2D3333] bg-[#121616]/80 px-5 py-4 backdrop-blur-xl">
+    <div class="flex items-center gap-3">
+      <p class="text-left text-sm font-black tracking-tight text-white sm:text-base">
+        AI tools influenced {LEAD_COUNT} leads this month
+      </p>
+    </div>
+
+    <ul class="mt-3 flex flex-wrap items-center gap-2">
+      {
+        AI_SOURCES.map((source) => (
+          <li class="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-2.5 py-1 text-[11px] font-bold text-[#C7CFCF]">
+            <span class="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true"></span>
+            {source}
+          </li>
+        ))
+      }
+    </ul>
+
+    <p class="mt-3 text-left text-[11px] leading-relaxed text-[#9DA7A7]">
+      Illustrative example, not a customer's data. SourceTrack detects AI referrers that most
+      analytics record as Direct.
+    </p>
+  </div>
+</div>
