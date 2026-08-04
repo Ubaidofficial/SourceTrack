@@ -14,7 +14,8 @@ import {
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  Filler
 } from 'chart.js'
 import {
   RefreshCw, Bookmark, Trash2, Download, Copy,
@@ -33,7 +34,12 @@ import { SourceIcon, SourceChip } from '../components/SourceIcon'
 import SparseReadings from '../components/SparseReadings'
 import { densifyDailySeries, honestLineStyle, hasEnoughPointsForChart, readingsCaption, formatShortDay } from '../utils/chartHonesty'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend)
+// Filler is required by the 'area' chart type (CHART_TYPES below), which sets
+// `fill: true` on its datasets. It was missing here and the area fill only
+// rendered because Analytics.jsx registered Filler into chart.js's global
+// registry at app boot. Once routes are code-split that page no longer loads,
+// so this file has to register what it actually uses.
+ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend, Filler)
 
 // Multi-touch models are paid-only.
 const MULTI_TOUCH_KEYS = new Set(['linear', 'time_decay', 'u_shaped', 'w_shaped'])

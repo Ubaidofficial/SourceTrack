@@ -1,7 +1,14 @@
+import { lazy, Suspense } from 'react'
 import { useAuth } from './contexts/AuthContext'
-import ReportBuilderMarketing from './pages/ReportBuilderMarketing'
-import ReportBuilder from './pages/ReportBuilder'
 import Layout from './components/Layout'
+import RouteFallback from './components/RouteFallback'
+
+// Split the two branches apart, not just this gate. /report-builder is a public
+// marketing URL for logged-out visitors, and ReportBuilder is the largest page
+// in the app — bundling both into the gate's chunk would make every marketing
+// visitor download the full builder just to see the marketing page.
+const ReportBuilderMarketing = lazy(() => import('./pages/ReportBuilderMarketing'))
+const ReportBuilder = lazy(() => import('./pages/ReportBuilder'))
 
 export default function ReportBuilderGate() {
   const { user, loading } = useAuth()
@@ -15,8 +22,16 @@ export default function ReportBuilderGate() {
   }
 
   if (!user) {
-    return <ReportBuilderMarketing />
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <ReportBuilderMarketing />
+      </Suspense>
+    )
   }
 
-  return <Layout><ReportBuilder /></Layout>
+  return (
+    <Suspense fallback={<RouteFallback />}>
+      <Layout><ReportBuilder /></Layout>
+    </Suspense>
+  )
 }

@@ -3,78 +3,99 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HelmetProvider } from 'react-helmet-async'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { SiteProvider } from './contexts/SiteContext'
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, lazy, Suspense } from 'react'
 import { fetchApi } from './lib/api'
 import Layout from './components/Layout'
-import Login from './pages/Login'
-import Signup from './pages/Signup'
-import ForgotPassword from './pages/ForgotPassword'
-import ResetPassword from './pages/ResetPassword'
-import Dashboard from './pages/Dashboard'
-import AttributionPage from './pages/AttributionPage'
-import Setup from './pages/Setup'
-import Settings from './pages/Settings'
-import Billing from './pages/Billing'
-import Onboarding from './pages/Onboarding'
-import AuthCallback from './pages/AuthCallback'
-import AuthConfirm from './pages/AuthConfirm'
-import Leads from './pages/Leads'
-import LeadDetail from './pages/LeadDetail'
-import Campaigns from './pages/Campaigns'
-import Integrations from './pages/Integrations'
-import Admin from './pages/Admin'
-import Analytics from './pages/Analytics'
 import AdminRoute from './components/AdminRoute'
+import RouteFallback from './components/RouteFallback'
 import { getAuthAppRole } from './utils/authRole'
 import { isSupportPreviewActive } from './utils/supportPreview'
+
+// ─── Eager routes — deliberately NOT code-split ──────────────────────────────
+// Layout and the gate components are the shell around every route, so deferring
+// them buys nothing. The auth entry points stay eager for a correctness reason,
+// not a size one: AuthCallback/AuthConfirm/ResetPassword read window.location's
+// hash/search inside effects, while supabase-js `detectSessionInUrl` (eager, via
+// AuthProvider) CLEARS that hash once it exchanges the tokens. Adding a chunk
+// fetch before those effects run widens the window in which the hash is already
+// gone — an intermittent premature "timeout" on a real login. Login/Signup stay
+// eager because they are the first paint for every logged-out visitor and the
+// only indexable app-host paths (server.mjs INDEXABLE_APP_PATHS).
+// ─────────────────────────────────────────────────────────────────────────────
+import Login from './pages/Login'
+import Signup from './pages/Signup'
+import ResetPassword from './pages/ResetPassword'
+import AuthCallback from './pages/AuthCallback'
+import AuthConfirm from './pages/AuthConfirm'
+
+// ─── Lazy routes ─────────────────────────────────────────────────────────────
+// Everything below is fetched on first navigation to it. One <Suspense> wraps
+// the whole <Routes> tree (see App) — it must, because Landing is rendered from
+// inside AppRootRedirect rather than as a Route element, so a boundary placed
+// only around route children would miss it.
+// ─────────────────────────────────────────────────────────────────────────────
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const AttributionPage = lazy(() => import('./pages/AttributionPage'))
+const Setup = lazy(() => import('./pages/Setup'))
+const Settings = lazy(() => import('./pages/Settings'))
+const Billing = lazy(() => import('./pages/Billing'))
+const Onboarding = lazy(() => import('./pages/Onboarding'))
+const Leads = lazy(() => import('./pages/Leads'))
+const LeadDetail = lazy(() => import('./pages/LeadDetail'))
+const Campaigns = lazy(() => import('./pages/Campaigns'))
+const Integrations = lazy(() => import('./pages/Integrations'))
+const Admin = lazy(() => import('./pages/Admin'))
+const Analytics = lazy(() => import('./pages/Analytics'))
+
 // User Docs
-import DocsHome from './pages/docs/DocsHome'
-import DocsQuickstart from './pages/docs/DocsQuickstart'
-import DocsInstall from './pages/docs/DocsInstall'
-import DocsGoogleAds from './pages/docs/DocsGoogleAds'
-import DocsGTM from './pages/docs/DocsGTM'
-import DocsWebflow from './pages/docs/DocsWebflow'
-import DocsWordPress from './pages/docs/DocsWordPress'
-import DocsFramer from './pages/docs/DocsFramer'
-import DocsShopify from './pages/docs/DocsShopify'
-import DocsStripe from './pages/docs/DocsStripe'
-import DocsTroubleshooting from './pages/docs/DocsTroubleshooting'
-import DocsMCP from './pages/docs/DocsMCP'
+const DocsHome = lazy(() => import('./pages/docs/DocsHome'))
+const DocsQuickstart = lazy(() => import('./pages/docs/DocsQuickstart'))
+const DocsInstall = lazy(() => import('./pages/docs/DocsInstall'))
+const DocsGoogleAds = lazy(() => import('./pages/docs/DocsGoogleAds'))
+const DocsGTM = lazy(() => import('./pages/docs/DocsGTM'))
+const DocsWebflow = lazy(() => import('./pages/docs/DocsWebflow'))
+const DocsWordPress = lazy(() => import('./pages/docs/DocsWordPress'))
+const DocsFramer = lazy(() => import('./pages/docs/DocsFramer'))
+const DocsShopify = lazy(() => import('./pages/docs/DocsShopify'))
+const DocsStripe = lazy(() => import('./pages/docs/DocsStripe'))
+const DocsTroubleshooting = lazy(() => import('./pages/docs/DocsTroubleshooting'))
+const DocsMCP = lazy(() => import('./pages/docs/DocsMCP'))
 
 // Developer Docs
-import DevelopersHome from './pages/developers/DevelopersHome'
-import DevelopersApi from './pages/developers/DevelopersApi'
-import DevelopersTracker from './pages/developers/DevelopersTracker'
-import DevelopersConversions from './pages/developers/DevelopersConversions'
-import DevelopersOfflineConversions from './pages/developers/DevelopersOfflineConversions'
-import DevelopersIdentify from './pages/developers/DevelopersIdentify'
-import DevelopersWebhooks from './pages/developers/DevelopersWebhooks'
-import DevelopersCampaignCosts from './pages/developers/DevelopersCampaignCosts'
-import DevelopersSecurity from './pages/developers/DevelopersSecurity'
+const DevelopersHome = lazy(() => import('./pages/developers/DevelopersHome'))
+const DevelopersApi = lazy(() => import('./pages/developers/DevelopersApi'))
+const DevelopersTracker = lazy(() => import('./pages/developers/DevelopersTracker'))
+const DevelopersConversions = lazy(() => import('./pages/developers/DevelopersConversions'))
+const DevelopersOfflineConversions = lazy(() => import('./pages/developers/DevelopersOfflineConversions'))
+const DevelopersIdentify = lazy(() => import('./pages/developers/DevelopersIdentify'))
+const DevelopersWebhooks = lazy(() => import('./pages/developers/DevelopersWebhooks'))
+const DevelopersCampaignCosts = lazy(() => import('./pages/developers/DevelopersCampaignCosts'))
+const DevelopersSecurity = lazy(() => import('./pages/developers/DevelopersSecurity'))
 
-import Landing from './pages/Landing'
-import Product from './pages/Product'
-import Attribution from './pages/Attribution'
-import AIReferralTracking from './pages/AIReferralTracking'
-import ReportBuilderGate from './ReportBuilderGate'
-import Pricing from './pages/Pricing'
-import CompareGA4 from './pages/CompareGA4'
-import SolutionEcommerce from './pages/SolutionEcommerce'
-import SolutionSaaS from './pages/SolutionSaaS'
-import SolutionLeadGen from './pages/SolutionLeadGen'
-import SolutionAgency from './pages/SolutionAgency'
-import SolutionShopify from './pages/SolutionShopify'
-import Privacy from './pages/Privacy'
-import DPA from './pages/DPA'
-import Subprocessors from './pages/Subprocessors'
-import DoNotSell from './pages/DoNotSell'
-import Terms from './pages/Terms'
-import SEORevenue from './pages/SEORevenue'
-import AIVisibility from './pages/AIVisibility'
-import PublicIntegrations from './pages/PublicIntegrations'
-import Security from './pages/Security'
-import Demo from './pages/Demo'
-import UtmBuilderTool from './pages/tools/UtmBuilder'
+const Landing = lazy(() => import('./pages/Landing'))
+const Product = lazy(() => import('./pages/Product'))
+const Attribution = lazy(() => import('./pages/Attribution'))
+const AIReferralTracking = lazy(() => import('./pages/AIReferralTracking'))
+const ReportBuilderGate = lazy(() => import('./ReportBuilderGate'))
+const Pricing = lazy(() => import('./pages/Pricing'))
+const CompareGA4 = lazy(() => import('./pages/CompareGA4'))
+const SolutionEcommerce = lazy(() => import('./pages/SolutionEcommerce'))
+const SolutionSaaS = lazy(() => import('./pages/SolutionSaaS'))
+const SolutionLeadGen = lazy(() => import('./pages/SolutionLeadGen'))
+const SolutionAgency = lazy(() => import('./pages/SolutionAgency'))
+const SolutionShopify = lazy(() => import('./pages/SolutionShopify'))
+const Privacy = lazy(() => import('./pages/Privacy'))
+const DPA = lazy(() => import('./pages/DPA'))
+const Subprocessors = lazy(() => import('./pages/Subprocessors'))
+const DoNotSell = lazy(() => import('./pages/DoNotSell'))
+const Terms = lazy(() => import('./pages/Terms'))
+const SEORevenue = lazy(() => import('./pages/SEORevenue'))
+const AIVisibility = lazy(() => import('./pages/AIVisibility'))
+const PublicIntegrations = lazy(() => import('./pages/PublicIntegrations'))
+const Security = lazy(() => import('./pages/Security'))
+const Demo = lazy(() => import('./pages/Demo'))
+const UtmBuilderTool = lazy(() => import('./pages/tools/UtmBuilder'))
 
 // React Query's default staleTime is 0, so every tab switch and every
 // navigation refetched all data even when it had just loaded. 60s of freshness
@@ -218,12 +239,11 @@ function ProtectedRoute({ children }) {
   }
 
   // ── Phase 2: onboarding/me in-flight ──────────────────────────────────────
+  // Same spinner as the Suspense fallback: a lazy route chunk resolves, then
+  // this gate runs, and reusing one component makes that read as a single
+  // continuous load rather than two different loading UIs in sequence.
   if (onboarding.loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-dark-bg">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black dark:border-st-lime" />
-      </div>
-    )
+    return <RouteFallback />
   }
 
   // ── Phase 3: error — do NOT redirect; show recoverable UI ─────────────────
@@ -344,11 +364,7 @@ function AppRootRedirect() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-dark-bg">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black dark:border-st-lime" />
-      </div>
-    )
+    return <RouteFallback />
   }
 
   if (user) {
@@ -368,6 +384,11 @@ export default function App() {
       <AuthProvider>
         <SiteProvider>
           <BrowserRouter>
+            {/* One boundary around the whole tree. It has to sit here rather
+                than around individual route children: AppRootRedirect renders
+                <Landing /> itself (for www.) instead of Landing being a Route
+                element, so a narrower boundary would miss it. */}
+            <Suspense fallback={<RouteFallback />}>
             <Routes>
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
               <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
@@ -464,6 +485,7 @@ export default function App() {
               {/* Unknown paths: on app. subdomain go through auth-branch; on www. fall to Landing */}
               <Route path="*" element={<AppRootRedirect />} />
             </Routes>
+            </Suspense>
           </BrowserRouter>
         </SiteProvider>
       </AuthProvider>
