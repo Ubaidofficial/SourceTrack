@@ -478,9 +478,23 @@ router.post('/create-checkout', requireUserAuth, validateSiteKey, requireSiteMem
       client_reference_id: site.id,
       customer: site.stripe_customer_id || undefined,
       allow_promotion_codes: true,
-      subscription_data: {
-        trial_period_days: site.plan === 'trial' ? 14 : undefined,
-      },
+      // NO trial_period_days, and no subscription_data at all — deliberate.
+      //
+      // This previously read `trial_period_days: site.plan === 'trial' ? 14 : undefined`,
+      // which granted a SECOND trial precisely to sites already on one. The product's own
+      // trial is 28 days (sites.trial_ends_at, migration 20260730000000), so a visitor who
+      // subscribed late in it got up to 28 + 14 = 42 days before the first charge. The
+      // condition read like a guard and was the opposite of one.
+      //
+      // The fix is a removal, not a re-number: there is ONE trial, the product's 28 days,
+      // and Stripe adds nothing on top. Do not reintroduce this key "corrected" to 28 —
+      // that would re-create the stack with a bigger number.
+      //
+      // The whole subscription_data object goes with it because the key was its only
+      // member. Verified against the ACTUAL wire payload (not the in-memory object): the
+      // Stripe SDK already dropped both `undefined` values and the resulting empty
+      // `subscription_data: {}`, so non-trial checkouts sent no subscription_data before
+      // this change either — removing it is a byte-identical no-op for them.
     })
 
     return res.status(200).json({ success: true, data: { url: session.url }, error: null })
