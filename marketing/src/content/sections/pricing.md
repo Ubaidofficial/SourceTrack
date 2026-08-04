@@ -52,8 +52,6 @@ pricing_plans:
         include: true
       - value: Visitor Journey Timeline Inspector
         include: true
-      - value: Unlimited Team Seats
-        include: true
 
     button:
       label: Start 28-day free trial
