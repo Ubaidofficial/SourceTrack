@@ -170,6 +170,38 @@ const requireGoogleConnectionSetup = (req, res, next) => {
 }
 
 
+// Build the per-platform status map from the tenant's connection rows. Pure + testable,
+// mirroring buildCapiStatus in api/routes/capi.js — which already gets this exact question
+// right for the same table (`const oauthConnected = row?.status === 'connected'`).
+//
+// `connected` MUST be derived from the row's status, never from the row merely existing.
+// The OAuth callback deliberately creates the row half-finished (status 'needs_account',
+// no account_id yet — see the upsert above), so row-presence and usability are different
+// facts. Collapsing them reported 'needs_account' as connected:true, which made
+// Campaigns.jsx render a "Sync connected accounts" button that always 400s on the
+// !conn.account_id guard in POST /google/sync. Never returns a raw site_key (§6.5).
+export function buildAdPlatformStatusMap(connections, envConfigured) {
+  const statusMap = {
+    google_ads: { connected: false, status: 'not_configured', env_configured: envConfigured },
+    meta_ads: { connected: false, status: 'not_configured' }
+  }
+
+  for (const c of connections || []) {
+    if (!statusMap[c.platform]) continue
+    statusMap[c.platform] = {
+      connected: c.status === 'connected',
+      status: c.status,
+      account_id: c.account_id || null,
+      account_name: c.account_name || null,
+      last_synced_at: c.last_synced_at || null,
+      last_error_message: c.last_error_message || null,
+      env_configured: c.platform === 'google_ads' ? envConfigured : undefined
+    }
+  }
+
+  return statusMap
+}
+
 // 2. GET `/status`: Returns status overview for all ad platform sync accounts
 router.get('/status', async (req, res) => {
   try {
@@ -183,24 +215,9 @@ router.get('/status', async (req, res) => {
 
     if (error) throw error
 
-    const statusMap = {
-      google_ads: { connected: false, status: 'not_configured', env_configured: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_ADS_REDIRECT_URI) },
-      meta_ads: { connected: false, status: 'not_configured' }
-    }
+    const envConfigured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_ADS_REDIRECT_URI)
 
-    for (const c of connections || []) {
-      statusMap[c.platform] = {
-        connected: true,
-        status: c.status,
-        account_id: c.account_id || null,
-        account_name: c.account_name || null,
-        last_synced_at: c.last_synced_at || null,
-        last_error_message: c.last_error_message || null,
-        env_configured: c.platform === 'google_ads' ? statusMap.google_ads.env_configured : undefined
-      }
-    }
-
-    res.json({ success: true, data: statusMap })
+    res.json({ success: true, data: buildAdPlatformStatusMap(connections, envConfigured) })
   } catch (err) {
     console.error('[ad-platforms/status] Error:', err.message)
     res.status(500).json({ success: false, error: 'Failed to retrieve connection statuses' })
