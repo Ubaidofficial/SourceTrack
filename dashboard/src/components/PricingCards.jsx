@@ -1,8 +1,18 @@
 import { Link } from 'react-router-dom'
 
 // Monthly pageview caps are taken verbatim from PLAN_DEFAULT_PV_LIMIT in
-// api/lib/plan-features.js: starter 50_000, growth 150_000. Founder (early-bird
-// annual) maps to Growth entitlements, so 150,000. Data-retention is NOT claimed
+// api/lib/plan-features.js: starter 250_000, growth 1_000_000. Founder (early-bird
+// annual) maps to Growth entitlements, so 1,000,000.
+//
+// This comment previously claimed the same "taken verbatim" provenance while stating
+// starter 50_000 / growth 150_000 — neither of which PLAN_DEFAULT_PV_LIMIT has ever
+// held. The claim of provenance is what made it dangerous: it told every later reader
+// the numbers had already been checked against the backend, so nobody re-checked them,
+// and the card under-promised Growth by a factor of ~6.7 for as long as it stood. If
+// you change a number here, re-read plan-features.js in the same edit — the comment is
+// only true while someone keeps making it true.
+//
+// Data-retention is NOT claimed
 // here — it is not enforced in prod. "First month free" is intentionally NOT
 // claimed: the trial is 28 days (raised from 14 in migration 20260730000000), and
 // 28 days is still not a month, so that copy would still overstate it. The
@@ -19,7 +29,7 @@ const PLANS = [
       'First-, last- & multi-touch views',
       'CSV export',
       '1 site',
-      '50,000 tracked pageviews/mo',
+      '250,000 tracked pageviews/mo',
     ],
     cta: 'Start free', href: '/signup', featured: false,
   },
@@ -32,7 +42,7 @@ const PLANS = [
       'Google Search Console SEO attribution (beta)',
       'Stripe revenue attribution (beta / test-mode)',
       'Manual Shopify & webhook revenue import',
-      '150,000 tracked pageviews/mo',
+      '1,000,000 tracked pageviews/mo',
     ],
     cta: 'Start free', href: '/signup', featured: true,
   },
@@ -42,7 +52,7 @@ const PLANS = [
     features: [
       '25 seats. One per customer. Locked forever.',
       'Growth-level features',
-      '150,000 tracked pageviews/mo',
+      '1,000,000 tracked pageviews/mo',
       '28-day money-back guarantee',
       'Price never rises while you keep the seat',
       'Seats left — [VERIFY: wire to a real count]',

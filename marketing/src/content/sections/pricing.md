@@ -16,7 +16,7 @@ pricing_plans:
         prefix: $
         suffix: /year
     features:
-      - value: 50,000 tracked pageviews / mo
+      - value: 250,000 tracked pageviews / mo
         include: true
       - value: Full Multi-Touch Attribution
         include: true
@@ -44,7 +44,7 @@ pricing_plans:
         prefix: $
         suffix: /year
     features:
-      - value: 250,000 tracked pageviews / mo
+      - value: 1,000,000 tracked pageviews / mo
         include: true
       - value: Search Console SEO Revenue Attribution
         include: true
