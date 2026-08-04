@@ -5,8 +5,11 @@
 // FACTUAL CORRECTION (PR3): this header used to say the refund is "TINYBIRD-ONLY …
 // NOT written to Supabase attributed_conversions" because "nightly-attribution.js
 // already skips convValue < 0". BOTH halves are now stale. #240 changed the nightly to
-// PERSIST refunds: nightly-attribution.js:720 skips negatives EXCEPT
-// conversion_type='refund', so a refund DOES reach Supabase attributed_conversions with
+// PERSIST refunds: nightly-attribution.js:809 skips negatives EXCEPT
+// conversion_type='refund' (grep the guard, not the line — it read :720 until this
+// correction and will drift again:
+//   `if ((convValue < 0 && conversion.conversion_type !== 'refund') || !conversion.distinct_id)`)
+// so a refund DOES reach Supabase attributed_conversions with
 // its negative value and Supabase revenue nets (gross − refund). The WEBHOOK still
 // writes only to Tinybird — the Supabase row arrives via the nightly, keyed
 // conversion_event_id = the Tinybird event_id (re_…) under
