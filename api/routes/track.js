@@ -12,6 +12,24 @@ import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { getSupabase } from '../lib/supabase.js'
 import { isIngestionBotUserAgent, logWouldDropBot, coarseUaHash } from '../lib/bot-filter.js'
 
+// Confirmed-booking provenance: which completion event each provider is allowed to
+// report. ONE source of truth for the pairing, used by both the ingest allowlist and
+// the auto-promotion gate — previously these were two independent flat lists, which is
+// how a calendly payload carrying Cal.com's event name passed both.
+//
+// Mirrors exactly what the tracker emits (tracker/tracker.js:1211,1228 and
+// tracker/tracker.cookieless.js:975,989). Nothing else may legitimately produce a
+// booking_scheduled event, so a payload outside this map did not come from our tracker.
+// Adding a provider means adding its real event name here, not widening a list.
+export const BOOKING_PROVIDER_EVENTS = {
+  calendly: ['event_scheduled'],
+  calcom: ['bookingSuccessfulV2']
+}
+
+// The only detection mechanism that exists. A booking is promoted to a conversion only
+// on a first-party provider callback observed in the browser — never an inference.
+export const BOOKING_DETECTION_METHOD = 'browser_embed_event'
+
 async function updateTelemetryMetadata(site, body) {
   try {
     const supabase = getSupabase()
@@ -316,17 +334,21 @@ export async function track(req, res) {
 
       if (typeof p.booking_provider === 'string') {
         const bp = p.booking_provider.trim().toLowerCase()
-        if (['calendly', 'calcom'].includes(bp)) booking_provider = bp
+        if (Object.hasOwn(BOOKING_PROVIDER_EVENTS, bp)) booking_provider = bp
       }
 
       if (typeof p.booking_detection_method === 'string') {
         const bdm = p.booking_detection_method.trim().toLowerCase()
-        if (bdm === 'browser_embed_event') booking_detection_method = bdm
+        if (bdm === BOOKING_DETECTION_METHOD) booking_detection_method = bdm
       }
 
-      if (typeof p.booking_event_type === 'string') {
+      // Validated AGAINST THE RESOLVED PROVIDER, not against a flat union of every
+      // provider's event names. A calendly payload claiming 'bookingSuccessfulV2' is a
+      // payload our tracker cannot produce; it is now stored as null rather than kept as
+      // a valid-looking pairing that no real integration would ever emit.
+      if (booking_provider && typeof p.booking_event_type === 'string') {
         const bet = p.booking_event_type.trim()
-        if (['event_scheduled', 'bookingSuccessfulV2'].includes(bet)) booking_event_type = bet
+        if (BOOKING_PROVIDER_EVENTS[booking_provider].includes(bet)) booking_event_type = bet
       }
 
       booking_page_path = validatePathname(p.page_path)
@@ -592,11 +614,21 @@ export async function track(req, res) {
 
       // No isLeadForm analogue, deliberately. isLeadForm exists because a raw form submit is
       // ambiguous — it might be a login, a search box or an internal admin form — so the form
-      // path has to INFER intent from shape. A booking carries no such ambiguity: the gate is
-      // simply that the ingest allowlist above accepted a provider, which happens only for
-      // calendly/calcom paired with a recognised browser_embed_event. A spoofed or unrecognised
-      // payload leaves booking_provider null and never reaches this branch.
-      if (!isIgnore && booking_provider) {
+      // path has to INFER intent from shape. A booking carries no such ambiguity.
+      //
+      // ALL THREE provenance fields are required. This previously read `booking_provider`
+      // alone, while the comment here claimed the allowlist only accepted a provider "paired
+      // with a recognised browser_embed_event" — a pairing that was never implemented. The
+      // three fields are validated independently above, so a bare { booking_provider:
+      // 'calendly' } promoted to a real $conversion with both other fields null, as did a
+      // calendly payload carrying Cal.com's event name. Promotion writes a LEAD, so the
+      // weakest accepted payload set the bar for what counts as a confirmed meeting.
+      //
+      // Checking all three is what makes the comment true: a payload reaching this branch
+      // named a known provider, reported the only detection mechanism that exists, AND
+      // named that provider's own completion event. Anything else is not something our
+      // tracker can emit, so it does not become a lead.
+      if (!isIgnore && booking_provider && booking_detection_method && booking_event_type) {
         const anonId = req.body.anonymous_id || uuidv4()
 
         // incomingIsExplicit = TRUE here, where the form path passes false. A provider callback

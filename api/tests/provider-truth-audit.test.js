@@ -959,7 +959,12 @@ test('140L — J. Backend form_provider allowlist matches provider truth', async
 test('140L — K. Backend booking_provider allowlist enforces calendly/calcom only', async (t) => {
   const { track } = await import('../../api/routes/track.js')
 
-  function mockBookingReq(provider) {
+  // eventType is parameterised because booking_event_type is validated AGAINST the
+  // resolved provider: 'event_scheduled' is Calendly's completion event and
+  // 'bookingSuccessfulV2' is Cal.com's. K2 previously passed calcom paired with
+  // Calendly's event — a combination no tracker build emits — and still passed,
+  // because it only asserted the provider field.
+  function mockBookingReq(provider, eventType = 'event_scheduled') {
     return {
       headers: { 'user-agent': 'Mozilla/5.0 (Test)' },
       body: {
@@ -971,7 +976,7 @@ test('140L — K. Backend booking_provider allowlist enforces calendly/calcom on
           event_type: 'booking_scheduled',
           booking_provider: provider,
           booking_detection_method: 'browser_embed_event',
-          booking_event_type: 'event_scheduled',
+          booking_event_type: eventType,
           page_path: '/contact'
         }
       },
@@ -997,10 +1002,12 @@ test('140L — K. Backend booking_provider allowlist enforces calendly/calcom on
 
   await t.test('K2. booking_provider=calcom accepted and persisted verbatim', async () => {
     const res = mockRes()
-    const captured = await withCaptureSpy(() => track(mockBookingReq('calcom'), res))
+    const captured = await withCaptureSpy(() => track(mockBookingReq('calcom', 'bookingSuccessfulV2'), res))
     assert.strictEqual(res._status, 200)
     assert.strictEqual(captured.properties.booking_provider, 'calcom',
       'allowlisted booking_provider must persist as-is')
+    assert.strictEqual(captured.properties.booking_event_type, 'bookingSuccessfulV2',
+      "Cal.com's own completion event must persist as-is")
   })
 
   // K3–K7: unsupported booking providers are accepted (200) but their provider
@@ -1016,6 +1023,158 @@ test('140L — K. Backend booking_provider allowlist enforces calendly/calcom on
         `unsupported booking_provider="${provider}" must be coerced to null`)
     })
   }
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// K8+. Confirmed-booking PROMOTION requires ALL THREE provenance fields
+// ─────────────────────────────────────────────────────────────────────────────
+// Why this block exists: section K above validated the provider allowlist only, and
+// used booking_detection_method / booking_event_type purely as a valid FIXTURE. It
+// never asserted what happens when they are missing, wrong, or belong to a different
+// provider — so the promotion gate reading `booking_provider` alone was consistent
+// with a green suite. A bare { booking_provider: 'calendly' } wrote a real $conversion
+// of type 'meeting' (a LEAD) with both other fields null.
+//
+// Promotion is the thing worth pinning, not storage: an over-permissive gate invents
+// leads. Every case below asserts the CONVERSION outcome, not just the stored label.
+test('140L — K8+. Booking promotion requires provider + detection_method + that provider\'s own event', async (t) => {
+  const { track } = await import('../../api/routes/track.js')
+  const { setDualWriteTransport, __getDualWriteBatcher } = await import('../../tinybird/adapter/dual-write.js')
+  const { gunzipSync } = await import('node:zlib')
+
+  // Unlike withCaptureSpy (which returns only the first row) this returns EVERY row,
+  // because a promoted booking writes two: the booking_scheduled event AND the
+  // derived $conversion. Asserting on row[0] alone cannot see promotion at all.
+  let seq = 0
+  async function ingestAll(properties) {
+    const payloads = []
+    const prevFlag = process.env.TINYBIRD_DUAL_WRITE
+    process.env.TINYBIRD_DUAL_WRITE = 'true'
+    setDualWriteTransport(async (p) => { payloads.push(p) }, { flushAt: 1000, flushInterval: 0 })
+    try {
+      const req = {
+        headers: { 'user-agent': 'Mozilla/5.0 (Test)' },
+        // Distinct anonymous_id per case: the shared dedupe cache is process-wide, so
+        // reusing one id would let case N suppress case N+1 and fake a rejection.
+        body: {
+          event: 'booking_scheduled',
+          anonymous_id: `anon-promo-${seq++}`,
+          session_id: 'sess-456',
+          page_url: 'https://example.com/contact',
+          properties: { event_type: 'booking_scheduled', page_path: '/contact', ...properties }
+        },
+        site: { id: 'site-123', excluded_paths: null, custom_url_params: null, last_seen_at: null, plan_name: 'starter', pv_limit: 5000 }
+      }
+      const res = { _status: 200, status (s) { this._status = s; return this }, json () { return this } }
+      await track(req, res)
+      const b = __getDualWriteBatcher(); if (b) await b.flush()
+      return { status: res._status, rows: payloads.flatMap(p => gunzipSync(p).toString('utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l))) }
+    } finally {
+      setDualWriteTransport(null)
+      if (prevFlag === undefined) delete process.env.TINYBIRD_DUAL_WRITE
+      else process.env.TINYBIRD_DUAL_WRITE = prevFlag
+    }
+  }
+  const promotion = (rows) => rows.find(r => r.event_type === '$conversion') || null
+
+  const VALID_CALENDLY = {
+    booking_provider: 'calendly',
+    booking_detection_method: 'browser_embed_event',
+    booking_event_type: 'event_scheduled'
+  }
+
+  // ── Positive control FIRST — if this ever fails, every rejection below is vacuous ──
+  await t.test('K8. Baseline: all three fields valid DOES promote to a meeting conversion', async () => {
+    const { status, rows } = await ingestAll(VALID_CALENDLY)
+    assert.strictEqual(status, 200)
+    const conv = promotion(rows)
+    assert.ok(conv, 'a fully-valid Calendly booking must still promote')
+    assert.strictEqual(conv.conversion_type, 'meeting')
+  })
+
+  await t.test('K9. Baseline: Cal.com with its OWN event promotes', async () => {
+    const { rows } = await ingestAll({
+      booking_provider: 'calcom',
+      booking_detection_method: 'browser_embed_event',
+      booking_event_type: 'bookingSuccessfulV2'
+    })
+    const conv = promotion(rows)
+    assert.ok(conv, 'a fully-valid Cal.com booking must still promote')
+    assert.strictEqual(conv.conversion_type, 'meeting')
+  })
+
+  // ── The five patterns that were WRONGLY promoted before this gate was fixed ──────
+  const WRONGLY_PROMOTED = [
+    ['K10. detection_method bogus', { ...VALID_CALENDLY, booking_detection_method: 'totally_made_up' }],
+    ['K11. event_type bogus', { ...VALID_CALENDLY, booking_event_type: 'NONSENSE_XYZ' }],
+    ['K12. both other fields bogus', { booking_provider: 'calendly', booking_detection_method: 'x', booking_event_type: 'y' }],
+    ['K13. other fields absent entirely', { booking_provider: 'calendly' }],
+    // Both individually allowlisted, but the pair is one no tracker build emits.
+    ['K14. cross-provider mismatch (calendly + Cal.com event)', { ...VALID_CALENDLY, booking_event_type: 'bookingSuccessfulV2' }]
+  ]
+
+  for (const [name, properties] of WRONGLY_PROMOTED) {
+    await t.test(`${name} — accepted (200) but must NOT promote`, async () => {
+      const { status, rows } = await ingestAll(properties)
+      // Still 200: an incomplete payload is stored, not rejected. Only the LEAD is refused.
+      assert.strictEqual(status, 200, 'incomplete provenance is accepted, not rejected')
+      assert.ok(rows.some(r => r.event_type === 'booking_scheduled'),
+        'the booking_scheduled event itself must still be recorded')
+      assert.strictEqual(promotion(rows), null,
+        'incomplete/mismatched provenance must NOT write a $conversion')
+    })
+  }
+
+  await t.test('K15. Mismatch rejects in BOTH directions (calcom + Calendly event)', async () => {
+    const { rows } = await ingestAll({
+      booking_provider: 'calcom',
+      booking_detection_method: 'browser_embed_event',
+      booking_event_type: 'event_scheduled'
+    })
+    assert.strictEqual(promotion(rows), null,
+      'the pairing check must not be one-directional')
+  })
+
+  await t.test('K16. A mismatched event name is stored as null, not kept as a valid-looking label', async () => {
+    const { rows } = await ingestAll({ ...VALID_CALENDLY, booking_event_type: 'bookingSuccessfulV2' })
+    const evt = rows.find(r => r.event_type === 'booking_scheduled')
+    assert.strictEqual(evt.booking_event_type, null,
+      "Cal.com's event name must not persist on a Calendly booking")
+  })
+
+  await t.test('K17. Casing/whitespace is still tolerated on a genuine booking', async () => {
+    const { rows } = await ingestAll({
+      booking_provider: '  CALENDLY ',
+      booking_detection_method: ' Browser_Embed_Event ',
+      booking_event_type: 'event_scheduled'
+    })
+    assert.ok(promotion(rows), 'normalisation must not be tightened into a false rejection')
+  })
+
+  await t.test('K18. ignore_conversion still suppresses an otherwise-valid booking', async () => {
+    const { rows } = await ingestAll({ ...VALID_CALENDLY, ignore_conversion: true })
+    assert.strictEqual(promotion(rows), null, 'the opt-out must survive the tighter gate')
+  })
+
+  await t.test('K19. The gate and the ingest allowlist share ONE pairing map', async () => {
+    // Anti-drift: the bug was two independent lists that could disagree. If a future
+    // change re-forks them, this fails rather than silently re-opening the gap.
+    const { BOOKING_PROVIDER_EVENTS, BOOKING_DETECTION_METHOD } = await import('../../api/routes/track.js')
+    assert.deepStrictEqual(BOOKING_PROVIDER_EVENTS, {
+      calendly: ['event_scheduled'],
+      calcom: ['bookingSuccessfulV2']
+    }, 'the pairing map must match what tracker.js actually emits')
+    assert.strictEqual(BOOKING_DETECTION_METHOD, 'browser_embed_event')
+
+    // And it must match the trackers themselves — the real producers.
+    for (const f of ['tracker/tracker.js', 'tracker/tracker.cookieless.js']) {
+      const src = fs.readFileSync(path.join(rootDir, f), 'utf8')
+      for (const [provider, events] of Object.entries(BOOKING_PROVIDER_EVENTS)) {
+        assert.ok(src.includes(`_sendBookingScheduled('${provider}', '${events[0]}')`),
+          `${f} must emit ${provider} -> ${events[0]}`)
+      }
+    }
+  })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
