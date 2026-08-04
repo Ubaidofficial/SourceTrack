@@ -165,7 +165,7 @@ router.get('/', async (req, res) => {
 
       // 10-second timeout Promise
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('HogQL query timed out')), 10000)
+        setTimeout(() => reject(new Error('seo_revenue_landing_pages pipe read timed out')), 10000)
       })
 
       try {
@@ -191,7 +191,7 @@ router.get('/', async (req, res) => {
         // as before.
         if (process.env.TINYBIRD_FORCE_READ === 'true') throw phErr
         landingLookupFailed = true
-        console.error('[SEO Revenue] PostHog landing page query failed or timed out:', phErr.message)
+        console.error('[SEO Revenue] Tinybird seo_revenue_landing_pages read failed or timed out:', phErr.message)
       }
     }
 

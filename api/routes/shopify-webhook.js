@@ -302,7 +302,7 @@ router.post('/:site_key', async (req, res) => {
 
     return res.status(200).json({ received: true })
   } catch (phErr) {
-    console.error('[shopify-webhook] PostHog capture conversion ingestion failed:', phErr.message)
+    console.error('[shopify-webhook] $conversion ingestion failed:', phErr.message)
     await logIngestionEvent(siteKey, 'shopify', {
       providerEventId,
       orderId,
