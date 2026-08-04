@@ -20,7 +20,7 @@ import {
   RefreshCw, Bookmark, Trash2, Download, Copy,
   Search, ChevronDown, ArrowRight, Plus, HelpCircle,
   BarChart3, X, Lock, Settings, Sparkles, AlertTriangle,
-  LineChart, AreaChart, PieChart, Hash, Table, CalendarX
+  LineChart, AreaChart, PieChart, Hash, Table, CalendarX, UploadCloud
 } from 'lucide-react'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
 import { describeQueryError } from '../lib/queryError'
@@ -1271,16 +1271,28 @@ export default function ReportBuilder() {
           <div className="w-16 h-16 bg-lime-500/10 border border-lime-500/20 text-lime-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <Lock className={iconClass} />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-dark-primary mb-2">Ad Integration Required</h3>
+          {/* #624 — this used to read "Connect Google Ads or Meta Ads in Integrations" with a
+              "Connect Ad Accounts" button pointing at /app/integrations. No such flow exists
+              there: POST /google/save-account and POST /meta/connect have zero dashboard
+              callers, and the Integrations page's own copy says "SourceTrack does not
+              auto-sync from ad networks here." The CTA outlived the surface it pointed at
+              (PR #23 removed the UI; the endpoints and this link survived).
+
+              Now points at the path that actually works today — CSV import — reusing the
+              existing ?import=true deep link that Integrations.jsx:1425 already uses. Wording
+              follows design.md §19.5/§22's canonical line ("Connect ad cost data to unlock
+              ROAS, CPL, and CAC") rather than inventing a third phrasing. */}
+          <h3 className="text-lg font-bold text-gray-900 dark:text-dark-primary mb-2">Ad Cost Data Required</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
-            Connect Google Ads or Meta Ads in Integrations to track ad spend, campaigns, ROAS, CAC, and CPA.
+            Connect ad cost data to unlock ROAS, CPL, and CAC. Import your ad spend as a CSV —
+            SourceTrack does not sync from ad networks automatically.
           </p>
           <Link
-            to="/app/integrations"
+            to="/campaigns?import=true"
             className="inline-flex items-center gap-2 px-4 py-2 bg-lime-500 text-st-black hover:bg-lime-400 rounded-lg text-sm font-bold transition-all shadow-sm"
           >
-            <Settings className="w-4 h-4" />
-            Connect Ad Accounts
+            <UploadCloud className="w-4 h-4" />
+            Import Ad Spend
           </Link>
         </div>
       )
@@ -1292,16 +1304,24 @@ export default function ReportBuilder() {
           <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <Lock className="w-8 h-8 text-amber-600 dark:text-amber-400" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-dark-primary mb-2">Waiting for Cost Data</h3>
+          {/* #624, adjacent branch of the same gate. This said "Cost data typically updates
+              every few hours" — a cadence that does not exist. There is no scheduled ad-cost
+              sync: no job in api/jobs/, and none is even possible through these routes, since
+              every sync endpoint sits behind requireUserAuth (ad-platforms.js:143) and a cron
+              cannot authenticate as a user. Syncing is manual, via Campaigns → "Sync connected
+              accounts". Promising an automatic refresh made an empty state look like a wait
+              rather than a required action. */}
+          <h3 className="text-lg font-bold text-gray-900 dark:text-dark-primary mb-2">No Cost Data Yet</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
-            Ad accounts are connected, but no ad spend cost data has been synced for this site yet. Cost data typically updates every few hours.
+            An ad account is connected, but no spend has been imported for this range. Cost
+            syncing is manual — run a sync, or import your ad spend as a CSV.
           </p>
           <Link
-            to="/app/integrations"
+            to="/campaigns"
             className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 rounded-lg text-sm font-semibold transition-all"
           >
             <Settings className="w-4 h-4" />
-            Manage Integrations
+            Go to Campaigns
           </Link>
         </div>
       )
