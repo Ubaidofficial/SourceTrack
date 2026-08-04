@@ -67,3 +67,21 @@ npm-audit*.json
 # taste-skill (npx skills add) - agent skill files, not app code
 .agents/
 skills-lock.json
+
+# Competitor visual reference captures — INTENTIONALLY LOCAL, never committed.
+#
+# research/competitors/ holds full-page screenshots of competitors' marketing sites
+# (SourceLoop, Orchly, …) used as visual reference under design.md §35.1, plus an
+# INDEX.md manifest. It is ignored rather than committed for two independent reasons:
+#
+#   1. THIS REPO IS PUBLIC (verified: visibility=public). Committing third-party
+#      marketing pages would republish someone else's copyrighted material from our
+#      own public repo. §35.3 treats competitor assets as a trademark/misrepresentation
+#      exposure and permits studying them, not shipping them.
+#   2. It is ~24 MB of binaries. Git history is append-only, so committing it costs
+#      every future clone forever and cannot be undone without rewriting history.
+#
+# ⚠️ Ignoring protects against `git clean -fd`, NOT `git clean -xfd` (-x removes ignored
+# files too). If these captures need to survive indefinitely, move them OUTSIDE the repo
+# working tree — a path under the repo is always one -x away from gone.
+research/
