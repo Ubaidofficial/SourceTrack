@@ -3,6 +3,7 @@ import AnimatedButton from "@/components/AnimatedButton.astro";
 import HeroShape from "@/components/shape/HeroShape";
 import { markdownify } from "@/lib/utils/textConverter";
 import JourneyMockup from "./JourneyMockup.astro";
+import HeroStatCallout from "./HeroStatCallout.astro";
 interface Props {
   data: any;
 }
@@ -71,6 +72,9 @@ const { data } = Astro.props;
               )
             }
           </div>
+
+          <!-- AI attribution stat, fixture-only (§10.4 shape, §29.5 rules) -->
+          <HeroStatCallout />
           </div>
 
           <!-- VISITOR JOURNEY MOCKUP -->
