@@ -57,7 +57,13 @@
               <td class="py-4 px-4 font-black text-primary">
                 <span class="inline-flex items-center gap-1.5 text-primary">
                   <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                  <span>22 AI domains</span>
+                  {/* COUNT IS GUARDED. api/tests/ai-assistant-count-copy.test.js reads this
+                      literal and asserts it equals the number of distinct canonical labels in
+                      AI_DOMAINS_MAP (api/lib/channel-classifier.js). Change the classifier and
+                      this string must move with it, or the suite fails.
+                      Counting labels, not domains, on purpose: chatgpt.com and openai.com are
+                      one product to a buyer, and a domain total drifts on every alias added. */}
+                  <span>16 AI assistants and answer engines</span>
                 </span>
               </td>
               <td class="py-4 px-4 text-[#D5D0C3]">ChatGPT focus</td>

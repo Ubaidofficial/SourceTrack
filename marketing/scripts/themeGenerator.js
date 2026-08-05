@@ -87,26 +87,14 @@ function generateThemeCSS() {
       addColorsToCss(cssLines, themeConfig.colors.default.text_color);
     }
 
-    // Add darkmode colors (if available)
-    if (themeConfig.colors.darkmode) {
-      cssLines.push("", "  /* === Darkmode Colors === */");
-
-      if (themeConfig.colors.darkmode.theme_color) {
-        addColorsToCss(
-          cssLines,
-          themeConfig.colors.darkmode.theme_color,
-          "darkmode",
-        );
-      }
-
-      if (themeConfig.colors.darkmode.text_color) {
-        addColorsToCss(
-          cssLines,
-          themeConfig.colors.darkmode.text_color,
-          "darkmode",
-        );
-      }
-    }
+    // No darkmode branch. The marketing site is light-only (design.md §3.1: the
+    // marketing site does not ship a dark mode; the product app keeps both and is
+    // a separate build with its own `darkMode: 'class'` Tailwind config).
+    //
+    // The emitter is deleted rather than left guarded on `colors.darkmode`,
+    // because a guarded emitter turns re-adding one key to theme.json into a
+    // silent resurrection of a whole theme. Reinstating dark mode here should
+    // have to be a deliberate code change, not a config typo.
 
     // Add font families
     cssLines.push("", "  /* === Font Families === */");
@@ -136,25 +124,11 @@ function generateThemeCSS() {
 
     cssLines.push("}");
 
-    // Dark mode overrides.
-    //
-    // Tailwind v4 compiles every token utility to var(--color-<key>) — verified:
-    // `.bg-body{background-color:var(--color-body)}`. So re-declaring the SAME
-    // variable names under the theme attribute flips every existing utility at
-    // runtime, with no `dark:` variant needed on any element. The `@theme` block
-    // above also emits --color-darkmode-* (the upstream theme's convention); that
-    // form would require a dark: twin on each of the ~459 token-utility usages,
-    // which is why the override below is what actually drives dark mode here.
-    //
-    // Selector is `:root[data-theme="dark"]` (0,2,0) so it outranks `@theme`'s
-    // `:root` (0,1,0) regardless of emitted source order.
-    if (themeConfig.colors.darkmode) {
-      cssLines.push("", '/* === Dark mode — toggled by data-theme on <html> === */');
-      cssLines.push(':root[data-theme="dark"] {');
-      addColorsToCss(cssLines, themeConfig.colors.darkmode.theme_color || {});
-      addColorsToCss(cssLines, themeConfig.colors.darkmode.text_color || {});
-      cssLines.push("}");
-    }
+    // No theme-attribute override block is emitted — see the note above the
+    // font-family section. Tailwind v4 compiles every token utility to
+    // var(--color-<key>), so an override block re-declaring those same names
+    // under a selector is all it takes to flip the entire site; that is exactly
+    // why it must not exist on a light-only build.
 
     // Ensure output directory exists
     const outputDir = path.dirname(outputPath);
