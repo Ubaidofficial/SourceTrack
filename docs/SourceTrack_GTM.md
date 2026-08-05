@@ -160,7 +160,7 @@ Multi-touch attribution (9 models) · UTM/referrer/campaign/click-ID capture · 
 CAPI (Meta+Google config landing via #60 — don't claim "live forwarding" until a merchant uses it) · GSC SEO-revenue ("estimated, matched by landing page + date") · Stripe ("test-mode beta," not production) · Shopify ("manual webhook," not native app).
 
 ### 🚫 CANNOT claim yet
-Trial→paid / MRR-by-source (rail unbuilt — and this is your *sharpest stated ICP feature*, so closing it is high-value) · quality-filtered CAPI (Phase 3) · ROAS/CPL/CAC (V2) · "GDPR compliant" badge · native Shopify/Stripe · privacy advantage vs SourceLoop · full production Stripe.
+Trial→paid / MRR-by-source (rail unbuilt — and this is your *sharpest stated ICP feature*, so closing it is high-value) · quality-filtered CAPI (Phase 3) · **ROAS/CPL/CAC *from automatic ad-platform sync*** (corrected 2026-08-04 — see §5.3; the metrics themselves DO compute off manual CSV cost import and belong in the caveat list, it is the *auto-sync* that cannot be claimed) · "GDPR compliant" badge · native Shopify/Stripe · privacy advantage vs SourceLoop · full production Stripe.
 
 ### 5.1 Copy constraints — the hard DO-NOTs for every public page
 
@@ -223,6 +223,38 @@ shows 4 started on ChatGPT — Meta can't see that, and neither can your pixel."
 signal, sends the platform nothing extra, **strengthens** the privacy story, and is more compelling
 to a marketer than "our CAPI has extra fields." **V1.1 idea — logged, not built.**
 
+### 5.3 Ad-cost IMPORT is a different rail from CAPI export — and it is further along than this doc said (2026-08-04)
+
+§5.1/§5.2 above are about CAPI **export** (conversions *out* to ad platforms). Cost **import**
+(spend *in* from ad platforms) is the opposite direction and had no entry here at all, which made
+this doc read as though ROAS were wholly absent. It is not.
+
+**What actually ships: manual CSV/API cost import, and it is live.** `api/lib/ad-cost-imports.js`
+plus `/api/campaign-costs`, surfaced as Campaigns → "Import Costs" and the Integrations CSV card.
+When cost rows exist, ROAS/CPL/CAC/CPA/net-profit compute and render for real
+(`Campaigns.jsx:272` gates every one of them on `hasCost`, with an additional currency-mismatch
+suppression). So the CMO-facing ROAS story is **claimable today with a setup caveat**
+("upload your spend CSV"), not a V2 promise. `FEATURE_MAP.md:121` already said this; design.md's
+Feature Flag Map contradicted it and has been corrected in the same pass.
+
+**What does NOT ship: 1-click native ad-platform sync — for any platform.** Verified at
+`f8e134ca`:
+
+- **Google Ads / Meta Ads** — cost-import BACKENDS are real and complete (`google-ads.js` GAQL,
+  `meta-ads.js` `/insights`, both workers in `ad-platforms.js`). But **neither has a customer-facing
+  connect UI**: `POST /google/save-account` and `POST /meta/connect` have **zero dashboard callers**.
+  No customer can complete a connection through the product. PR #23 removed the Integrations UI as a
+  spec-leak and the endpoints survived without it.
+- **TikTok / LinkedIn** — **no cost-import code whatsoever.** No lib, no route, no worker. Both are
+  CAPI-export-only platforms. Any claim of four native ad integrations is false for these two at the
+  code level, not merely unverified.
+
+Google Ads API access being approved (Manager Account, Basic Access, 15k ops/day) is
+**API-access evidence, not integration-built evidence** — it removes one blocker to a connection
+flow that still has to be built. The §5.1 ban on claiming "Automatic Google Ads / Meta sync"
+therefore **stands unchanged and is now better evidenced**: it is not "built but unverified", it is
+"built server-side, unreachable by any customer."
+
 ---
 
 ## 6. ICP
@@ -232,7 +264,7 @@ to a marketer than "our CAPI has extra fields." **V1.1 idea — logged, not buil
 - Agencies = SMALL agencies on portfolio view; full white-label/workspaces stay V1.1 (the bloat doorway).
 - **Anti-bloat test for every feature: "would a founder find this simple?"**
 - **Delivery promise: "no setup tax, no enterprise tax."** CAPI config must hit "minutes not hours."
-- ⚠️ Tension to hold: CMOs expect ROAS; it's V2. Position quality-filtered forwarding ("optimize on buyers, not signups") as the CMO value, hold the ROAS line unless beta CMOs demand it.
+- ⚠️ Tension to hold: CMOs expect ROAS. **Corrected 2026-08-04 — "it's V2" was wrong** (see §5.3): ROAS/CPL/CAC compute and render today off manual CSV cost import. What is V2 is *automatic* ad-platform sync. So the line to hold is not "no ROAS" but "ROAS, once you upload spend" — and position quality-filtered forwarding ("optimize on buyers, not signups") alongside it rather than as a substitute for it.
 
 ---
 

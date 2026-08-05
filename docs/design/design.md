@@ -2486,9 +2486,11 @@ This table is authority. If anything conflicts, this table wins.
 | HubSpot sync | V1.1 | Locked card only |
 | PDF export | V1.1 | Locked state only |
 | Activity heatmap | V1.1 | Locked. Currently shipping in the journey panel and must be gated. |
-| Google Ads cost import | V2 | Not active V1 UI |
-| Meta Ads cost import | V2 | Not active V1 UI |
-| TikTok cost import | V2 | Not active V1 UI |
+| CSV/API cost import | V1 live | Unlocks ROAS/CPL/CAC when cost data exists. `api/lib/ad-cost-imports.js` + `/api/campaign-costs`; UI is Campaigns "Import Costs" and the Integrations CSV card. This is the ONLY shipped cost path. |
+| Google Ads cost import | V2 · backend built, no connect UI | Backend real (`api/lib/google-ads.js` GAQL, `runGoogleSync`), but `POST /google/save-account` has zero dashboard callers, so no customer can complete a connection. End-to-end unproven. |
+| Meta Ads cost import | V2 · backend built, no connect UI | Backend real (`api/lib/meta-ads.js` `/insights`, `runMetaSync`), but `POST /meta/connect` has zero dashboard callers. End-to-end unproven. |
+| TikTok Ads cost import | V2 · not built | No lib, route, or worker exists. TikTok is CAPI-export only (`conversion-sync.js`). "Not active V1 UI" previously implied something was being withheld — nothing is. |
+| LinkedIn Ads cost import | V2 · not built | No lib, route, or worker exists. LinkedIn is CAPI-export only (`conversion-sync.js`). |
 | Team roles | V2 | Future component |
 | API playground | V2 | Future component |
 | Alerts/notification bell | V2 | Not V1 top bar. Currently shipping and must be removed. |
