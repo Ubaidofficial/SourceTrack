@@ -80,6 +80,21 @@ This version expands the prior V1.1 design system with the missing product surfa
   the app-side references in §4 (top-bar item 5) and §30.8 were checked and are **not** affected.
   **§29.2 still reads "light-first with a dark toggle" and is contradicted by the same PR — left
   unamended here deliberately, scoped to a follow-up so this row lands alone.**
+- v1.4 (2026-08-05): §29.2 rewritten for **light-only**, closing the contradiction flagged but
+  deliberately left unfixed by #644. The opening paragraph read *"light-first with a dark toggle,
+  defaulting to the visitor's OS preference … render on warm ink in both themes"*; PR #643 deleted the
+  toggle and collapsed marketing to a single light palette, so the spec Phase 2 builds from described
+  behaviour that no longer exists. **The design intent is preserved, not deleted:** the warm-ink product
+  band and final CTA stay, *and so does the stated reason* — they are what give the light page its
+  structure and keep the product frame reading as a lit object rather than a flat screenshot. Only the
+  theme mechanics (toggle, OS-preference default, "both themes", canvas inversion) are dropped. PR #643
+  named as the shipped reference implementation.
+- v1.4 (2026-08-05): §29.2's **"soft lime glow behind the product preview"** reconciled with §2.6 in the
+  §29.2 text itself, so the homepage spec no longer has to be read alongside §2 to be applied safely.
+  Both limits restated inline (~15% of visible area, never a full-bleed wash or glow behind primary
+  content; computed WCAG AA verified, never eyeballed), and §2.6's **OPEN live-hero defect** —
+  glow at ~70–80% of view, white-on-lime below AA — is cross-referenced explicitly as a defect and
+  **not** a reference implementation, so Phase 2 cannot re-ship it by copying the current hero.
 - v1.4, **OPEN — founder decision required, deliberately not settled here:** glassmorphism. §25.1
   lists it under "avoid" as an AI-generation guardrail; §26, the master V1 prohibited list, does not
   address it in either direction. Needed call: a full V1-wide ban, or a guardrail scoped to
@@ -2824,12 +2839,13 @@ Website positioning, hero copy, and voice are owned by `docs/SourceTrack_GTM.md`
 
 ### 29.2 Website visual direction
 
-> The marketing site is **light-first with a dark toggle**, defaulting to the visitor's OS preference. Both themes share the same warm neutrals; only the canvas inverts. The product band and the final CTA render on warm ink in **both** themes — that is what gives the light theme its structure and keeps the product frame reading as a lit object rather than a flat screenshot.
+> The marketing site is **light-only**. There is no dark theme, no toggle, and no OS-preference switching — the page renders the same for every visitor. The product band and the final CTA render on **warm ink**; that contrast against the light canvas is what gives the page its structure and keeps the product frame reading as a **lit object rather than a flat screenshot**. Those ink bands are structural, not a dark-theme artefact — dropping them would flatten the page, so they stay. Reference implementation — PR #643, merged 2026-08-05, which deleted `marketing/src/layouts/components/ThemeToggle.astro`, removed it from `Header.astro`, and collapsed the marketing theme to a single light palette.
 
 Borrow the premium lightweight SaaS feel from modern lime-glow landing pages:
 
 - product-first hero
-- soft lime glow behind the product preview
+- soft lime glow behind the product preview — **bounded to the product-preview object, never the page.**
+  See the constraint below.
 - clean rounded cards
 - clear three-step explanation
 - simple pricing cards
@@ -2846,6 +2862,22 @@ Do not borrow:
 - heavy animation
 - decorative blobs
 - workflow-builder metaphors
+
+**The lime glow is bounded by §2.6 — read that before building the hero.** "Behind the product
+preview" means behind a **bounded object**; a glow that reads as page background violates the
+accent-density ceiling no matter how soft it is. Both §2.6 limits apply here in full:
+
+- **~15% of any single screen's visible area**, and **never** a full-bleed background wash or a glow
+  behind primary content.
+- If lime ends up behind body text, **verify computed WCAG AA contrast before shipping — do not
+  eyeball it.**
+
+⚠️ **This is an OPEN defect on the live site, not a solved problem** (§2.6, confirmed via screenshot
+2026-08-03, still unfixed): the live marketing hero's background glow covers roughly **70–80% of
+visible area**, with white text on a bright-lime highlight block at a **computed contrast below AA**.
+That hero is the motivating case for the ceiling — it is **not** a reference implementation and must
+not be copied forward. Any Phase 2 homepage work has to measure the glow's coverage and run the
+computed-AA check rather than inheriting the current hero's treatment.
 
 ### 29.3 Homepage structure
 
