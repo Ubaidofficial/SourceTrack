@@ -77,6 +77,12 @@
 
   --orange: #ff7a33;
   --orange-700: #b3480e;
+  /* ⚠ BANNED FOR TEXT. #e85a1a computes to 3.24:1 on --paper and 3.21:1 on
+     --orange-50 — both below WCAG AA (4.5). Fills, borders and icons only.
+     For orange text use --orange-700 (#b3480e, 4.97:1 on paper). Enforced by
+     scripts/contrast-audit.mjs, which scores every text pair against the BUILT
+     stylesheet. Three rules previously violated this and were corrected to
+     --orange-700 (a:hover -> --ink + underline, .calc-row.hi b, .plan li em). */
   --orange-600: #e85a1a;
   --orange-400: #ff9459;
   --orange-200: #ffcbaa;
@@ -143,8 +149,17 @@
     color: var(--orange-700);
     text-decoration: none;
   }
+  /* Hover goes DARKER, not lighter. --orange-600 (#e85a1a) on paper computes to
+     3.24:1 — below WCAG AA 4.5 — so using it for link text shipped an inaccessible
+     hover state. --ink is ~16:1 on paper, and the underline carries the affordance
+     that a colour shift alone no longer can (base `a` is already --orange-700, so
+     hover had to change on some axis other than hue to remain perceivable).
+     See the --orange-600 text ban noted at its declaration. */
   a:hover {
-    color: var(--orange-600);
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
   }
   button {
     font: inherit;
@@ -2316,7 +2331,9 @@
     margin-left: 3px;
   }
   .calc-row.hi b {
-    color: var(--orange-600);
+    /* was --orange-600: 3.24:1 on paper, below AA. Colour value only — the rule is
+       otherwise untouched and its component is not built until 2c. */
+    color: var(--orange-700);
   }
   .calc-row.sub b {
     font-size: 18px;
@@ -2599,7 +2616,9 @@
     font-weight: 900;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--orange-600);
+    /* was --orange-600: 3.21:1 on --orange-50, below AA. Colour value only — the rule
+       is otherwise untouched and its component is not built until 2c. */
+    color: var(--orange-700);
     background: var(--orange-50);
     padding: 2px 6px;
     border-radius: 6px;
@@ -3582,7 +3601,11 @@
   border-radius: 16px;
   background: rgba(23, 29, 27, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.11);
-  backdrop-filter: blur(8px);
+  /* backdrop-filter removed — glassmorphism is barred by §25.1 (open founder
+     decision, binding on generation until ruled) and is on the 2a do-not-port list.
+     Declaration deleted only; the 0.92 fill already carries the card, so nothing
+     else in this rule changes. It shipped inert in #643 and would have gone live
+     the moment this stylesheet was imported. */
   z-index: 4;
 }
 .st-home .orb-av {
@@ -3648,9 +3671,12 @@
   gap: 8px;
   padding: 6px 12px;
   border-radius: 99px;
-  background: rgba(12, 16, 15, 0.72);
+  /* Fill raised 0.72 -> 0.92 because the backdrop-filter below it was removed
+     (§25.1 glassmorphism ban, see .orb-card above). At 0.72 with no blur the text
+     would sit on whatever passes behind it; 0.92 keeps the pill legible without
+     reintroducing the effect. Alpha is the only value changed. */
+  background: rgba(12, 16, 15, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.09);
-  backdrop-filter: blur(6px);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: -0.01em;
