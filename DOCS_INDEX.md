@@ -51,7 +51,7 @@ Trust tier per doc. **Precedence when sources conflict:** code → `KNOWN_ISSUES
 |---|---|---|
 | `SESSION_STATE.md` | Current session, branch, blockers, active work. | Maintained |
 | `SESSION_HANDOFF_2026-08-01.md` | Frozen point-in-time handoff for the 2026-08-01 thread (GDPR erasure-suppression arc #540→#554, Sitepins tiers 1–3, the KNOWN_ISSUES batch). Dated snapshot — **not** a rolling doc; do not edit it forward. Same pattern as `SESSION_HANDOFF_2026-07-26.md`. | Historical |
-| `SESSION_HANDOFF_2026-08-04.md` | Frozen point-in-time handoff for the 2026-08-04 thread — beta launch blockers only (free-plan `manual_spend` paywall gap #628/#629, the `ReportBuilderGate` plan hole, #627 unverified in-browser), verified against live GitHub/Railway/Supabase at `c00957b9`. Dated snapshot — do not edit it forward. | Historical |
+| `SESSION_HANDOFF_2026-08-04.md` | Frozen point-in-time handoff for the 2026-08-04 thread — beta launch blockers only, verified against live GitHub/Railway/Supabase at `c00957b9`. **The three blockers it lists were open AT FREEZE TIME; two have since moved.** Still open: **#627 unverified in-browser** (merged `c00957b9`, never click-tested) and the **free-plan `manual_spend` paywall gap**, now tracked solely under **#629** (#628 closed as its duplicate — the duplicate closed, the gap did not). Resolved since: the `ReportBuilderGate` plan hole, split out as #631 and fixed by #632 (`5f1f4bb3`). Dated snapshot — do not edit it forward. | Historical |
 
 *(`SESSION_HANDOFF.md` and `SESSION_LOG.md` — the rolling session narrative — were archived 2026-07-24 → `docs/archive/2026-07/`, superseded by `NEXT_SESSION_PROMPT.md §0.5`; see the dated section below.)*
 
