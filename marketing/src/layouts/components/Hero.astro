@@ -1,6 +1,5 @@
 ---
 import AnimatedButton from "@/components/AnimatedButton.astro";
-import HeroShape from "@/components/shape/HeroShape";
 import { markdownify } from "@/lib/utils/textConverter";
 import JourneyMockup from "./JourneyMockup.astro";
 import HeroStatCallout from "./HeroStatCallout.astro";
@@ -10,57 +9,58 @@ interface Props {
 const { data } = Astro.props;
 ---
 
-<section class="overflow-hidden relative">
-  <div class="h-full w-px bg-light/8 absolute top-0 left-1/2 -translate-x-1/2">
-  </div>
-  <div class="main-container">
-    <div class="container px-0">
-      <div class="container-padding-y pb-0 px-0">
-        <!-- Editorial two-column: copy left, product mockup right.
-             Single column below md with the copy first, matching how
-             WhyChooseUs/KeyFeatures stack. -->
-        <div class="grid items-center gap-10 px-4 lg:grid-cols-12 lg:gap-12">
-          <div
-            class="flex flex-col items-start text-left lg:col-span-5"
-          >
-          <!-- BADGE -->
+{/*
+  Homepage hero — v1.4 design system (Phase 2a).
+
+  ── §2.6: WHY HeroShape IS GONE ────────────────────────────────────────────────
+  The previous hero rendered `shape/HeroShape.tsx`: a 1519x912 SVG holding two lime
+  paths under `feGaussianBlur stdDeviation="60"`, absolutely positioned and centred
+  behind the whole section. Rasterised over the real page canvas it covered ~43% of a
+  1440x900 viewport at the "clearly lime" threshold (g-b>25, g>=200) and ~60% at any
+  perceptible tint — against §2.6's ~15% ceiling. More importantly it failed the
+  CATEGORICAL half of the rule: a full-bleed blur behind the entire section reads as
+  page background, which §2.6 bars outright regardless of area.
+
+  It is replaced by `.hero`'s own background in home-design.css — two radial gradients
+  that terminate at `transparent 20%` / `transparent 22%`, so the lime is a bounded
+  corner accent rather than a wash, plus a masked grid. Nothing is layered on top of
+  that here; the glow now lives entirely in the stylesheet where its extent is legible.
+
+  HeroShape.tsx itself is left in the tree, unimported. It is not dead-by-accident —
+  deleting a component while rebuilding the section that used it would mix two
+  unrelated changes in one diff. Removal is a follow-up.
+
+  ── §2.7 position 1: window-frame card ─────────────────────────────────────────
+  The product preview sits in `.demo-frame` + `.demo-chrome` (title bar, three
+  window dots, a URL). §2.7 requires consecutive sections not to repeat a container
+  treatment, and names the hero as position 1 = window frame.
+
+  ── §29.4: attribution story, fixture data ─────────────────────────────────────
+  The frame wraps `JourneyMockup`, which already renders a real attribution path as
+  static fixture data rather than a generic dashboard. It is reused rather than
+  rebuilt: it is already §29.5-compliant and already covered by the fixture guard
+  tests. Disclosure stays where §29.8 puts it — the single page-footer line, never a
+  per-card badge.
+*/}
+
+<section class="st-home">
+  <div class="hero">
+    <div class="main-container">
+      <div class="wrap">
+        <div class="hero-copy">
           {
             data.badge?.enable && (
-              <div
-                id="hero-badge"
-                class="bg-gradient-secondary p-px rounded-full mb-2"
-              >
-                <div class="px-4 py-1.5 bg-gradient-black-grid rounded-full flex items-center">
-                  <p class="gradient-text-primary">{data.badge.label}</p>
-                </div>
-              </div>
+              <p id="hero-badge" class="pill">
+                {data.badge.label}
+              </p>
             )
           }
-          <!-- TITLE -->
-          <h1
-            id="hero-title"
-            class="hero-text mb-4"
-            set:html={markdownify(data.title).__html}
-          />
-          <!-- CONTENT -->
-          <p id="hero-content" class="text-lg">
-            {data.content}
-          </p>
-          <!-- BUTTONS -->
-          <div
-            id="hero-buttons"
-            class="mt-10 flex items-center gap-5 flex-wrap justify-start"
-          >
-            {
-              data.button_dark?.enable && (
-                <AnimatedButton
-                  classNames="btn btn-dark"
-                  href={data.button_dark?.link || "/"}
-                >
-                  {data.button_dark?.label}
-                </AnimatedButton>
-              )
-            }
+
+          <h1 id="hero-title" set:html={markdownify(data.title).__html} />
+
+          <p id="hero-content" class="hero-sub">{data.content}</p>
+
+          <div id="hero-buttons" class="hero-actions">
             {
               data.button_primary?.enable && (
                 <AnimatedButton
@@ -71,88 +71,109 @@ const { data } = Astro.props;
                 </AnimatedButton>
               )
             }
+            {
+              data.button_dark?.enable && (
+                <AnimatedButton
+                  classNames="btn btn-dark"
+                  href={data.button_dark?.link || "/"}
+                >
+                  {data.button_dark?.label}
+                </AnimatedButton>
+              )
+            }
           </div>
 
-          <!-- AI attribution stat, fixture-only (§10.4 shape, §29.5 rules) -->
+          {/* AI attribution stat, fixture-only (§10.4 shape, §29.5 rules) */}
           <HeroStatCallout />
-          </div>
+        </div>
 
-          <!-- VISITOR JOURNEY MOCKUP -->
-          <div id="hero-journey" class="relative z-1 lg:col-span-7">
-            <JourneyMockup />
+        {/* Product preview — window-frame card (§2.7 position 1) */}
+        <div id="hero-preview" class="hero-preview">
+          <div class="demo-frame">
+            <div class="demo-chrome">
+              <span class="tl" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="url">app.sourcetrack.ai/journey</span>
+            </div>
+            <div class="demo-body">
+              <JourneyMockup />
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-
-  <!-- Hero Shape -->
-  <div
-    id="hero-shape"
-    class="absolute bottom-20 -z-1 left-1/2 -translate-x-1/2 pointer-events-none h-100 sm:h-150 lg:h-170 xl:h-210"
-  >
-    <HeroShape />
-  </div>
 </section>
 
+<style>
+  /* Hero-local only. Everything structural comes from home-design.css; these are the
+     few declarations that exist because the frame now wraps JourneyMockup, which was
+     previously unframed. Scoped by Astro on top of the .st-home nesting. */
+  .hero-copy {
+    min-width: 0;
+  }
+  .hero-preview {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+  }
+  /* The chrome bar is ink; the body is paper so the mockup reads on its own canvas
+     rather than inheriting the frame's dark fill. */
+  .demo-body {
+    background: var(--paper);
+    padding: 18px;
+  }
+  /* Visible focus on every interactive element (§21). The frame clips, so the ring is
+     drawn inside the element rather than outside it. */
+  .hero-copy :global(a:focus-visible),
+  .hero-preview :global(a:focus-visible),
+  .hero-preview :global(button:focus-visible) {
+    outline: 3px solid var(--ink);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  @media (max-width: 900px) {
+    .demo-body {
+      padding: 12px;
+    }
+  }
+</style>
+
 <script>
+  // §37.1 — entrance motion only, and gated. `prefers-reduced-motion: reduce` skips
+  // every animation and leaves the final state painted, so a reduced-motion visitor
+  // gets the finished hero immediately rather than a hidden one.
+  //
+  // Nothing here depicts product behaviour: these are entrance transforms on static
+  // content, not a simulated data flow. §37.1's product-mechanic rule binds motion
+  // that claims to show the product doing something — the animated journey inside
+  // JourneyMockup is that, and it owns its own guards.
   import { animateMini as animate } from "motion";
+
   function initHero() {
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) return;
+
     const smooth = { ease: "easeInOut" as const };
-    const badge = document.getElementById("hero-badge");
-    const title = document.getElementById("hero-title");
-    const content = document.getElementById("hero-content");
-    const buttons = document.getElementById("hero-buttons");
-    const heroJourney = document.getElementById("hero-journey");
-    const heroShape = document.getElementById("hero-shape");
-    if (badge) {
-      badge.style.opacity = "0";
+    const steps: [string, number, number, string][] = [
+      ["hero-badge", 0.5, 0.2, "translateY(-20px)"],
+      ["hero-title", 0.8, 0.3, "translateY(20px)"],
+      ["hero-content", 0.5, 0.5, "translateY(20px)"],
+      ["hero-buttons", 0.5, 0.6, "translateY(20px)"],
+      ["hero-preview", 1.2, 0.4, "translateY(40px)"],
+    ];
+
+    for (const [id, duration, delay, from] of steps) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      el.style.opacity = "0";
       animate(
-        badge,
-        { opacity: [0, 1], transform: ["translateY(-20px)", "translateY(0)"] },
-        { ...smooth, duration: 0.5, delay: 0.2 },
-      );
-    }
-    if (title) {
-      title.style.opacity = "0";
-      animate(
-        title,
-        { opacity: [0, 1], transform: ["translateY(20px)", "translateY(0)"] },
-        { ...smooth, duration: 0.8, delay: 0.3 },
-      );
-    }
-    if (content) {
-      content.style.opacity = "0";
-      animate(
-        content,
-        { opacity: [0, 1], transform: ["translateY(20px)", "translateY(0)"] },
-        { ...smooth, duration: 0.5, delay: 0.5 },
-      );
-    }
-    if (buttons) {
-      buttons.style.opacity = "0";
-      animate(
-        buttons,
-        { opacity: [0, 1], transform: ["translateY(20px)", "translateY(0)"] },
-        { ...smooth, duration: 0.5, delay: 0.6 },
-      );
-    }
-    if (heroJourney) {
-      heroJourney.style.opacity = "0";
-      animate(
-        heroJourney,
-        { opacity: [0, 1], transform: ["translateY(40px)", "translateY(0)"] },
-        { ...smooth, duration: 1.2, delay: 0.4 },
-      );
-    }
-    if (heroShape) {
-      heroShape.style.opacity = "0";
-      animate(
-        heroShape,
-        { opacity: [0, 1], transform: ["scale(0.8)", "scale(1)"] },
-        { ...smooth, duration: 1.2, delay: 0.2 },
+        el,
+        { opacity: [0, 1], transform: [from, "translateY(0)"] },
+        { ...smooth, duration, delay },
       );
     }
   }
+
   document.addEventListener("astro:page-load", initHero);
 </script>
