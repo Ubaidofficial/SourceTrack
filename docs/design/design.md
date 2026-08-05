@@ -71,6 +71,15 @@ This version expands the prior V1.1 design system with the missing product surfa
   must depict a real, verifiable product behaviour, never decoration disconnected from what the product
   does. It is a constraint on the other §37.1 rows rather than a new motion type. JourneyTrail (PR #571)
   and ModelCompareMockup (PR #576) are named as the compliant-before-the-rule reference implementations.
+- v1.4 (2026-08-05): §23's **Dark mode** row amended — the app keeps both themes with the top-bar
+  toggle (§4), the **marketing site is light-only with no toggle**. PR #643 is named as the shipped
+  reference implementation; it deleted `marketing/src/layouts/components/ThemeToggle.astro` and removed
+  it from `Header.astro`. The row previously read *"Full, both app and marketing. Toggle in top bar."*,
+  so §23 — which declares itself authority ("if anything conflicts, this table wins") — was asserting
+  behaviour `main` no longer ships. §3.3's dark tokens are **unchanged** and remain live for the app;
+  the app-side references in §4 (top-bar item 5) and §30.8 were checked and are **not** affected.
+  **§29.2 still reads "light-first with a dark toggle" and is contradicted by the same PR — left
+  unamended here deliberately, scoped to a follow-up so this row lands alone.**
 - v1.4, **OPEN — founder decision required, deliberately not settled here:** glassmorphism. §25.1
   lists it under "avoid" as an AI-generation guardrail; §26, the master V1 prohibited list, does not
   address it in either direction. Needed call: a full V1-wide ban, or a guardrail scoped to
@@ -2468,7 +2477,7 @@ This table is authority. If anything conflicts, this table wins.
 | Landing page performance | V1 verified | Full |
 | Cookieless visitor ID | V1 verified | Full |
 | Privacy-minimized tracking | V1 verified | Full |
-| Dark mode | V1 | Full, both app and marketing. Toggle in top bar. |
+| Dark mode | V1 (app only) | **App: both themes, toggle in the app top bar (§4).** **Marketing site: light-only, no toggle.** Reference implementation — PR #643, merged 2026-08-05, which deleted `marketing/src/layouts/components/ThemeToggle.astro` and removed it from `Header.astro`. §3.3's dark tokens remain live for the app and are unchanged. |
 | Manual lead qualification | V1 verified | Full |
 | Lead quality metrics | V1 | No revenue required |
 | Manual conversion webhook | V1 verified | Full |
