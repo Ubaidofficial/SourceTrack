@@ -3,8 +3,18 @@ name: CI Regression Pipeline
 on:
   push:
     branches: [ main ]
+  # `feat/home-v14` is the homepage-rebuild integration branch: phases 2a/2b/2c each
+  # open their own PR against it and only the finished result goes to main as one
+  # cutover. Without it listed here a phase PR matches no trigger, reports "no checks
+  # reported", and the CI-green-on-the-exact-head-SHA merge gate (CLAUDE.md §9) is
+  # silently suspended for the whole series — which is exactly what happened to #646.
+  #
+  # NOTE for the next integration branch: adding the name here is necessary but may not
+  # be sufficient. For `pull_request` events GitHub reads the workflow file from the BASE
+  # branch, so a PR into an integration branch that predates this change can still report
+  # no checks until this commit is merged INTO that branch too.
   pull_request:
-    branches: [ main ]
+    branches: [ main, feat/home-v14 ]
 
 # Cancel a superseded in-flight run when a branch is pushed again, so a rapid
 # push sequence bills one full run instead of N. Keyed by ref, so a PR branch and
