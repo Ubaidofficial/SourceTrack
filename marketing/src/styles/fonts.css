@@ -1,0 +1,32 @@
+/* Self-hosted font faces (design.md §3.1: Geist + Geist Mono, self-hosted — no
+   CDN @import, no third-party font host).
+
+   Split by loading mechanism, deliberately:
+
+   · Geist (sans) is NOT declared here. It goes through Astro's font pipeline —
+     declared in theme.json's font_family, fetched at BUILD time by
+     astro.config.mjs's provider, and emitted as a local @font-face pointing at a
+     hashed asset under /_astro/. That is already self-hosted at runtime: the
+     browser issues no request to any external font host. Declaring a second face
+     for the same family here would give the browser two competing sources.
+
+   · Geist Mono IS declared here, from a real file in public/fonts, because the
+     design bundle pins that exact path (`/fonts/GeistMono-Variable.woff2`) and
+     because it is listed in theme.json's `self_hosted` array — which is what
+     tells astro.config.mjs and Base.astro to skip the provider for it.
+
+   File: public/fonts/GeistMono-Variable.woff2
+   Source: npm `geist@1.7.2`, dist/fonts/geist-mono/GeistMono-Variable.woff2
+   sha256: fba8f577f38a2bbcbe818efa6348dd58f36303a10b8737c42fefad275be563ab
+   Licence: SIL Open Font License 1.1 — see public/fonts/GeistMono-LICENSE.txt
+
+   `font-display: swap` matches the pipeline's setting for Geist, so mono and
+   sans behave the same during load. */
+
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/GeistMono-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}

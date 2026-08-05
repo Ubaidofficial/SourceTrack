@@ -16,11 +16,12 @@ const logoPath = src ?? logo;
     instead of pairing with it, and an image also escapes .navbar-brand's colour — which is
     what makes the wordmark theme-responsive in the first place. Inlining keeps the text as
     text and adds the mark beside it.
-    The mark carries its own ink background, so it needs no theme variant; the one exception
-    is dark mode, where that background (#12100C) equals the body colour and the square would
-    otherwise vanish, leaving two floating discs. The dark-only border rect holds the
-    silhouette using the existing --color-border token. Same geometry as
-    dashboard/src/components/Logo.jsx and both favicon.svg files. */}
+    The mark carries its own ink background and needs no theme variant. It previously also
+    carried a dark-mode-only border rect, because on a #12100C body the ink square vanished
+    and left two floating discs; the marketing site is light-only (design.md §3.1) so that
+    case cannot arise and the rect is gone. Same geometry as
+    dashboard/src/components/Logo.jsx and both favicon.svg files — the app keeps both themes
+    and keeps its own equivalent handling there. */}
 <a href="/" class="navbar-brand inline-flex items-center gap-2.5">
   {
     logoPath ? (
@@ -37,17 +38,6 @@ const logoPath = src ?? logo;
       <>
         <svg class="h-8 w-8 shrink-0" viewBox="0 0 80 80" fill="none" aria-hidden="true">
           <rect x="4" y="4" width="72" height="72" rx="18" fill="#12100C" />
-          <rect
-            x="5"
-            y="5"
-            width="70"
-            height="70"
-            rx="17"
-            fill="none"
-            stroke="#302B22"
-            stroke-width="2"
-            class="hidden dark:block"
-          />
           <circle cx="54" cy="26" r="14" fill="#D2EC2A" />
           <circle cx="24" cy="56" r="8" fill="#D2EC2A" />
         </svg>

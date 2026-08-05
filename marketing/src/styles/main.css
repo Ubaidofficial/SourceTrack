@@ -2,13 +2,22 @@
 @plugin "@tailwindcss/forms";
 @plugin "@tailwindcss/typography";
 
-/* Bind the `dark:` variant to the theme attribute instead of the OS preference.
-   Tailwind v4 defaults `dark:` to @media (prefers-color-scheme: dark), which would
-   ignore the toggle and desync from it (user picks light, OS is dark → element
-   still flips). Structural colours don't need `dark:` at all — they flip via the
-   :root[data-theme="dark"] variable overrides in generated-theme.css — but this
-   keeps any explicit `dark:` usage keyed to the same source of truth. */
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+/* No dark variant is registered, and no dark utilities remain. The marketing
+   site is light-only (design.md §3.1) and ships no theme attribute, so the
+   custom variant that used to bind here had nothing left to key off.
+
+   Worth stating why BOTH had to go rather than just the attribute: Tailwind v4's
+   built-in fallback for that variant is an OS-preference media query. Removing
+   the custom binding while leaving even one such utility in the tree would have
+   silently handed theming back to the visitor's operating system — a theme
+   nobody chose and no toggle can correct. With neither present, that path does
+   not exist.
+
+   (The product app keeps both themes: separate build, `darkMode: 'class'`.) */
+
+/* Self-hosted @font-face declarations — must precede the token definitions that
+   name these families. */
+@import "./fonts.css";
 
 /* Auto-generated theme from "theme.json"*/
 @import "./generated-theme.css";

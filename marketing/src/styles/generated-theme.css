@@ -21,24 +21,9 @@
   --color-text-dark: #161310;
   --color-text-light: #6E675C;
 
-  /* === Darkmode Colors === */
-  --color-darkmode-primary: #D2EC2A;
-  --color-darkmode-secondary: #BCD41C;
-  --color-darkmode-accent-warm: #F2A93B;
-  --color-darkmode-primary-dark: #12100C;
-  --color-darkmode-body: #12100C;
-  --color-darkmode-border: #302B22;
-  --color-darkmode-light: #F6F3EB;
-  --color-darkmode-gray: #A79E8C;
-  --color-darkmode-dark: #12100C;
-  --color-darkmode-dark-gray: #302B22;
-  --color-darkmode-card: #1B1811;
-  --color-darkmode-text: #F6F3EB;
-  --color-darkmode-text-dark: #161310;
-  --color-darkmode-text-light: #A79E8C;
-
   /* === Font Families === */
   --font-primary: Geist, sans-serif;
+  --font-mono: Geist Mono, monospace;
 
   /* === Font Sizes === */
   --text-base: 16px;
@@ -55,22 +40,4 @@
   --text-h2-sm: 2.239488rem;
   --text-h1: 2.9859839999999997rem;
   --text-h1-sm: 2.6873856rem;
-}
-
-/* === Dark mode — toggled by data-theme on <html> === */
-:root[data-theme="dark"] {
-  --color-primary: #D2EC2A;
-  --color-secondary: #BCD41C;
-  --color-accent-warm: #F2A93B;
-  --color-primary-dark: #12100C;
-  --color-body: #12100C;
-  --color-border: #302B22;
-  --color-light: #F6F3EB;
-  --color-gray: #A79E8C;
-  --color-dark: #12100C;
-  --color-dark-gray: #302B22;
-  --color-card: #1B1811;
-  --color-text: #F6F3EB;
-  --color-text-dark: #161310;
-  --color-text-light: #A79E8C;
 }

@@ -12,9 +12,14 @@ import Header from "./partials/Header.astro";
 const gtmEnabled = config.google_tag_manager?.enable;
 const gtmId = config.google_tag_manager?.gtm_id;
 
-// font families
+// Font families routed through Astro's font pipeline. Families named in
+// theme.json's `self_hosted` array are excluded: they ship as a real file under
+// public/fonts with their own @font-face in src/styles/fonts.css, and astro.config
+// already omits them from `fonts`, so asking <Font> for one would look up a family
+// the pipeline never registered.
+const selfHostedFonts = new Set(theme.fonts.self_hosted || []);
 const fontEntries = Object.entries(theme.fonts.font_family).filter(
-  ([key]) => !key.includes("_type"),
+  ([key]) => !key.includes("_type") && !selfHostedFonts.has(key),
 );
 
 export interface Props {
@@ -48,41 +53,16 @@ const allSchemas = [orgSchema, ...structuredData];
 <!doctype html>
 <html lang="en">
   <head>
-    {/* Theme bootstrap — MUST stay the first element in <head>.
+    {/* No theme bootstrap. The marketing site is light-only (design.md §3.1);
+        the product app keeps both themes and is a separate build with its own
+        `darkMode: 'class'` Tailwind config — nothing here reaches it.
 
-        Plain inline <script> on purpose: it is parser-blocking and runs before
-        the stylesheet below is applied, so data-theme is on <html> before the
-        first paint. A `type="module"` script (or anything deferred/async) would
-        run after paint and produce a flash of the wrong theme on every load.
-
-        Also re-applies on astro:after-swap: ClientRouter replaces the document
-        on client-side navigation, which drops attributes set on <html>. */}
-    <script is:inline>
-      (function () {
-        var KEY = "theme";
-        function resolve() {
-          try {
-            var stored = localStorage.getItem(KEY);
-            if (stored === "dark" || stored === "light") return stored;
-          } catch (e) {}
-          try {
-            return window.matchMedia("(prefers-color-scheme: dark)").matches
-              ? "dark"
-              : "light";
-          } catch (e) {
-            return "light";
-          }
-        }
-        function apply() {
-          document.documentElement.setAttribute("data-theme", resolve());
-        }
-        apply();
-        if (!window.__stThemeBound) {
-          window.__stThemeBound = true;
-          document.addEventListener("astro:after-swap", apply);
-        }
-      })();
-    </script>
+        A returning visitor may still hold a `theme` key in localStorage from the
+        removed toggle. It is inert: nothing writes a theme attribute onto <html>
+        and no stylesheet keys off one, so the page renders light regardless of
+        what that key says. Deliberately NOT clearing it — a cleanup script would
+        re-introduce the storage read this removal exists to delete, to tidy a
+        value nothing can observe. */}
     <!-- Google Tag Manager -->
     {gtmEnabled && (
       <script is:inline define:vars={{ gtmId }}>
@@ -107,11 +87,12 @@ const allSchemas = [orgSchema, ...structuredData];
     <!-- theme meta -->
     <meta name="theme-name" content="sourcetrack-astro" />
     <meta name="msapplication-TileColor" content="#000000" />
-    <meta
-      name="theme-color"
-      media="(prefers-color-scheme: dark)"
-      content="#12100C"
-    />
+    {/* One theme-color, unconditionally. This previously carried an OS-preference
+        media condition and the ink value, which made the browser chrome follow the
+        visitor's operating system while the page itself followed the (now removed)
+        toggle — the two could disagree. On a light-only site the correct value is
+        the page background, with no media condition at all. */}
+    <meta name="theme-color" content="#F7F4ED" />
     <meta name="generator" content={Astro.generator} />
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 
