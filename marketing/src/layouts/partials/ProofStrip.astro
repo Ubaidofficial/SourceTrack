@@ -6,7 +6,16 @@ import AiSourceLedgerMockup from "@/components/AiSourceLedgerMockup.astro";
 import SeoRevenueMockup from "@/components/SeoRevenueMockup.astro";
 ---
 
-<section class="relative overflow-hidden py-20 border-y border-[#3D3830]/60 bg-[#18150F]/70">
+{/* §2.7 POSITION 5 — FRAMELESS GRID, ACCENT BORDER. The two cells already carry the
+    accent (border-t-2 border-t-primary/50) and are deliberately NOT cards and NOT
+    window frames — position 4 immediately above is the window frame, and repeating it
+    here is exactly what §2.7 bars.
+
+    The surface is now OPAQUE. It was `bg-[#18150F]/70`, and 70% dark over the paper page
+    composites to a mid-grey that the #A79E8C body copy could not clear: 2.67:1 against
+    a 4.5 requirement. The raw hex looked safe; the rendered surface was not. Opaque
+    #18150F takes the same copy to 6.86:1 with no colour change to the text itself. */}
+<section class="relative overflow-hidden py-20 border-y border-[#3D3830] bg-[#18150F]">
   <div class="main-container">
     <div class="container px-4">
       <div class="mb-12 text-center">

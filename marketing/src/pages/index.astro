@@ -1,5 +1,13 @@
 ---
 import Base from "@/layouts/Base.astro";
+// R4 — homepage-only stylesheet, imported HERE rather than from main.css.
+// main.css is pulled in by Base.astro, which every one of the 49 routes shares, so an
+// import there put the full 3,851-line homepage design system on /pricing, /docs/* and
+// everything else. Astro code-splits a page-level import, so this keeps it on / alone.
+// Measured: non-homepage routes drop 61,036 B raw / 10,967 B gzip. The homepage pays a
+// second stylesheet request and ~613 B more gzip (two files compress worse than one) —
+// a good trade across 48 routes. No Base.astro change was needed.
+import "@/styles/home-design.css";
 import Hero from "@/components/Hero.astro";
 import TrustBar from "@/partials/TrustBar.astro";
 import DirectRescueShowcase from "@/partials/DirectRescueShowcase.astro";

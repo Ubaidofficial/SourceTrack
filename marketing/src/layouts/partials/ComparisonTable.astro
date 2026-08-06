@@ -4,7 +4,16 @@
 // No competitor logos (design.md §35.3 compliant). Text column headers only.
 ---
 
-<section class="py-20 relative overflow-hidden bg-[#12100C]/60 border-y border-white/5">
+{/* §2.7 POSITION 7 — TABLE CARD. The section is now a paper-surface container holding a
+    single bounded card (see .comparison-card below), rather than another full-bleed
+    tinted band. Position 5 is a full-bleed grid and 6 is a divided band, so a third
+    band here would be the run §2.7 exists to break.
+
+    It also removes an AA failure. The old surface was `bg-[#12100C]/60` — 60% dark over
+    the paper page — and the #A79E8C cell text on that composite measured 2.00:1 against
+    a 4.5 requirement, the worst pair on the homepage. The card is opaque #12100C, which
+    takes the same text to 6.10:1 without changing a single text colour. */}
+<section class="comparison-section py-20 relative overflow-hidden">
   <div class="main-container">
     <div class="container px-4">
       <div class="mb-12 text-center">
