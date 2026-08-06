@@ -1,0 +1,32 @@
+---
+/**
+ * V3 Logo — the SourceTrack mark. On all 12 design pages.
+ *
+ * §3.1: "Two lime discs on a warm-ink rounded square. Large disc upper-right,
+ * small disc lower-left." Drawn from that description, NOT ported from the
+ * handoff's lib/logo.jsx — the spec is the source of truth for identity, and a
+ * JSX port would carry the handoff's own token names with it.
+ *
+ * Inline SVG, no network request. §3.4's implementation note bars hot-linking
+ * third-party assets; the same reasoning applies to our own mark.
+ */
+interface Props { size?: number; title?: string }
+const { size = 32, title = "SourceTrack" } = Astro.props
+---
+<svg
+  class="v3-logo"
+  width={size}
+  height={size}
+  viewBox="0 0 32 32"
+  role="img"
+  aria-label={title}
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <rect width="32" height="32" rx="9" fill="var(--v3-ink)" />
+  <circle cx="20.5" cy="11.5" r="6" fill="var(--v3-accent)" />
+  <circle cx="11" cy="21" r="3.25" fill="var(--v3-accent)" />
+</svg>
+
+<style>
+  .v3-logo { display: block; flex: none; }
+</style>

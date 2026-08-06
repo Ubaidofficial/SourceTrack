@@ -1,0 +1,123 @@
+/* ============================================================================
+   V3 TOKEN LAYER — Phase 1 foundation
+   ============================================================================
+
+   SCOPED TO `.v3`, DELIBERATELY. v3 replaces 12 of the site's 36 pages; the other
+   24 (docs, blog, developers, integrations, legal) keep v1.4's visual system. Two
+   systems coexist by ruling, not by accident — the same deliberate seam as the
+   nav. Every rule below is nested under `.v3` so a legacy page cannot pick it up.
+
+   ⚠️ DO NOT LIFT THIS SCOPE. `home-design.css` carries an identical warning for
+   the same reason: it restyles bare `a`, `button`, `section` and `h1`-`h4`
+   selectors, and un-scoping it repaints the whole site. This file is narrower but
+   the failure mode is the same. If a v3 rule "needs" to be global, that is a
+   design decision for the founder, not a scoping workaround.
+
+   ── WHAT THE DESIGN HANDOFF PROPOSED, AND WHAT WAS RULED ────────────────────
+   The handoff declared 69 custom properties against v1.4 §3.2's ~40. They are two
+   systems, not a superset. Rulings, 2026-08-06:
+
+   REJECTED — Tier 1, spec violations:
+     --green (#00AA57), --green-100 (#DDF6EA)
+         §3.4: "There must be no separate success green, no terminal green, no
+         info blue, no purple, and no slate in the shipped app." Lime already
+         means good. Not defined here, at any name.
+     --violet, --violet-50/100/200/400/600, --violet-glow, --shadow-violet
+         Every one of these resolves to an ORANGE value (--violet: #FF7A33). The
+         values are legal; the NAMES are a trap. They are correct today and wrong
+         the moment someone "fixes" violet to actually be violet — and §3.4 bans
+         purple, §3.8 lists #8F2FFE / #DF53FE as do-not-use. Use --orange-*.
+
+   ALIASED — Tier 2, near-collisions. THE POINT IS THAT ONLY ONE VALUE EXISTS.
+   Defining both the design's hex and v1.4's would let the wrong one enter the
+   build invisibly: #B3480E vs #B4420E differ by two characters and mean the same
+   thing, and picking wrong silently changes a contrast ratio that
+   contrast-audit.mjs would then certify as passing.
+     --orange-700 -> --color-spend-text (#B4420E, NOT the handoff's #B3480E)
+     --red        -> --color-danger     (#C4381C, NOT the handoff's #E54545)
+     --paper      -> --color-bg         (same value, one name)
+     --paper-card -> --color-surface    (same value, one name)
+
+   ADOPTED — Tier 3, v3 pages only: the 12/18/28/36 radius scale and the deeper
+   shadow set. REJECTED: the handoff's font stack — no 'Inter Tight', no
+   --font-serif, no 'Segoe UI'. §3.1 mandates a single family and a serif fallback
+   contradicts it outright.
+
+   ADOPTED — genuinely new: --v3-max, --v3-gutter, --v3-ease-out, --v3-ease-in-out.
+
+   RAMPS — adopted only where a v1.4 semantic token cannot express the value.
+   The handoff ships 25 ramp steps; 10 are never referenced by its own CSS
+   (gray-300, black-600/800/850, lime-50/100, orange-100/200 and two others), so
+   importing all 25 would be importing dead tokens. The 15 below are the ones its
+   stylesheets actually use, with usage counts recorded so the next reader can see
+   this was measured rather than guessed.
+   ============================================================================ */
+
+.v3 {
+  /* ── Structure. New, no v1.4 equivalent. ──────────────────────────────── */
+  --v3-max: 1320px;
+  --v3-gutter: 24px;
+
+  /* ── Motion curves. New; §37 governs motion BEHAVIOUR but defines no curves. */
+  --v3-ease-out: cubic-bezier(0.16, 0.8, 0.25, 1);
+  --v3-ease-in-out: cubic-bezier(0.6, 0, 0.2, 1);
+
+  /* ── Radii. ADOPTED for v3 only. v1.4 keeps 5/9/13 on the 24 legacy pages. ─
+     ⚠️ The handoff also hardcodes radii OUTSIDE this scale — 2,4,5,6,7,8,9,10,
+     11,13,14,16px appear across its stylesheets, and .cta-box uses 40px. Those
+     are ad-hoc values, not tokens. v3 components use the four below; anything
+     else needs a reason in the diff. */
+  --v3-radius-sm: 12px;
+  --v3-radius-md: 18px;
+  --v3-radius-lg: 28px;
+  --v3-radius-xl: 36px;
+
+  /* ── Shadows. ADOPTED for v3 only. Materially deeper than v1.4's set. ──── */
+  --v3-shadow-card: 0 12px 38px rgba(18, 16, 12, 0.055);
+  --v3-shadow-soft: 0 24px 80px rgba(18, 16, 12, 0.12);
+  --v3-shadow-deep: 0 32px 110px rgba(18, 16, 12, 0.32);
+  --v3-shadow-lime: 0 18px 52px rgba(210, 236, 42, 0.32);
+
+  /* ── Tier 2 ALIASES. One value, two names. The v1.4 hex is authoritative. ─ */
+  --v3-paper: var(--color-bg);              /* handoff --paper       */
+  --v3-paper-card: var(--color-surface);    /* handoff --paper-card  */
+  --v3-spend-text: var(--color-spend-text); /* handoff --orange-700  */
+  --v3-danger: var(--color-danger);         /* handoff --red         */
+
+  /* ── Core identity, straight from §3.1. Referenced, never redefined. ───── */
+  --v3-ink: var(--color-accent-text);
+  --v3-text: var(--color-text);
+  --v3-accent: var(--color-accent);
+  --v3-spend: var(--color-spend);
+  --v3-border: var(--color-border);
+
+  /* ── Warm-neutral ramp. 8 steps, all referenced by the handoff's own CSS.
+     Counts are its usage, measured: 50(6) 100(7) 200(6) 400(29) 500(23)
+     600(32) 700(34). gray-300 is declared there and never used — omitted. ── */
+  --v3-gray-50: #FAF8F1;
+  --v3-gray-100: #EFEADC;
+  --v3-gray-200: #E2DBC9;
+  --v3-gray-400: #9C9484;
+  --v3-gray-500: #7A7364;
+  --v3-gray-600: #665F50;
+  --v3-gray-700: #5B5548;
+
+  /* Dark surfaces. black-700(1) black-900(5); 600/800/850 unused, omitted. */
+  --v3-black-700: #2A251E;
+  --v3-black-900: #0B0A07;
+
+  /* Accent ramp. lime-200(1) lime-400(2). 50/100 unused, omitted.
+     ⚠️ --v3-lime-400 is a HOVER/fill value. Never a text colour on a light
+     canvas — §3.6: lime on paper is ~1.3:1, "Fail. Never — fills only." */
+  --v3-lime-200: #E9F58A;
+  --v3-lime-400: #DEF356;
+
+  /* Counterweight ramp. orange-50(2) orange-400(3) orange-600(3).
+     ⚠️ --v3-orange-600 is FILL / BORDER / ICON ONLY. It is 3.24:1 on paper and
+     3.21:1 on --orange-50 — both below AA. contrast-audit.mjs bans
+     `color: var(--orange-600)` outright and will fire if v3 uses it as text.
+     For orange TEXT on a light surface use --v3-spend-text. */
+  --v3-orange-50: #FFF1E7;
+  --v3-orange-400: #FF9459;
+  --v3-orange-600: #E85A1A;
+}

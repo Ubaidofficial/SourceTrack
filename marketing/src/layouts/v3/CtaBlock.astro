@@ -1,0 +1,58 @@
+---
+/**
+ * V3 CtaBlock — the closing call-to-action. 11 of 12 design pages carry one.
+ *
+ * RECREATED, not lifted. Two deliberate departures from the handoff:
+ *
+ * 1. RADIUS. The handoff's `.cta-box` uses a hardcoded `border-radius: 40px`,
+ *    which is outside the adopted 12/18/28/36 scale. Uses --v3-radius-xl (36px).
+ *    A one-off 40px would be the first crack in a scale that is four hours old.
+ *
+ * 2. NO GLASSMORPHISM. The handoff's dark CTA leans on layered translucency.
+ *    Solid --v3-black-900 fill instead: backdrop-filter is banned on anything
+ *    new or rebuilt, and the ban has held across four phases at no cost.
+ *
+ * §3.6: white on --v3-black-900 (#0B0A07) is ~19.9:1. The lede is #CBD4D4 on the
+ * same, ~12.4:1. Both AAA. Neither is lime — lime is a FILL here (the button),
+ * never text on this surface.
+ */
+interface Props { heading: string; lede?: string }
+const { heading, lede } = Astro.props
+---
+<section class="v3-cta">
+  <div class="v3-cta-box">
+    <div class="v3-cta-copy">
+      <h2 set:html={heading} />
+      {lede && <p>{lede}</p>}
+    </div>
+    <div class="v3-cta-actions"><slot /></div>
+  </div>
+</section>
+
+<style>
+  .v3-cta-box {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 28px;
+    align-items: center;
+    min-height: 360px;
+    padding: 54px;
+    border-radius: var(--v3-radius-xl);
+    background: var(--v3-black-900);
+    color: #fff;
+    box-shadow: var(--v3-shadow-deep);
+  }
+  .v3-cta-copy h2 { margin: 0; color: #fff; }
+  .v3-cta-copy p {
+    margin: 18px 0 0;
+    max-width: 610px;
+    color: #cbd4d4;
+    font-size: 18px;
+    line-height: 1.55;
+  }
+  .v3-cta-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 12px; }
+  @media (max-width: 900px) {
+    .v3-cta-box { grid-template-columns: 1fr; padding: 32px; min-height: 0; }
+    .v3-cta-actions { justify-content: flex-start; }
+  }
+</style>
