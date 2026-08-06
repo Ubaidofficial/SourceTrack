@@ -63,7 +63,7 @@ export default function Pricing() {
               ['Stripe revenue (beta / test-mode)', '—', '✓', '✓'],
               ['Manual Shopify / webhook revenue', '—', '✓', '✓'],
               ['CSV export', '✓', '✓', '✓'],
-              ['Monthly pageviews', '50,000', '150,000', '150,000'],
+              ['Monthly pageviews', '250,000', '1,000,000', '1,000,000'],
             ]} />
           </div>
           <p className="mt-5 text-[#A39B8C] text-xs font-bold">
@@ -118,7 +118,7 @@ export default function Pricing() {
           <div className="mt-[54px]">
             <FAQSection faqs={[
               { q: 'Is there a free trial?', a: 'Yes — you can start free, no credit card required.' },
-              { q: 'What counts toward my plan?', a: 'Tracked pageviews per month: 50,000 on Starter, and 150,000 on Growth and Founder.' },
+              { q: 'What counts toward my plan?', a: 'Tracked pageviews per month: 250,000 on Starter, and 1,000,000 on Growth and Founder.' },
               { q: 'Can I change plans later?', a: 'Yes, anytime.' },
               { q: 'What’s the catch with the $99 Founder plan?', a: 'None — it’s an early-bird thank-you. 25 seats, one per customer, Growth-level features, and the price is locked while you keep the seat.' },
               { q: 'Do you offer a money-back guarantee?', a: 'Yes — a 28-day money-back guarantee. If SourceTrack isn’t the right fit, email us within 28 days of your first payment and we’ll refund it.' },
