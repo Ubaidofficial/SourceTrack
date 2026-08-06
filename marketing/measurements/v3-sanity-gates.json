@@ -1,0 +1,28 @@
+{
+  "_comment": "V3 measurement sanity gates. See README.md in this directory before using or editing.",
+  "status": "AWAITING_MEASUREMENT",
+  "measuredAt": null,
+  "measuredRef": null,
+  "viewports": {
+    "desktop": {
+      "emulateArg": null,
+      "expectedInnerWidth": 1440,
+      "actualInnerWidth": null,
+      "gateSelector": ".v3-wrap",
+      "gateProperty": "getBoundingClientRect().width",
+      "derivedExpectation": 1320,
+      "derivedFrom": "--v3-max 1320px; at any viewport >= 1320 + 2*32 padding the wrap clamps to its max",
+      "measuredValue": null
+    },
+    "mobile": {
+      "emulateArg": null,
+      "expectedInnerWidth": 390,
+      "actualInnerWidth": null,
+      "gateSelector": ".v3-wrap",
+      "gateProperty": "getBoundingClientRect().width",
+      "derivedExpectation": 390,
+      "derivedFrom": "below 900px the wrap takes full width; padding is inside the border box, so the element width equals the viewport",
+      "measuredValue": null
+    }
+  }
+}

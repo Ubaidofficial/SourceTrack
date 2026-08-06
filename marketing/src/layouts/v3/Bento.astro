@@ -1,0 +1,41 @@
+---
+/**
+ * V3 Bento — 12-column grid of feature cells. 5 of 12 design pages.
+ *
+ * RECREATED. The handoff's `.bento-cell:hover { transform: translateY(-2px) }`
+ * is kept but gated: §37.3 requires every animation to sit inside
+ * `prefers-reduced-motion: no-preference`, and under `reduce` elements render in
+ * their final state immediately. A 2px hover lift is small, but "small" is not
+ * one of the exemptions §37.3 offers.
+ *
+ * No backdrop-filter. Solid --v3-paper-card fill.
+ */
+interface Props { class?: string }
+const { class: cls = "" } = Astro.props
+---
+<div class:list={["v3-bento", cls]}><slot /></div>
+
+<style>
+  .v3-bento {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-auto-rows: minmax(180px, auto);
+    gap: 16px;
+  }
+  .v3-bento :global(.v3-bento-cell) {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--v3-radius-lg);
+    background: var(--v3-paper-card);
+    border: 1px solid rgba(18, 16, 12, 0.08);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .v3-bento :global(.v3-bento-cell) { transition: transform 0.25s var(--v3-ease-out); }
+    .v3-bento :global(.v3-bento-cell:hover) { transform: translateY(-2px); }
+  }
+  @media (max-width: 900px) { .v3-bento { grid-template-columns: repeat(6, 1fr); } }
+</style>

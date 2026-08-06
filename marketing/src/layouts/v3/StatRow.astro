@@ -1,0 +1,49 @@
+---
+/**
+ * V3 StatRow — a bordered band of numeric stats. 7 of 12 design pages.
+ *
+ * ⚠️ EVERY VALUE PASSED IN MUST BE TRUE, and true TODAY. §6 forbids fake zeros
+ * and placeholder metrics; #615 shipped `Seats left — [VERIFY: wire to a real
+ * count]` to a live pricing page, which is exactly the failure this note exists
+ * to prevent. The component renders what it is given — the caller owns the truth.
+ *
+ * Uses tabular numerals so figures do not shift width between renders.
+ */
+interface Props { stats: Array<{ value: string; label: string }> }
+const { stats } = Astro.props
+---
+<div class="v3-stat-row">
+  {stats.map((s) => (
+    <div class="v3-stat">
+      <div class="v3-stat-num">{s.value}</div>
+      <div class="v3-stat-label">{s.label}</div>
+    </div>
+  ))}
+</div>
+
+<style>
+  .v3-stat-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--v3-gutter);
+    padding: 36px 0;
+    border-top: 1px solid rgba(18, 16, 12, 0.08);
+    border-bottom: 1px solid rgba(18, 16, 12, 0.08);
+  }
+  .v3-stat-num {
+    font-size: clamp(48px, 5vw, 76px);
+    line-height: 0.9;
+    letter-spacing: -0.07em;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    color: var(--v3-text);
+  }
+  .v3-stat-label {
+    margin-top: 8px;
+    color: var(--v3-gray-700);
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  @media (max-width: 900px) { .v3-stat-row { grid-template-columns: repeat(2, 1fr); row-gap: 28px; } }
+</style>
