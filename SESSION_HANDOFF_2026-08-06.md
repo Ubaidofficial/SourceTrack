@@ -157,7 +157,34 @@ Findings, with citations. **UNDETERMINEDs below are carried across as UNDETERMIN
 
 **The real finding underneath it is worth keeping:** Tinybird's `site_id` column holds, at least for this row, a **`site_key`** — not a `sites.id`. Whether that is systematic or one bad seed is **UNDETERMINED** and worth checking before any join between Tinybird and Postgres is trusted.
 
-### PR-F Step 1 audit — not started.
+### PR-F Step 1 audit — COMPLETE (ran in a separate session)
+
+Recorded in enough detail that it is not redone. Findings marked ✅ were **independently re-verified while writing this file**; the rest are as-reported from that session.
+
+**The four edge-compute questions are SETTLED — all four answers are negative:**
+1. The identity cookie is **client-side `document.cookie`**, opt-in only, and **does NOT survive Safari ITP**.
+2. UTM capture **requires the tracker to execute** — there is no edge capture.
+3. Filtering is **UA-regex only** (the same weakness the bookmentions investigation found from the other direction).
+4. **No Bunny Edge Scripting is in use at all.**
+
+⚠️ **Therefore "edge compute" is unusable in marketing copy.** Nothing runs at the edge; Bunny is a pull-zone CDN in front of the origin. Treat any existing or proposed claim as false until something actually executes there.
+
+**✅ Campaigns exposes 2 attribution models, not 9** — re-verified: `api/routes/campaigns.js:33` reads `const ROUTE_ALLOWED_MODELS = new Set(['first_touch', 'last_touch'])`.
+
+Worth carrying the *reason*, because it is deliberate and the comment above it is good: the route fails closed because the live readers do not yet count DISTINCT VISITORS for `sessions`, and adding a model without fixing that "reintroduces the fabrication." So this is **not a bug to widen casually** — it is a guard. But it does sit against the "9 attribution models" claim in seven dashboard marketing pages (§3 of the 08-05b handoff), and **Report Builder does offer all 9**. The inconsistency is real; the fix is not simply widening the set.
+
+**✅ CAPI is configured on ZERO sites — and it is broader than GA4.** Re-verified across all 4 prod sites: `ga4 0/4`, `meta 0/4`, `tiktok 0/4`, `linkedin 0/4`. So `sendGA4Conversion` cannot have fired, and **neither can any other sender.** This is the root cause behind `capi_deliveries` = 0 (✅ re-verified: **0 rows**) — not a delivery failure, simply nothing configured to deliver. Any "CAPI works" claim is unevidenced in both directions.
+
+**Three dead jobs:**
+- `email-reports-weekly` — **393 clean runs processing zero**, silent since **2026-07-27**. Reports success while doing nothing; the KI-45 honest-reporting class again.
+- `ai-crawler-range-refresh` — **has never run**. ✅ re-verified: `ai_crawler_ranges` = **0 rows**, so AI-crawler range detection has no data to work from.
+- (third job as reported in that session's master table — see it for the A/B/C/D categorisation.)
+
+The full audit carries a master table with A/B/C/D categories and a jobs-by-EFFECT breakdown. **Read it before re-auditing anything above.**
+
+### 🔶 PR-F Step 2 — docs correction. OPEN, not started.
+
+The corrections implied by Step 1's findings — principally the **edge-compute claims** and the **Campaigns 2-vs-9 inconsistency**. Needs its **own dedicated worktree** (§13, worktree isolation). Do not fold it into another phase's PR.
 
 ---
 
