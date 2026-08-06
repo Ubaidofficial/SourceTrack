@@ -95,12 +95,11 @@ This version expands the prior V1.1 design system with the missing product surfa
   content; computed WCAG AA verified, never eyeballed), and §2.6's **OPEN live-hero defect** —
   glow at ~70–80% of view, white-on-lime below AA — is cross-referenced explicitly as a defect and
   **not** a reference implementation, so Phase 2 cannot re-ship it by copying the current hero.
-- v1.4, **OPEN — founder decision required, deliberately not settled here:** glassmorphism. §25.1
-  lists it under "avoid" as an AI-generation guardrail; §26, the master V1 prohibited list, does not
-  address it in either direction. Needed call: a full V1-wide ban, or a guardrail scoped to
-  AI-generated mockups only. Raised when a "liquid glass" card technique was considered and retracted
-  without a clear answer either way. Until this is answered, treat §25.1 as binding on generation and
-  do not read it as a V1-wide product ban.
+- v1.4 → **CLOSED 2026-08-06: glassmorphism is a full V1-WIDE BAN.** Was open pending a founder
+  call between a V1-wide product ban and a guardrail scoped to AI-generated mockups only. **Ruled:
+  V1-wide.** It is now listed in §26 (which is what makes it binding on shipped UI) and explained in
+  §26.2; §25.1 is unchanged and still binds generation. Raised when a "liquid glass" card technique
+  was considered and retracted without a clear answer either way.
 
 ---
 
@@ -168,7 +167,10 @@ SourceTrack has two major pillars:
 - Not a heatmap/session-recording product
 - Not a CRM
 - Not a full SEO suite
-- Not a native Shopify app in V1
+- Not a **shipped** native Shopify app in V1 — ⚠️ **corrected 2026-08-06: the app IS BUILT.** It is
+  **not deployed** and **Shopify Level 1 approval has not been granted**, so it is not available to
+  any customer and must not be claimed. The prohibition stands; the old wording implied the code did
+  not exist, which is false. See §17.6.
 - Not a public report-sharing platform in V1
 
 ### 1.5 Safe V1 claims
@@ -189,7 +191,9 @@ SourceTrack has two major pillars:
 
 - No PII in transit
 - Full Stripe production attribution
-- Native Shopify integration
+- Native Shopify integration — ⚠️ **still unclaimable, but for a different reason than this list
+  implies (2026-08-06): the app is BUILT, not deployed, and not Level 1 approved.** Do not claim it
+  until it ships and is approved
 - CRM sync
 - ROAS reporting unless ad cost data exists
 - Full SEO suite
@@ -265,6 +269,22 @@ ceiling regardless of how soft it is.
 background glow covers roughly 70–80% of visible area, and white text sits on a bright-lime highlight
 block at a computed contrast below AA. This is the motivating case for the rule and is tracked as a
 follow-up task; it is recorded here as an open defect, not as a shipped example.
+
+> ⚠️ **RECORDED CONTRADICTION — NOT RESOLVED. Founder ruling 2026-08-06: record it, do not fix it.**
+>
+> **The heading and the rule disagree about scope.** This section is titled *"Accent-density
+> **ceiling**"* — which reads as a cap on accents generally — but every sentence of the rule itself
+> names **lime only**. §3.1:309 lists a second accent, `#FF7A33`, explicitly labelled *"Accent —
+> counterweight"*, and §3.1's token block adds `#F2A93B` as a gradient-only bridge.
+>
+> **The gap that follows: no rule caps TOTAL accent density.** A screen could hold 15% lime plus an
+> unbounded amount of `#FF7A33` and violate nothing written here, while plainly breaking the intent
+> stated in the opening line — *"a signal stops signalling once it covers the screen."* Whether the
+> ceiling should be per-accent or aggregate is an open design decision.
+>
+> **Do not silently reconcile this** by widening the rule text to "accents" or by narrowing the
+> heading to "Lime-density ceiling". Either edit would look like a typo fix and would quietly decide
+> the open question. It needs a ruling, not a wording pass.
 
 ### 2.7 Container-shape variety
 
@@ -2235,7 +2255,19 @@ Do not build:
 
 ### 17.6 Shopify V1 boundary
 
-Shopify is manual webhook only in V1.
+Shopify is manual webhook only in V1 — **as the shipped surface.**
+
+> ⚠️ **CORRECTED 2026-08-06 — "manual webhook only" describes what CUSTOMERS CAN USE, not what exists.**
+> **A native Shopify app IS BUILT** (see `Ubaidofficial/sourcetrack-shpfy-app`). It is **not
+> deployed**, and **Shopify Level 1 approval has not been granted.**
+>
+> **Both halves matter and neither cancels the other.** The customer-facing boundary is unchanged:
+> manual webhook is the only path a customer can take today, and the no-native-app claim rule below
+> **stands exactly as written**. What was wrong is the *reason* — this section read as "the app does
+> not exist", and a reader planning work from it would have scoped a build that is already done.
+>
+> **Founder ruling, recorded: rewrite the claims, DO NOT deploy the app.** Deployment is not a
+> follow-up implied by this correction.
 
 Required copy:
 
@@ -2243,7 +2275,7 @@ Required copy:
 - HMAC verification guidance
 - order ID dedupe guidance
 - line item handling docs
-- no native app claim
+- no native app claim — **unchanged; built-but-undeployed is still unclaimable**
 
 ---
 
@@ -2724,6 +2756,38 @@ Remove from active V1 UI:
 - URL inspection
 - live map
 - per-card "Sample data" badges on marketing mockups — disclosure is one footer line per page, see §29.8
+- **glassmorphism / "liquid glass" surfaces — V1-WIDE BAN (founder ruling, 2026-08-06)**
+- **any "edge compute" claim — see §26.2**
+
+### 26.2 Two additions ruled on 2026-08-06
+
+**Glassmorphism — the open question is CLOSED as a full V1-wide ban.**
+
+The changelog previously carried this as *"OPEN — founder decision required"*: §25.1 listed
+glassmorphism under "avoid" as an AI-generation guardrail, while this section — the master V1
+prohibited list — did not address it in either direction. That gap meant §25.1 bound *generation*
+only, and a hand-built glass surface was prohibited by nothing.
+
+**Ruling: full V1-wide product ban, not a generation-only guardrail.** It now appears in the list
+above, which is what makes it binding on shipped UI. §25.1 is unchanged and still applies to
+generation. Raised originally when a "liquid glass" card technique was considered and retracted
+without a clear answer either way.
+
+**"Edge compute" is unclaimable — all four investigations returned NEGATIVE.**
+
+⚠️ **Recorded as a prohibition rather than a removal, and the difference is deliberate: there was
+never an edge-compute claim in this document to delete.** A repo-wide grep on 2026-08-06 found
+**zero** such claims in `design.md` and zero in the marketing site. The findings that settled it
+live in `SESSION_HANDOFF_2026-08-06.md:209-215`; the only surviving related claim is
+**"first-party subdomain"**, which is accurate and stays.
+
+**Nothing runs at the edge.** Bunny is a pull-zone CDN in front of the origin — caching and TLS
+termination, not execution. Any existing or proposed "edge compute" / "runs at the edge" /
+"edge worker" phrasing is false until something actually executes there.
+
+*(Not in scope of this ban: the path-allowlisted Cloudflare Worker and Next.js rewrite templates in
+the self-hosted proxy docs. Those are examples a CUSTOMER runs on their own infrastructure, not a
+claim about SourceTrack's, and they remain correct.)*
 
 ### 26.1 Lead intelligence & enrichment — not built, not planned pre-paid-beta
 
@@ -2965,7 +3029,8 @@ Avoid:
 
 - SOC 2 certified unless true
 - GDPR compliant unless legally verified
-- native Shopify app
+- native Shopify app — ⚠️ **2026-08-06: the app is BUILT but not deployed and not Level 1 approved.**
+  It stays on this Avoid list until both change. "We built it" is not "it ships"
 - native Stripe app
 - automatic Meta/Google Ads sync unless built and verified
 - perfect attribution
