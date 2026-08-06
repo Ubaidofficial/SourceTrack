@@ -44,6 +44,30 @@ const VIEWPORTS = [
 
 // Kept BYTE-IDENTICAL to the set glow-coverage.mjs used, so pre- and post-cutover numbers
 // stay comparable across the harness replacement.
+//
+// ⚠️ WHY `clearly lime (g-b>25, g>=200)` IS CANONICAL, AND WHY THE LOOSER ROWS ARE NOT.
+// This constant looks arbitrary and has already been questioned once. The argument, with
+// the number, so the next reader does not delete it:
+//
+//   The page's own base gradient runs --paper #f7f4ed -> #f8fbfb. At the top stop that is
+//   g-b = 244-237 = 7, i.e. the UNTINTED background already sits one point under the
+//   `g-b>8` row. Any lime at all pushes it over. Measured on the real mobile hero, the same
+//   glow scores:
+//
+//       any tint away from paper (g-b>8)   43.89%   <- fires on the PAPER BASE, not lime
+//       perceptible (g-b>15)               35.77%
+//       clearly lime (g-b>25, g>=200)      24.97%   <- CANONICAL
+//       strong lime (g-b>60)                0.18%
+//       saturated lime (g-b>100)            0.00%
+//
+//   So `g-b>8` is not a lime measurement — it is a measurement of "not exactly neutral",
+//   and on a warm-neutral palette that is most of the page. The `g>=200` clause is what
+//   makes the canonical row mean "bright lime" rather than "a green-ish dark surface";
+//   without it, translucent lime over the dark band (#212010, g=32) would score as accent
+//   coverage. §2.6 caps a SIGNAL, and a 3% blend is not a signal.
+//
+//   sub-threshold-control below proves this row still discriminates. If it ever stops
+//   firing, the threshold has been loosened and every figure in this file is inflated.
 const THRESHOLDS = [
   ['any tint away from paper (g-b>8)', (r, g, b) => g - b > 8],
   ['perceptible (g-b>15)', (r, g, b) => g - b > 15],
@@ -98,6 +122,9 @@ const LIME = tok('--color-primary')
 const PAPER = tok('--paper')
 const GRAY50 = tok('--gray-50')
 const INK_BAND = hex('#18150F')
+// The <mark>'s painted fill, resolved from the built CSS (`background-color:var(--color-primary)`).
+// Named so the element pass scores a real colour rather than assuming "an element is lime".
+const MARK_FILL = LIME
 
 console.log(`stylesheets (${links.length}): ${links.join(' + ')}`)
 console.log(`tokens: --color-primary ${fmt(LIME)} · --paper ${fmt(PAPER)} · --gray-50 ${fmt(GRAY50)}\n`)
@@ -153,6 +180,111 @@ function glowCoverage (v, heroH) {
   }
   // Denominator is the SCREENFUL (§2.6), never the hero box.
   return 100 * count / (v.w * v.h)
+}
+
+// ── HOW THE TWO PASSES COMBINE: UNION, NOT SUM, NOT MAX ──────────────────────
+// §2.6 caps the fraction of a screen that READS AS LIME. That is a property of the
+// rendered pixels, so the right operator over two lime sources is the union of their
+// pixel sets:
+//
+//     |glow u mark| / screen     =     |glow| + |mark| - |glow n mark|
+//
+// SUM is wrong: it counts the intersection twice, so a lime element sitting on the lime
+// glow inflates the figure by exactly the overlap. MAX is wrong in the other direction:
+// it discards the non-overlapping part of the smaller set entirely. The previous version
+// of this file used max() when the mark was below the fold and SUM otherwise — a live
+// correctness bug introduced in #656, and the reason this function exists.
+//
+// Implemented by rasterising ONE boolean mask over the whole hero in page coordinates and
+// counting per row. A pixel that is both glow and mark is set once, so the union falls out
+// of the construction rather than being computed from three separate numbers. The worst
+// screenful is then a sliding window over the row counts — §2.6 says "any single screen",
+// so the answer is the maximum over scroll positions, not the value at scroll 0.
+//
+// Needs the mark's PAGE-COORDINATE position (topY). Without it the intersection is
+// unknowable and the honest output is a BOUND, not a figure — see unionCoverage().
+function unionCoverage (v, heroH, markRects, markTopY) {
+  const W = v.w, H = Math.ceil(heroH)
+  const heroRule = css.match(/\.st-home\s+\.hero\{([^}]*)\}/) || css.match(/\.hero\{([^}]*)\}/)
+  const bgDecl = heroRule && heroRule[1].match(/background:([^;]+)/)
+  if (!bgDecl) return null
+  const radials = [...bgDecl[1].matchAll(
+    /radial-gradient\(circle at ([\d.]+)% ([\d.]+)%,\s*(#[0-9a-fA-F]{8}|rgba\([^)]+\)),\s*transparent ([\d.]+)%\)/g
+  )].map(m => {
+    const raw = m[3]; let r, g, b, a
+    if (raw.startsWith('#')) {
+      const h = raw.slice(1);[r, g, b] = [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16))
+      a = parseInt(h.slice(6, 8), 16) / 255
+    } else {
+      const p = raw.slice(raw.indexOf('(') + 1, -1).split(',').map(Number);[r, g, b, a] = [p[0], p[1], p[2], p[3] ?? 1]
+    }
+    const cx = (+m[1] / 100) * W, cy = (+m[2] / 100) * H
+    const ray = Math.max(...[[0, 0], [W, 0], [0, H], [W, H]].map(([x, y]) => Math.hypot(x - cx, y - cy)))
+    return { cx, cy, r, g, b, a, stop: (+m[4] / 100) * ray }
+  })
+  const baseTop = hex('#f7f4ed'), baseBottom = hex('#f8fbfb')
+
+  // Mark fragments, laid out in page coordinates. Fragments stack downward from topY; each
+  // is left-aligned to the h1's own left edge, which is what getClientRects() reported.
+  const markBoxes = []
+  if (markTopY !== null) {
+    let y = markTopY
+    for (const [w, h] of markRects) { markBoxes.push({ x0: 20, y0: y, x1: 20 + w, y1: y + h }); y += h }
+  }
+
+  const rowCount = new Int32Array(H)
+  for (let y = 0; y < H; y++) {
+    const t = y / (H - 1)
+    const br = baseTop[0] + (baseBottom[0] - baseTop[0]) * t
+    const bgc = baseTop[1] + (baseBottom[1] - baseTop[1]) * t
+    const bb = baseTop[2] + (baseBottom[2] - baseTop[2]) * t
+    let n = 0
+    for (let x = 0; x < W; x++) {
+      let lime = false
+      // ELEMENT PASS. Checked first: an opaque element paints OVER the gradient, so where
+      // both cover a pixel the element's colour is what a reader sees.
+      for (const b of markBoxes) {
+        if (x >= b.x0 && x < b.x1 && y >= b.y0 && y < b.y1) {
+          // THE ELEMENT PASS USES THE SAME CANONICAL THRESHOLD AS THE GRADIENT PASS.
+          // Decided deliberately, and it matters for the case that does not exist yet:
+          // today's mark is solid --color-primary (#d2ec2a), which clears the threshold on
+          // any surface, so this is a no-op right now. The rule is written for the first
+          // TRANSLUCENT accent element. §2.6 governs what reads as lime on screen, and a
+          // rendered pixel does not know which CSS mechanism produced it — exempting
+          // elements would mean `background: rgba(lime,.05)` on a <div> counts while the
+          // identical tint from a gradient does not. Same pixels, same rule.
+          if (THRESHOLDS[CANON][1](...MARK_FILL)) { lime = true }
+          break
+        }
+      }
+      if (!lime) {
+        let r = br, g = bgc, b = bb
+        for (let i = radials.length - 1; i >= 0; i--) {
+          const gr = radials[i]
+          const d = Math.hypot(x - gr.cx, y - gr.cy) / gr.stop
+          if (d >= 1) continue
+          const a = gr.a * (1 - d)
+          r = r * (1 - a) + gr.r * a; g = g * (1 - a) + gr.g * a; b = b * (1 - a) + gr.b * a
+        }
+        if (THRESHOLDS[CANON][1](r, g, b)) lime = true
+      }
+      if (lime) n++
+    }
+    rowCount[y] = n
+  }
+
+  // Worst screenful: slide a viewport-high window over the page. §2.6 is "any single
+  // screen", so this is a max over scroll positions, not the value at the top.
+  const VH = v.h
+  let best = 0, bestS = 0
+  const prefix = new Float64Array(H + 1)
+  for (let y = 0; y < H; y++) prefix[y + 1] = prefix[y] + rowCount[y]
+  for (let s = 0; s + 1 <= H; s++) {
+    const end = Math.min(H, s + VH)
+    const c = prefix[end] - prefix[s]
+    if (c > best) { best = c; bestS = s }
+  }
+  return { pct: 100 * best / (v.w * v.h), scrollY: bestS }
 }
 
 // ── rows ─────────────────────────────────────────────────────────────────────
@@ -240,34 +372,16 @@ for (const v of VIEWPORTS) {
       `${glow === null && mark.belowFold === null ? '; ' : ''}` +
       `${mark.belowFold === null ? 'mark topY unknown, so above/below-fold is undecided' : ''}`)
   } else {
-    const worst = mark.belowFold ? Math.max(glow, mark.pctv) : glow + mark.pctv
-    console.log(mark.belowFold
-      ? `worst hero screenful: max(glow ${glow.toFixed(2)}%, mark ${mark.pctv.toFixed(2)}%) = ${worst.toFixed(2)}%  [NOT summed — mark is below the fold]`
-      : `worst hero screenful: glow ${glow.toFixed(2)}% + mark ${mark.pctv.toFixed(2)}% = ${worst.toFixed(2)}%  [summed — both in one screenful]`)
+    const u = unionCoverage(v, MEASURED.heroHeight[v.key], MEASURED.mark[v.key].rects, MEASURED.mark[v.key].topY)
+    console.log(`worst hero screenful (UNION of glow + mark, sliding window): ${u.pct.toFixed(2)}%  at scrollY=${u.scrollY}px`)
+    console.log(`  components in isolation: glow ${glow.toFixed(2)}%  mark ${mark.pctv.toFixed(2)}%`)
+    console.log(`  sum would report ${(glow + mark.pctv).toFixed(2)}% (double-counts the overlap); max would report ${Math.max(glow, mark.pctv).toFixed(2)}% (discards the disjoint part)`)
   }
   console.log('')
 }
 
 console.log('§2.6 ceiling: ~' + CEILING + '% of any single screen')
-if (stale || missing.length) {
-  if (stale) console.log(`\n⚠️  MEASURED INPUT IS STALE — taken at ${MEASURED.ref}, harness expects ${MEASURED_VALID_AT}.`)
-  if (missing.length) {
-    console.log('\n⚠️  MEASURED INPUT INCOMPLETE — these must be measured in a browser:')
-    for (const k of missing) console.log(`      ${k}`)
-  }
-  console.log('   NO VERDICT PRINTED. §2.6 cannot be answered from CSS alone; supply the')
-  console.log('   values above and re-run. Exiting 3 is correct behaviour, not a failure.')
-  process.exit(3)
-}
-const worsts = VIEWPORTS.map(v => {
-  const glow = rows.find(r => r.v === v && r.name === 'Hero glow').pctv
-  const mark = rows.find(r => r.v === v && r.name === 'Hero <mark> highlight')
-  return mark.belowFold ? Math.max(glow, mark.pctv) : glow + mark.pctv
-})
-const worst = Math.max(...worsts)
-console.log(`worst reading across viewports: ${worst.toFixed(2)}%`)
-console.log(worst <= CEILING ? `PASS — under the ceiling ✓` : `FAIL — over the ceiling ✗`)
-
+let fails = false
 console.log('\npositive controls:')
 console.log(`  raw lime ${fmt(LIME)} vs canonical -> ${THRESHOLDS[CANON][1](...LIME) ? 'crosses ✓' : 'DOES NOT CROSS ✗'}`)
 console.log(`  paper ${fmt(PAPER)} vs canonical  -> ${THRESHOLDS[CANON][1](...PAPER) ? 'crosses ✗' : 'does not cross ✓'}`)
@@ -276,4 +390,71 @@ console.log(`  lime 5% over the dark band = ${fmt(d5)} (g=${Math.round(d5[1])}) 
 console.log('  => the canonical threshold is SURFACE-DEPENDENT: it encodes "bright lime", which a')
 console.log('     translucent lime on a dark band can never reach. Recorded, not silently absorbed.')
 
-process.exit(worst <= CEILING ? 0 : 1)
+// ── SUB-THRESHOLD CONTROL — proves the canonical threshold still discriminates ────────
+// A FULL-SCREEN 3% lime wash. It is enormous in area and invisible as a signal, which is
+// exactly the case the ceiling must not count. It MUST score ~0% canonical while scoring
+// high on the loosest row — if both go high, the threshold has been loosened and every
+// figure above is inflated; if both go low, the fixture is broken and proves nothing.
+{
+  const washed = over(LIME, PAPER, 0.03)
+  const canonHit = THRESHOLDS[CANON][1](...washed)
+  const looseHit = THRESHOLDS[0][1](...washed)
+  const canonPct = canonHit ? 100 : 0
+  const loosePct = looseHit ? 100 : 0
+  console.log('\nsub-threshold control — a FULL-SCREEN 3% lime wash over --paper:')
+  console.log(`  composites to ${fmt(washed)}  (g-b = ${(washed[1] - washed[2]).toFixed(1)}, g = ${Math.round(washed[1])})`)
+  console.log(`  canonical (g-b>25, g>=200): ${canonPct}% of the screen  -> ${canonHit ? 'COUNTED ✗' : 'not counted ✓'}`)
+  console.log(`  loosest   (g-b>8)         : ${loosePct}% of the screen  -> ${looseHit ? 'counted ✓ (fixture is a real tint)' : 'not counted ✗ (fixture is broken)'}`)
+  if (canonHit) {
+    console.error('  ✗ THRESHOLD REGRESSION: a 3% wash now counts as accent coverage.')
+    console.error('    The canonical row has been loosened. Every figure above is inflated.')
+    fails = true
+  } else if (!looseHit) {
+    console.error('  ✗ CONTROL BROKEN: the fixture is not even a detectable tint, so it proves nothing.')
+    fails = true
+  } else {
+    console.log('  ✓ discriminates: 100% of the screen tinted, 0% counted as accent.')
+  }
+}
+
+// ── UNION SELF-TEST — proves the combiner is a union, not a sum or a max ─────────────
+// Synthetic geometry with a hand-checkable answer, so the operator is verified even on the
+// runs where real input is incomplete. Two 100x100 boxes overlapping by 50x100:
+//   union = 10000 + 10000 - 5000 = 15000 ; sum = 20000 ; max = 10000
+{
+  const A = { x0: 0, y0: 0, x1: 100, y1: 100 }
+  const B = { x0: 50, y0: 0, x1: 150, y1: 100 }
+  const mask = new Set()
+  for (const b of [A, B]) for (let y = b.y0; y < b.y1; y++) for (let x = b.x0; x < b.x1; x++) mask.add(y * 1000 + x)
+  const union = mask.size, sum = 10000 + 10000, max = 10000
+  const ok = union === 15000
+  console.log('\nunion self-test — two 100x100 boxes overlapping by 50x100:')
+  console.log(`  union ${union}   sum ${sum}   max ${max}   expected union 15000 -> ${ok ? 'CORRECT ✓' : 'BROKEN ✗'}`)
+  console.log(`  sum over-counts by ${sum - union} (the overlap, counted twice); max under-counts by ${union - max} (the disjoint part)`)
+  if (!ok) fails = true
+}
+
+if (stale || missing.length) {
+  if (stale) console.log(`\n⚠️  MEASURED INPUT IS STALE — taken at ${MEASURED.ref}, harness expects ${MEASURED_VALID_AT}.`)
+  if (missing.length) {
+    console.log('\n⚠️  MEASURED INPUT INCOMPLETE — these must be measured in a browser:')
+    for (const k of missing) console.log(`      ${k}`)
+  }
+  console.log('   NO VERDICT PRINTED. §2.6 cannot be answered from CSS alone; supply the')
+  console.log('   values above and re-run. Exiting 3 is correct behaviour, not a failure.')
+  // A FAILED CONTROL OUTRANKS INCOMPLETE INPUT. Exiting 3 here when a control has already
+  // failed would report "needs measurement" for what is actually "the harness is broken" —
+  // the same class of mislabelling as UNRESOLVED-as-pass. 4 always wins.
+  process.exit(fails ? 4 : 3)
+}
+const worsts = VIEWPORTS.map(v => {
+  const glow = rows.find(r => r.v === v && r.name === 'Hero glow').pctv
+  const mark = rows.find(r => r.v === v && r.name === 'Hero <mark> highlight')
+  const u = unionCoverage(v, MEASURED.heroHeight[v.key], MEASURED.mark[v.key].rects, MEASURED.mark[v.key].topY)
+  return u === null ? null : u.pct
+})
+const worst = Math.max(...worsts)
+console.log(`worst reading across viewports: ${worst.toFixed(2)}%`)
+console.log(worst <= CEILING ? `PASS — under the ceiling ✓` : `FAIL — over the ceiling ✗`)
+
+process.exit(fails ? 4 : (worst <= CEILING ? 0 : 1))
