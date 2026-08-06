@@ -222,6 +222,19 @@ router.post('/collect',
       if (!site_key || !url) return res.status(400).json({ error: 'site_key and url required' })
 
       // Bot filter — silent drop, 200 so crawlers don't retry
+      //
+      // 🔴 KNOWN DEFECT, NOT FIXED IN THIS PR — see the separate /analytics/collect PR.
+      // This calls isBotUserAgent, the REPORTING predicate, at INGESTION. That is the
+      // wrong function: bot-filter.js:47 states that applying BOT_UA_PATTERN at
+      // ingestion "deleted real humans", because its `whatsapp` / `telegrambot` tokens
+      // also appear in the UA of a real person browsing inside those apps' in-app
+      // WebViews. This route is browser-facing and mounted (api/index.js:550).
+      //
+      // The fix is a one-word swap to isIngestionBotUserAgent — the function that
+      // already exists for this purpose. It is annotated here rather than left silent
+      // because that PR may sit behind CI, and an invisible live defect is how this one
+      // survived three weeks. If you are reading this and the swap has not landed, it
+      // still needs to.
       const ua = req.headers['user-agent'] || ''
       if (isBotUserAgent(ua)) return res.json({ ok: true })
 
