@@ -21,14 +21,37 @@ import { join } from 'node:path'
 // not a descriptive label. Nine descriptive labels in contrast-audit.mjs had to be rewritten
 // precisely because a label cannot be verified against a DOM.
 export const V3_PAGE_PAIRS = {
-  // '/v3': [
-  //   { id: 'hero h1 on paper', sel: '.v3-hero h1', fg: 'var(--color-text)', bg: 'var(--color-bg)', level: 'AA-large' },
-  // ],
+  // ── /v3 homepage. Registered in the SAME PR that builds the page. ──────────
+  // ⚠️ THE DARK BAND (section 4) IS WHY THIS MATTERS. Flipping a section's surface
+  // invalidates every carried-forward number on it, even when the text's own CSS
+  // is untouched: TrustBar's badge went 10.54 -> 1.22 on exactly this kind of flip
+  // in 2b because the surface beneath it changed. Every pair on a dark surface
+  // below is computed against that surface, not inherited from a light one.
+  '/v3': [
+    // dark band — section 4, the new surface
+    { id: 'dark band title', sel: '.v3-section--dark .v3-section-title', fg: '#f6f3eb', bg: '#0B0A07', level: 'AA-large' },
+    { id: 'dark band lede', sel: '.v3-section--dark .v3-section-lede', fg: '#a79e8c', bg: '#0B0A07', level: 'AA' },
+    { id: 'dark band eyebrow', sel: '.v3-section--dark .v3-eyebrow', fg: '#a79e8c', bg: '#0B0A07', level: 'AA' },
+    // bento cells — a second, lighter dark surface (--v3-black-700), scored separately
+    { id: 'bento dark h3', sel: '.v3-bento-cell-dark', fg: '#f6f3eb', bg: '#2A251E', level: 'AA' },
+    { id: 'bento dark body', sel: '.v3-bento-cell-dark', fg: '#a79e8c', bg: '#2A251E', level: 'AA' },
+    // accent cell — ink on a lime tint. §3.6: lime is a SURFACE you put dark text on.
+    { id: 'bento accent h3', sel: '.v3-bento-cell-accent', fg: '#161310', bg: '#E9F58A', level: 'AA' },
+    // CTA band — full-saturation accent. The lede carries opacity .82, so it is
+    // scored COMPOSITED (#343711), not at its declared colour: an opacity that is
+    // never composited is the same false-pass shape as a translucent background.
+    { id: 'CTA band heading', sel: '.v3-cta-band h2', fg: '#12100C', bg: '#D2EC2A', level: 'AA-large' },
+    { id: 'CTA band lede @.82', sel: '.v3-cta-band p', fg: '#343711', bg: '#D2EC2A', level: 'AA' },
+    // light surfaces
+    { id: 'frame chrome url', sel: '.v3-frame-url', fg: '#8a9494', bg: '#12100C', level: 'AA' },
+    { id: 'card body on paper-card', sel: '.v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'eyebrow on paper', sel: '.v3-eyebrow', fg: '#5B5548', bg: '#F7F4ED', level: 'AA' }
+  ],
 }
 
 // Pages that exist in the build and must therefore be registered above.
 // Populated as v3 pages land; a page here with no pairs is an error, not a skip.
-export const V3_ROUTES = []
+export const V3_ROUTES = ['/v3']
 
 const DIST = 'dist'
 let fails = 0
