@@ -376,6 +376,25 @@
   .hero h1 {
     font-size: clamp(40px, 4.6vw, 70px);
     text-wrap: balance;
+    /* Overrides the 0.94 on the base h1 above (line ~319). A line-height BELOW 1 makes each
+       line box SHORTER than the font's content area, so an inline background paints outside
+       its own line and — being later in document order — over the descenders of the line
+       above. Measured in a browser at 642410ea: 14.83px of overlap at 1440x900 against a
+       ~14px descender depth, and 8.65px against ~8px at 390x844. Descenders fully covered at
+       both.
+
+       Not a z-index or stacking problem, and nothing is negative: this is ordinary inline
+       paint order meeting sub-1 leading. Scoped to `.hero h1` rather than the base `h1` so
+       the blast radius is exactly the surface that was measured.
+
+       1.25 is the value the control pages (/pricing, /contact) already use — chosen as a
+       typographic reference rather than reverse-engineered to clear the collision, per the
+       rule that the leading should be right on its own terms. ⚠️ The mark also carries
+       `px-4 py-1`, and inline vertical padding grows the painted box WITHOUT growing the
+       line box, so ~4px of the overlap is padding that leading cannot remove. Whether 1.25
+       fully clears the descenders is a browser question, not an arithmetic one, and is
+       being measured rather than asserted here. */
+    line-height: 1.25;
   }
   .hero-sub {
     margin: 28px 0 0;

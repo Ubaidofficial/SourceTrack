@@ -63,26 +63,36 @@ function toRgb (value, vars) {
 // that applies. 'AA-large' = >=18.66px bold or >=24px regular (WCAG 1.4.3), threshold 3.0.
 const PAIRS = [
   // ── text on LIME ──
-  { id: 'hero <mark> highlight',        sel: '.hero-text>mark',        fg: 'var(--color-text)',  bg: 'var(--color-primary)',   level: 'AA-large' },
+  { id: 'hero <mark> highlight',        sel: '#hero-title>mark',        fg: 'var(--color-text)',  bg: 'var(--color-primary)',   level: 'AA-large' },
   { id: 'btn-primary label @stop25%',   sel: '.btn-primary',           fg: 'var(--color-dark)',  bg: 'var(--color-primary)',   level: 'AA' },
   { id: 'btn-primary label @stop100%',  sel: '.btn-primary',           fg: 'var(--color-dark)',  bg: 'var(--color-secondary)', level: 'AA' },
   { id: 'badge lime text @stop0%',      sel: '.gradient-text-primary', fg: 'var(--color-primary)',   bg: 'var(--color-dark)',      level: 'AA' },
   { id: 'badge lime text @stop100%',    sel: '.gradient-text-primary', fg: 'var(--color-secondary)', bg: 'var(--color-dark-gray)', level: 'AA' },
 
-  // ── home-design.css link + orange text, as the rules ACTUALLY ship ──
-  // These mirror real selectors, not hypotheticals. --orange-600 is banned for text
-  // (see the BAN check below), so it is asserted absent rather than scored here.
+  // ── home-design.css link + orange text ──
+  // ⚠️ THIS COMMENT USED TO READ "These mirror real selectors, not hypotheticals."
+  // It was FALSE for two of its five pairs, and the false claim of having-been-checked is
+  // why nobody checked. `.calc-row.hi b` and `.plan li em` referenced `calc-row`, `hi` and
+  // `plan` — classes that exist on NO page of the built site, on any route, ever. Both were
+  // introduced by 2a alongside this file and scored green for three phases while matching
+  // nothing. They are REMOVED rather than repointed: home-design.css styles a component set
+  // the marketing site does not build, so there is no element for them to point at.
+  // --orange-600 is banned for text (see the BAN check below), asserted absent, not scored.
   { id: '.st-home a on paper',          sel: '.st-home a',             fg: 'var(--orange-700)',  bg: 'var(--paper)',           level: 'AA' },
   { id: '.st-home a:hover on paper',    sel: '.st-home a:hover',       fg: 'var(--ink)',         bg: 'var(--paper)',           level: 'AA' },
-  { id: '.calc-row.hi b on paper',      sel: '.calc-row.hi b',         fg: 'var(--orange-700)',  bg: 'var(--paper)',           level: 'AA' },
-  { id: '.plan li em on orange-50',     sel: '.plan li em',            fg: 'var(--orange-700)',  bg: 'var(--orange-50)',       level: 'AA' },
   { id: 'hero .pill label on gray-100', sel: '.st-home .pill',         fg: 'var(--black)',       bg: 'var(--gray-100)',        level: 'AA' },
   { id: 'hero-sub on paper',            sel: '.st-home .hero-sub',     fg: '#586464',            bg: 'var(--paper)',           level: 'AA' },
   { id: 'demo-chrome url on ink',       sel: '.demo-chrome .url',      fg: '#8a9494',            bg: '#12100c',                level: 'AA' },
 
   // ── surrounding hero text, for baseline ──
   { id: 'hero body copy on bone',       sel: '#hero-content',          fg: 'var(--color-text-light)', bg: 'var(--color-body)', level: 'AA' },
-  { id: 'hero h1 on bone',              sel: '.hero-text',             fg: 'var(--color-text)',  bg: 'var(--color-body)',      level: 'AA-large' },
+  // ⚠️ VALUE CHANGED, and not by a regression. This pair targeted `.hero-text` and so
+  // matched nothing on the homepage from 2a onward, while reporting 16.85 PASS. Repointed
+  // to the real hero h1, its tokens are also different: home-design.css gives it
+  // `color: var(--black)` (#12100c), not --color-text, over the hero's own gradient base
+  // whose top stop is --paper. 17.30 is the FIRST true reading of this pair, not an
+  // improvement on 16.85 — there was nothing to improve on.
+  { id: 'hero h1 on hero base',         sel: '#hero-title',            fg: 'var(--black)',       bg: 'var(--paper)',           level: 'AA-large' },
   { id: 'btn-dark label',               sel: '.btn-dark',              fg: 'var(--color-white)', bg: 'var(--color-dark)',      level: 'AA' },
 
   // ── Phase 2b sections ──
@@ -93,11 +103,11 @@ const PAIRS = [
   { id: 'TrustBar eyebrow',             sel: '.trustbar-eyebrow',      fg: 'var(--gray-600)',    bg: 'var(--gray-50)',         level: 'AA' },
   { id: 'TrustBar logo label',          sel: '.trustbar-logo',         fg: 'var(--black)',       bg: 'var(--gray-50)',         level: 'AA' },
   // DirectRescue keeps its dark band unchanged; pinned so a later edit cannot drift it.
-  { id: 'DirectRescue h2',              sel: 'DirectRescue h2',        fg: '#F6F3EB',            bg: '#18150F',                level: 'AA-large' },
-  { id: 'DirectRescue lede',            sel: 'DirectRescue p',         fg: '#A79E8C',            bg: '#18150F',                level: 'AA' },
+  { id: 'DirectRescue h2',              sel: 'h2.text-h2.text-\\[\\#F6F3EB\\]',   fg: '#F6F3EB',            bg: '#18150F',                level: 'AA-large' },
+  { id: 'DirectRescue lede',            sel: 'p.text-lg.text-\\[\\#A79E8C\\]',    fg: '#A79E8C',            bg: '#18150F',                level: 'AA' },
   // JourneyShowcase gained a frame but kept its paper surface and type colours.
-  { id: 'Journey h2 on paper',          sel: 'JourneyShowcase h2',     fg: 'var(--color-text)',  bg: 'var(--color-body)',      level: 'AA-large' },
-  { id: 'Journey lede on paper',        sel: 'JourneyShowcase p',      fg: 'var(--color-text-light)', bg: 'var(--color-body)', level: 'AA' },
+  { id: 'Journey h2 on paper',          sel: 'h2.text-h2.font-medium',        fg: 'var(--color-text)',  bg: 'var(--color-body)',      level: 'AA-large' },
+  { id: 'Journey lede on paper',        sel: 'p.text-lg.mt-4',                fg: 'var(--color-text-light)', bg: 'var(--color-body)', level: 'AA' },
   { id: 'Journey frame chrome url',     sel: '.demo-chrome .url',      fg: '#8a9494',            bg: '#12100c',                level: 'AA' },
 
   // ── Phase 2c ──
@@ -105,13 +115,31 @@ const PAIRS = [
   // dark over the paper page). Both are now opaque, and every pair below is measured
   // against the real rendered surface. Pinned rather than checked-and-discarded so a
   // later re-tint cannot silently reintroduce the failure.
-  { id: 'ProofStrip heading',           sel: 'ProofStrip h2',          fg: '#F6F3EB',            bg: '#18150F',                level: 'AA-large' },
-  { id: 'ProofStrip lede',              sel: 'ProofStrip p',           fg: '#A79E8C',            bg: '#18150F',                level: 'AA' },
-  { id: 'IconTrio h3',                  sel: 'IconTrio h3',            fg: '#F6F3EB',            bg: '#18150F',                level: 'AA' },
-  { id: 'IconTrio body',                sel: 'IconTrio p',             fg: '#A79E8C',            bg: '#18150F',                level: 'AA' },
+  { id: 'ProofStrip heading',           sel: 'h2.text-h2.text-\\[\\#F6F3EB\\]',   fg: '#F6F3EB',            bg: '#18150F',                level: 'AA-large' },
+  { id: 'ProofStrip lede',              sel: 'p.text-lg.text-\\[\\#A79E8C\\]',    fg: '#A79E8C',            bg: '#18150F',                level: 'AA' },
+  { id: 'IconTrio h3',                  sel: 'h3.text-xl.text-\\[\\#F6F3EB\\]',   fg: '#F6F3EB',            bg: '#18150F',                level: 'AA' },
+  { id: 'IconTrio body',                sel: 'p.text-sm.text-\\[\\#A79E8C\\]',    fg: '#A79E8C',            bg: '#18150F',                level: 'AA' },
   { id: 'ComparisonTable lede',         sel: '.comparison-section p',  fg: 'var(--color-gray)',  bg: 'var(--color-body)',      level: 'AA' },
-  { id: 'ComparisonTable cell',         sel: 'comparison card td',     fg: '#A79E8C',            bg: '#1B1811',                level: 'AA' },
-  { id: 'Footer §29.8 disclosure',      sel: 'Footer p.text-gray',     fg: 'var(--color-gray)',  bg: 'var(--color-body)',      level: 'AA' }
+  { id: 'ComparisonTable cell',         sel: 'td.px-4.text-\\[\\#A79E8C\\]',      fg: '#A79E8C',            bg: '#1B1811',                level: 'AA' },
+  { id: 'Footer §29.8 disclosure',      sel: 'p.text-gray',                   fg: 'var(--color-gray)',  bg: 'var(--color-body)',      level: 'AA' },
+
+  // ── Phase 2d — FAQ ──
+  // ESTABLISHING A BASELINE, NOT COMPARING TO ONE. The FAQ and Pricing are React
+  // islands (client:visible) and were never in this list: before 2d there were ZERO
+  // pairs for either, so "0 FAIL" across 30 pairs was true only of the sections that
+  // happened to be listed. These six rows are the FAQ's first measurement — read them as
+  // a starting point, not as an after-figure with a before behind it.
+  //
+  // Surfaces are real: the accordion is `bg-card` (#fffdf8) on the `--color-body` page,
+  // not on paper, and its answer text is `text-gray`. The badge pill interior is the
+  // same `bg-gradient-black-grid` used by nine other sections, so its two stops are
+  // scored at both ends exactly as the hero badge is.
+  { id: 'FAQ h2 on body',               sel: 'h2.text-h1',                    fg: 'var(--color-text)',      bg: 'var(--color-body)',      level: 'AA-large' },
+  { id: 'FAQ subtitle on body',         sel: 'p.text-lg',                     fg: 'var(--color-text)',      bg: 'var(--color-body)',      level: 'AA' },
+  { id: 'FAQ question on card',         sel: 'h3.text-xl.font-medium',        fg: 'var(--color-text)',      bg: 'var(--color-card)',      level: 'AA' },
+  { id: 'FAQ answer on card',           sel: 'div.mt-4.text-gray',            fg: 'var(--color-gray)',      bg: 'var(--color-card)',      level: 'AA' },
+  { id: 'FAQ badge label @stop0%',      sel: 'span.gradient-text-primary',    fg: 'var(--color-primary)',   bg: 'var(--color-dark)',      level: 'AA' },
+  { id: 'FAQ badge label @stop100%',    sel: 'span.gradient-text-primary',    fg: 'var(--color-secondary)', bg: 'var(--color-dark-gray)', level: 'AA' }
 ]
 
 // Pairs whose background is TRANSLUCENT and therefore has no resolvable hex in the
@@ -197,6 +225,62 @@ for (const p of COMPOSITE_PAIRS) {
 
 console.log('-'.repeat(84))
 console.log(`${PAIRS.length + COMPOSITE_PAIRS.length} pairs · ${fails} FAIL · ${unresolved} unresolved`)
+
+// ── ZERO-MATCH GUARD ─────────────────────────────────────────────────────────
+// THE DEFECT THIS EXISTS FOR: 2a rebuilt the hero and dropped `class="hero-text"`. The
+// pairs `hero <mark> highlight` and `hero h1 on bone` both targeted `.hero-text`, matched
+// NOTHING on the homepage from that moment, and reported PASS (13.90 and 16.85) through 2a,
+// 2b AND 2c. A green number for an element that is not on the page is worse than no number:
+// it actively certifies the thing it failed to look at. Meanwhile the real <mark> was
+// rendering in the browser's default yellow.
+//
+// A selector's class/id tokens must all appear in the BUILT html. That is a necessary
+// condition, not a full CSS engine — it cannot prove the combination matches one element —
+// but it catches every failure of this shape at zero cost, which is the shape that shipped.
+//
+// Tailwind arbitrary values arrive escaped in a selector (`text-\\[\\#F6F3EB\\]`) and
+// unescaped in the class attribute (`text-[#F6F3EB]`), so tokens are unescaped before the
+// comparison. Getting that backwards would make every arbitrary-value pair look orphaned.
+const htmlPath = 'dist/index.html'
+const builtHtml = readFileSync(htmlPath, 'utf8')
+const domTokens = new Set()
+for (const m of builtHtml.matchAll(/\b(?:class|id)="([^"]*)"/g)) {
+  for (const t of m[1].split(/\s+/)) if (t) domTokens.add(t)
+}
+const selTokens = sel => (sel.match(/[.#]((?:\\.|[A-Za-z0-9_-])+)/g) || [])
+  .map(t => t.slice(1).replace(/\\(.)/g, '$1'))
+
+const orphans = []
+for (const p of PAIRS) {
+  const missing = selTokens(p.sel).filter(t => !domTokens.has(t))
+  if (missing.length) orphans.push({ id: p.id, sel: p.sel, missing })
+}
+console.log(`\nZERO-MATCH GUARD — every selector's class/id tokens must exist in ${htmlPath}`)
+console.log(`  ${domTokens.size} distinct class/id tokens in the built page`)
+if (orphans.length) {
+  fails += orphans.length
+  for (const o of orphans) {
+    console.log(`  ORPHAN ✗  ${o.id.padEnd(32)} sel='${o.sel}'  missing: ${o.missing.join(', ')}`)
+  }
+  console.log(`  ${orphans.length} selector(s) match NOTHING — a pair that cannot be seen cannot be scored.`)
+} else {
+  console.log('  clean ✓ — every asserted selector resolves against the built page')
+}
+
+// Positive control: the guard must be able to FIRE. A guard that has never failed is
+// indistinguishable from one that cannot fail — which is precisely how the orphans above
+// survived three phases of green output.
+const FAKE = { id: '__positive_control__', sel: '.definitely-not-a-real-class-xyz' }
+const fakeMissing = selTokens(FAKE.sel).filter(t => !domTokens.has(t))
+console.log(`  guard positive control: fake pair '${FAKE.sel}' -> ${
+  fakeMissing.length ? 'DETECTED as orphan ✓' : 'NOT DETECTED ✗ (guard is broken)'}`)
+if (!fakeMissing.length) fails++
+// Negative control: a token known to be present must NOT be flagged, or the guard would
+// report every pair as an orphan and be ignored as noise.
+const realTok = domTokens.has('hero-sub')
+console.log(`  guard negative control: known-present '.hero-sub' -> ${
+  realTok ? 'not flagged ✓' : 'FLAGGED ✗ (guard over-fires)'}`)
+if (!realTok) fails++
 
 // ── BAN: --orange-600 must never be a text colour ────────────────────────────
 // #e85a1a is 3.24:1 on --paper and 3.21:1 on --orange-50 — both below AA. It is a
