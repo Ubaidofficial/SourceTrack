@@ -68,7 +68,11 @@ export default defineConfig({
   fonts: fontsConfig,
   integrations: [
     react(),
-    sitemap(),
+    // /v3 is a noindex PREVIEW route. A noindex page listed in the sitemap is a
+    // contradiction — it tells crawlers "index this" and "do not index this" at
+    // once, and Search Console reports it as an error rather than ignoring it.
+    // Filtered here so the two signals agree.
+    sitemap({ filter: (page) => !page.includes("/v3") }),
     AutoImport({
       imports: [
         "@/shortcodes/Button",

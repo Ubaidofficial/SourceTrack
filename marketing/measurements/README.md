@@ -13,6 +13,19 @@ what it was believed to be. The h1 looked like it overflowed by 235px, and the c
 A gate is one element whose width is **derivable from CSS**, so a mismatch proves the
 viewport is wrong before any figure is taken.
 
+## MEASURED 2026-08-06 at ref a6a21e40 — and the warning below still stands
+
+| viewport | emulate argument | true innerWidth | `.v3-wrap` |
+|---|---|---|---|
+| desktop | `1152x720x1` | 1440 | 1320px |
+| mobile | `390x844x1,mobile,touch` | 390 | 390px |
+
+⚠️ **These are ENVIRONMENT-SPECIFIC.** On this host `devicePixelRatio` is 0.8, so
+`1440x900x1` yields innerWidth **1800**. The LIVE site needed `1440x900x1`. Both arguments
+are correct in their own context, which is exactly why the gate exists: **its value is the
+verification step, not the argument.** Always read `window.innerWidth` and compare before
+trusting a single rect.
+
 ## ⚠️ The emulate argument is NOT hardcoded, deliberately
 
 An earlier instruction fixed it at `1152x720x1` to yield a real 1440. That was

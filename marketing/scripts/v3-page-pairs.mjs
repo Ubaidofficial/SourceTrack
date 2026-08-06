@@ -21,14 +21,44 @@ import { join } from 'node:path'
 // not a descriptive label. Nine descriptive labels in contrast-audit.mjs had to be rewritten
 // precisely because a label cannot be verified against a DOM.
 export const V3_PAGE_PAIRS = {
-  // '/v3': [
-  //   { id: 'hero h1 on paper', sel: '.v3-hero h1', fg: 'var(--color-text)', bg: 'var(--color-bg)', level: 'AA-large' },
-  // ],
+  // ── /v3 homepage. Registered in the SAME PR that builds the page. ──────────
+  // ⚠️ THE DARK BAND (section 4) IS WHY THIS MATTERS. Flipping a section's surface
+  // invalidates every carried-forward number on it, even when the text's own CSS
+  // is untouched: TrustBar's badge went 10.54 -> 1.22 on exactly this kind of flip
+  // in 2b because the surface beneath it changed. Every pair on a dark surface
+  // below is computed against that surface, not inherited from a light one.
+  '/v3': [
+    // dark band — section 4, the new surface
+    { id: 'dark band title', sel: '.v3-section--dark .v3-section-title', fg: '#f6f3eb', bg: '#0B0A07', level: 'AA-large' },
+    { id: 'dark band lede', sel: '.v3-section--dark .v3-section-lede', fg: '#a79e8c', bg: '#0B0A07', level: 'AA' },
+    { id: 'dark band eyebrow', sel: '.v3-section--dark .v3-eyebrow', fg: '#a79e8c', bg: '#0B0A07', level: 'AA' },
+    // bento cells — a second, lighter dark surface (--v3-black-700), scored separately
+    { id: 'bento dark h3', sel: '.v3-bento-cell-dark', fg: '#f6f3eb', bg: '#2A251E', level: 'AA' },
+    { id: 'bento dark body', sel: '.v3-bento-cell-dark', fg: '#a79e8c', bg: '#2A251E', level: 'AA' },
+    // accent cell — ink on a lime tint. §3.6: lime is a SURFACE you put dark text on.
+    { id: 'bento accent h3', sel: '.v3-bento-cell-accent', fg: '#161310', bg: '#E9F58A', level: 'AA' },
+    // ⚠️ SECTION 18 PAIRS RE-SCORED, NOT CARRIED FORWARD. The full-bleed lime band
+    // was replaced with a paper close (§2.6's "never a full-bleed wash behind primary
+    // content"), so every ratio measured against the lime surface is VOID — a
+    // carried-forward ratio across a surface flip is the TrustBar 10.54 -> 1.22 failure
+    // exactly, and it happens without the text's own CSS changing.
+    // The lede also stopped using opacity .82 and takes --v3-gray-600 instead: a token
+    // has a fixed value, an opacity has to be composited before it can be scored.
+    { id: 'CTA close heading on paper', sel: '.v3-cta-close h2', fg: 'var(--v3-ink)', bg: 'var(--v3-paper)', level: 'AA-large' },
+    { id: 'CTA close lede on paper', sel: '.v3-cta-close p', fg: '#665F50', bg: '#F7F4ED', level: 'AA' },
+    // The button is now the ENTIRE accent presence in section 18 — and lime as a button
+    // is on §2.6's own acceptable-uses list, not a workaround around it.
+    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' },
+    // light surfaces
+    { id: 'frame chrome url', sel: '.v3-frame-url', fg: '#8a9494', bg: '#12100C', level: 'AA' },
+    { id: 'card body on paper-card', sel: '.v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'eyebrow on paper', sel: '.v3-eyebrow', fg: '#5B5548', bg: '#F7F4ED', level: 'AA' }
+  ],
 }
 
 // Pages that exist in the build and must therefore be registered above.
 // Populated as v3 pages land; a page here with no pairs is an error, not a skip.
-export const V3_ROUTES = []
+export const V3_ROUTES = ['/v3']
 
 const DIST = 'dist'
 let fails = 0
