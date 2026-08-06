@@ -2624,3 +2624,169 @@ All three verified present on `origin` (2026-08-06). Work sitting outside the re
 never reviewed, never CI'd, and invisible to any process that enumerates PRs. The `resolve/xff-…`
 branch name suggests security-relevant content, which makes its status worth deciding rather than
 leaving.
+
+---
+
+## 2026-08-07 — KI-100 … KI-104
+
+Continuing from KI-99. Every claim below is labelled **VERIFIED** (checked at the ref/date given)
+or **INFERRED** (reasoned, not observed). Verified 2026-08-07 on branch `1a4676ee` unless stated.
+
+### KI-100 — Bunny issues the managed-proxy TLS certs. We have no ACME code because we need none. ✅ RESOLVED
+
+**Closes a long-standing unknown, and explains why the search kept failing.** ACME/cert-issuance code
+was searched for repeatedly and never found. The reason is not that it is hidden — **it does not
+exist, and should not.** Certificate issuance is BunnyCDN's.
+
+**VERIFIED — no issuance code in `api/`.** A repo-wide scan for `acme|certbot|greenlock|lets
+encrypt|tls-alpn|http-01|dns-01` across `api/` returns exactly two files, and **both are tests**
+(`api/tests/tracker-booking-detection.test.js`, `api/tests/ad-platforms-status-connected.test.js`) —
+incidental string matches, not an implementation.
+
+**VERIFIED — what we actually do instead.** `api/lib/bunny-edge.js:4,9` documents the real mechanism:
+
+    //   • loadFreeCertificate()  — issue the free Let's Encrypt cert for it
+    //   GET https://api.bunny.net/pullzone/loadFreeCertificate?hostname=<host>  → 200/201
+
+We *ask Bunny to issue*; we never issue. That single call is the whole of our cert story.
+
+**VERIFIED live 2026-08-06/07 — both hostnames serve valid certs**, read straight off the TLS
+handshake (`openssl s_client -servername`), not from a dashboard:
+
+| host | subject | issuer | validity |
+|---|---|---|---|
+| `track.bookmentions.net` | `CN=track.bookmentions.net` | `C=US, O=Let's Encrypt, CN=YE2` | Jul 7 17:31 – Oct 5 17:31 2026 GMT |
+| `track2.bookmentions.net` | `CN=track2.bookmentions.net` | `C=US, O=Let's Encrypt, CN=YE2` | Jul 7 19:52 – Oct 5 19:52 2026 GMT |
+
+Both on pullzone `6119064` (`cdn-pullzone` response header). CN matches host in both cases.
+
+**This also settles the older "Bunny custom-hostname / per-tenant-cert capability UNVERIFIED" item:
+the capability is not merely available, it is already in production and has been since 2026-07-07.**
+
+⚠️ **The lesson is about the search, not the certs.** Repeatedly failing to find code is evidence
+about the *codebase*, not about the *capability* — a missing implementation can mean "delegated"
+just as easily as "missing". The question "who issues these?" was answerable in one TLS handshake
+and was never asked.
+
+### KI-101 — a tracker change takes up to 8 days to fully propagate ⚠️ OPERATIONAL HAZARD, NOT FIXED
+
+**VERIFIED live 2026-08-07** — response headers on the proxied tracker
+(`https://track.bookmentions.net/tracker.min.js`):
+
+    cache-control: public, max-age=86400, stale-while-revalidate=604800, immutable
+    cdn-cache: HIT     cdn-cachedat: 08/05/2026 23:16:58     cdn-pullzone: 6119064
+
+**24h fresh + 7d stale-while-revalidate = up to 8 days** during which the edge can answer without
+the origin. `immutable` additionally tells conforming browsers not to revalidate at all within
+`max-age`.
+
+**Consequence: there is no fast rollback of a tracker-side defect.** Shipping a fix does not
+un-ship the broken file; it starts an up-to-8-day tail during which some visitors keep executing
+the old bundle. Any incident response that assumes "deploy the fix and it stops" is wrong for
+anything in `tracker/`.
+
+⚠️ **This will directly affect A2 (the click-ID restorer), which is tracker-side. Cost the tail
+before A2 ships, not after.**
+
+**VERIFIED — the client cannot force freshness.** A cache-buster query string still returned
+`cdn-cache: HIT` (the zone ignores query strings) and a `Cache-Control: no-cache` *request* header
+did not bypass it either. Both measured, not assumed.
+
+**INFERRED, not measured:** the 7-day `stale-while-revalidate` extension is read from the declared
+header semantics. Only the `max-age` portion was observed directly (a fresh `HIT` ~20h after
+`cdn-cachedat`). Bunny's exact SWR behaviour has **not** been exercised. If a decision turns on the
+difference between "8 days" and "1 day", measure it rather than inheriting this line.
+
+**Deliberately not fixed.** The caching is *correct* for a static asset; degrading a
+customer-facing tracker cache to shorten an incident tail is a real trade, not an obvious win.
+Flagged so it is a decision rather than a surprise. Related: `api/lib/proxy-verification.js`'s
+header records the same 8-day window defeating that job's two-strike demotion on the tracker stage.
+
+### KI-102 — `bindManagedProxySiteKey` is a BINDING guard, not a host allowlist
+
+**VERIFIED — `api/middleware/managed-proxy.js:141-155`**, read in full:
+
+    export function bindManagedProxySiteKey(req, res, next) {
+      if (req.managedProxy) {                                    // :142
+        const siteKey = req.body?.site_key || req.query?.site_key
+        if (siteKey && siteKey !== req.managedProxy.site_key) {  // :145
+          return res.status(403)... 'Host-site key binding violation'
+        }
+      }
+      next()
+    }
+
+**What it does NOT do, and both matter:**
+
+* **It does not INJECT a site_key.** A request arriving on a registered proxy domain *without* a
+  `site_key` is passed straight through (`siteKey` is falsy → no 403 → `next()`). The proxy does
+  not supply the tenant on the caller's behalf.
+* **It does not reject unregistered hosts.** When `req.managedProxy` is absent the whole body is
+  skipped. Unregistered hosts are already 404'd upstream by `managedProxyEarlyGate`
+  (`managed-proxy.js:108-110`, `if (record === null) return res.status(404)`), so this is not a
+  hole — but the *guard itself* is permissive, and reading it as an allowlist is wrong.
+
+**⚠️ THE CONSEQUENCE, and we nearly misread it:** a `401 {"error":"Missing site_key"}` or
+`401 {"error":"Invalid site_key"}` on a **registered** proxy domain is **correct behaviour, not a
+proxy failure**. Those 401s come from `api/middleware/auth.js:32,79,91,188` — ordinary site_key
+validation — *after* the binding guard has correctly let the request through. Diagnosing that as a
+broken proxy sends you into the CDN and the DNS for a caller-side omission.
+
+### KI-103 — `marketing/public/llms.txt` has no generator and will drift again ⚠️ RECURRING SURFACE
+
+**VERIFIED** — a repo-wide search for `llms.txt` finds no generator. The only code reference is
+`dashboard/server.mjs:101-103`, which **serves** it (`res.sendFile`). It is hand-maintained, lives
+in `marketing/public/`, and is therefore copied to `dist/` **unprocessed**.
+
+**Nothing keeps it in step with the copy it mirrors** — `marketing/src/content/sections/key-features.md`
+and the changelog carry overlapping claims with no shared source and no test asserting agreement.
+
+**It has now drifted once and been corrected once.** It shipped
+`"Cookieless Identity Moat: 100% first-party, cookieless, zero cross-site tracking or
+fingerprinting."` — **two** banned absolutes in one line (`docs/release_checklist_gate.md:63`) —
+while the equivalent `marketing/src` copy said something different. Corrected in **#675**.
+
+⚠️ **Why this is worse than ordinary copy drift:** the file is footer-linked as **"AI info"**
+(`dashboard/src/components/MarketingFooter.jsx:61`). It is written for other AI systems to ingest,
+so a false claim there is repeated as fact **with none of the surrounding page context that would
+qualify it**. A drifted marketing paragraph misleads a reader who can see the rest of the page; a
+drifted `llms.txt` line propagates.
+
+**Also verified — a `marketing/src` scan cannot see it.** `public/` bypasses `src/` entirely, so a
+grep over `marketing/src` returns *clean*, which reads as "no hits" rather than "did not look".
+That is exactly how this survived. The method fix is in `QA_RUNBOOK.md` (#675): claim scans run
+against **built output**.
+
+**Not fixed:** the missing generator. The correction addressed the instance, not the surface.
+A one-line drift test (assert `llms.txt`'s feature bullets against their `src` source) would close
+it; none exists.
+
+### KI-104 — `/api/server/event` accepted click IDs ONLY when nested under `properties` (pre-#676)
+
+**Correcting a founder claim that CC disproved.** The capability was said to be absent; it was
+present but **undiscoverable**, which is a different defect with a different fix.
+
+**VERIFIED on this branch (pre-#676), `api/routes/server-events.js`:**
+
+* `:211-215` — UTMs are read from **TOP-LEVEL** body keys:
+  `utm_source: req.body.utm_source || null`, and the same for `medium`/`campaign`/`content`/`term`.
+* **There is no top-level click-ID equivalent.** A grep for `req.body.gclid|fbclid|msclkid|ttclid|li_fat_id`
+  returns **nothing**.
+* `:228` — a catch-all spread closes the properties object: `...(req.body.properties || {})`.
+
+**So nested click IDs reached the typed columns by accident of that spread, and top-level ones were
+silently dropped.** The route taught one convention (top-level, via its UTM handling) and rewarded
+the opposite.
+
+⚠️ **The failure mode is the worst kind: caller-dependent and silent.** A caller following the
+route's own UTM convention got no click IDs and no error. A caller who happened to nest under
+`properties` got them. Both received `200`. Nothing in the response distinguished the two, so the
+capability's presence depended on a guess the documentation never mentioned.
+
+**#676 (OPEN) makes the contract consistent — it did NOT create the capability.** Describing it as
+"adding click-ID support" would be wrong in the changelog and wrong in the record: the columns were
+already being populated for anyone who nested. **It is a contract fix, not a feature.**
+
+**INFERRED, not verified:** that any real caller ever hit the top-level path and lost data. Nothing
+persists a raw request body, so the loss — if any — is unmeasurable. Recorded as unknown rather
+than estimated.
