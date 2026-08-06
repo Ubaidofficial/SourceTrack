@@ -85,23 +85,45 @@ function isJavaScriptContentType (ct) {
  * uncacheable (no-store at the origin, api/index.js) because nothing depends on caching
  * it — the two paths differ deliberately.
  *
- * ⚠️ AND IT DEFEATS THE TWO-STRIKE DEMOTION. This is the consequence worth knowing:
- * nextProxyState() demotes only after TWO consecutive failures, which assumes two checks
- * see two INDEPENDENT responses. They may not. proxy-domain-recheck's cadence for an
- * active domain is DUE_AFTER_MS.active = 24h, and the cache window is up to 8 days — so
- * consecutive strikes can both read the SAME cached success. If the origin dies, the edge
- * keeps answering, no strike is ever recorded, and the domain stays `active`.
+ * ⚠️ THERE ARE TWO DIFFERENT DETECTION LATENCIES, AND THE SLOW ONE IS NARROWER THAN IT
+ * LOOKS. verifyProxyDelivery() runs the HEALTH stage first and only reaches the tracker
+ * stage if health passes, so which stage catches a failure decides how fast it is caught.
  *
- * For two strikes to mean two observations the interval would have to EXCEED the whole
- * cache window (>8 days), making demotion take >16 days. That is worse than the problem,
+ *   ORIGIN / GATE / TLS / DNS OUTAGE      -> caught by the HEALTH stage
+ *     verifySslAndRouting's endpoint is no-store at the origin (api/index.js) and the
+ *     gate reply is no-store too, so the edge cannot serve a cached success. Each check
+ *     is an independent live observation. At DUE_AFTER_MS.active = 24h that is
+ *     detection within ~24h, and demotion after two strikes within ~48h. The two-strike
+ *     rule works as designed here: two checks ARE two observations.
+ *
+ *   TRACKER-DELIVERY-ONLY FAILURE          -> caught by the TRACKER stage
+ *     i.e. the gate and origin answer correctly but tracker.min.js specifically is not
+ *     served as the tracker — a 404/5xx on the object, an HTML error page, or a wrong
+ *     content-type, while health still passes. THIS is where the cache window bites, and
+ *     only this. Up to ~8 days of edge answers plus ~2 days of strikes ≈ 10 days.
+ *
+ * ⚠️ SO THE TWO-STRIKE DEMOTION IS DEFEATED ONLY ON THE TRACKER STAGE. nextProxyState()
+ * assumes two consecutive checks see two INDEPENDENT responses. For a cached
+ * tracker.min.js they may not: at a 24h cadence inside an 8-day window, consecutive
+ * strikes can read the SAME cached success, so no strike is recorded while the object is
+ * broken. For two strikes to be two observations the interval would have to EXCEED the
+ * whole cache window (>8 days), making demotion take >16 days — worse than the problem,
  * so the interval is NOT the fix and was not changed.
  *
- * WHAT ACTUALLY HAPPENS: detection is DELAYED, not prevented. Once the
- * stale-while-revalidate window expires the edge must reach the origin, the check then
- * fails, and the strikes proceed normally — so worst case is roughly 8 days of cache plus
- * 2 days of strikes ≈ 10 days to demote. `status` therefore means "was serving within
- * about the last 10 days", NOT "is serving now". Setup.jsx:77 keys the install snippet
- * off `status === 'active'`, so that window is the real exposure.
+ * Detection is DELAYED, not prevented: once the stale-while-revalidate window expires the
+ * edge must reach the origin, the check fails, and strikes proceed normally.
+ *
+ * WHAT `status === 'active'` ACTUALLY MEANS, and Setup.jsx:77 keys the install snippet
+ * off exactly this:
+ *   • the gate + origin were reachable within about the last 24-48h, AND
+ *   • the tracker file was being served within about the last 10 days.
+ * NOT "is serving now", and the two halves have different ages. Quote both, never one.
+ *
+ * ⚠️ THIS PARAGRAPH WAS WRONG IN ITS FIRST VERSION and the correction is the point: it
+ * applied the ~10-day window to ALL failure modes. It does not. Layer 3a made the health
+ * endpoint uncacheable, which fixed the fast path and left only the tracker path slow —
+ * and the fix narrowed the defect without anyone re-deriving what remained. Re-check the
+ * blast radius of a finding after fixing part of it; do not inherit the original scope.
  *
  * ⚠️ ONE PART OF THIS IS DERIVED, NOT MEASURED: the max-age portion was observed
  * directly (a fresh HIT ~20h after cdn-cachedat). Bunny's exact stale-while-revalidate
