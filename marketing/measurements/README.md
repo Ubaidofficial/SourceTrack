@@ -15,10 +15,26 @@ viewport is wrong before any figure is taken.
 
 ## MEASURED 2026-08-06 at ref a6a21e40 — and the warning below still stands
 
-| viewport | emulate argument | true innerWidth | `.v3-wrap` |
-|---|---|---|---|
-| desktop | `1152x720x1` | 1440 | 1320px |
-| mobile | `390x844x1,mobile,touch` | 390 | 390px |
+| viewport | emulate argument | true innerWidth | resulting dpr | `.v3-wrap` |
+|---|---|---|---|---|
+| desktop — **prefer this** | `1152x720x1.25` | 1440 | **1.0** | 1320px |
+| desktop — also correct | `1152x720x1` | 1440 | 0.8 | 1320px |
+| mobile | `390x844x1,mobile,touch` | 390 | — | 390px |
+
+⚠️ **TWO DESKTOP ENTRIES, AND BOTH ARE RIGHT. Do not delete one as stale.**
+Measured 2026-08-06. `1152x720x1` yields the correct **innerWidth 1440** but leaves
+`devicePixelRatio` at this host's native **0.8**. `1152x720x1.25` yields innerWidth 1440
+**and** dpr **1.0** — the `x1.25` cancels the host's 0.8 exactly.
+
+A run at dpr 0.8 is **not wrong**: CSS-pixel geometry is what §2.6 and §2.7 are scored in,
+and that is identical at either dpr. Prefer `x1.25` anyway, because at dpr 1.0 a screenshot's
+device pixels map 1:1 to CSS pixels, so what a reviewer measures off the image matches what
+the tool reported. At 0.8 they differ by 25% and someone eventually reconciles two correct
+numbers as a discrepancy.
+
+The pair is recorded rather than collapsed because a single entry invites the next reader to
+assume the other was a mistake. Both were measured; the preference is about screenshot
+fidelity, not correctness.
 
 ⚠️ **These are ENVIRONMENT-SPECIFIC.** On this host `devicePixelRatio` is 0.8, so
 `1440x900x1` yields innerWidth **1800**. The LIVE site needed `1440x900x1`. Both arguments
@@ -56,3 +72,25 @@ describes markup which may no longer exist.
 - **Measure the element that carries the property.** A gradient's geometry derives from the
   box painting it, not from the screen. Measuring the viewport where the hero was painted
   reported 8.1% for a surface that is really ~26.9%.
+
+## ⚠️ §2.7: ask for a distinct TREATMENT, not a distinct CONTAINER
+
+When commissioning a §2.7 check, the question is **"do these two adjacent sections share a
+TREATMENT?"** — never *"does this section read as a distinct container?"*
+
+§2.7 governs container-shape **variety** across a sequence. A ruled band is one of the seven
+treatments, and a treatment does **not** have to be an enclosed box. Asking whether something
+reads as a "container" invites a **no** for a band that is correctly distinct, because a band
+is not a container.
+
+This cost a round trip on 2026-08-06: the stat band was asked about as a container, answered
+accurately as one, and the accurate answer was to the wrong question. The follow-up — *does
+it read as a distinct treatment from its neighbours* — cleared all five boundaries
+immediately, with nothing about the page having changed.
+
+Same failure family as everything else in this file: the run was correct, the instrument was
+pointed at the wrong property. Phrase the question in the spec's own terms.
+
+**Also ask about BOTH neighbours, not just the one under suspicion.** A section can differ
+from the one above and repeat the one below; a check that names only the reported boundary
+cannot see it.
