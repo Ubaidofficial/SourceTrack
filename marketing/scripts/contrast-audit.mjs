@@ -12,6 +12,64 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
+// ═══ A GREEN RUN DOES NOT MEAN EVERY COLOUR ON THE PAGE IS VERIFIED. ═════════
+// Read the coverage table below BEFORE trusting this script's output. Six of the
+// ten ways CSS reaches a built page are read here; three are not. This is first
+// on purpose — it is what a reader needs before the output, not after it.
+//
+// ═══ WHAT THIS READS, AND WHAT IT DOES NOT ═══════════════════════════════════
+// Written after the dead-token bug survived THREE merged PRs (#660/#661/#662)
+// because neither harness could see where the CSS actually lived. Two blind
+// spots were found in two checks, so a third was assumed until disproven — and
+// a third was found. Enumerated from the built output, not from Astro's docs.
+// The same block is in scripts/v3-page-pairs.mjs; keep them in step.
+//
+//   #  path                                    emitted as              read here?
+//   1  import "x.css" in .astro frontmatter    <link> /_astro/*.css    YES
+//   2  ...same, but INLINED                    <style> in <head>       YES (added
+//        `inlineStylesheets: 'auto'` inlines small sheets. v3-pages.css is
+//        emitted this way and NEVER reaches dist/_astro — the plan badge,
+//        featured border, billing toggle and compare split live only there.
+//   3  scoped <style> in an .astro component   SPLIT: bundle AND       YES
+//        (6 cid rules bundled, 2 inline on     inline
+//        /v3)
+//        ⚠️ Scoped styles land in BOTH places at once, so reading only
+//        dist/_astro made them PARTIALLY read — and a partial read looks like a
+//        complete one, the failure family this whole project keeps hitting.
+//        SectionHead/StatRow/Bento all carry <style>, so it was LIVE. #663
+//        closed it as a SIDE EFFECT of adding inline reading for v3-pages.css,
+//        NOT by design. Do not drop the inline read.
+//   4  <style is:global>                       same as #3              YES
+//   5  @import chains (main.css pulls 10)      folded in at build      YES
+//   6  Tailwind utilities                      folded into a bundle    YES
+//
+//   ── NOT READ ──
+//   7  inline style="..." ATTRIBUTE            on the element          NO
+//        Still not read here — but no longer undetectable. 20 inline style
+//        attrs exist on the v3 routes; 6 were paint-bearing (the plan blurb,
+//        3x on /v3 and 3x on /v3/pricing, from two source lines). Those moved
+//        to .v3-plan-blurb, and v3-page-pairs.mjs now has an INLINE STYLE GUARD
+//        that FAILS on any paint property in a style attribute. A convention in
+//        a comment enforces nothing; the guard is the enforceable version.
+//   8  CSS in public/ linked outside /_astro   verbatim copy           NO
+//        Still not read — but no longer skipped in silence. The loader below
+//        matches href="/_astro/..." only, so a plain <link href="/x.css"> would
+//        have been ignored rather than flagged. v3-page-pairs.mjs now has a
+//        STYLESHEET LINK GUARD that FAILS on any linked stylesheet this harness
+//        does not read. 0 such files today, which is why it was worth pinning:
+//        the check passed because there was nothing to miss, not because it
+//        would have noticed.
+//   9  runtime JS injection (insertRule etc.)  runtime only            NO
+//        Latent — the motion library injects [data-motion-pop-id] rules, but
+//        position/width/height only; 0 colour-setting occurrences in built JS.
+//  10  framework island styles inside JS       runtime only            NO
+//
+// SUMMARY: 6 read directly. #7 and #8 are not read but are now DETECTABLE via
+// guards in v3-page-pairs.mjs. #9 and #10 remain undetectable without a browser
+// and are documented rather than dismissed, because each is one dependency away
+// from becoming live.
+// ═════════════════════════════════════════════════════════════════════════════
+
 // ── colour parsing ───────────────────────────────────────────────────────────
 function hexToRgb (hex) {
   const h = hex.trim().replace(/^#/, '')
@@ -308,5 +366,124 @@ const ctl = ratio(ctlFg, ctlBg)
 console.log(`\npositive control (lime #d2ec2a on white #ffffff): ${ctl.toFixed(2)} — expect FAIL vs 4.5 -> ${ctl < 4.5 ? 'FAILS correctly ✓' : 'DID NOT FAIL ✗ checker is broken'}`)
 const ctl2 = ratio([0, 0, 0], [255, 255, 255])
 console.log(`positive control (black on white): ${ctl2.toFixed(2)} — expect 21.00 -> ${Math.abs(ctl2 - 21) < 0.01 ? 'correct ✓' : 'WRONG ✗'}`)
+
+// ── EVERY BUILT V3 ROUTE — not just dist/index.html ──────────────────────────
+// ⚠️ THIS SCRIPT ONLY EVER READ dist/index.html. Everything above scores the live
+// homepage and nothing else, while its name and its output ("34 pairs · 0 FAIL")
+// read as a site-wide contrast audit. Three v3 pages shipped across #660, #661
+// and #662 with --v3-accent resolving to NOTHING, and this audit was green for
+// every one of them — because it never opened those pages.
+//
+// So it now opens them. Each route is scored against ITS OWN linked stylesheets,
+// not against the homepage's: routes link different CSS bundles, and a token that
+// resolves on one page can be absent on another. Reading a shared blob would
+// reintroduce the same blindness one level down.
+//
+// A page audited by nobody is not passing, it is unmeasured.
+{
+  console.log('\nEVERY BUILT V3 ROUTE — scored against that route\'s own stylesheets')
+  const { V3_PAGE_PAIRS } = await import('./v3-page-pairs.mjs')
+    .catch(() => ({ V3_PAGE_PAIRS: null }))
+
+  if (!V3_PAGE_PAIRS) {
+    console.error('  ✗ could not load v3-page-pairs.mjs — v3 routes are UNAUDITED')
+    fails++
+  } else {
+    // Discovered from disk, not from a list someone must remember to update.
+    const built = []
+    const walk = (dir, base) => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        if (e.isDirectory()) walk(join(dir, e.name), `${base}/${e.name}`)
+        else if (e.name === 'index.html') built.push(base || '/')
+      }
+    }
+    try { walk('dist/v3', '/v3') } catch { /* no v3 pages built yet */ }
+
+    // Score one pair against one route. Returns null on pass, a reason on fail.
+    const scorePair = (pair, vars, tokens) => {
+      const selToks = (pair.sel.match(/[.#]((?:\\.|[A-Za-z0-9_-])+)/g) || [])
+        .map(t => t.slice(1).replace(/\\(.)/g, '$1'))
+      const missing = selToks.filter(t => !tokens.has(t))
+      if (missing.length) return `selector orphan (missing ${missing.join(', ')})`
+      const fg = toRgb(pair.fg, vars)
+      const bg = toRgb(pair.bg, vars)
+      if (!fg || !bg) return `UNRESOLVED colour (fg='${pair.fg}' bg='${pair.bg}')`
+      const r = ratio(fg, bg)
+      const need = THRESHOLD[pair.level] ?? 4.5
+      return r < need ? `${r.toFixed(2)} < ${need} (${pair.level})` : null
+    }
+
+    // Load a route's own DOM tokens and own resolved custom properties.
+    const loadRoute = (route) => {
+      const html = readFileSync(join('dist', route.replace(/^\//, ''), 'index.html'), 'utf8')
+      const tokens = new Set()
+      for (const m of html.matchAll(/\b(?:class|id)="([^"]*)"/g)) {
+        for (const t of m[1].split(/\s+/)) if (t) tokens.add(t)
+      }
+      const linked = [...html.matchAll(/href="(\/_astro\/[^"]+\.css)"/g)].map(m => m[1])
+      // ⚠️ INLINE <style> COUNTS. Astro's `inlineStylesheets: 'auto'` puts small
+      // stylesheets in the HTML, not in dist/_astro. v3-pages.css is emitted that
+      // way and never appears as a bundle — so the plan badge, featured border,
+      // billing toggle and compare split exist ONLY inline. A route audited from
+      // its linked files alone silently skips them.
+      const inline = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1])
+      const routeCss = [
+        ...linked.map(h => readFileSync(join('dist', h.replace(/^\//, '')), 'utf8')),
+        ...inline
+      ].join('\n')
+      return { tokens, vars: readVars(routeCss), sheets: linked.length, inline: inline.length }
+    }
+
+    let routeFails = 0, scored = 0
+    for (const route of built) {
+      const pairs = V3_PAGE_PAIRS[route]
+      if (!pairs?.length) {
+        console.error(`  ✗ ${route}: BUILT but has NO PAIRS — unmeasured, not passing`)
+        routeFails++
+        continue
+      }
+      const { tokens, vars, sheets, inline } = loadRoute(route)
+      const bad = pairs.map(p => [p, scorePair(p, vars, tokens)]).filter(([, r]) => r)
+      scored += pairs.length
+      for (const [p, reason] of bad) console.error(`  ✗ ${route}  ${p.id}: ${reason}`)
+      routeFails += bad.length
+      if (!bad.length) console.log(`  ✓ ${route}: ${pairs.length} pair(s) scored against ${sheets} linked + ${inline} inline stylesheet(s)`)
+    }
+    fails += routeFails
+    console.log(`  ${built.length} route(s), ${scored} pair(s) scored outside index.html`)
+
+    // ── POSITIVE CONTROLS, on a REAL v3 route, not on index.html ─────────────
+    // Each reconstructs a defect this audit previously could not report, and
+    // asserts it is now detected. A control that cannot demonstrate failure is
+    // what got us here.
+    if (built.length) {
+      const probe = built[0]
+      const { tokens, vars } = loadRoute(probe)
+
+      // (a) the #660 defect: a declared pair whose colour is an unresolvable var()
+      const unresolvable = scorePair(
+        { id: 'ctl', sel: '.v3-cta-close', fg: 'var(--color-accent)', bg: '#FFFFFF', level: 'AA' }, vars, tokens)
+      console.log(`  positive control on ${probe} — unresolvable var() in a declared pair -> ${unresolvable?.startsWith('UNRESOLVED') ? `DETECTED ✓ (${unresolvable})` : 'MISSED ✗'}`)
+      if (!unresolvable?.startsWith('UNRESOLVED')) fails++
+
+      // (b) a genuinely failing ratio on a non-index route
+      const failing = scorePair(
+        { id: 'ctl', sel: '.v3-cta-close', fg: '#D2EC2A', bg: '#FFFFFF', level: 'AA' }, vars, tokens)
+      console.log(`  positive control on ${probe} — lime on white pair -> ${failing?.includes('<') ? `DETECTED ✓ (${failing})` : 'MISSED ✗'}`)
+      if (!failing?.includes('<')) fails++
+
+      // (c) a selector that exists on index.html but NOT on this route
+      const orphan = scorePair(
+        { id: 'ctl', sel: '.definitely-not-on-this-route', fg: '#000000', bg: '#FFFFFF', level: 'AA' }, vars, tokens)
+      console.log(`  positive control on ${probe} — selector absent from this route -> ${orphan?.includes('orphan') ? 'DETECTED ✓' : 'MISSED ✗'}`)
+      if (!orphan?.includes('orphan')) fails++
+
+      // negative control: a real registered pair must still pass
+      const good = scorePair(V3_PAGE_PAIRS[probe][0], vars, tokens)
+      console.log(`  negative control on ${probe} — a real registered pair -> ${good === null ? 'passes ✓' : `over-fires ✗ (${good})`}`)
+      if (good !== null) fails++
+    }
+  }
+}
 
 process.exitCode = fails > 0 ? 1 : 0

@@ -261,6 +261,14 @@
 .v3 .v3-plan h3 { margin: 0; font-size: 20px; font-weight: 800; }
 .v3 .v3-plan-price { margin: 14px 0 0; font-size: 40px; font-weight: 900; letter-spacing: -0.04em; }
 .v3 .v3-plan-alt { display: block; margin-top: 6px; font-size: 13px; color: var(--v3-gray-600); }
+/* Was an inline style="...color:var(--v3-gray-600)..." attribute on the blurb <p>
+   in both index.astro and pricing.astro. Moved to a class because NO harness can
+   see a colour in a style attribute: there is no selector to register a contrast
+   pair against, and the zero-match guard has nothing to orphan, so the pair was
+   undetectable rather than merely unmeasured. scripts/v3-page-pairs.mjs now FAILS
+   on any paint-bearing inline style on a v3 route — see the INLINE STYLE GUARD
+   there. Keep colours in classes. */
+.v3 .v3-plan-blurb { margin: 14px 0 0; font-size: 15px; color: var(--v3-gray-600); }
 .v3 .v3-plan ul { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 10px; }
 .v3 .v3-plan li { font-size: 14px; color: var(--v3-gray-700); }
 @media (max-width: 900px) { .v3 .v3-plans { grid-template-columns: 1fr; } }
