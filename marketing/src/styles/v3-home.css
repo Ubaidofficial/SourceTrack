@@ -111,6 +111,62 @@
   .v3 .v3-divided > *:first-child { border-top: 0; }
 }
 
+/* ── .v3-band-ruled — the stat band's §2.7 frame ──────────────────────────
+   ⚠️ THE RULES WERE ALREADY HERE AND DID NOT READ. They were
+   `rgba(18, 16, 12, 0.08)`, which composites over paper to #E5E2DB — 1.18:1,
+   a ~4% luminance step. A visual pass found the stat band reading as the same
+   surface as its neighbour on three pages, while every class-based check
+   passed, BECAUSE THE CLASS GENUINELY HAD A BORDER DECLARATION. The proxy was
+   not wrong that a frame existed; it was wrong that 8% alpha renders as one.
+   That is a distinct failure from the ones logged before it: not a missing
+   frame, an INVISIBLE one.
+
+   ⚠️ THE GENERALISABLE RULE, which is why --v3-gray-200 was rejected here:
+   a replacement must be measurably stronger than EVERY value it replaces, not
+   merely different from one of them. Scored against paper #F7F4ED:
+
+     rgba(18,16,12,.08) -> #E5E2DB   1.18:1   (what was here)
+     --v3-border          #E7E0D2    1.20:1   (the obvious swap — a NO-OP)
+     --v3-gray-200        #E2DBC9    1.26:1   REJECTED
+     --v3-gray-400        #9C9484    2.74:1   adopted
+
+   --v3-gray-200 is 5% relatively stronger than --v3-border. That is another
+   value only a colour-picker can distinguish — the same defect wearing a new
+   number, and shipping it would have "fixed" nothing while closing the ticket.
+   Any future fix to an invisible-treatment bug must clear this bar: state the
+   baseline it beats and by how much, or it is not a fix.
+
+   --v3-gray-400 is 2.3x both baselines, is an EXISTING ramp token rather than
+   a new ad-hoc value, and is already the visible structural line in v3
+   (v3-pages.css uses it for the step-rail dots) — so this reuses one
+   line-weight concept instead of inventing a second. Inventing a second is
+   how `.v3-divided` ended up competing for the word "divided".
+
+   ⚠️ THIS IS APPLIED, NOT ACCEPTED. The value survives only if the visual run
+   confirms it reads as a deliberate DIVIDER. Top and bottom only — with no
+   left/right edges it cannot close into a box, so "looks like a border" is not
+   the risk. The risk is it reading as a TABLE RULE. If it does, that is a STOP
+   and the band wants a real container; do not quietly tune the value to dodge
+   it.
+
+   NAMING: the frame is `.v3-band-ruled`, the layout is `.v3-stat-row`. They are
+   separate classes on purpose — "what it is" and "how it is framed" are the
+   §2.7 distinction, and splitting them means the ruled band can frame something
+   other than a stat row without a second copy. The name deliberately shares no
+   word with `.v3-divided` (a bordered card with a paper-card fill and internal
+   dividers), because two treatments competing for "divided" is what produced
+   that collision. */
+.v3 .v3-band-ruled {
+  border-top: 1px solid var(--v3-gray-400);
+  border-bottom: 1px solid var(--v3-gray-400);
+}
+.v3-stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--v3-gutter);
+  padding: 36px 0;
+}
+
 /* ── treatment: frameless cards on paper (3, 6, 11) ──────────────────────── */
 .v3 .v3-cards {
   display: grid;
