@@ -2262,3 +2262,160 @@ already covers this path and still passes untouched.
 undefined, validRow2])` before deciding the fix — a `.filter(Boolean)` before both the `upsert` and
 the `records.push` is the likely shape, but only after the actual failure mode is known rather than
 assumed.
+
+---
+
+# KI-100 … KI-104 — appended 2026-08-07
+
+> **Numbering:** `KI-78` … `KI-99` are added by **#670** (`docs/reconcile-known-issues-2026-08-06`),
+> open and blocked behind the CI throttle at the time of writing. #670 merges **before** this file,
+> so the gap below `KI-100` closes on that merge. These entries are **append-only** — nothing above
+> this line was touched, so the two branches meet in one tail hunk.
+
+### KI-100 — Bunny issues the managed-proxy TLS certificates (RESOLVED — closes a long-open unknown)
+
+**We searched for ACME code across several sessions and never found it. The reason is that we do not
+issue certificates at all — BunnyCDN does.**
+
+Verified live 2026-08-07 against pull zone `6119064`:
+
+| Host | Subject | Issuer | Validity |
+|---|---|---|---|
+| `track.bookmentions.net` | `CN=track.bookmentions.net` | `C=US, O=Let's Encrypt, CN=YE2` | Jul 7 → Oct 5 2026 |
+| `track2.bookmentions.net` | `CN=track2.bookmentions.net` | `C=US, O=Let's Encrypt, CN=YE2` | Jul 7 → Oct 5 2026 |
+
+Both return `HTTP/2 200` with `server: BunnyCDN-…` and `cdn-pullzone: 6119064`, each holding a
+**distinct certificate whose CN matches its own hostname** — per-hostname issuance, not a shared or
+wildcard cert.
+
+**This also settles the older "Bunny custom-hostname / per-tenant-certificate API capability —
+UNVERIFIED" item: the capability is not merely available, it is already in production.** Any future
+plan that plans to *build* certificate issuance is duplicating something Bunny is doing today.
+
+**Status: VERIFIED** (live TLS chain + response headers, re-checked independently 2026-08-07).
+
+### KI-101 — Tracker updates carry an up-to-8-day propagation tail (OPERATIONAL HAZARD — not fixed)
+
+Live response header on the proxy-served tracker, confirmed on **both** hosts 2026-08-07:
+
+```
+cache-control: public, max-age=86400, stale-while-revalidate=604800, immutable
+```
+
+**A tracker change takes up to 24h to propagate (`max-age=86400`) and can then be served stale for a
+further 7 days (`stale-while-revalidate=604800`) — an 8-day worst-case tail.** `immutable` tells the
+browser not to revalidate even on reload, so there is no client-side bypass (see also the
+edge-caching entry: the same response is unbypassable from the client).
+
+**Why this is recorded now rather than after the fact: it blocks fast rollback of ANY tracker-side
+defect.** It directly affects **A2 (the click-ID restorer)**, which is tracker-side — so an A2 bug
+cannot be rolled back quickly, and the tail has to be **costed before A2 ships, not discovered
+after**. This is the same ~8-day window already accepted for `tracker.min.js`; naming it as a
+constraint on A2 is the new part.
+
+**Not fixed.** Shortening `max-age` trades propagation speed against edge load and is a decision, not
+a cleanup.
+
+**Status: VERIFIED** (live headers, both hosts).
+
+### KI-102 — `bindManagedProxySiteKey` is a BINDING guard, not a host allowlist
+
+`api/middleware/managed-proxy.js:141-155`. The whole body:
+
+```js
+export function bindManagedProxySiteKey(req, res, next) {
+  if (req.managedProxy) {
+    const siteKey = req.body?.site_key || req.query?.site_key
+    if (siteKey && siteKey !== req.managedProxy.site_key) {
+      return res.status(403).json({ … error: 'Host-site key binding violation' })
+    }
+  }
+  next()
+}
+```
+
+Three properties that are easy to assume and are all false:
+
+- **It does not inject a `site_key`.** A request without one passes straight through to `next()`.
+- **It does not reject unregistered hosts.** An unregistered host has no `req.managedProxy`, so the
+  outer `if` is false and the guard is **skipped entirely** for exactly the host you might expect it
+  to stop.
+- **It acts only on the narrow case:** a `site_key` that is present **and** mismatched → `403`.
+
+**The consequence worth recording — we nearly filed this as a defect:** a `401 Missing site_key` on a
+**registered** managed-proxy domain is **CORRECT behaviour, not a proxy failure.** The guard passes a
+keyless request through by design, and the 401 comes from the downstream ingestion route doing its
+job (§6.5: an ingestion endpoint must reject a missing/unknown `site_key` rather than fall through to
+a default tenant).
+
+**Status: VERIFIED** — source read at `:141-155`, plus a live `401` on **both** hosts with a cache
+`MISS` and **distinct `x-railway-request-id`** values, which is what proves the request actually
+reached the origin rather than being answered by the edge.
+
+### KI-103 — ⚠️ TWO ungenerated `llms.txt` files, already divergent, and the footer-linked one is NOT the one that was fixed
+
+**Recurring-defect surface, not a one-off.** Nothing generates either file, nothing keeps either in
+step with `key-features.md` or the changelog, and `public/` ships verbatim — so **no `src` scan can
+see either**.
+
+> ⚠️ **CORRECTION TO THE FILING (2026-08-07).** This was filed as a single finding —
+> *"`marketing/public/llms.txt` has no generator; `dashboard/server.mjs:101` only serves it."*
+> **Those two clauses are about DIFFERENT FILES**, and the real state is worse than the single-file
+> version. Recorded as a correction rather than silently rewritten.
+
+There are **two** files, and they have **already diverged from each other**:
+
+| File | Size | Served by | Fixed by #675? |
+|---|---|---|---|
+| `dashboard/public/llms.txt` | 2074 B | `dashboard/server.mjs:101-103` → `sendFile(join(DIST,'llms.txt'))`, `DIST = dashboard/dist` (`:6`) | ❌ **No** |
+| `marketing/public/llms.txt` | 874 B | the Astro marketing build | ✅ Yes |
+
+**The one the footer points at is the one #675 did NOT correct.** The *"AI info"* link lives at
+`dashboard/src/components/MarketingFooter.jsx:61` (`href="/llms.txt"`), which resolves through
+`dashboard/server.mjs` to the **dashboard** copy — while **#675 corrected the marketing copy**
+(`QA_RUNBOOK.md`, `marketing/public/llms.txt`, `key-features.md`, `security.md`).
+
+Repo-wide, the only two references to `llms.txt` in any `.js`/`.mjs`/`.json`/`.yml` are the serve
+route itself. **There is no generator, no sync step, and no check that the two agree** — which is why
+they are already 2074 B vs 874 B with different content.
+
+**Why it matters more than an ordinary stale doc:** this is the file AI systems fetch as the
+product's self-description, so drift here is **repeated back as fact about the product** by other AI
+systems. Correcting one copy while the linked copy still carries the old absolutes leaves the
+customer-visible surface wrong.
+
+**Cross-reference:** the `QA_RUNBOOK` entry added in **#675** — *scan built output, not source* — is
+the right shape of check and is the reason source scans miss this class. ⚠️ **#675 is still OPEN at
+the time of writing, so that entry does not exist on `main` yet.**
+
+**Status: VERIFIED** (both files present and differing; no generator found repo-wide; footer link and
+serve path traced to the dashboard copy; #675's file list read from the open PR).
+
+### KI-104 — `/api/server/event` accepted click IDs ONLY when nested under `properties` (pre-#676)
+
+⚠️ **Recorded as a CORRECTION, not a discovery — the original claim was that the route could not
+accept click IDs at all. It could; the capability was undiscoverable rather than absent.**
+
+On `main` before #676 (`api/routes/server-events.js`):
+
+- The route read **UTMs from top-level body keys** — `req.body.utm_source` … `req.body.utm_term`
+  at `:211-215`. That is the convention the route teaches a caller.
+- It had **no top-level click-ID equivalent** — `grep -cE "req\.body\.(gclid|fbclid|dclid)"` → **0**.
+- But the catch-all `...(req.body.properties || {})` spread at **`:228`** quietly carried **nested**
+  click IDs through — into the typed columns, via the adapter's flatten
+  (`tinybird/adapter/normalize.js:216-220`, top-level wins on collision).
+
+**So the capability EXISTED but was undiscoverable.** A caller following the route's own UTM
+convention (`{ gclid: … }`) **failed silently**; a caller who happened to nest
+(`{ properties: { gclid: … } }`) **succeeded**. Same documented endpoint, opposite outcomes, no error
+either way — the worst shape for a data-capture gap, because the failing caller gets a `200`.
+
+**#676 makes the contract consistent by accepting the top-level form. It did NOT create the
+capability**, and any claim that it "added click-ID support" overstates it.
+
+**The testing consequence, which is the durable lesson:** a test written with the *nested* form would
+have **passed on `main`** and measured nothing. #676's tests post at **top level** for exactly this
+reason, and its positive control executes `origin/main`'s route to prove the assertion discriminates.
+
+**Status: VERIFIED** (source read at `:211-215` and `:228` on `main`; nested-form behaviour confirmed
+by execution during #676).
