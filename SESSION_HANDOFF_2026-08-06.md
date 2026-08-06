@@ -73,11 +73,26 @@ Now asserts **both** health AND a `tracker.min.js` GET with content-type + leadi
 
 ## 3. The pv_limit truth, and the lesson attached to it
 
-**Enforced reality** — `api/lib/plan-features.js:18-26`, enforced at `api/lib/pageview-limits.js:78`:
+### ⚠️ Read this before quoting any pageview number
+
+**`PLAN_DEFAULT_PV_LIMIT` is a DEFAULT table, not the enforced reality.** `getPvLimit(plan, perSiteOverride)` returns the **per-site override whenever one is set**, and on prod **every site has one**. The defaults therefore govern nothing for any existing site.
+
+**Defaults** — `api/lib/plan-features.js:18-26`:
 
 ```
 free 10,000 · trial 10,000 · starter 250,000 · growth 1,000,000 · scale 5,000,000
 ```
+
+**What is actually stored and enforced on prod** (`select domain, plan, pv_limit from sites`, verified 2026-08-06):
+
+| domain | plan | stored `pv_limit` | default for that plan |
+|---|---|---|---|
+| bookmentions.net | free | **5,000** | 10,000 |
+| khalidrasool.com | free | **5,000** | 10,000 |
+| localhost:5173 | trial | 10,000 | 10,000 ✓ |
+| **www.techrupt.pk** | **growth** | **150,000** | **1,000,000** |
+
+Three of four sites are enforced **below** their plan default. Only the localhost test site matches.
 
 **Founder is not a plan key.** `api/routes/billing.js:25` maps Early Bird Annual to **growth** entitlements, so Founder = 1,000,000. No DDL was needed for any of this — the caps already existed and were already enforced; only the copy lied.
 
@@ -89,14 +104,60 @@ Before this session **three surfaces disagreed with each other and all three und
 The replacement ends: **"this comment is only true while someone keeps making it true."** Any comment asserting where a value came from should carry the same burden.
 
 ### #613 — HELD OPEN DELIBERATELY. Do not close it yet.
-It is superseded in two halves: marketing by #650 (**on `feat/home-v14`, not deployed**) and app-side by #651 (**merged**). Until the homepage branch cuts over, `main`'s marketing copy is still 50k/250k/"Unlimited" while the app says 250k/1M — the two surfaces still disagree, now in the opposite direction. **No customer is over-promised in either state** (every published number is at or under the real cap), but the disagreement only fully closes at cutover. **Close #613 after #651 + cutover have both landed.**
+It is superseded in two halves: marketing by #650 (**on `feat/home-v14`, not deployed**) and app-side by #651 (**merged**). Until the homepage branch cuts over, `main`'s marketing copy is still 50k/250k/"Unlimited" while the app says 250k/1M — the two surfaces still disagree, now in the opposite direction. **Close #613 after #651 + cutover have both landed.**
+
+### 🔴 A CUSTOMER IS NOW OVER-PROMISED. This is live.
+
+An earlier draft of this section said *"no customer is over-promised in either state."* **That is false**, and it was false the moment #651 merged.
+
+**`www.techrupt.pk` is a paying Growth customer enforced at a stored `pv_limit` of 150,000, while #651 — merged and live in-app — publishes 1,000,000 for Growth.** The published figure is **6.7× the enforced one** for a real paying site. This is the exact direction of error the pricing work set out to eliminate, reintroduced by fixing the copy against the defaults instead of against what is stored.
+
+Not a reason to revert #651 — the app now matches the documented plan — but **either that site's override is stale and should be raised, or the published number is wrong.** Resolving which is the top open item in §4.
+
+### 🔴 The provenance lesson failed inside the section that teaches it
+
+This section asserted *"enforced at `api/lib/pageview-limits.js:78`"* and printed the defaults table as **"Enforced reality."** That was written **one section after** the provenance-comment lesson, by someone actively thinking about it, and it repeated the identical failure: **it cited a real file and a real line number for a claim it had not actually verified.** `pageview-limits.js:78` is genuinely where enforcement happens — which is what made the sentence feel checked — but the line reads `getPvLimit(site.plan, site.pv_limit)`, and the second argument is what governs. Naming the right file is not the same as reading what it does.
+
+It took a `select domain, plan, pv_limit from sites` to catch, and nobody ran one because the citation implied someone already had.
+
+**Recorded rather than quietly corrected, because it is the most instructive thing in this document:** a provenance claim is not evidence, it is a claim *about* evidence, and it launders unverified assertions most effectively when the person making it believes they are being rigorous. **If a sentence names a file as its source, open that file in the same edit.**
 
 ---
 
-## 4. Open, unstarted
+## 4. Open
 
-- **bookmentions bot-inflation investigation** — not started.
-- **PR-F Step 1 audit** — not started.
+### 🔴 TOP ITEM — per-site `pv_limit` overrides · DISPATCHED-BUT-UNREPORTED
+
+**Dispatched this session and never came back.** Recorded so the next session knows it was sent, not forgotten, and does not re-scope it from scratch.
+
+Given §3 — every prod site carries an override and three of four sit below their plan default — the questions are:
+
+1. **What writes `sites.pv_limit`?** Provisioning, the Stripe webhook, an admin path, a migration backfill, or some combination.
+2. **Does the Stripe webhook write current or stale values?** `techrupt.pk` sits at 150,000, which is exactly the *old* `PLAN_DEFAULT_PV_LIMIT.growth` that #613's diff showed being corrected. That strongly suggests the override was written from a stale table and never refreshed — **but that is a hypothesis, not a finding.**
+3. **Would a new Growth purchase today get 1,000,000 or 150,000?** This decides whether the over-promise in §3 is one legacy row or an ongoing defect on every new sale.
+4. **Do Billing / Setup / `usage-threshold-emails` show a per-site number that contradicts published pricing?** The job reads `pv_limit`, so a customer could be warned at 80% of 150,000 while the pricing page promises 1,000,000.
+
+**Do not fix the copy again until this is answered** — #651 corrected it against the defaults, and the defaults turned out not to be what is enforced.
+
+### bookmentions bot-inflation investigation — COMPLETE
+
+Findings, with citations. **UNDETERMINEDs below are carried across as UNDETERMINED and must not harden into conclusions.**
+
+- **Metering proof.** The meter counted **5,000** pageviews against **1,730** genuine ones — the site was metered to its (overridden) free cap on inflated traffic.
+- **Diagnosis: the ingestion bot filter matches on UA substring only.** `track.js:170` and `:400` — the ordering matters: the filter runs *after* the point where the count is already taken, so a UA that does not match the substring list is metered regardless of behaviour.
+- **Two ingestion paths are unfiltered entirely** — `proxy.js:74` and `server-events.js:137`. Anything arriving through those is counted with no bot check at all.
+- **Shape is a sitemap crawl** — sequential, breadth-first over the sitemap, not human browsing.
+- **Blast radius is confined to traffic metrics and the usage meter. Revenue was verified clean** — no inflated conversion or revenue rows.
+
+**UNDETERMINED — do not resolve by assumption:**
+- **A 37-row delta between the meter and Tinybird is unexplained.** Direction and cause both unknown.
+- **A user-agent breakdown is unanswerable from stored data.** Raw `user_agent` is never persisted (§6 privacy), so there is no way to retrospectively attribute the inflated rows to specific agents. Any future UA analysis requires new forward-looking collection, which is itself a privacy decision.
+
+**⚠️ ONE FINDING FROM THAT REPORT IS RETRACTED.** It flagged one of the three Tinybird `site_id` values — the low-volume one, 1 event — as *"an orphan not in the prod `sites` table."* **That is wrong.** Verified 2026-08-06: the value is **bookmentions.net's `site_key`** — it appears verbatim as `data-site-key` in the live snippet on its Settings page. `sites.id` and `sites.site_key` are different columns and **both are UUID-shaped (36 chars)**, so comparing a Tinybird `site_id` against `sites.id` produced a false orphan. *(Value withheld here — a `site_key` is a credential, §6.5.)*
+
+**The real finding underneath it is worth keeping:** Tinybird's `site_id` column holds, at least for this row, a **`site_key`** — not a `sites.id`. Whether that is systematic or one bad seed is **UNDETERMINED** and worth checking before any join between Tinybird and Postgres is trusted.
+
+### PR-F Step 1 audit — not started.
 
 ---
 
@@ -104,7 +165,9 @@ It is superseded in two halves: marketing by #650 (**on `feat/home-v14`, not dep
 
 - **`marketing/src/layouts/partials/TrustBar.astro:20-22`** — stale comment referencing `feat/chat-tracking-phase1` editing the chat clause.
 - **`webhook-incoming.js:142`** — logs a raw `site_key`. **§6.5 violation**, same class as #637.
-- **`BUNNY_API_KEY` / `BUNNY_PULL_ZONE_ID` presence check** in Railway project `determined-reverence` (`0d626230`). **UNDETERMINED** — Railway MCP does not reach this project from the orchestrator grant; a name-level look in the Railway UI settles it. If absent, `isBunnyConfigured()` returns false, both provisioning calls no-op silently, and the Integrations **Verify** button does nothing — which would also explain the hand-made pull zone. **Check before attempting F1.**
+- **`BUNNY_API_KEY` / `BUNNY_PULL_ZONE_ID` presence check** — **STILL OPEN, and now actually checkable.** `determined-reverence` (`0d626230`) is **confirmed** as the SourceTrack Railway project; the earlier blocker was not knowing which project to look in, not the check itself. Still **UNDETERMINED**: Railway MCP does not reach it from the orchestrator grant, so it needs a name-level look in the Railway UI (names only — §0 forbids reading values). If absent, `isBunnyConfigured()` returns false, both provisioning calls no-op **silently**, and the Verify button does nothing — which would also explain the hand-made pull zone. **Check before attempting F1.**
+
+**RESOLVED this session, recorded so it is not reopened:** the customer-facing *"Check CNAME Status"* action is wired and current. `Settings.jsx:917` → `handleVerifyProxy` (`:274`) → `POST /integrations/proxy-domain/verify` — the **#648 path**, which now runs `verifyProxyDelivery` (health **and** a real `tracker.min.js` fetch with content-type + leading-bytes assertions). There is also an auto-poll at `:186` on the same endpoint. No work outstanding here.
 - **Delete five merged branches** — #592, #594, #598, #604, #606.
 - **#615 — `'Seats left — [VERIFY: wire to a real count]'`.** **LIVE customer-facing placeholder text** on the Founder card in `PricingCards.jsx`, one line below the cap #651 just corrected. Deliberately left out of #651 as out-of-scope for a numbers fix, but it is shipping to customers now.
 
