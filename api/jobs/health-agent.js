@@ -3,6 +3,7 @@ import WebSocket from 'ws'
 import { getSupabase } from '../lib/supabase.js'
 import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { fetchQuarantineSummary, classifyQuarantine } from '../lib/quarantine-alarm.js'
+import { writeJobRun } from '../lib/job-runs.js'
 
 const SLACK = process.env.SLACK_WEBHOOK_URL
 const API_URL = process.env.API_URL || 'http://localhost:3000'
@@ -336,7 +337,44 @@ async function notify(dx, snap) {
   }
 }
 
+// ── KI-46 contract: EXACTLY ONE job_runs row on EVERY terminal path ─────────────
+// Maps this job's overall verdict onto job_runs.status, which is constrained by
+// job_runs_status_check. `warning` has no slot there, so it records as success — the
+// warning detail rides in error_message, which is the only free-text column.
+//
+// ⚠️ conversions_processed CARRIES THE COUNT OF CHECKS ACTUALLY EXECUTED. It is
+// deliberately not a conversion count: this job attributes nothing. Reusing the column
+// is what makes "the job ran but checked nothing" DETECTABLE — a row with
+// conversions_processed = 0 is a run that completed while doing no work, which is
+// exactly the silent-success failure this monitor exists to catch elsewhere. Applying
+// its own standard to itself, and no DDL was permitted to add a better-named column.
+export function healthRunRow ({ snap, startedAt, now = Date.now(), crashError = null }) {
+  if (crashError) {
+    return {
+      job_name: 'health-agent',
+      status: 'failed',
+      conversions_processed: snap?.checks?.length ?? 0,
+      error_message: `crashed: ${String(crashError).slice(0, 400)}`,
+      duration_ms: now - startedAt
+    }
+  }
+  const checks = snap?.checks ?? []
+  const failed = snap?.errors ?? []
+  const warned = snap?.warnings ?? []
+  const parts = [`overall=${snap?.overall ?? 'unknown'}`, `checks=${checks.length}`]
+  if (failed.length) parts.push(`failed=${failed.map(e => e.name).join(',')}`)
+  if (warned.length) parts.push(`warnings=${warned.map(w => w.name).join(',')}`)
+  return {
+    job_name: 'health-agent',
+    status: snap?.overall === 'critical' ? 'failed' : 'success',
+    conversions_processed: checks.length,
+    error_message: parts.join(' '),
+    duration_ms: now - startedAt
+  }
+}
+
 async function run() {
+  const startedAt = Date.now()
   console.log('🔍 SourceTrack health check starting...\n')
   const snap = await collectSnapshot()
 
@@ -361,11 +399,31 @@ async function run() {
 
   await notify(dx, snap)
 
+  // ⚠️ WRITTEN AT THE END, AFTER THE WORK — never at entry. A row written on entry
+  // proves the process BOOTED, not that it finished, which is the exact failure this
+  // is fixing: a job that dies mid-run would still look like it ran.
+  //
+  // Written on EVERY outcome including a fully healthy one. Before this, a healthy run
+  // produced no persistent trace at all (Slack stays silent unless severity is non-ok),
+  // so a healthy run and a run that never happened were indistinguishable.
+  await writeJobRun(getSupabase(), healthRunRow({ snap, startedAt }))
+    .catch(() => { /* writeJobRun already logs loudly; a row failure must not change the exit code */ })
+
   process.exit(snap.overall === 'critical' ? 1 : 0)
 }
 
 // Auto-run ONLY when executed directly (cron), NOT when imported by tests — so the
 // exported evaluators can be unit-tested without hitting the network.
 if (import.meta.url === `file://${process.argv[1]}`) {
-  run().catch(e => { console.error('Health check crashed:', e.message); process.exit(1) })
+  const crashStartedAt = Date.now()
+  run().catch(async (e) => {
+    console.error('Health check crashed:', e.message)
+    // THE CASE THIS EXISTS FOR. run() exits the process itself on both normal paths,
+    // so reaching here means the job died mid-run — the outcome that previously left
+    // no trace anywhere. The row is written BEFORE exiting, and its own failure is
+    // swallowed so a dead DB cannot turn a crash into a hang.
+    await writeJobRun(getSupabase(), healthRunRow({ snap: null, startedAt: crashStartedAt, crashError: e?.message || e }))
+      .catch(() => { /* never mask the original crash */ })
+    process.exit(1)
+  })
 }
