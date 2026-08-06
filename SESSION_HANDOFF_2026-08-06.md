@@ -106,13 +106,17 @@ The replacement ends: **"this comment is only true while someone keeps making it
 ### #613 — HELD OPEN DELIBERATELY. Do not close it yet.
 It is superseded in two halves: marketing by #650 (**on `feat/home-v14`, not deployed**) and app-side by #651 (**merged**). Until the homepage branch cuts over, `main`'s marketing copy is still 50k/250k/"Unlimited" while the app says 250k/1M — the two surfaces still disagree, now in the opposite direction. **Close #613 after #651 + cutover have both landed.**
 
-### 🔴 A CUSTOMER IS NOW OVER-PROMISED. This is live.
+### The published/enforced gap is real. **No paying customer is affected.**
 
-An earlier draft of this section said *"no customer is over-promised in either state."* **That is false**, and it was false the moment #651 merged.
+> ⚠️ **This section twice asserted the opposite and was wrong both times.** A first draft said *"no customer is over-promised in either state."* A correction then declared **"🔴 A CUSTOMER IS NOW OVER-PROMISED. This is live"** — naming `www.techrupt.pk` as *"a paying Growth customer."* **That is also false.** `www.techrupt.pk` is the **founder's own test domain** (founder-confirmed 2026-08-06). The over-correction is recorded rather than quietly reverted, because the disconfirming evidence **was already in this repo when the claim was written** — see below.
 
-**`www.techrupt.pk` is a paying Growth customer enforced at a stored `pv_limit` of 150,000, while #651 — merged and live in-app — publishes 1,000,000 for Growth.** The published figure is **6.7× the enforced one** for a real paying site. This is the exact direction of error the pricing work set out to eliminate, reintroduced by fixing the copy against the defaults instead of against what is stored.
+**The arithmetic stands.** `www.techrupt.pk` carries a stored `pv_limit` of **150,000** while #651 — merged and live in-app — publishes **1,000,000** for Growth. The published figure is **6.7× the enforced one** on that row. What does not stand is the framing: it is not a customer, and there is no live harm. **Zero paying customers are affected by the `pv_limit` gap** — prod holds four sites, two free, one trial, and this test domain.
 
-Not a reason to revert #651 — the app now matches the documented plan — but **either that site's override is stale and should be raised, or the published number is wrong.** Resolving which is the top open item in §4.
+**The disconfirming evidence was already on file.** `KNOWN_ISSUES.md` **KI-44** records that this domain's subscription `sub_1TmNs5…` was **CANCELED 2026-06-26T01:19:27Z, 36 minutes after creation**, while the prod `sites` row still reads `plan='growth'`, `pv_limit=150000`. A canceled subscription and a live paid plan cannot both be true. The claim was made without reading a file the same document cites elsewhere — **the third instance in this document of a confident assertion about state that a single read would have refuted.**
+
+**That stale row is its own finding, and it is the more interesting one.** `sites.plan='growth'` persisting on a **canceled-subscription** domain for six weeks is the visible symptom of KI-44's zero-row-detection class: the four `billing.js` lifecycle handlers destructure only `{ error }`, and in PostgREST a zero-row `UPDATE` is not an error, so a cancellation returns 200, logs success, and changes nothing. **The pv_limit gap and the stale plan are the same defect seen from two directions** — one row whose entitlement state no longer matches its billing state.
+
+**Cutover impact: DOWNGRADED from blocker to condition.** With no customer affected there is no live-harm blocker here. It remains a **cutover CONDITION** — the branch's marketing copy must be true before it ships — not a reason to hold anything. Resolving which number is authoritative is still the top open item in §4.
 
 ### 🔴 The provenance lesson failed inside the section that teaches it
 
@@ -144,8 +148,14 @@ Given §3 — every prod site carries an override and three of four sit below th
 Findings, with citations. **UNDETERMINEDs below are carried across as UNDETERMINED and must not harden into conclusions.**
 
 - **Metering proof.** The meter counted **5,000** pageviews against **1,730** genuine ones — the site was metered to its (overridden) free cap on inflated traffic.
-- **Diagnosis: the ingestion bot filter matches on UA substring only.** `track.js:170` and `:400` — the ordering matters: the filter runs *after* the point where the count is already taken, so a UA that does not match the substring list is metered regardless of behaviour.
-- **Two ingestion paths are unfiltered entirely** — `proxy.js:74` and `server-events.js:137`. Anything arriving through those is counted with no bot check at all.
+- **Diagnosis: the ingestion bot filter matches on UA substring only. The defect is DETECTION, not ordering.**
+
+  > ⚠️ **An earlier draft of this bullet said the filter "runs *after* the point where the count is already taken."** That is **backwards**, and the phrasing was invertible enough to send a future session at the wrong repair. Corrected here rather than silently, because the wrong reading implies a reordering fix that would change nothing.
+
+  **The ordering is correct.** `isIngestionBotUserAgent` gates at `track.js:169-173` with an early `return res.status(200)`; `claimPageviewUsage` is at `:400`. A filtered request **never reaches the meter**. `pageview-limits.js:44-46` documents exactly that intent — the claim is *"called at the latest safe point inside each ingestion handler — AFTER bot filtering, path exclusion, PII redaction, and all payload validation… to avoid burning quota for events that would have been dropped."*
+
+  **The real mechanism:** a spoofed Chrome UA does not match `INGESTION_BOT_UA_PATTERN` (`bot-filter.js:66`), so it **passes a correctly-ordered filter** and is then legitimately metered. **Reordering fixes nothing.** The fix is detection — IP / ASN / datacenter checks, or promoting the two signals that already exist but are log-only to actual drops: `header_shape` (`bot-filter.js:126-141`, wired log-only at `track.js:177`) and the client `auto_score` (`track.js:186-191`, which states outright that *"nothing reads this value to filter, drop, classify, or meter"*).
+- **SEPARATE DEFECT — two ingestion paths have no filter at ANY position.** `proxy.js:74` and `server-events.js:137` meter pageviews with no bot check whatsoever (neither file imports `bot-filter.js`). **Do not collapse this with the detection finding above:** that one is a filter that runs correctly and matches too little; this one is a filter that does not exist. Different fixes.
 - **Shape is a sitemap crawl** — sequential, breadth-first over the sitemap, not human browsing.
 - **Blast radius is confined to traffic metrics and the usage meter. Revenue was verified clean** — no inflated conversion or revenue rows.
 
