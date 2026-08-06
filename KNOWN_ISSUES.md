@@ -2352,44 +2352,71 @@ a default tenant).
 `MISS` and **distinct `x-railway-request-id`** values, which is what proves the request actually
 reached the origin rather than being answered by the edge.
 
-### KI-103 — ⚠️ TWO ungenerated `llms.txt` files, already divergent, and the footer-linked one is NOT the one that was fixed
+### KI-103 — Two hand-maintained `llms.txt` files, already divergent, neither generated
 
 **Recurring-defect surface, not a one-off.** Nothing generates either file, nothing keeps either in
 step with `key-features.md` or the changelog, and `public/` ships verbatim — so **no `src` scan can
-see either**.
+see either**. Repo-wide, the only references to `llms.txt` in any `.js`/`.mjs`/`.json`/`.yml` are the
+serve route itself: **no generator, no sync step, and no check that the two agree.**
 
-> ⚠️ **CORRECTION TO THE FILING (2026-08-07).** This was filed as a single finding —
-> *"`marketing/public/llms.txt` has no generator; `dashboard/server.mjs:101` only serves it."*
-> **Those two clauses are about DIFFERENT FILES**, and the real state is worse than the single-file
-> version. Recorded as a correction rather than silently rewritten.
+They have already diverged — **874 B vs 2074 B, different content**:
 
-There are **two** files, and they have **already diverged from each other**:
+| File | Size | Carries the absolutes? |
+|---|---|---|
+| `marketing/public/llms.txt` | 874 B | **YES** — `:10`, *"100% first-party, cookieless, zero cross-site tracking"*. This is the file **#675 fixes** |
+| `dashboard/public/llms.txt` | 2074 B | **No** — `grep -nE "100%\|zero "` returns nothing |
 
-| File | Size | Served by | Fixed by #675? |
-|---|---|---|---|
-| `dashboard/public/llms.txt` | 2074 B | `dashboard/server.mjs:101-103` → `sendFile(join(DIST,'llms.txt'))`, `DIST = dashboard/dist` (`:6`) | ❌ **No** |
-| `marketing/public/llms.txt` | 874 B | the Astro marketing build | ✅ Yes |
+> ⚠️ **TWO CORRECTIONS TO THIS ENTRY (2026-08-07), recorded rather than silently rewritten.**
+>
+> **(a) The original filing treated this as ONE file.** It cited
+> *"`marketing/public/llms.txt` has no generator"* alongside *"`dashboard/server.mjs:101` only serves
+> it"* — but those clauses are about **different files**. There are two, and they have diverged.
+>
+> **(b) A first draft of this entry then claimed *"the customer-visible surface still carries the old
+> text"*. THAT IS WITHDRAWN — it inverted the severity.** The absolutes live **only** in the 874 B
+> marketing copy, which is exactly the file #675 corrects. The 2074 B dashboard copy has none.
+> **Nothing unfixed is shipping.** The draft assumed that "the copy #675 did not touch" meant "the
+> copy that is wrong"; the opposite is true — #675 touched the one that needed it.
 
-**The one the footer points at is the one #675 did NOT correct.** The *"AI info"* link lives at
-`dashboard/src/components/MarketingFooter.jsx:61` (`href="/llms.txt"`), which resolves through
-`dashboard/server.mjs` to the **dashboard** copy — while **#675 corrected the marketing copy**
-(`QA_RUNBOOK.md`, `marketing/public/llms.txt`, `key-features.md`, `security.md`).
+**What remains true, and is the actual finding: the routing is ambiguous.**
+`dashboard/src/components/MarketingFooter.jsx:61` links to a **relative** `/llms.txt`, and
+`dashboard/server.mjs:101-103` serves that path from `dashboard/dist` (`DIST` at `:6`). **Which file
+answers depends on which SERVICE handles the request**, and the services have since been split:
+marketing now runs as its own Railway service (`sourcetrack-marketing`, www + apex), while Dashboard
+holds `app.sourcetrack.ai` only. `MarketingFooter.jsx` living under `dashboard/src` **predates that
+split**, so its location no longer implies which origin renders it.
 
-Repo-wide, the only two references to `llms.txt` in any `.js`/`.mjs`/`.json`/`.yml` are the serve
-route itself. **There is no generator, no sync step, and no check that the two agree** — which is why
-they are already 2074 B vs 874 B with different content.
+**VERIFIED by live request (2026-08-07)** — the byte length is an unambiguous discriminator:
 
-**Why it matters more than an ordinary stale doc:** this is the file AI systems fetch as the
-product's self-description, so drift here is **repeated back as fact about the product** by other AI
-systems. Correcting one copy while the linked copy still carries the old absolutes leaves the
-customer-visible surface wrong.
+| URL | Bytes | ⇒ file |
+|---|---|---|
+| `https://www.sourcetrack.ai/llms.txt` | **874** | the marketing copy |
+| `https://app.sourcetrack.ai/llms.txt` | **2074** | the dashboard copy |
+
+Both `HTTP/2 200`, both `server: railway-hikari`, distinct `x-railway-request-id`.
+
+⚠️ **INFERRED — UNKNOWN, deliberately NOT asserted: which of the two the FOOTER LINK resolves to.**
+Source alone cannot settle it. What is verified is only that `www/docs` is server-rendered (36 KB)
+and contains **no** *"AI info"* string, while `app/docs` returns a **2971 B SPA shell** — so if the
+footer renders at all it renders **client-side**, where `curl` cannot observe it. The plausible
+reading is that `MarketingFooter` renders only in the dashboard SPA and its relative link therefore
+resolves to the 2074 B copy — **but that is inference, not evidence, and it is not recorded as fact.**
+
+**What would settle it:** a headless-browser render of a `MarketingPage`/`DocsLayout` route on
+`app.sourcetrack.ai`, confirming the *"AI info"* link is present and reading its resolved `href` —
+i.e. a browser-agent check, not a source read.
+
+**Why any of this matters more than an ordinary stale doc:** this is the file AI systems fetch as the
+product's self-description, so drift is **repeated back as fact about the product** by other AI
+systems. Two hand-maintained copies with no generator and no parity check is a surface that will
+drift again — it already has once.
 
 **Cross-reference:** the `QA_RUNBOOK` entry added in **#675** — *scan built output, not source* — is
-the right shape of check and is the reason source scans miss this class. ⚠️ **#675 is still OPEN at
-the time of writing, so that entry does not exist on `main` yet.**
+the right shape of check and is why source scans miss this class. ⚠️ **#675 is still OPEN at the time
+of writing, so neither that entry nor its `llms.txt` correction exists on `main` yet.**
 
-**Status: VERIFIED** (both files present and differing; no generator found repo-wide; footer link and
-serve path traced to the dashboard copy; #675's file list read from the open PR).
+**Status: VERIFIED** for the file inventory, the divergence, the absence of a generator, and the
+per-origin serve mapping (live). **INFERRED-unknown** for the footer's resolution target, as above.
 
 ### KI-104 — `/api/server/event` accepted click IDs ONLY when nested under `properties` (pre-#676)
 
