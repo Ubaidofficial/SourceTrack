@@ -1,0 +1,94 @@
+/* ============================================================================
+   V3 SHARED PAGE TREATMENTS — everything the homepage did not already need.
+   ============================================================================
+   Scoped under `.v3`, like v3-tokens.css and v3-home.css. Pages import
+   v3-tokens + v3-home + this, so the section rhythm, soft/dark bands, cards,
+   table card, FAQ list, plan grid and CTA close are REUSED rather than rebuilt.
+   Only genuinely new components live here.
+
+   ⚠️ Do not add a page-specific variant of something v3-home.css already ships.
+   Three near-identical card components is the divergence CLAUDE.md §11 names,
+   and it is how a fix lands in one copy and not the others.
+   ============================================================================ */
+
+/* ── billing toggle (pricing §2) ──────────────────────────────────────────────
+   Static in the preview. The design renders it as an interactive control; the
+   live /pricing page already has a working monthly/yearly toggle, so v3 does not
+   need to invent one — it needs the SHAPE. Marked aria-hidden from the tab order
+   until it is wired, because a focusable control that does nothing is worse for
+   a keyboard user than one that is not focusable at all. */
+.v3 .v3-billing-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--v3-gray-100);
+  border: 1px solid var(--v3-border);
+}
+.v3 .v3-billing-toggle span {
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--v3-gray-700);
+}
+.v3 .v3-billing-toggle span[data-active] {
+  background: var(--v3-paper-card);
+  color: var(--v3-ink);
+  box-shadow: var(--v3-shadow-card);
+}
+
+/* ── side-by-side compare (compare-ga4 §2) ───────────────────────────────────
+   The design ships a drag-to-compare slider. Rendered here as two static panels
+   side by side: the slider is an interactive island and islands are Phase 6.
+   A static split communicates the same contrast and needs no JS — and §37.1
+   requires motion to depict real behaviour, which a decorative drag handle on a
+   non-functional slider would not. */
+.v3 .v3-compare-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  border: 1px solid var(--v3-border);
+  border-radius: var(--v3-radius-lg);
+  overflow: hidden;
+  background: var(--v3-border);
+}
+.v3 .v3-compare-panel { background: var(--v3-paper-card); padding: 28px; }
+.v3 .v3-compare-panel h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--v3-gray-700);
+}
+.v3 .v3-compare-panel p { margin: 0; color: var(--v3-gray-600); font-size: 15px; line-height: 1.55; }
+.v3 .v3-compare-panel .v3-compare-value {
+  margin: 10px 0 0;
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--v3-ink);
+}
+@media (max-width: 900px) { .v3 .v3-compare-split { grid-template-columns: 1fr; } }
+
+/* ── plan card emphasis (pricing §3) ────────────────────────────────────────
+   Reuses .v3-plans / .v3-plan from v3-home.css. Only the highlight is new.
+   The accent is a 2px BORDER, not a fill: §2.6's acceptable uses are a badge, a
+   button, a highlighted line, a chart's winning data point. A highlighted line
+   is exactly this, and a filled card would be lime behind primary content —
+   the clause that has no budget. */
+.v3 .v3-plan--featured { border: 2px solid var(--v3-accent); }
+.v3 .v3-plan-badge {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--v3-accent);
+  color: var(--v3-ink);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
