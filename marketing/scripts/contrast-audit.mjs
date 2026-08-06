@@ -83,7 +83,32 @@ const PAIRS = [
   // ── surrounding hero text, for baseline ──
   { id: 'hero body copy on bone',       sel: '#hero-content',          fg: 'var(--color-text-light)', bg: 'var(--color-body)', level: 'AA' },
   { id: 'hero h1 on bone',              sel: '.hero-text',             fg: 'var(--color-text)',  bg: 'var(--color-body)',      level: 'AA-large' },
-  { id: 'btn-dark label',               sel: '.btn-dark',              fg: 'var(--color-white)', bg: 'var(--color-dark)',      level: 'AA' }
+  { id: 'btn-dark label',               sel: '.btn-dark',              fg: 'var(--color-white)', bg: 'var(--color-dark)',      level: 'AA' },
+
+  // ── Phase 2b sections ──
+  // TrustBar flipped from a dark band (#1B1811) to the light contrast band at §2.7
+  // position 2, so every pair in it is recomputed against the NEW surface rather than
+  // carried forward. The badge is handled separately: its background is translucent
+  // (10% lime), so it has no static hex to resolve — see the composite block below.
+  { id: 'TrustBar eyebrow',             sel: '.trustbar-eyebrow',      fg: 'var(--gray-600)',    bg: 'var(--gray-50)',         level: 'AA' },
+  { id: 'TrustBar logo label',          sel: '.trustbar-logo',         fg: 'var(--black)',       bg: 'var(--gray-50)',         level: 'AA' },
+  // DirectRescue keeps its dark band unchanged; pinned so a later edit cannot drift it.
+  { id: 'DirectRescue h2',              sel: 'DirectRescue h2',        fg: '#F6F3EB',            bg: '#18150F',                level: 'AA-large' },
+  { id: 'DirectRescue lede',            sel: 'DirectRescue p',         fg: '#A79E8C',            bg: '#18150F',                level: 'AA' },
+  // JourneyShowcase gained a frame but kept its paper surface and type colours.
+  { id: 'Journey h2 on paper',          sel: 'JourneyShowcase h2',     fg: 'var(--color-text)',  bg: 'var(--color-body)',      level: 'AA-large' },
+  { id: 'Journey lede on paper',        sel: 'JourneyShowcase p',      fg: 'var(--color-text-light)', bg: 'var(--color-body)', level: 'AA' },
+  { id: 'Journey frame chrome url',     sel: '.demo-chrome .url',      fg: '#8a9494',            bg: '#12100c',                level: 'AA' }
+]
+
+// Pairs whose background is TRANSLUCENT and therefore has no resolvable hex in the
+// stylesheet — the effective colour depends on what is behind it. Composited here
+// explicitly, because carrying a pre-composite number forward is exactly how
+// TrustBar's badge would have shipped at 1.22:1: `text-primary` on `bg-primary/10`
+// measured 10.54:1 over the old dark band and never changed its own declaration, but
+// the surface under it flipped to a light tint.
+const COMPOSITE_PAIRS = [
+  { id: 'TrustBar badge text', fg: '#12100c', over: '#d2ec2a', alpha: 0.10, base: '#faf8f1', level: 'AA' }
 ]
 
 const THRESHOLD = { AA: 4.5, 'AA-large': 3.0 }
@@ -134,8 +159,24 @@ for (const p of PAIRS) {
   )
 }
 
+// Composite (translucent-background) pairs.
+for (const p of COMPOSITE_PAIRS) {
+  const over = hexToRgb(p.over), base = hexToRgb(p.base), fg = hexToRgb(p.fg)
+  const bg = over.map((c, i) => Math.round(c * p.alpha + base[i] * (1 - p.alpha)))
+  const r = ratio(fg, bg)
+  const need = THRESHOLD[p.level]
+  const pass = r >= need
+  if (!pass) fails++
+  const hex = c => '#' + c.map(x => x.toString(16).padStart(2, '0')).join('')
+  console.log(
+    p.id.padEnd(34) + p.fg.padEnd(10) + hex(bg).padEnd(10) +
+    r.toFixed(2).padEnd(9) + String(need).padEnd(7) +
+    (pass ? 'PASS' : 'FAIL') + ` (${p.level}, composited ${p.over}@${p.alpha} over ${p.base})`
+  )
+}
+
 console.log('-'.repeat(84))
-console.log(`${PAIRS.length} pairs · ${fails} FAIL · ${unresolved} unresolved`)
+console.log(`${PAIRS.length + COMPOSITE_PAIRS.length} pairs · ${fails} FAIL · ${unresolved} unresolved`)
 
 // ── BAN: --orange-600 must never be a text colour ────────────────────────────
 // #e85a1a is 3.24:1 on --paper and 3.21:1 on --orange-50 — both below AA. It is a
