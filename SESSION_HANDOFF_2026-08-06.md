@@ -34,7 +34,16 @@ GitHub, the live databases, or a local build at write time. Squash merges defeat
 - **2d** — FAQ accordion a11y (`aria-expanded`, `aria-controls`, keyboard operable, visible focus; any open/close motion bound by §37.2/37.3 and complete under `prefers-reduced-motion`) **+ the six-section §2.6 both-breakpoint lime table.** Base off `642410ea`. Not started — deliberately deferred rather than rushed.
 - **Cutover assessment** — full a1–a9 against the whole branch, total CSS payload on `/` and `/pricing`, total lime both viewports, and confirmation no non-homepage route ships homepage-only CSS. **Cutover conditions unchanged.**
 
-**Next-session order: 2d → cutover assessment → close #613.**
+### Next-session order — **REVISED 2026-08-06 (founder)**
+
+> ⚠️ **Supersedes the earlier "2d → cutover → close #613."** That order predated the AI Visibility finding.
+
+**#654 merge → 🔴 AI Visibility → 2d → cutover assessment → `pv_limit` (c) → PR-F Step 2 → bot detection · `site_key` sweep · `integrations.js:914`+`:981` · branch deletes**
+
+**Rationale, recorded so the ordering is not silently re-sorted:**
+- **AI Visibility jumps to the top.** It **throws on every request in production while being marketed**. A page that throws is worse than one that does not exist — the marketed version promises something, and the customer gets an error instead of an absence. See the 🔴 section in §4.
+- **Bot detection drops BELOW cutover.** It costs **quota nobody is paying for** — the only affected sites are two free sites and the founder's test domain (§3.5 ruling 1). **Real, but not urgent.** Do not let its red framing in the bookmentions section pull it upward.
+- **#613 closes after cutover**, unchanged (§3).
 
 ### CI on the integration branch — a real gap, accepted
 #647 added `feat/home-v14` to `pull_request.branches` only, **not** `push.branches`. Phase PRs get checks; a **squash-merge into `feat/home-v14` gets none**. Confirmed empirically: `1acad7fa` has zero check-runs. Closed instead by tree-hash equality against the CI-green PR head plus a local full-suite run. Also confirmed empirically: **the trigger change must be merged INTO the base branch, not just `main`** — GitHub reads the workflow from the base for `pull_request` events, and `gh pr close && gh pr reopen` re-fires checks on the same SHA without moving the head.
@@ -128,20 +137,46 @@ It took a `select domain, plan, pv_limit from sites` to catch, and nobody ran on
 
 ---
 
+## 3.5 DECIDED — founder rulings, 2026-08-06
+
+**These are settled. Do not re-litigate them; do not re-raise them as open.** Each carries the rationale, because a ruling without its reasoning gets reopened by the next person who sees only the conclusion.
+
+### 1. `pv_limit` → **option (c) only. Skip the backfill (a).**
+
+**Fix the webhook so the FIRST REAL SIGNUP gets a correct `pv_limit`.** No migration, no DDL, no prod DML.
+
+Rationale, recorded: `www.techrupt.pk` is the **founder's test domain**, so **zero real customers exist** — a backfill would be production DML for no customer benefit, and it would be **reverted by the next `customer.subscription.updated`** anyway if the Growth price carries stale metadata. Repairing the write path is the only fix that survives.
+
+**`Billing.jsx:9-18`'s stale table folds into that same PR** — same defect, same surface.
+
+**The Stripe metadata question now SHAPES (c); it no longer gates it.** When the answer arrives it determines *what* the webhook should write, not *whether* the PR proceeds. The four investigation questions below are answered and retained for that shaping:
+
+1. **What writes `sites.pv_limit`?** The Stripe billing webhook, from `price.metadata.pv_limit`, falling back to the plan default — `billing.js:78-81`, patched at `:201`, `:230`, `:292`, `:316`. Column `DEFAULT 5000` otherwise.
+2. **Does it write current or stale values?** `techrupt.pk`'s 150,000 is exactly the *old* `PLAN_DEFAULT_PV_LIMIT.growth`. Still a **hypothesis, not a finding** — needs the live Stripe price metadata, which is founder-only (§6.5).
+3. **Would a new Growth purchase get 1M or 150k?** Decided by that same metadata. **This is the question (c) must answer before it ships.**
+4. **Do Billing / Setup / `usage-threshold-emails` contradict published pricing?** Yes — they read `pv_limit`, so a site would be warned at 80% of its stored value while the pricing page promises the plan default.
+
+> ⚠️ **`email-reports-weekly` inherits this.** The same stale `plan='growth'` row makes `techrupt.pk` pass the job's paid-plan gate, so a run today would email a weekly report about a **canceled** test domain. Fold into (c) rather than tracking separately.
+
+### 2. `chat_lead_captured` stays **DETECT-ONLY**. Not promoted to `$conversion`.
+
+**Five conversions total in prod is not enough to validate a new type flowing into attribution and revenue surfaces.** Promoting it would put an unvalidated conversion type into the revenue rail at a volume where nothing could detect it going wrong. **Revisit at real volume.** Recorded so it is not re-litigated.
+
+### 3. Glassmorphism → **V1-WIDE BAN, formalized.**
+
+The §26 amendment lands in **PR-F Step 2**. **Rule (a) has already been in force across three phases at no cost** — zero new `backdrop-filter`/`backdrop-blur` on anything built or rebuilt, no substitute scrims — which is the evidence the ban is affordable. **The nine pre-existing sites keep their own post-cutover PR**; `navigation.css` remains off-limits (global header).
+
+### 4. Shopify → **rewrite the claim, do NOT deploy the app.**
+
+**PR-F Step 2 rewrites all four statements** — `§1.4:171`, `§1.6:192`, `§17.6:2236-2244`, `§29.7:2968` — from *"we don't have this"* to **"built, not deployed, Level 1 not approved."** The implementation at `Ubaidofficial/sourcetrack-shpfy-app` is code-complete and stays undeployed. Partner Dashboard state is out of scope and must not be probed.
+
+---
+
 ## 4. Open
 
-### 🔴 TOP ITEM — per-site `pv_limit` overrides · DISPATCHED-BUT-UNREPORTED
+### per-site `pv_limit` overrides — **REPORTED IN FULL, and RULED.** See §3.5 ruling 1.
 
-**Dispatched this session and never came back.** Recorded so the next session knows it was sent, not forgotten, and does not re-scope it from scratch.
-
-Given §3 — every prod site carries an override and three of four sit below their plan default — the questions are:
-
-1. **What writes `sites.pv_limit`?** Provisioning, the Stripe webhook, an admin path, a migration backfill, or some combination.
-2. **Does the Stripe webhook write current or stale values?** `techrupt.pk` sits at 150,000, which is exactly the *old* `PLAN_DEFAULT_PV_LIMIT.growth` that #613's diff showed being corrected. That strongly suggests the override was written from a stale table and never refreshed — **but that is a hypothesis, not a finding.**
-3. **Would a new Growth purchase today get 1,000,000 or 150,000?** This decides whether the over-promise in §3 is one legacy row or an ongoing defect on every new sale.
-4. **Do Billing / Setup / `usage-threshold-emails` show a per-site number that contradicts published pricing?** The job reads `pv_limit`, so a customer could be warned at 80% of 150,000 while the pricing page promises 1,000,000.
-
-**Do not fix the copy again until this is answered** — #651 corrected it against the defaults, and the defaults turned out not to be what is enforced.
+> ⚠️ **This item was previously tagged `DISPATCHED-BUT-UNREPORTED`. That is no longer true.** The investigation came back complete and the founder has ruled: **option (c) only**. What remains is not an investigation but a PR, sequenced in the revised next-session order in §1.
 
 ### bookmentions bot-inflation investigation — COMPLETE
 
@@ -220,27 +255,28 @@ The full audit carries a master table with A/B/C/D categories and a jobs-by-EFFE
 
 ### 🔶 PR-F Step 2 — docs correction. OPEN, not started.
 
-The corrections implied by Step 1's findings — principally the **edge-compute claims** and the **Campaigns 2-vs-9 inconsistency**. Needs its **own dedicated worktree** (§13, worktree isolation). Do not fold it into another phase's PR.
+The corrections implied by Step 1's findings, plus the two doc changes the founder ruled on: the **edge-compute claims**, the **§26 glassmorphism amendment** (§3.5 ruling 3), and the **four Shopify statements** (§3.5 ruling 4). **Campaigns is OUT of scope — withdrawn on inspection**, see the Step 1 section above. Needs its **own dedicated worktree** (§13, worktree isolation). Do not fold it into another phase's PR.
 
 ---
 
 ## 5. Open, small
 
-- **`marketing/src/layouts/partials/TrustBar.astro:20-22`** — stale comment referencing `feat/chat-tracking-phase1` editing the chat clause.
-- **`webhook-incoming.js:142`** — logs a raw `site_key`. **§6.5 violation**, same class as #637.
+- ~~**`webhook-incoming.js:142`** — logs a raw `site_key`.~~ **FIXED by #653** (`fcdbcf08`), merged 2026-08-06.
 - **`BUNNY_API_KEY` / `BUNNY_PULL_ZONE_ID` presence check** — **STILL OPEN, and now actually checkable.** `determined-reverence` (`0d626230`) is **confirmed** as the SourceTrack Railway project; the earlier blocker was not knowing which project to look in, not the check itself. Still **UNDETERMINED**: Railway MCP does not reach it from the orchestrator grant, so it needs a name-level look in the Railway UI (names only — §0 forbids reading values). If absent, `isBunnyConfigured()` returns false, both provisioning calls no-op **silently**, and the Verify button does nothing — which would also explain the hand-made pull zone. **Check before attempting F1.**
 
 **RESOLVED this session, recorded so it is not reopened:** the customer-facing *"Check CNAME Status"* action is wired and current. `Settings.jsx:917` → `handleVerifyProxy` (`:274`) → `POST /integrations/proxy-domain/verify` — the **#648 path**, which now runs `verifyProxyDelivery` (health **and** a real `tracker.min.js` fetch with content-type + leading-bytes assertions). There is also an auto-poll at `:186` on the same endpoint. No work outstanding here.
-- **Delete five merged branches** — #592, #594, #598, #604, #606.
+- **Delete FOUR merged branches** — #592, #598, #604, #606. *(Previously listed as five; #594 has since been deleted.)*
 - **#615 — `'Seats left — [VERIFY: wire to a real count]'`.** **LIVE customer-facing placeholder text** on the Founder card in `PricingCards.jsx`, one line below the cap #651 just corrected. Deliberately left out of #651 as out-of-scope for a numbers fix, but it is shipping to customers now.
 
 ---
 
-## 6. Product decisions open
+## 6. Product decisions — **ALL THREE RULED 2026-08-06.** None are open.
 
-- **Chat detection (#594) is live but DETECT-ONLY** — no `$conversion` promotion. Booking (#592) *is* promoted to `conversion_type: 'meeting'`. **The open decision is whether chat should be promoted the same way.** The asymmetry is currently deliberate, not an oversight.
-- **`design.md` states "no native Shopify app" in FOUR places** — §1.4, §1.6, §17.6, §29.7 — while **a full implementation exists and has never been deployed**; Shopify Level 1 access is unconfirmed. Either the doc is wrong or the implementation is dead. Resolve before either is cited.
-- **Glassmorphism (§25.1)** — founder ruling pending on a V1-wide ban. **Rule (a) is in force meanwhile: zero new `backdrop-filter`/`backdrop-blur` on anything built or rebuilt**, no substitute scrims. Nine pre-existing sites remain, out of scope until their own remediation PR; **`navigation.css` is explicitly off-limits** (global header).
+> ⚠️ **This section previously listed all three as open.** The founder ruled on 2026-08-06; the rulings and their rationale live in **§3.5**. Kept here as pointers so a reader arriving at "Product decisions open" is not misled by the heading.
+
+- **Chat detection (#594) stays DETECT-ONLY** — **RULED**, §3.5 ruling 2. No `$conversion` promotion. Booking (#592) remains promoted to `conversion_type: 'meeting'`; **the asymmetry is now a decision, not an open question.** Revisit only at real conversion volume.
+- **`design.md`'s four "no native Shopify app" statements** — **RULED**, §3.5 ruling 4. The doc is what changes: PR-F Step 2 rewrites all four to *"built, not deployed, Level 1 not approved."* **The app is not deployed.**
+- **Glassmorphism (§25.1)** — **RULED**, §3.5 ruling 3. V1-wide ban, formalized as a §26 amendment in PR-F Step 2. Rule (a) stays in force in the meantime; the nine pre-existing sites keep their own post-cutover PR; `navigation.css` off-limits.
 
 ---
 
