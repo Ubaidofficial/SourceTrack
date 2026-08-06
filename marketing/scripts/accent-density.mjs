@@ -58,17 +58,26 @@ const CEILING = 15
 // Browser rects, not estimates. Each entry records the ref it was measured at, because a
 // rect is only true for the markup that produced it — see STALE below.
 const MEASURED = {
-  ref: '642410ea-PRE-FIX',
+  ref: '31cd3216',            // post-#656: line-height 1.40, mark rule re-targeted
+  // Mark fragment rects. Verified UNCHANGED across the 1.25 -> 1.40 change, which is the
+  // empirical confirmation of the invariance argument: line-height is an input to neither
+  // line-breaking nor painted height, so neither fragment widths nor the 94.24/58.39
+  // painted heights moved.
   mark: {
-    1440: { rects: [[581.30, 80.625], [238.68, 80.625]], topY: null },
-    390: { rects: [[477.75, 46.25]], topY: 1039 }
+    1440: { rects: [[613.95, 94.24], [280.40, 94.24]], topY: null },
+    390: { rects: [[282.60, 58.39], [270.03, 58.39]], topY: null }
+  },
+  // Hero box height. NOT the viewport — see glowCoverage(). The gradient sits at 12% of
+  // the HERO and its radius is the hero box's farthest corner, so assuming hero == viewport
+  // put the glow in the wrong place and gave it the wrong size. On mobile the hero is
+  // TWICE the viewport height, so that assumption was ~100% out.
+  heroHeight: {
+    1440: null,                 // NEEDED — only the +20.94px delta was reported, not the absolute
+    390: 1711.86                // measured at true 390x844 (the 1420.58 figure is from the
+                                // invalidated ~625px run and is discarded, not a "before")
   }
 }
-// ⚠️ STALE-INPUT GUARD. Set to the ref the rects describe. If HEAD differs, the harness
-// says so and refuses to print a verdict, because the fix in this very PR restores
-// `px-4 py-1` on the mark and therefore GROWS the box these rects describe. A number that
-// silently outlives the markup it measured is the exact failure this file exists to end.
-const MEASURED_VALID_AT = 'post-hero-fix'  // set by whoever lands the re-measured rects
+const MEASURED_VALID_AT = '31cd3216'  // bump when hero markup or the mark rule changes
 
 const hex = h => [0, 2, 4].map(i => parseInt(h.replace('#', '').slice(i, i + 2), 16))
 const over = (fg, bg, a) => fg.map((c, i) => c * a + bg[i] * (1 - a))
@@ -94,7 +103,11 @@ console.log(`stylesheets (${links.length}): ${links.join(' + ')}`)
 console.log(`tokens: --color-primary ${fmt(LIME)} · --paper ${fmt(PAPER)} · --gray-50 ${fmt(GRAY50)}\n`)
 
 // ── HERO GLOW — rasterised (ported from glow-coverage.mjs, which this file replaces) ──
-function glowCoverage (v) {
+// The glow is painted on the HERO box, not the viewport, and §2.6 is measured over a
+// SCREENFUL. Those are two different rectangles and conflating them is what the previous
+// version did. Renders the gradient across the real hero box, then counts canonical pixels
+// only inside the worst screenful — which for a top-anchored glow is the first one.
+function glowCoverage (v, heroH) {
   const heroRule = css.match(/\.st-home\s+\.hero\{([^}]*)\}/) || css.match(/\.hero\{([^}]*)\}/)
   if (!heroRule) return null
   const bgDecl = heroRule[1].match(/background:([^;]+)/)
@@ -113,14 +126,15 @@ function glowCoverage (v) {
   })
   if (!radials.length) return null
   const baseTop = hex('#f7f4ed'), baseBottom = hex('#f8fbfb')
-  const { w: W, h: H } = v
+  const W = v.w, H = heroH          // hero box, NOT the viewport
+  const windowH = Math.min(v.h, H)  // the first screenful, clipped to the hero
   const rays = radials.map(g => {
     const cx = g.cx * W, cy = g.cy * H
     const d = [[0, 0], [W, 0], [0, H], [W, H]].map(([x, y]) => Math.hypot(x - cx, y - cy))
     return { ...g, cx, cy, ray: Math.max(...d) }
   })
   let count = 0
-  for (let y = 0; y < H; y++) {
+  for (let y = 0; y < windowH; y++) {
     const t = y / (H - 1)
     const br = baseTop[0] + (baseBottom[0] - baseTop[0]) * t
     const bgc = baseTop[1] + (baseBottom[1] - baseTop[1]) * t
@@ -137,7 +151,8 @@ function glowCoverage (v) {
       if (THRESHOLDS[CANON][1](r, g, b)) count++
     }
   }
-  return 100 * count / (W * H)
+  // Denominator is the SCREENFUL (§2.6), never the hero box.
+  return 100 * count / (v.w * v.h)
 }
 
 // ── rows ─────────────────────────────────────────────────────────────────────
@@ -151,23 +166,34 @@ const BADGES = ['Architectural Principles', 'Frequently Asked Questions', 'Proof
   'Direct Rescue', 'Comparison', 'How It Works', 'Use Cases', 'Pricing', 'Trust']
 
 const stale = MEASURED.ref !== MEASURED_VALID_AT
+const missing = []
+for (const v of VIEWPORTS) {
+  if (MEASURED.heroHeight[v.key] === null) missing.push(`heroHeight[${v.key}]`)
+  if (MEASURED.mark[v.key].topY === null) missing.push(`mark[${v.key}].topY`)
+}
 const rows = []
 
 for (const v of VIEWPORTS) {
-  const glow = glowCoverage(v)
+  const heroH = MEASURED.heroHeight[v.key]
+  const glow = heroH === null ? null : glowCoverage(v, heroH)
 
   // 1. hero glow — RASTERISED
-  rows.push({ v, name: 'Hero glow', method: 'RASTERISED', pctv: glow,
-    window: 'the hero box, treated as exactly one viewport' })
+  rows.push({ v, name: 'Hero glow', method: heroH === null ? 'BLOCKED' : 'RASTERISED',
+    pctv: glow,
+    window: heroH === null
+      ? 'BLOCKED — hero height not measured at this breakpoint; cannot place the gradient'
+      : `gradient rendered across the real hero box (${heroH}px tall), counted over the first screenful` })
 
   // 2. hero <mark> — MEASURED (the row glow-coverage.mjs could not see)
   const m = MEASURED.mark[v.key]
   const area = m.rects.reduce((s, [w, h]) => s + w * h, 0)
   rows.push({ v, name: 'Hero <mark> highlight', method: 'MEASURED', pctv: pct(area, v),
-    window: m.topY !== null && m.topY > v.h
-      ? `BELOW THE FOLD (mark top y=${m.topY} > viewport ${v.h}) — never shares screenful 1 with the glow`
-      : 'the first screenful, which contains the whole headline',
-    belowFold: m.topY !== null && m.topY > v.h })
+    window: m.topY === null
+      ? 'topY NOT MEASURED — cannot decide whether it shares a screenful with the glow'
+      : m.topY > v.h
+        ? `BELOW THE FOLD (mark top y=${m.topY} > viewport ${v.h}) — never shares screenful 1 with the glow`
+        : 'the first screenful, which contains the whole headline',
+    belowFold: m.topY === null ? null : m.topY > v.h })
 
   // 3-6. the analytic/exact rows
   const tbFillW = 28 * ASSUMED_ADVANCE * 14 + 24, tbFillH = 14 * 1.5 + 8
@@ -199,7 +225,8 @@ for (const v of VIEWPORTS) {
   console.log('row'.padEnd(30) + 'method'.padEnd(12) + '% screen'.padEnd(11) + 'window')
   console.log('-'.repeat(86))
   for (const r of rows.filter(r => r.v === v)) {
-    console.log(r.name.padEnd(30) + r.method.padEnd(12) + `${r.pctv.toFixed(2)}%`.padEnd(11) + r.window)
+    const cell = r.pctv === null ? 'BLOCKED' : `${r.pctv.toFixed(2)}%`
+    console.log(r.name.padEnd(30) + r.method.padEnd(12) + cell.padEnd(11) + r.window)
     if (r.note) console.log(' '.repeat(53) + `-> ${r.note}`)
   }
   // Worst single screenful. The glow is anchored top-right of the hero; the mark sits in
@@ -207,18 +234,29 @@ for (const v of VIEWPORTS) {
   // screenful is whichever is larger, NOT the sum. Where they can co-occur, they are summed.
   const glow = rows.find(r => r.v === v && r.name === 'Hero glow').pctv
   const mark = rows.find(r => r.v === v && r.name === 'Hero <mark> highlight')
-  const worst = mark.belowFold ? Math.max(glow, mark.pctv) : glow + mark.pctv
   console.log('-'.repeat(86))
-  console.log(mark.belowFold
-    ? `worst hero screenful: max(glow ${glow.toFixed(2)}%, mark ${mark.pctv.toFixed(2)}%) = ${worst.toFixed(2)}%  [NOT summed — mark is below the fold]`
-    : `worst hero screenful: glow ${glow.toFixed(2)}% + mark ${mark.pctv.toFixed(2)}% = ${worst.toFixed(2)}%  [summed — both in one screenful]`)
+  if (glow === null || mark.belowFold === null) {
+    console.log(`worst hero screenful: BLOCKED — ${glow === null ? 'glow unmeasurable (no hero height)' : ''}` +
+      `${glow === null && mark.belowFold === null ? '; ' : ''}` +
+      `${mark.belowFold === null ? 'mark topY unknown, so above/below-fold is undecided' : ''}`)
+  } else {
+    const worst = mark.belowFold ? Math.max(glow, mark.pctv) : glow + mark.pctv
+    console.log(mark.belowFold
+      ? `worst hero screenful: max(glow ${glow.toFixed(2)}%, mark ${mark.pctv.toFixed(2)}%) = ${worst.toFixed(2)}%  [NOT summed — mark is below the fold]`
+      : `worst hero screenful: glow ${glow.toFixed(2)}% + mark ${mark.pctv.toFixed(2)}% = ${worst.toFixed(2)}%  [summed — both in one screenful]`)
+  }
   console.log('')
 }
 
 console.log('§2.6 ceiling: ~' + CEILING + '% of any single screen')
-if (stale) {
-  console.log(`\n⚠️  MEASURED INPUT IS STALE — rects were taken at ${MEASURED.ref}, harness expects ${MEASURED_VALID_AT}.`)
-  console.log('   NO VERDICT PRINTED. Re-measure in a browser and update MEASURED before quoting a figure.')
+if (stale || missing.length) {
+  if (stale) console.log(`\n⚠️  MEASURED INPUT IS STALE — taken at ${MEASURED.ref}, harness expects ${MEASURED_VALID_AT}.`)
+  if (missing.length) {
+    console.log('\n⚠️  MEASURED INPUT INCOMPLETE — these must be measured in a browser:')
+    for (const k of missing) console.log(`      ${k}`)
+  }
+  console.log('   NO VERDICT PRINTED. §2.6 cannot be answered from CSS alone; supply the')
+  console.log('   values above and re-run. Exiting 3 is correct behaviour, not a failure.')
   process.exit(3)
 }
 const worsts = VIEWPORTS.map(v => {
