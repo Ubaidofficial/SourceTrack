@@ -54,11 +54,40 @@ export const V3_PAGE_PAIRS = {
     { id: 'card body on paper-card', sel: '.v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
     { id: 'eyebrow on paper', sel: '.v3-eyebrow', fg: '#5B5548', bg: '#F7F4ED', level: 'AA' }
   ],
+  // ── /v3/pricing ───────────────────────────────────────────────────────────
+  '/v3/pricing': [
+    { id: 'plan name on card', sel: '.v3-plan h3', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
+    { id: 'plan feature li', sel: '.v3-plan li', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
+    { id: 'plan-alt small', sel: '.v3-plan-alt', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    // The featured plan uses a 2px accent BORDER and a small badge, never a lime
+    // fill: §2.6's acceptable uses are a badge, a button, a highlighted line. A
+    // filled card would be lime behind primary content, the clause with no budget.
+    { id: 'plan badge ink on lime', sel: '.v3-plan-badge', fg: '#12100C', bg: '#D2EC2A', level: 'AA' },
+    { id: 'toggle active', sel: '.v3-billing-toggle span[data-active]', fg: '#12100C', bg: '#FFFDF8', level: 'AA' },
+    { id: 'toggle inactive', sel: '.v3-billing-toggle span', fg: '#5B5548', bg: '#EFEADC', level: 'AA' },
+    { id: 'table cell', sel: '.v3-table-card td', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
+    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
+  ],
+  // ── /v3/compare-ga4 ───────────────────────────────────────────────────────
+  '/v3/compare-ga4': [
+    { id: 'compare panel label', sel: '.v3-compare-panel h3', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
+    { id: 'compare value', sel: '.v3-compare-value', fg: '#12100C', bg: '#FFFDF8', level: 'AA-large' },
+    { id: 'compare panel body', sel: '.v3-compare-panel p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    // Dark band pairs are scored against THIS page's dark surface, not carried
+    // over from the homepage — same tokens, but a carried-forward ratio across a
+    // surface is the habit that produced TrustBar 10.54 -> 1.22.
+    { id: 'dark band title', sel: '.v3-section--dark .v3-section-title', fg: '#f6f3eb', bg: '#0B0A07', level: 'AA-large' },
+    { id: 'dark band lede', sel: '.v3-section--dark .v3-section-lede', fg: '#a79e8c', bg: '#0B0A07', level: 'AA' },
+    { id: 'stat label', sel: '.v3-stat-label', fg: '#5B5548', bg: '#F7F4ED', level: 'AA' },
+    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
+    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
+  ],
 }
 
 // Pages that exist in the build and must therefore be registered above.
 // Populated as v3 pages land; a page here with no pairs is an error, not a skip.
-export const V3_ROUTES = ['/v3']
+export const V3_ROUTES = ['/v3', '/v3/pricing', '/v3/compare-ga4']
 
 const DIST = 'dist'
 let fails = 0
