@@ -2418,6 +2418,59 @@ of writing, so neither that entry nor its `llms.txt` correction exists on `main`
 **Status: VERIFIED** for the file inventory, the divergence, the absence of a generator, and the
 per-origin serve mapping (live). **INFERRED-unknown** for the footer's resolution target, as above.
 
+#### KI-103 addendum — the routing map is CONFIRMED, and it exposes a LIVE claims defect
+
+**The serve mapping is now VERIFIED TWICE, independently** — once by CC and once by the browser
+agent (2026-08-06 22:46–22:49Z), and re-confirmed by CC at **2026-08-06 22:52:13Z**. All three runs
+agree. This is no longer inferred anywhere:
+
+| URL | `content-length` | ⇒ file | Absolutes? |
+|---|---|---|---|
+| `https://www.sourcetrack.ai/llms.txt` | **874** | `marketing/public/llms.txt` | ⚠️ **PRESENT** |
+| `https://app.sourcetrack.ai/llms.txt` | **2074** | `dashboard/public/llms.txt` | clean |
+
+All responses `HTTP/2 200`, `server: railway-hikari`, distinct `x-railway-request-id`.
+
+**🔴 LIVE EXPOSURE — open now.** A grep against the **live** `www` response body returns:
+
+```
+10:- Cookieless Identity Moat: 100% first-party, cookieless, zero cross-site tracking or fingerprinting.
+```
+
+**The false absolute is serving on the public marketing site at this moment, in the one file written
+specifically for LLMs to ingest.** Every AI system that fetches `/llms.txt` during this window takes
+the absolute as fact and may repeat it as a claim about the product — which is the failure mode this
+entry exists to describe, now actually occurring rather than hypothesised.
+
+**Window:** opens now, closes when **#675** merges. Duration is **throttle-dependent and currently
+unbounded** — #675 is pushed and sitting at **0 CI runs** behind GitHub incident **#6249** (~15% of
+webhooks trigger a run), so there is no predictable close time.
+
+> ⚠️ **THIS DOES NOT REINSTATE THE WITHDRAWN CLAIM — and the difference is the point of this entry.**
+> The withdrawal above was about the **DASHBOARD** copy (2074 B), which has **no** absolutes. That
+> withdrawal **STANDS and is still correct.** The exposure is on the **MARKETING** side, through a
+> **different file than either party was tracking when the original claim was made.**
+>
+> **The finding survived its own retraction and changed surfaces.** Recording it as a reinstatement
+> would erase the fact that the first version was wrong about *which file*; recording only the
+> retraction would erase a live defect. Both are true at once, and neither cancels the other.
+
+**RULING — recorded so it is not re-opened: do NOT hand-edit the deployed file out-of-band.**
+Patching the live `llms.txt` directly would trade a claims defect for a **provenance defect** —
+deployed state diverging from git, with no commit explaining why — which is *precisely* the class of
+problem this KI documents (two hand-maintained copies, no generator, no parity check). A second
+untracked edit path would make the next drift harder to detect, not easier. **Wait for #675.**
+
+**SEQUENCING CONSEQUENCE.** **#674** (*cut the "100%" absolute from the changelog's cookieless line*)
+and **#675** (*cut four remaining absolutes, incl. two in the AI-facing `llms.txt`*) are the **ONLY**
+open PRs whose delay carries an **ongoing EXTERNAL cost** — every other queued PR costs only internal
+time while it waits. **Merge order revised: both promoted to TIER 1, ahead of the v3 chain.** Both
+verified OPEN at **0 CI runs** (2026-08-06 22:52Z).
+
+**Footer resolution remains INFERRED-UNKNOWN** — unchanged by any of the above. Knowing which origin
+serves which *file* does not establish which origin renders the *footer*; that still needs a
+headless-browser render of a `MarketingPage`/`DocsLayout` route on `app.sourcetrack.ai`.
+
 ### KI-104 — `/api/server/event` accepted click IDs ONLY when nested under `properties` (pre-#676)
 
 ⚠️ **Recorded as a CORRECTION, not a discovery — the original claim was that the route could not
