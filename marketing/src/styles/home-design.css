@@ -77,6 +77,12 @@
 
   --orange: #ff7a33;
   --orange-700: #b3480e;
+  /* ⚠ BANNED FOR TEXT. #e85a1a computes to 3.24:1 on --paper and 3.21:1 on
+     --orange-50 — both below WCAG AA (4.5). Fills, borders and icons only.
+     For orange text use --orange-700 (#b3480e, 4.97:1 on paper). Enforced by
+     scripts/contrast-audit.mjs, which scores every text pair against the BUILT
+     stylesheet. Three rules previously violated this and were corrected to
+     --orange-700 (a:hover -> --ink + underline, .calc-row.hi b, .plan li em). */
   --orange-600: #e85a1a;
   --orange-400: #ff9459;
   --orange-200: #ffcbaa;
@@ -143,8 +149,17 @@
     color: var(--orange-700);
     text-decoration: none;
   }
+  /* Hover goes DARKER, not lighter. --orange-600 (#e85a1a) on paper computes to
+     3.24:1 — below WCAG AA 4.5 — so using it for link text shipped an inaccessible
+     hover state. --ink is ~16:1 on paper, and the underline carries the affordance
+     that a colour shift alone no longer can (base `a` is already --orange-700, so
+     hover had to change on some axis other than hue to remain perceivable).
+     See the --orange-600 text ban noted at its declaration. */
   a:hover {
-    color: var(--orange-600);
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
   }
   button {
     font: inherit;
@@ -361,6 +376,48 @@
   .hero h1 {
     font-size: clamp(40px, 4.6vw, 70px);
     text-wrap: balance;
+    /* Overrides the 0.94 on the base h1 above (line ~319). A line-height BELOW 1 makes each
+       line box SHORTER than the font's content area, so an inline background paints outside
+       its own line and — being later in document order — over the descenders of the line
+       above. Measured in a browser at 642410ea: 14.83px of overlap at 1440x900 against a
+       ~14px descender depth, and 8.65px against ~8px at 390x844. Descenders fully covered at
+       both.
+
+       Not a z-index or stacking problem, and nothing is negative: this is ordinary inline
+       paint order meeting sub-1 leading. Scoped to `.hero h1` rather than the base `h1` so
+       the blast radius is exactly the surface that was measured.
+
+       1.25 is the value the control pages (/pricing, /contact) already use — chosen as a
+       typographic reference rather than reverse-engineered to clear the collision, per the
+       rule that the leading should be right on its own terms.
+
+       1.25 WAS NOT ENOUGH, and the browser said so: residual overlap 7.45px at 1440x900
+       and 5.20px at 390x844. The mark carries `px-4 py-1`, and inline vertical padding
+       grows the PAINTED box without growing the LINE box, so ~4px of the overlap is
+       padding that leading has to absorb rather than remove.
+
+       The model that fits the measurements is  overlap = A + p - L*F,  where A is the
+       content-area height (painted height - 2p), p = 4px, F the font-size. At 1440 it
+       predicts 7.44px against 7.45px measured. Solving for zero:
+         1440 (F=66.24): dL = 7.45/66.24 = 0.1125 -> L >= 1.3625
+         390  (F=40.00): dL = 5.20/40.00 = 0.1300 -> L >= 1.3800   <- MOBILE BINDS
+       Mobile binds, and it binds at 1.38 with EXACTLY zero margin, which sub-pixel
+       rounding would put straight back into contact. 1.40 clears both — by 2.49px at
+       1440 and 0.80px at 390 — and is the value shipped.
+
+       ⚠️ Raising this CANNOT change accent coverage, which is why it was the safe lever:
+       line-height is an input to neither line-breaking (fragment count and widths follow
+       available width, font-size and the text) nor painted height (content area plus
+       padding). §2.6 coverage is invariant under this change: desktop mark 6.50%, mobile
+       9.80%, both MEASURED. What it DOES move is the hero's height (~+40px at 1440,
+       ~+30px at 390), and the glow is positioned relative to the hero box — so the glow
+       figure must be re-measured, not carried forward.
+
+       design.md constrains display tracking (§3.1, -0.03em) but says nothing about
+       leading, so no rule is violated here. 1.40 on a 66px display headline is loose;
+       that is the cost of keeping `px-4 py-1` shared with /pricing and /contact rather
+       than forking the mark rule. One line, cheap to revisit. */
+    line-height: 1.40;
   }
   .hero-sub {
     margin: 28px 0 0;
@@ -2316,7 +2373,9 @@
     margin-left: 3px;
   }
   .calc-row.hi b {
-    color: var(--orange-600);
+    /* was --orange-600: 3.24:1 on paper, below AA. Colour value only — the rule is
+       otherwise untouched and its component is not built until 2c. */
+    color: var(--orange-700);
   }
   .calc-row.sub b {
     font-size: 18px;
@@ -2599,7 +2658,9 @@
     font-weight: 900;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--orange-600);
+    /* was --orange-600: 3.21:1 on --orange-50, below AA. Colour value only — the rule
+       is otherwise untouched and its component is not built until 2c. */
+    color: var(--orange-700);
     background: var(--orange-50);
     padding: 2px 6px;
     border-radius: 6px;
@@ -3582,7 +3643,11 @@
   border-radius: 16px;
   background: rgba(23, 29, 27, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.11);
-  backdrop-filter: blur(8px);
+  /* backdrop-filter removed — glassmorphism is barred by §25.1 (open founder
+     decision, binding on generation until ruled) and is on the 2a do-not-port list.
+     Declaration deleted only; the 0.92 fill already carries the card, so nothing
+     else in this rule changes. It shipped inert in #643 and would have gone live
+     the moment this stylesheet was imported. */
   z-index: 4;
 }
 .st-home .orb-av {
@@ -3648,9 +3713,12 @@
   gap: 8px;
   padding: 6px 12px;
   border-radius: 99px;
-  background: rgba(12, 16, 15, 0.72);
+  /* Fill raised 0.72 -> 0.92 because the backdrop-filter below it was removed
+     (§25.1 glassmorphism ban, see .orb-card above). At 0.72 with no blur the text
+     would sit on whatever passes behind it; 0.92 keeps the pill legible without
+     reintroducing the effect. Alpha is the only value changed. */
+  background: rgba(12, 16, 15, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.09);
-  backdrop-filter: blur(6px);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: -0.01em;

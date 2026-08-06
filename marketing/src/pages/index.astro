@@ -1,5 +1,28 @@
 ---
 import Base from "@/layouts/Base.astro";
+// R4 — homepage-only stylesheet, imported HERE rather than from main.css.
+// main.css is pulled in by Base.astro, which every one of the 49 routes shares, so an
+// import there put the full 3,851-line homepage design system on /pricing, /docs/* and
+// everything else. Astro code-splits a page-level import, so this keeps it on / alone.
+// Measured: non-homepage routes drop 61,084 B raw / 10,974 B gzip. The homepage pays a
+// second stylesheet request and ~606 B more gzip (two files compress worse than one) —
+// a good trade across 48 routes. No Base.astro change was needed.
+//
+// ⚠️ DO NOT UN-SCOPE ANYTHING INSIDE home-design.css. This warning used to live beside
+// the @import in main.css and moved here with it, because the danger moved too and a
+// deleted warning is how the next person rediscovers a solved problem.
+//
+// Every rule in that file is nested under `.st-home` (its custom properties are on
+// :root, which is deliberate and safe). The file restyles BARE `a`, `button`, `section`
+// and `h1`-`h4` selectors, so lifting the wrapper repaints the whole site:
+// `a { color: var(--orange-700) }` alone turns every link on every page orange, and the
+// bare `section` padding re-spaces every other layout. The wrapper is also what lets it
+// outrank base.css's element selectors without a single !important.
+//
+// Scoping the import to this page does NOT change that. It narrows which ROUTES load the
+// file; `.st-home` is still the only thing keeping it off the rest of the homepage's own
+// markup — the header, the footer and every partial that does not carry the wrapper.
+import "@/styles/home-design.css";
 import Hero from "@/components/Hero.astro";
 import TrustBar from "@/partials/TrustBar.astro";
 import DirectRescueShowcase from "@/partials/DirectRescueShowcase.astro";

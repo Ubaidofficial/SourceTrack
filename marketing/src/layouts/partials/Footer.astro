@@ -67,12 +67,26 @@ const { footer_company, footer_legal, footer_resource } = menu;
           mid-letter, reading "SOURCETF". This slot wants the brand word only.
           The wrapper is the sizing container — see .footer-title-fit in components.css. */}
       <div class="footer-title-fit mt-12 lg:mt-20">
-        <h1 class="footer-title leading-tight">{config.site.logo_text}</h1>
+        {/* §21 — was an <h1>. Footer renders on EVERY page, so a wordmark marked up as a
+            top-level heading gave the homepage two h1s and /pricing three. It is a brand
+            wordmark, not a document heading; <p> carries no outline weight. `.footer-title`
+            is unchanged, so nothing about the rendering moves — see components.css and the
+            .footer-title-fit sizing wrapper above. */}
+        <p class="footer-title leading-tight">{config.site.logo_text}</p>
       </div>
       <div class="flex justify-between lg:-translate-y-12 items-center flex-col sm:flex-row gap-y-6 py-6">
         <div>
           <p class="text-text text-sm" set:html={markdownify(copyright).__html} />
-          <p class="text-xs text-gray/60 mt-1">Product visuals shown use illustrative data.</p>
+          {/* §29.8 disclosure. Text is UNCHANGED and must stay byte-identical —
+              key-features-mockups.test.js and direct-rescue-mockup-fixture.test.js both
+              assert on this exact string, and it is the single page-level disclosure that
+              replaces per-card "Sample data" badges.
+
+              Opacity removed: `text-gray/60` composited to 2.39:1 on paper, below AA. A
+              compliance line nobody can read is present without being legible, which
+              defeats the rule it satisfies. Full-strength --color-gray is 5.09:1. The
+              tests match on text, not class, so this does not touch their coverage. */}
+          <p class="text-xs text-gray mt-1">Product visuals shown use illustrative data.</p>
         </div>
         <Social source={social.main} className="social-icons" />
       </div>

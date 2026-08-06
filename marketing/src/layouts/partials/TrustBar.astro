@@ -43,16 +43,16 @@ const integrations = [
 ];
 ---
 
-<section class="py-12 border-y border-[#3D3830] bg-[#1B1811]">
+<section class="trustbar-band py-12">
   <div class="main-container">
     <div class="container px-4 text-center">
-      <p class="text-xs font-bold uppercase tracking-widest text-[#A79E8C] mb-6">
+      <p class="trustbar-eyebrow text-xs font-bold uppercase tracking-widest mb-6">
         Works with your existing stack, and any tool that can send a webhook
       </p>
       <div class="flex flex-wrap items-center justify-center gap-8 md:gap-12 mb-6">
         {
           integrations.map((item) => (
-            <div class="flex items-center gap-2 text-xs font-semibold text-[#F6F3EB]">
+            <div class="trustbar-logo flex items-center gap-2 text-xs font-semibold">
               <img
                 src={item.logo}
                 alt={item.name}
@@ -67,7 +67,7 @@ const integrations = [
           ))
         }
       </div>
-      <div class="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs text-primary font-medium">
+      <div class="trustbar-badge inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium">
         <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
           <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
@@ -77,3 +77,40 @@ const integrations = [
     </div>
   </div>
 </section>
+
+<style>
+  /* §2.7 POSITION 2 — FULL-BLEED CONTRAST BAND.
+     Was `bg-[#1B1811] border-y border-[#3D3830]`: a full-bleed DARK band sitting
+     directly above DirectRescue, which is also full-bleed dark (#18150F). A 3-value
+     hex difference across every channel is not a distinguishable treatment, so
+     positions 2 and 3 read as one continuous slab — the repeat §2.7 forbids. Going
+     light is what makes the dark band at position 3 mean something.
+
+     Tokens come from home-design.css's :root block (v1.4 palette). No `.st-home`
+     wrapper here on purpose: this section needs the VALUES, not the nested element
+     rules, and adding the wrapper would activate bare section/h1-h4/a/button rules
+     across a subtree that does not need them. */
+  .trustbar-band {
+    background: var(--gray-50);
+    border-block: 1px solid var(--gray-200);
+  }
+  .trustbar-eyebrow {
+    color: var(--gray-600);
+  }
+  .trustbar-logo {
+    color: var(--black);
+  }
+
+  /* The lime stays BOUNDED — a pill border and a 10% fill, never a wash (§2.6).
+     The TEXT could not stay lime. `text-primary` on the old dark band computed 10.54:1;
+     the same declaration over the new light tint computes 1.22:1, because the badge
+     fill is translucent and its effective background flipped with the section even
+     though the badge's own values did not change. Text is --black (17.43:1); lime
+     survives as the border and the fill, which is where it was doing the signalling
+     work anyway. */
+  .trustbar-badge {
+    border: 1px solid color-mix(in srgb, var(--lime) 30%, transparent);
+    background: color-mix(in srgb, var(--lime) 10%, transparent);
+    color: var(--black);
+  }
+</style>
