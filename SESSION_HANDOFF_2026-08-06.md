@@ -181,7 +181,33 @@ Recorded in enough detail that it is not redone. Findings marked ✅ were **inde
 
 **✅ Campaigns exposes 2 attribution models, not 9** — re-verified: `api/routes/campaigns.js:33` reads `const ROUTE_ALLOWED_MODELS = new Set(['first_touch', 'last_touch'])`.
 
-Worth carrying the *reason*, because it is deliberate and the comment above it is good: the route fails closed because the live readers do not yet count DISTINCT VISITORS for `sessions`, and adding a model without fixing that "reintroduces the fabrication." So this is **not a bug to widen casually** — it is a guard. But it does sit against the "9 attribution models" claim in seven dashboard marketing pages (§3 of the 08-05b handoff), and **Report Builder does offer all 9**. The inconsistency is real; the fix is not simply widening the set.
+Worth carrying the *reason*, because it is deliberate and the comment above it is good: the route fails closed because the live readers do not yet count DISTINCT VISITORS for `sessions`, and adding a model without fixing that "reintroduces the fabrication." So this is **not a bug to widen casually** — it is a guard.
+
+> ⚠️ **WITHDRAWN ON INSPECTION — do not re-raise this as an inconsistency.** This bullet originally continued: *"But it does sit against the '  9 attribution models' claim … The inconsistency is real."* **There is no inconsistency.** Verified 2026-08-06:
+> - **The Campaigns UI has no model picker.** `dashboard/src/pages/Campaigns.jsx:573` hardcodes `model: 'last_touch'`. A user cannot select a rejected model. The page carries a `Last Touch` badge (`:532`) whose tooltip says so: *"This page uses last-touch attribution… To compare other models, open Report Builder."*
+> - **If forced anyway** (hand-crafted query param), the response is a clean **400 with an authored message** — *"The `<model>` attribution model isn't supported on this page"* — surfaced deliberately by `overview()`'s catch (`campaigns.js:369-376`, *"A GATE is not a failure… retrying a deny cannot help"*). Not a silent fallback, not an empty table, not a 500.
+> - **The "9 models" claim is accurate.** Report Builder genuinely serves all 9 (`report-config-validation.js:33`), which is where the claim points.
+>
+> Guarded by `api/tests/campaigns-model-guard.test.js`. **Nothing to fix; Campaigns is out of PR-F Step 2 scope.** Recorded so this is not rediscovered and re-raised a third time.
+
+### 🔴 AI Visibility is a LIVE BROKEN PAGE — two stacked breakages, two different fixes
+
+Not a dormant feature and not one finding. Verified 2026-08-06. **Do not treat these as one item; fixing either alone leaves the other.**
+
+**1. The page is dead — its pipes were never deployed.** `api/routes/ai-visibility.js` reads exactly two pipes, `crawler_agents` (`:63`) and `crawler_pages` (`:113`). Both exist as authored `.pipe` files locally and **neither is deployed** — 83 of 86 local pipes are live in the prod workspace; these two are among the three that are not (`events_by_visitor_mv` is a materialized view, so its absence is expected). The route **fails closed by design** (`:47-51`):
+
+```js
+if (rows === null) {
+  // Never a fake zero (§6): a dead pipe is an error, not "no crawlers".
+  throw new Error(`[ai-visibility] ${pipeName} returned null — FIX THE PIPE`)
+}
+```
+
+`tinybird-read.js` returns `null` on a non-2xx (`:192-193`) **and** returns `null` immediately if `TINYBIRD_READ_PIPES` is set and omits the pipe (`:138`). Which of the two fires is **UNDETERMINED** — that env var's *value* is founder-only (§0; the MCP reads names, not values) — but **the outcome is identical either way: every request to this page throws.** Fix = deploy the two pipes (founder-gated, `tb --cloud deploy --check` first, §8).
+
+**2. IP verification is impossible — the range job is scheduled nowhere.** `api/jobs/ai-crawler-range-refresh.js` is referenced in exactly three places repo-wide: its own migration, its own test, and itself. **Nothing invokes it** — not `package.json`, not `railway.json`/`.toml`, not `nixpacks.toml`, not `Procfile`, not `.github/workflows/` (only `ci.yml` and `schema-drift.yml` exist, neither with a `schedule:` key), and not in-process (`api/routes/internal-jobs.js` exposes only `erasure-resweep`). Hence `ai_crawler_ranges` = **0 rows**. Fix = schedule it. Separate work from deploying the pipes.
+
+**✅ Record the honest part too — this half is well-built.** `detectAiCrawler` **degrades rather than fabricating**: with no ranges it returns `verification: UA_ONLY` and never claims `IP_VERIFIED` (`ai-crawler-detect.js:340-348`), and it keeps a distinct `UA_ONLY_NO_RANGES_PUBLISHED` for vendors that publish no ranges at all — because *"the two have different remedies."* It even distinguishes `IP_MISMATCH` as an impersonation signal. **The detection layer is right; it has no page to render into.**
 
 **✅ CAPI is configured on ZERO sites — and it is broader than GA4.** Re-verified across all 4 prod sites: `ga4 0/4`, `meta 0/4`, `tiktok 0/4`, `linkedin 0/4`. So `sendGA4Conversion` cannot have fired, and **neither can any other sender.** This is the root cause behind `capi_deliveries` = 0 (✅ re-verified: **0 rows**) — not a delivery failure, simply nothing configured to deliver. Any "CAPI works" claim is unevidenced in both directions.
 
