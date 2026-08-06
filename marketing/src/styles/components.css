@@ -196,7 +196,25 @@
    box-decoration-break:clone is what keeps the padding and the rounded ends on EVERY line
    fragment once the headline wraps — without it a wrapped highlight loses its right padding
    on line one and its left padding on line two. */
-.hero-text > mark {
+/* RE-TARGETED, not restored (2026-08-06). Phase 2a rebuilt the homepage hero and dropped
+   `class="hero-text"` from its <h1> (87a34b7f: `-<h1 class="hero-text mb-4"` ->
+   `+<h1 id="hero-title" …>`). This selector then matched NOTHING on the homepage, so the
+   <mark> fell through to the browser default — bright yellow, square corners, no padding —
+   for the whole of 2a, 2b and 2c. Every numeric check passed throughout; a human looking at
+   a screenshot is what caught it.
+
+   The class is NOT restored, deliberately: `.hero-text` also carries
+   `text-4xl md:text-5xl lg:text-6xl font-semibold mb-4`, which would override the rebuilt
+   hero's `clamp(40px, 4.6vw, 70px)` and its `font-weight: 800`. Restoring it to fix the
+   highlight would silently revert 2a's typography. `#hero-title` is added to the selector
+   instead, so /pricing and /contact keep matching via `.hero-text` and the homepage matches
+   by id — one rule, one visual definition, no divergent copy (CLAUDE.md §11).
+
+   ⚠️ If the homepage <h1> ever gains a class or loses `id="hero-title"`, this breaks again
+   the same silent way. scripts/contrast-audit.mjs now fails loudly on a zero-match selector,
+   which is the durable half of this fix. */
+.hero-text > mark,
+#hero-title > mark {
   @apply bg-primary text-text rounded-2xl px-4 py-1;
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
