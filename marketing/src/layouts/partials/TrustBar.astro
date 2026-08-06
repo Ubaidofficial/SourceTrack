@@ -18,8 +18,21 @@
 // "Calendly bookings are detected automatically" would be false for every link-only
 // customer, so the qualifier must survive copy edits. GTM §5.1 / design.md §29.7.
 //
-// The "chat" mention in this line is the INCOMING-WEBHOOK claim and is deliberately
-// untouched here — feat/chat-tracking-phase1 edits that clause. See this PR's body.
+// THE "CHAT" MENTION IS THE WEBHOOK CLAIM, NOT A DETECTION CLAIM. It sits inside
+// "any tool that can send a webhook connects too: forms, chat, and CRMs", and what
+// backs it is api/routes/webhook-incoming.js — the generic inbound rail a chat tool
+// posts to. Nothing here claims chat is picked up on its own.
+//
+// That distinction is deliberate, and it is NOT waiting on anything. Chat auto-detection
+// for Intercom and Crisp shipped in #594 (2026-08-03), but it is DETECT-ONLY: the tracker
+// emits `chat_lead_captured` through /api/track, explicitly not /api/conversion
+// (tracker/tracker.js:1243), and no conversion_type 'chat' exists anywhere in the API. So
+// a detected chat lead is a signal, not a conversion, and copy that implied otherwise
+// would be false in effect — the same trap the Calendly clause avoided before #592.
+//
+// Promote chat to a real $conversion first; only then may this clause claim detection.
+// (An earlier version of this note said feat/chat-tracking-phase1 would edit this clause.
+// It did not: that branch landed as #594 and touched zero marketing/ files.)
 const integrations = [
   { name: "Stripe", logo: "/images/integrations/stripe.svg" },
   { name: "Shopify", logo: "/images/integrations/shopify.svg" },
