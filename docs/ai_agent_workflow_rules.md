@@ -74,6 +74,50 @@ Before claiming a session is ready for review, the agent must successfully run a
   cd dashboard && npm run build && cd ..
   ```
 
+### ⚠️ Install before baselining. A fresh worktree has no `node_modules`
+
+`git worktree add` copies **tracked files only** — installs do not come with it. Run `npm ci` at the
+root of the worktree (and in `dashboard/` or `marketing/` if you will touch them) **before** running
+or baselining anything.
+
+The failure mode is not a clear error. Mass import failures **reproduce on clean `main` too**, so
+baselining "confirms" the failures are not yours and the whole run reads as pre-existing breakage in
+the code. 147 unit-test failures were once recorded as hidden breakage surviving green CI on exactly
+this basis. The cause was a worktree with no root `node_modules`.
+
+### ⚠️ Baselining proves a failure is not yours. It says nothing about what it is
+
+Stashing your change and re-running against `main` is the right method, and it answers **exactly
+one** question: *did I cause this?*
+
+**"Not caused by my change" and "pre-existing defect" are different claims, and only the first has
+evidence behind it.** A failure that reproduces on clean `main` still needs a cause before it can be
+reported as a finding — otherwise you file an environment as a defect.
+
+### ⚠️ A grep that finds nothing has TWO explanations. "Absent" is only one of them
+
+The other is that you searched for the wrong string. **Before reporting a citation as unresolvable,
+a file as dead, or a claim as unsupported, search a second way** — different quoting, a different
+character, a substring of the symbol, or the identifier's plain-text form.
+
+Both of these were real, correctly cited, and nearly reported as missing:
+
+| Searched | Returned zero because | Truth |
+|---|---|---|
+| `-0.03em` in `docs/design/design.md` | the doc uses a **Unicode minus `U+2212`**, not an ASCII hyphen | the spec is at `:312` |
+| `pv_limit integer DEFAULT` in the baseline migration | the column is **quoted** in the DDL — `"pv_limit"` | it is at `:900`, exactly as cited |
+
+Same class as reading a `getaddrinfo NXDOMAIN` as "the service is down". **Report the miss, not the
+conclusion** — say which search you ran and that it returned nothing, rather than asserting absence.
+
+(For the three *non-import* reference classes a usage grep cannot see at all — hardcoded file
+manifests, Postgres triggers/functions, and path-string route/title maps — see `CLAUDE.md` §10.)
+
+### Verify a branch base by CONTENT, not `merge-base`
+
+After a squash-merge, `merge-base` no longer identifies the true base. Check for a marker the base
+commit introduced (a class name, a constant, a file) and confirm it is present in the worktree.
+
 ---
 
 ## Production safety protocol
