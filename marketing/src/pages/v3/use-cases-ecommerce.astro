@@ -14,8 +14,29 @@
  * the shape of evidence we do not have. This is a worse failure than
  * overstating capability: it fabricates proof.
  *
- * ⚠️ "126 verified conversions in the demo fixture" is also dropped — it is not
- * in homeFixtures.js. The fixture figures that ARE real are used instead.
+ * ⚠️ "126 verified conversions" — THE NUMBER IS RESTORED, THE WORD IS NOT.
+ *
+ * It was dropped on my finding that 126 "is not in homeFixtures.js". That was
+ * WRONG, and the way it was wrong is the lesson: 126 is TOTALS.conv in the demo
+ * fixture, DERIVED as sum(CHANNELS) rather than written as a literal, so a grep
+ * for the string found nothing and I read absence as fabrication. A claim scan
+ * that only matches literals cannot see a computed value — recorded in
+ * api/tests/v3-claims-allowlist.test.js so the next scan resolves rather than
+ * greps. The demo fixture and homeFixtures.js are in fact identical channel for
+ * channel, so the design was citing real data.
+ *
+ * "VERIFIED" IS STILL DROPPED, and not merely as unsupported. main has no
+ * concept of a verified conversion — attribution_status resolves to
+ * attributed/unattributed, which is whether a source could be traced, not
+ * whether anything was checked. Worse, main RESERVES the word: ai-crawler-detect.js
+ * defines IP_VERIFIED for reverse-DNS-verified crawler identity and states twice
+ * that a weaker signal "must not be reported as verified". Putting it on a
+ * marketing page would import a term from a security context that guards it,
+ * onto something main never verifies.
+ *
+ * "126 attributed conversions" was also rejected: it would assert all 126 were
+ * attributed, which has not been checked against the fixture. Substituting one
+ * unverified qualifier for another is the same error in a quieter word.
  *
  * §3's $84 / $252 arithmetic is KEPT. It is explicitly hypothetical — three
  * platforms each claiming the same single order — and it makes the
@@ -39,7 +60,20 @@ const stats = [
   { value: "9", label: "attribution models, all on every plan" },
   { value: "16", label: "AI assistants classified on arrival" },
   { value: "$21,430", label: "order revenue reconciled · demo workspace fixture" },
-  { value: "4", label: "ecommerce report templates, ready to run" },
+  // RESTORED 2026-08-06, with the qualifier removed. See the header note.
+  { value: "126", label: "conversions · demo workspace fixture" },
+  // ⚠️ "4 ecommerce report templates, ready to run" WAS HERE and is dropped —
+  // NOT on truth grounds. It is supportable: exactly four PRESET_TEMPLATES carry
+  // category: 'Ecommerce' (ecom_orders, ecom_revenue, ecom_aov, ecom_shopify,
+  // ReportBuilder.jsx:137), and that was verified from source BEFORE deciding, so
+  // the cut is an editorial call rather than a correction dressed as one.
+  //
+  // It goes because restoring 126 made five cells in a repeat(4, 1fr) grid — four
+  // on one row, one orphaned on the next — and a template COUNT is the weakest of
+  // the five on a use-case page, where the other four are outcomes. Changing the
+  // grid to repeat(5, 1fr) for this page alone was rejected: that is one shared
+  // StatRow rendering two ways, the same fragmentation a modifier class would have
+  // caused. Four cells everywhere, by construction.
 ];
 
 // Hypothetical by construction — one order, three platforms each claiming it.

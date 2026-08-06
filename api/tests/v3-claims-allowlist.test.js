@@ -16,6 +16,35 @@
 // highest-consequence claims, and the ones the handoff actually got wrong. It is not a
 // general prose linter and does not pretend to be: a guard that claims more coverage than
 // it has is the false-pass class this repo keeps finding.
+//
+// ═══ ⚠️ A CLAIM SCAN MUST RESOLVE COMPUTED VALUES, NOT MATCH STRINGS. ═══════════
+// Added 2026-08-06 after a verification error that ran the wrong way — a REAL figure
+// was rejected as fabricated, and the page shipped weaker than the truth.
+//
+// use-cases-ecommerce cited "126 verified conversions in the demo fixture". Checking
+// it, I grepped for the literal `126` in marketing/src/lib/homeFixtures.js, found
+// nothing, and cut the number as unsourced. But the demo fixture defines
+//
+//     const TOTALS = { conv: sum('conv'), rev: sum('rev'), ... }
+//
+// so 126 and $21,430 exist only as the RESULT of summing CHANNELS — never as
+// literals anywhere. The number was real the whole time. (The word "verified" was
+// still wrong, for an unrelated reason; see that page's header.)
+//
+// THE RULE: absence of a string is not absence of a value. Before rejecting a
+// figure as unsourced, resolve the arithmetic — sums, allocations, percentages,
+// re-weightings — not just the source text. Derived data is the normal case in a
+// well-built fixture, not the exception: demo-data.jsx derives its totals, allocates
+// daily series by largest-remainder so they sum exactly, and redistributes all nine
+// attribution models to the same $21,430. A literal-matching scan sees none of it.
+//
+// This is the same shape as two harness defects fixed in #663 — contrast-audit.mjs
+// reading only dist/_astro while Astro inlined the stylesheet, and v3-page-pairs.mjs
+// declaring fg/bg it never computed. In all three the check reported cleanly because
+// it could not see where the answer lived. It is the fifth instance on this project,
+// and it is the first where the blind spot cost us a TRUE claim rather than letting a
+// false one through — which is why it is written here rather than only in a report.
+// ═══════════════════════════════════════════════════════════════════════════════
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
