@@ -12,6 +12,64 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
+// ═══ A GREEN RUN DOES NOT MEAN EVERY COLOUR ON THE PAGE IS VERIFIED. ═════════
+// Read the coverage table below BEFORE trusting this script's output. Six of the
+// ten ways CSS reaches a built page are read here; three are not. This is first
+// on purpose — it is what a reader needs before the output, not after it.
+//
+// ═══ WHAT THIS READS, AND WHAT IT DOES NOT ═══════════════════════════════════
+// Written after the dead-token bug survived THREE merged PRs (#660/#661/#662)
+// because neither harness could see where the CSS actually lived. Two blind
+// spots were found in two checks, so a third was assumed until disproven — and
+// a third was found. Enumerated from the built output, not from Astro's docs.
+// The same block is in scripts/v3-page-pairs.mjs; keep them in step.
+//
+//   #  path                                    emitted as              read here?
+//   1  import "x.css" in .astro frontmatter    <link> /_astro/*.css    YES
+//   2  ...same, but INLINED                    <style> in <head>       YES (added
+//        `inlineStylesheets: 'auto'` inlines small sheets. v3-pages.css is
+//        emitted this way and NEVER reaches dist/_astro — the plan badge,
+//        featured border, billing toggle and compare split live only there.
+//   3  scoped <style> in an .astro component   SPLIT: bundle AND       YES
+//        (6 cid rules bundled, 2 inline on     inline
+//        /v3)
+//        ⚠️ Scoped styles land in BOTH places at once, so reading only
+//        dist/_astro made them PARTIALLY read — and a partial read looks like a
+//        complete one, the failure family this whole project keeps hitting.
+//        SectionHead/StatRow/Bento all carry <style>, so it was LIVE. #663
+//        closed it as a SIDE EFFECT of adding inline reading for v3-pages.css,
+//        NOT by design. Do not drop the inline read.
+//   4  <style is:global>                       same as #3              YES
+//   5  @import chains (main.css pulls 10)      folded in at build      YES
+//   6  Tailwind utilities                      folded into a bundle    YES
+//
+//   ── NOT READ ──
+//   7  inline style="..." ATTRIBUTE            on the element          NO
+//        Still not read here — but no longer undetectable. 20 inline style
+//        attrs exist on the v3 routes; 6 were paint-bearing (the plan blurb,
+//        3x on /v3 and 3x on /v3/pricing, from two source lines). Those moved
+//        to .v3-plan-blurb, and v3-page-pairs.mjs now has an INLINE STYLE GUARD
+//        that FAILS on any paint property in a style attribute. A convention in
+//        a comment enforces nothing; the guard is the enforceable version.
+//   8  CSS in public/ linked outside /_astro   verbatim copy           NO
+//        Still not read — but no longer skipped in silence. The loader below
+//        matches href="/_astro/..." only, so a plain <link href="/x.css"> would
+//        have been ignored rather than flagged. v3-page-pairs.mjs now has a
+//        STYLESHEET LINK GUARD that FAILS on any linked stylesheet this harness
+//        does not read. 0 such files today, which is why it was worth pinning:
+//        the check passed because there was nothing to miss, not because it
+//        would have noticed.
+//   9  runtime JS injection (insertRule etc.)  runtime only            NO
+//        Latent — the motion library injects [data-motion-pop-id] rules, but
+//        position/width/height only; 0 colour-setting occurrences in built JS.
+//  10  framework island styles inside JS       runtime only            NO
+//
+// SUMMARY: 6 read directly. #7 and #8 are not read but are now DETECTABLE via
+// guards in v3-page-pairs.mjs. #9 and #10 remain undetectable without a browser
+// and are documented rather than dismissed, because each is one dependency away
+// from becoming live.
+// ═════════════════════════════════════════════════════════════════════════════
+
 // ── colour parsing ───────────────────────────────────────────────────────────
 function hexToRgb (hex) {
   const h = hex.trim().replace(/^#/, '')

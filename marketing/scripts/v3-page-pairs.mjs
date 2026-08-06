@@ -16,6 +16,83 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
+// ═══ A GREEN RUN DOES NOT MEAN EVERY COLOUR ON THE PAGE IS VERIFIED. ═════════
+// Read the coverage table below BEFORE trusting this script's output. Six of the
+// ten ways CSS reaches a built page are read here; three are not, and one more
+// is only detectable because a guard was added for it. This is the first thing
+// on the page on purpose — it is what a reader needs before the output, not
+// after it.
+//
+// ═══ WHAT THIS READS, AND WHAT IT DOES NOT ═══════════════════════════════════
+// Written after the dead-token bug went through THREE merged PRs (#660/#661/#662)
+// because the harnesses could not see where the CSS actually lived. Two blind
+// spots were found in two checks, so a third was assumed until disproven — and a
+// third was found. Enumerated empirically from the built output, not from docs.
+//
+// EVERY WAY CSS REACHES A BUILT PAGE IN THIS ASTRO SETUP:
+//
+//   #  path                                    emitted as              read here?
+//   1  import "x.css" in .astro frontmatter    <link> /_astro/*.css    YES
+//   2  ...same, but INLINED                    <style> in <head>       YES (added
+//        Astro `inlineStylesheets: 'auto'` inlines small sheets. v3-pages.css is
+//        emitted this way and NEVER appears in dist/_astro — the plan badge,
+//        featured border, billing toggle and compare split live only here. This
+//        was blind spot #2.
+//   3  scoped <style> in an .astro component   SPLIT: bundle AND       YES
+//        Observed on /v3: 6 data-astro-cid     inline
+//        rules in bundles, 2 inline.
+//        ⚠️ READ THIS BEFORE "SIMPLIFYING" THE INLINE READING. Because scoped
+//        styles land in BOTH places at once, reading only dist/_astro made them
+//        PARTIALLY read — and a partial read looks exactly like a complete one,
+//        which is the entire failure family on this project. SectionHead.astro,
+//        StatRow.astro and Bento.astro all carry <style> blocks, so this was
+//        LIVE, not theoretical. #663 closed it as a SIDE EFFECT of adding inline
+//        reading for v3-pages.css, NOT by design — nobody was looking for it.
+//        Dropping the inline read because "the bundles have the CSS" reopens it,
+//        and the reopened version reports green.
+//   4  <style is:global>                       same as #3              YES
+//   5  @import chains (main.css pulls 10       folded into the         YES
+//        files incl. generated-theme.css)      bundle at build
+//   6  Tailwind utilities                      folded into a bundle    YES
+//
+//   ── NOT READ. #7 and #8 now have GUARDS; #9 and #10 do not. ──
+//   7  inline style="..." ATTRIBUTE            on the element itself   NO
+//        This was blind spot #3, and it was LIVE: 20 inline style attrs on the
+//        v3 routes, 6 of them paint-bearing — the plan blurb, 3x on /v3 and 3x
+//        on /v3/pricing, from two source lines. A colour in style="" is not
+//        merely unmeasured, it is UNDETECTABLE: there is no selector to register
+//        a pair against, so the zero-match guard has nothing to orphan and every
+//        other check passes in silence.
+//        FIXED: those six moved to .v3-plan-blurb and are registered as a pair.
+//        GUARDED: the INLINE STYLE GUARD below FAILS on any paint property in a
+//        style attribute on a v3 route. The convention alone ("keep colours in
+//        classes") enforces nothing — a rule with no check behind it is the same
+//        fictional-guard pattern this file exists to prevent.
+//   8  CSS in public/ linked outside /_astro   verbatim copy           NO
+//        The route loader matches href="/_astro/..." only, so a plain
+//        <link href="/x.css"> would have been SKIPPED SILENTLY, not flagged —
+//        a check passing because it cannot see. 0 such files exist today, which
+//        is precisely why it was worth pinning.
+//        GUARDED: the STYLESHEET LINK GUARD below FAILS on any linked stylesheet
+//        this harness does not read.
+//   9  runtime JS injection (insertRule,       at runtime only         NO
+//        createElement('style'), cssText)
+//        Latent: present on /v3 (the motion library injects
+//        [data-motion-pop-id] rules) but those set position/width/height only —
+//        0 colour-setting occurrences across every built JS bundle. A future
+//        library that themes at runtime would be invisible here.
+//  10  framework island styles bundled         at runtime only         NO
+//        into JS                               Latent: 3 JS bundles on /v3, 0
+//                                              colour occurrences.
+//
+// SUMMARY: 6 paths read directly. #7 and #8 are not read, but are now
+// DETECTABLE — each has a guard below that fails rather than passing in silence.
+// #9 and #10 cannot be closed without a real browser; they are written down
+// rather than dismissed because each is one dependency away from becoming live.
+// A future check that reports green still does not prove every colour is
+// verified — it proves the six covered paths are.
+// ═════════════════════════════════════════════════════════════════════════════
+
 // ── the registry ─────────────────────────────────────────────────────────────
 // route -> pairs. Add a page's entry in the PR that creates the page.
 // `sel` must be a REAL CSS selector whose class/id tokens exist in that page's built HTML —
@@ -74,13 +151,20 @@ export const V3_PAGE_PAIRS = {
     // light surfaces
     { id: 'frame chrome url', sel: '.v3-frame-url', fg: '#8a9494', bg: '#12100C', level: 'AA' },
     { id: 'card body on paper-card', sel: '.v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'eyebrow on paper', sel: '.v3-eyebrow', fg: '#5B5548', bg: '#F7F4ED', level: 'AA' }
+    { id: 'eyebrow on paper', sel: '.v3-eyebrow', fg: '#5B5548', bg: '#F7F4ED', level: 'AA' },
+    // Was an inline style attribute — undetectable by every check here until it
+    // became a class. See the INLINE STYLE GUARD below.
+    { id: 'plan blurb on card', sel: '.v3-plan-blurb', fg: '#665F50', bg: '#FFFDF8', level: 'AA' }
   ],
   // ── /v3/pricing ───────────────────────────────────────────────────────────
   '/v3/pricing': [
     { id: 'plan name on card', sel: '.v3-plan h3', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
     { id: 'plan feature li', sel: '.v3-plan li', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
     { id: 'plan-alt small', sel: '.v3-plan-alt', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    // Was an inline style attribute (see the INLINE STYLE GUARD below): a colour
+    // in style="" has no selector, so no pair could be registered against it and
+    // the zero-match guard had nothing to orphan. Now a class, now scored.
+    { id: 'plan blurb on card', sel: '.v3-plan-blurb', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
     // The featured plan uses a 2px accent BORDER and a small badge, never a lime
     // fill: §2.6's acceptable uses are a badge, a button, a highlighted line. A
     // filled card would be lime behind primary content, the clause with no budget.
@@ -327,6 +411,94 @@ if (!V3_ROUTES.length) {
   if (lime >= 4.5) fails++
   console.log(`  scorer negative control: black on white = ${bw.toFixed(2)} -> ${Math.abs(bw - 21) < 0.01 ? 'correct ✓' : 'wrong ✗'}`)
   if (Math.abs(bw - 21) >= 0.01) fails++
+}
+
+// ── INLINE STYLE GUARD — closes blind spot #7 ────────────────────────────────
+// ⚠️ THIS EXISTS BECAUSE A CONVENTION IN A COMMENT ENFORCES NOTHING. "Keep
+// colours out of style attributes" written as prose is the fictional-guard
+// pattern — a rule with nothing behind it — which is the same failure family as
+// everything else this file guards. So it is a check, not a note.
+//
+// A colour in a style="" attribute is not merely unmeasured, it is UNDETECTABLE:
+// there is no selector to register a pair against, so the zero-match guard has
+// nothing to orphan and every other check here passes in silence. Six such
+// declarations shipped on /v3 and /v3/pricing (the plan blurb, 3x per page) and
+// nothing could have reported them.
+//
+// Layout-only inline styles are fine and common (grid-column, opacity, transform,
+// font-size) — only PAINT properties are barred, because only those need a
+// contrast pair.
+{
+  console.log('\nINLINE STYLE GUARD — no paint properties in style="" on a v3 route')
+  const PAINT = /(^|[;\s])(color|background|background-color|border-color|fill|stroke|outline-color)\s*:/i
+  const scan = html => [...html.matchAll(/style="([^"]*)"/g)].map(m => m[1]).filter(v => PAINT.test(v))
+
+  let offenders = 0, total = 0
+  for (const route of V3_ROUTES) {
+    const p = join(DIST, route.replace(/^\//, ''), 'index.html')
+    if (!existsSync(p)) continue
+    const html = readFileSync(p, 'utf8')
+    total += [...html.matchAll(/style="([^"]*)"/g)].length
+    for (const v of scan(html)) {
+      console.error(`  ✗ ${route}: paint in a style attribute -> style="${v}"  (move it to a class; no pair can be registered against this)`)
+      offenders++
+    }
+  }
+  fails += offenders
+  console.log(`  ${total} inline style attribute(s) across ${V3_ROUTES.length} route(s), ${offenders} paint-bearing`)
+  if (!offenders) console.log('  clean ✓ — every inline style is layout-only')
+
+  // Positive control: the exact declaration that shipped must be detected.
+  const shipped = 'margin:14px 0 0;color:var(--v3-gray-600);font-size:15px'
+  console.log(`  positive control (the shipped plan-blurb style) -> ${PAINT.test(shipped) ? 'DETECTED ✓' : 'MISSED ✗'}`)
+  if (!PAINT.test(shipped)) fails++
+  // Negative control: a layout-only inline style must NOT fire.
+  const layout = 'grid-column: span 7'
+  console.log(`  negative control (grid-column: span 7) -> ${PAINT.test(layout) ? 'over-fires ✗' : 'not flagged ✓'}`)
+  if (PAINT.test(layout)) fails++
+  // Negative control: a property merely CONTAINING a paint word must not fire.
+  const nearMiss = 'background-position: center'
+  console.log(`  negative control (background-position: center) -> ${PAINT.test(nearMiss) ? 'over-fires ✗' : 'not flagged ✓'}`)
+  if (PAINT.test(nearMiss)) fails++
+}
+
+// ── STYLESHEET LINK GUARD — closes blind spot #8 ─────────────────────────────
+// ⚠️ The route loader in contrast-audit.mjs matches href="/_astro/...". A plain
+// <link rel="stylesheet" href="/x.css"> — anything copied verbatim out of
+// public/ — would therefore be SKIPPED SILENTLY rather than flagged. Zero such
+// files exist today, which is exactly why this is worth pinning: the check
+// currently passes because there is nothing to miss, not because it would notice.
+// An unrecognised stylesheet must FAIL, not be ignored.
+{
+  console.log('\nSTYLESHEET LINK GUARD — every linked stylesheet must be one this harness reads')
+  const recognised = /^\/_astro\/.+\.css$/
+  let unknown = 0, seen = 0
+  for (const route of V3_ROUTES) {
+    const p = join(DIST, route.replace(/^\//, ''), 'index.html')
+    if (!existsSync(p)) continue
+    const html = readFileSync(p, 'utf8')
+    for (const m of html.matchAll(/<link[^>]+rel="stylesheet"[^>]*>/g)) {
+      const href = (m[0].match(/href="([^"]+)"/) || [])[1]
+      if (!href) continue
+      seen++
+      if (!recognised.test(href)) {
+        console.error(`  ✗ ${route}: stylesheet NOT read by this harness -> ${href}`)
+        unknown++
+      }
+    }
+  }
+  fails += unknown
+  console.log(`  ${seen} linked stylesheet(s), ${unknown} unrecognised`)
+  if (!unknown) console.log('  clean ✓ — every linked stylesheet is under /_astro and is read')
+
+  // Positive control: a public/ stylesheet link must be detected, not ignored.
+  console.log(`  positive control (<link href="/x.css">) -> ${!recognised.test('/x.css') ? 'DETECTED ✓' : 'MISSED ✗'}`)
+  if (recognised.test('/x.css')) fails++
+  console.log(`  positive control (a CDN href) -> ${!recognised.test('https://cdn.example/x.css') ? 'DETECTED ✓' : 'MISSED ✗'}`)
+  if (recognised.test('https://cdn.example/x.css')) fails++
+  // Negative control: a real bundle must not be flagged.
+  console.log(`  negative control (/_astro/v3-home.abc123.css) -> ${recognised.test('/_astro/v3-home.abc123.css') ? 'not flagged ✓' : 'over-fires ✗'}`)
+  if (!recognised.test('/_astro/v3-home.abc123.css')) fails++
 }
 
 // ── TOKEN RESOLUTION — the check that would have caught the #660 defect ──────
