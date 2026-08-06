@@ -64,6 +64,50 @@ function isJavaScriptContentType (ct) {
  * Returns { ok, code, message, httpStatus, contentType }. Never throws — a verifier
  * that throws on a customer's broken DNS would take the whole sweep down with it.
  *
+ * ⚠️ KNOWN LIMIT — THIS CHECK CAN BE UP TO ~8 DAYS STALE, AND THAT IS ACCEPTED.
+ * Ruled 2026-08-06. Read this before trusting a pass, and before "fixing" it.
+ *
+ * tracker.min.js is served through Bunny with (measured on a live customer domain):
+ *
+ *     cache-control: public, max-age=86400, stale-while-revalidate=604800, immutable
+ *     cdn-cache: HIT
+ *
+ * That is 1 day fresh + 7 days stale-while-revalidate = up to 8 days during which the
+ * edge can answer without the origin. THE CLIENT CANNOT FORCE FRESHNESS: a cache-buster
+ * query string still returned HIT (the zone ignores query strings), and a
+ * `Cache-Control: no-cache` REQUEST header did not bypass it either. Both measured, not
+ * assumed.
+ *
+ * WHY IT IS NOT FIXED. That caching is CORRECT for a static asset — degrading a
+ * customer-facing tracker cache to serve a monitor is the wrong trade, and a Bunny-side
+ * cache-bypass rule would add a founder-gated console dependency. So the staleness is
+ * accepted and documented here instead. The sibling proxy-health check IS made
+ * uncacheable (no-store at the origin, api/index.js) because nothing depends on caching
+ * it — the two paths differ deliberately.
+ *
+ * ⚠️ AND IT DEFEATS THE TWO-STRIKE DEMOTION. This is the consequence worth knowing:
+ * nextProxyState() demotes only after TWO consecutive failures, which assumes two checks
+ * see two INDEPENDENT responses. They may not. proxy-domain-recheck's cadence for an
+ * active domain is DUE_AFTER_MS.active = 24h, and the cache window is up to 8 days — so
+ * consecutive strikes can both read the SAME cached success. If the origin dies, the edge
+ * keeps answering, no strike is ever recorded, and the domain stays `active`.
+ *
+ * For two strikes to mean two observations the interval would have to EXCEED the whole
+ * cache window (>8 days), making demotion take >16 days. That is worse than the problem,
+ * so the interval is NOT the fix and was not changed.
+ *
+ * WHAT ACTUALLY HAPPENS: detection is DELAYED, not prevented. Once the
+ * stale-while-revalidate window expires the edge must reach the origin, the check then
+ * fails, and the strikes proceed normally — so worst case is roughly 8 days of cache plus
+ * 2 days of strikes ≈ 10 days to demote. `status` therefore means "was serving within
+ * about the last 10 days", NOT "is serving now". Setup.jsx:77 keys the install snippet
+ * off `status === 'active'`, so that window is the real exposure.
+ *
+ * ⚠️ ONE PART OF THIS IS DERIVED, NOT MEASURED: the max-age portion was observed
+ * directly (a fresh HIT ~20h after cdn-cachedat). Bunny's exact stale-while-revalidate
+ * behaviour was NOT observed — the 7-day extension is read from the declared header
+ * semantics. If it matters to a decision, measure it rather than inheriting this line.
+ *
  * @param {string} domain          customer hostname (no scheme)
  * @param {boolean} cookielessMode pick the cookieless bundle, matching Setup.jsx:134
  */
