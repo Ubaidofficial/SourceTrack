@@ -37,11 +37,18 @@ export const V3_PAGE_PAIRS = {
     { id: 'bento dark body', sel: '.v3-bento-cell-dark', fg: '#a79e8c', bg: '#2A251E', level: 'AA' },
     // accent cell — ink on a lime tint. §3.6: lime is a SURFACE you put dark text on.
     { id: 'bento accent h3', sel: '.v3-bento-cell-accent', fg: '#161310', bg: '#E9F58A', level: 'AA' },
-    // CTA band — full-saturation accent. The lede carries opacity .82, so it is
-    // scored COMPOSITED (#343711), not at its declared colour: an opacity that is
-    // never composited is the same false-pass shape as a translucent background.
-    { id: 'CTA band heading', sel: '.v3-cta-band h2', fg: '#12100C', bg: '#D2EC2A', level: 'AA-large' },
-    { id: 'CTA band lede @.82', sel: '.v3-cta-band p', fg: '#343711', bg: '#D2EC2A', level: 'AA' },
+    // ⚠️ SECTION 18 PAIRS RE-SCORED, NOT CARRIED FORWARD. The full-bleed lime band
+    // was replaced with a paper close (§2.6's "never a full-bleed wash behind primary
+    // content"), so every ratio measured against the lime surface is VOID — a
+    // carried-forward ratio across a surface flip is the TrustBar 10.54 -> 1.22 failure
+    // exactly, and it happens without the text's own CSS changing.
+    // The lede also stopped using opacity .82 and takes --v3-gray-600 instead: a token
+    // has a fixed value, an opacity has to be composited before it can be scored.
+    { id: 'CTA close heading on paper', sel: '.v3-cta-close h2', fg: 'var(--v3-ink)', bg: 'var(--v3-paper)', level: 'AA-large' },
+    { id: 'CTA close lede on paper', sel: '.v3-cta-close p', fg: '#665F50', bg: '#F7F4ED', level: 'AA' },
+    // The button is now the ENTIRE accent presence in section 18 — and lime as a button
+    // is on §2.6's own acceptable-uses list, not a workaround around it.
+    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' },
     // light surfaces
     { id: 'frame chrome url', sel: '.v3-frame-url', fg: '#8a9494', bg: '#12100C', level: 'AA' },
     { id: 'card body on paper-card', sel: '.v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },

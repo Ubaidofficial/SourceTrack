@@ -378,21 +378,28 @@ const comparison = [
       </Wrap>
     </section>
 
-    {/* 18 — accent CTA band. §2.6 measurement requested in the PR. */}
-    <section class="v3-cta-band">
+    {/* 18 — CTA close on PAPER. The lime lives on the button only.
+        Ruled 2026-08-06 after the full-bleed band measured 30.9%/32.1% against a
+        ~15% ceiling — and, more decisively, breached §2.6's "never as a full-bleed
+        background wash behind primary content", which has no budget.
+
+        The §29.8 disclosure is folded INTO this section rather than getting its own.
+        As its own section element it rendered paper-on-paper directly after this one,
+        which is a §2.7 consecutive repeat. It is one line, not a section. */}
+    <section class="v3-cta-close">
       <Wrap>
         <div class="v3-cta-inner">
           <div>
             <h2>Ready to see which channels <em>actually</em> pay?</h2>
             <p>Click through the demo workspace first — every screen is live. Or install the script and watch your own first attributed session land.</p>
           </div>
+          <div class="v3-cta-actions">
+            <a class="v3-btn-accent" href="https://app.sourcetrack.ai/signup">Start 28-day free trial</a>
+          </div>
         </div>
+        {/* §29.8 — ONE disclosure line per page. Not per-card badges. */}
+        <p class="v3-disclosure">Product visuals shown use illustrative data.</p>
       </Wrap>
-    </section>
-
-    {/* §29.8 — ONE disclosure line, page footer. Not per-card badges. */}
-    <section class="v3-section v3-section--tight">
-      <Wrap><p class="v3-disclosure">Product visuals shown use illustrative data.</p></Wrap>
     </section>
   </div>
 </Base>

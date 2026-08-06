@@ -23,9 +23,14 @@
      15 soft band
      16 plain (FAQ)
      17 soft band
-     18 accent CTA band
-   Verified: zero consecutive-identical treatments; the window-frame mockup at 2
-   and 5 is separated by two sections.
+     18 CTA close on PAPER, lime on the button only
+   ⚠️ 18 WAS a full-bleed accent band. Changed 2026-08-06 — see the section-18 block
+   below for why the number was the smaller half of the problem. The §29.8 disclosure
+   line was folded INTO 18 at the same time: as its own section it rendered
+   paper-on-paper straight after 18, which is a §2.7 consecutive repeat.
+   Verified after the change: zero consecutive-identical treatments (17 soft -> 18
+   paper, and 18 is now the last section); the window-frame mockup at 2 and 5 is
+   separated by two sections.
    ============================================================================ */
 
 .v3 {
@@ -136,26 +141,70 @@
 .v3 .v3-table-card th { font-weight: 800; }
 .v3 .v3-table-card td { color: var(--v3-gray-600); }
 
-/* ── treatment: accent CTA band (18) ─────────────────────────────────────────
-   ⚠️ §2.6 — a full-bleed --v3-accent band is a large saturated surface and the
-   ceiling is ~15% of a screenful. Band height is the lever the founder ruled on;
-   the colour is the token and does not move. Height is deliberately BELOW the
-   handoff's 100px/100px padding pending the measurement this PR requests. */
-.v3 .v3-cta-band {
-  background: var(--v3-accent);
-  padding: 56px 0;
-}
-.v3 .v3-cta-band .v3-cta-inner {
+/* ── treatment: section 18 CTA — PAPER, with lime on the BUTTON only ─────────
+   ⚠️ THIS REPLACED A FULL-BLEED LIME BAND. Do not reinstate it, and do not add a
+   lime border, rule, badge or glow here to "compensate" — that reintroduces the
+   coverage by another route, which is the thing the change exists to remove.
+
+   The band was measured at 278.21px desktop / 271.03px mobile — 30.9% and 32.1%
+   of a screenful against a ~15% ceiling. But the number was the smaller problem.
+   §2.6 reads:
+
+     "Lime may cover at most ~15% of any single screen's visible area, AND NEVER
+      AS A FULL-BLEED BACKGROUND WASH OR GLOW BEHIND PRIMARY CONTENT. Acceptable
+      uses: a badge, A BUTTON, a highlighted line, a chart's winning data point."
+
+   Lime edge-to-edge behind an <h2> and a <p> is the second clause exactly, and
+   that clause has no budget — it would still have been breached at 10% coverage.
+   Insetting the lime into a bounded card was considered and rejected: it keeps
+   lime behind primary content in a smaller box, the same breach at lower area,
+   and narrowing the box reflows the copy so height rises as width falls.
+
+   A button is on the rule's own acceptable-uses list, so the accent survives as
+   a signal rather than a surface. Derived from measured geometry: a ~210x52px
+   button is 0.84% of a desktop screenful and 3.32% of a mobile one.
+
+   The lede uses --v3-gray-600 rather than ink at opacity .82. Same visual
+   register, but a token has a fixed value while an opacity has to be composited
+   before it can be scored — and an uncomposited opacity is how a pair reports
+   10.54 while rendering at 1.22. One less thing that can be scored wrong. */
+.v3 .v3-cta-close { padding: 96px 0; }
+.v3 .v3-cta-close .v3-cta-inner {
   display: grid;
   grid-template-columns: 1.2fr 0.8fr;
   gap: 28px;
   align-items: center;
 }
-.v3 .v3-cta-band h2 { margin: 0; color: var(--v3-ink); }
-.v3 .v3-cta-band p { margin: 14px 0 0; color: var(--v3-ink); opacity: 0.82; font-size: 17px; line-height: 1.55; max-width: 56ch; }
+.v3 .v3-cta-close h2 { margin: 0; color: var(--v3-ink); }
+.v3 .v3-cta-close p {
+  margin: 14px 0 0;
+  color: var(--v3-gray-600);
+  font-size: 17px;
+  line-height: 1.55;
+  max-width: 56ch;
+}
+.v3 .v3-cta-actions { display: flex; justify-content: flex-end; }
+.v3 .v3-btn-accent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 28px;
+  border-radius: 999px;
+  background: var(--v3-accent);
+  color: var(--v3-ink);
+  font-weight: 800;
+  font-size: 16px;
+  text-decoration: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .v3 .v3-btn-accent { transition: transform 0.2s var(--v3-ease-out); }
+  .v3 .v3-btn-accent:hover { transform: translateY(-1px); }
+}
+.v3 .v3-cta-close .v3-disclosure { margin: 40px 0 0; }
 @media (max-width: 900px) {
-  .v3 .v3-cta-band { padding: 40px 0; }
-  .v3 .v3-cta-band .v3-cta-inner { grid-template-columns: 1fr; }
+  .v3 .v3-cta-close { padding: 56px 0; }
+  .v3 .v3-cta-close .v3-cta-inner { grid-template-columns: 1fr; }
+  .v3 .v3-cta-actions { justify-content: flex-start; }
 }
 
 /* ── hero ────────────────────────────────────────────────────────────────── */
