@@ -4,7 +4,8 @@ import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { getSupabase } from '../lib/supabase.js'
 import { esc, encryptSecret } from '../lib/utils.js'
 import { siteCache } from '../middleware/auth.js'
-import { resolveCname, verifySslAndRouting, normalizeDnsName } from '../lib/dns-resolver.js'
+import { resolveCname, normalizeDnsName } from '../lib/dns-resolver.js'
+import { verifyProxyDelivery, nextProxyState } from '../lib/proxy-verification.js'
 import { addPullZoneHostname, loadFreeCertificate, removePullZoneHostname } from '../lib/bunny-edge.js'
 import { invalidateProxyCache } from '../middleware/managed-proxy.js'
 import { validateCrossDomainSettings } from '../lib/cross-domain-validation.js'
@@ -932,9 +933,12 @@ router.post('/proxy-domain/verify', async (req, res) => {
     }
 
     const supabase = getSupabase()
+    // status + error_code are needed so this path shares the two-strike demotion rule
+    // with the scheduled job; cookieless_mode decides which bundle must be served, and
+    // has to agree with Setup.jsx:134 or we would verify a file nobody is told to load.
     const { data: record, error: fetchErr } = await supabase
       .from('managed_proxy_domains')
-      .select('domain, cname_target')
+      .select('domain, cname_target, status, error_code, sites!inner(cookieless_mode)')
       .eq('site_key', siteKey)
       .maybeSingle()
 
@@ -978,18 +982,21 @@ router.post('/proxy-domain/verify', async (req, res) => {
         await loadFreeCertificate(domain)
       }
 
-      // 3. Perform HTTP/HTTPS health self-check routing verification
-      const sslValid = await verifySslAndRouting(domain)
-      if (sslValid) {
-        finalStatus = 'active'
-        verifiedAt = new Date().toISOString()
-        dnsErrorCode = null
-        dnsErrorMessage = null
-      } else {
-        finalStatus = 'pending_ssl_or_routing'
-        dnsErrorCode = 'SSL_ROUTING_PENDING'
-        dnsErrorMessage = 'DNS CNAME resolves correctly, but SSL/routing gateway is provisioning. Please allow 10-30 minutes for certificate generation.'
-      }
+      // 3. Delivery verification — the SAME function the scheduled re-check job runs
+      // (api/lib/proxy-verification.js), so a manual verify and an automated one can
+      // never disagree about what "active" means. It asserts BOTH the proxy-health
+      // endpoint AND that /tracker.min.js actually returns JavaScript: the health path
+      // is answered by managedProxyEarlyGate before the status check and never reaches
+      // the origin's static files, so on its own it proves the gate is up, not that the
+      // tracker is served.
+      const cookieless = record.sites?.cookieless_mode === true
+      const delivery = await verifyProxyDelivery(domain, cookieless)
+      const next = nextProxyState(record.status, record.error_code, delivery)
+
+      finalStatus = next.status
+      dnsErrorCode = next.error_code
+      dnsErrorMessage = next.error_message
+      if (delivery.ok) verifiedAt = new Date().toISOString()
     } else {
       finalStatus = 'error'
     }
