@@ -78,18 +78,69 @@
   --v3-shadow-deep: 0 32px 110px rgba(18, 16, 12, 0.32);
   --v3-shadow-lime: 0 18px 52px rgba(210, 236, 42, 0.32);
 
-  /* ── Tier 2 ALIASES. One value, two names. The v1.4 hex is authoritative. ─ */
-  --v3-paper: var(--color-bg);              /* handoff --paper       */
-  --v3-paper-card: var(--color-surface);    /* handoff --paper-card  */
-  --v3-spend-text: var(--color-spend-text); /* handoff --orange-700  */
-  --v3-danger: var(--color-danger);         /* handoff --red         */
+  /* ── Tier 2 ALIASES. One value, two names. The v1.4 hex is authoritative. ─
+     ⚠️ SEVEN OF THESE NINE POINTED AT TOKENS THAT DO NOT EXIST. Shipped in
+     #660, live through #661 and #662. Verified against the BUILT css and the
+     source tree: --color-bg, --color-surface, --color-spend-text,
+     --color-danger, --color-accent-text, --color-accent and --color-spend are
+     defined NOWHERE. Only --color-text and --color-border ever resolved.
+
+     A var() naming an undefined custom property with no fallback computes to
+     the guaranteed-invalid value, so the declaration using it is invalid at
+     computed-value time and the property falls back to its initial value. For
+     background-color that is `transparent`. Across 33 usages that meant no
+     paper, no card surfaces, no ink — and NO LIME on anything driven by
+     --v3-accent: the CTA band, the button, the plan badge, the featured border.
+
+     ⚠️ THE LIME RAMP WAS NEVER AFFECTED. --v3-lime-200/-400 below are Tier-3
+     LITERALS, so .v3-bento-cell-accent (which uses --v3-lime-200) painted
+     correctly the whole time. "No lime rendered anywhere" is too broad and is
+     wrong: the split is alias vs literal, not lime vs not-lime. Any §2.6
+     re-measurement has to keep those two apart.
+
+     WHY NOTHING CAUGHT IT: contrast-audit.mjs read only dist/index.html, and
+     v3-page-pairs.mjs resolved SELECTORS while ignoring the fg/bg it declared —
+     68 asserted ratios that no check could contradict. Both ran green for three
+     PRs. Both are fixed in this same PR, each with a control that fails on
+     exactly this defect.
+
+     The four that are USED are repointed at the names main really defines, in
+     src/styles/generated-theme.css (generated from config/theme.json). The
+     value each lands on is what this file always intended; only the name it
+     asks for is corrected:
+       --color-bg          -> --color-body     #F7F4ED
+       --color-surface     -> --color-card     #FFFDF8
+       --color-accent-text -> --color-dark     #12100C
+       --color-accent      -> --color-primary  #D2EC2A
+     Aliases, not literals: main stays the single source of truth, so a theme
+     change still flows through rather than being forked into this file. */
+  --v3-paper: var(--color-body);            /* handoff --paper      #F7F4ED */
+  --v3-paper-card: var(--color-card);       /* handoff --paper-card #FFFDF8 */
+
+  /* ⚠️ THESE THREE STILL DO NOT RESOLVE, deliberately. --color-spend,
+     --color-spend-text and --color-danger exist nowhere in main, and unlike the
+     four above there is no token to repoint them at. All three have ZERO v3
+     usages, so nothing renders wrong today, and inventing a value would fork
+     the palette to satisfy a checker.
+
+     They must NOT be filled with the handoff's hexes: #B3480E and #E54545 are
+     its --orange-700 and --red, both LIFT FINGERPRINTS
+     (api/tests/v3-lift-detection.test.js), and v1.4's values are #B4420E and
+     #C4381C — two characters different, same colour, invisible in review. The
+     lift test caught exactly that attempt while this defect was being fixed.
+
+     v3-page-pairs.mjs reports them by name as unresolved-but-unused rather than
+     failing, so they stay visible instead of quietly passing. Whoever first
+     needs one adds the real token to config/theme.json. */
+  --v3-spend-text: var(--color-spend-text); /* UNRESOLVED · 0 uses · v1.4 #B4420E */
+  --v3-danger: var(--color-danger);         /* UNRESOLVED · 0 uses · v1.4 #C4381C */
 
   /* ── Core identity, straight from §3.1. Referenced, never redefined. ───── */
-  --v3-ink: var(--color-accent-text);
-  --v3-text: var(--color-text);
-  --v3-accent: var(--color-accent);
-  --v3-spend: var(--color-spend);
-  --v3-border: var(--color-border);
+  --v3-ink: var(--color-dark);              /* handoff --ink        #12100C */
+  --v3-text: var(--color-text);             /* resolved already — untouched */
+  --v3-accent: var(--color-primary);        /* handoff --lime       #D2EC2A */
+  --v3-spend: var(--color-spend);           /* UNRESOLVED · 0 uses          */
+  --v3-border: var(--color-border);         /* resolved already — untouched */
 
   /* ── Warm-neutral ramp. 8 steps, all referenced by the handoff's own CSS.
      Counts are its usage, measured: 50(6) 100(7) 200(6) 400(29) 500(23)
