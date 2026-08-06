@@ -71,6 +71,7 @@ import DoNotSell from './pages/DoNotSell'
 import Terms from './pages/Terms'
 import SEORevenue from './pages/SEORevenue'
 import AIVisibility from './pages/AIVisibility'
+import { AI_VISIBILITY_ENABLED } from './featureFlags'
 import PublicIntegrations from './pages/PublicIntegrations'
 import Security from './pages/Security'
 import Demo from './pages/Demo'
@@ -387,7 +388,13 @@ export default function App() {
               <Route path="/demo" element={<Demo />} />
               <Route path="/report-builder" element={<ReportBuilderGate />} />
               <Route path="/seo-revenue" element={<ProtectedRoute><SEORevenue /></ProtectedRoute>} />
-              <Route path="/ai-visibility" element={<ProtectedRoute><AIVisibility /></ProtectedRoute>} />
+              {/* AI Visibility is BUILT but its backend is not deployed — the route is
+                  withheld rather than served, because readPipe() fails closed and the
+                  page would throw on every request. See featureFlags.js for the five
+                  conditions that must hold before this flips. */}
+              {AI_VISIBILITY_ENABLED && (
+                <Route path="/ai-visibility" element={<ProtectedRoute><AIVisibility /></ProtectedRoute>} />
+              )}
               <Route path="/old-analytics" element={<Navigate to="/analytics" replace />} />
               <Route path="/snippet" element={<Navigate to="/setup" replace />} />
               <Route path="/setup" element={<ProtectedRoute><Setup /></ProtectedRoute>} />

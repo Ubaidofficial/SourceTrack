@@ -1248,6 +1248,30 @@ After #420, `POST /api/server/event` meters the **complement of the conversion t
 
 **Copy consequence, flagged not fixed:** `dashboard/src/pages/Pricing.jsx:121` answers *"What counts toward my plan?"* with *"Tracked pageviews per month: 50,000 on Starter, and 150,000 on Growth and Founder."* That is now **incomplete for API users**, whose custom events consume the same allowance. One clause of copy; a marketing call, deliberately not made here. Reach is bounded — `api_access` is trial/growth/scale only, so free and starter cannot call the route at all.
 
+
+### 77. Bot detection: the headless signal is COLLECTED, CORRECT, and DISCARDED — the gap is a threshold, not infrastructure
+
+Filed 2026-08-06 against `6af056d7`. Recorded because it **changes what the fix is**. The bookmentions bot-inflation investigation concluded the ingestion filter "matches on UA substring only", which reads as *"we need IP/ASN/datacenter intelligence we do not have."* **That is not the position we are in.**
+
+**Observed live in production logs, 2026-08-06 08:45:02Z, one millisecond apart:**
+
+```
+[bot-filter][automation-score] site_id=712a83a8-…  score=60  ua_hash=2f1bd5706ab5
+[ingest-obs] accepted count=1 sites=712a83a8-…    event_ids=[7294407c-…]
+```
+
+**Score 60 is exactly the `navigator.webdriver === true` weight** (`tracker.min.js`, fn `Ve`; constant `qe = 60`). The tracker detected an automated browser, reported it, the server logged it — **and metered the pageview anyway.** The same deploy shows the UA filter working correctly on other traffic (`[ingest-obs] rejected … reason=bot`), so this is not a broken filter; it is a **second, better signal that nothing reads.**
+
+`api/routes/track.js:186-191` says so outright: *"nothing reads this value to filter, drop, classify, or meter… there is deliberately no threshold anywhere in this codebase."* That was the right call when written — a threshold invented before observing real data is a guess. **Real data now exists.**
+
+**Consequence for the fix:** the work is a **threshold decision on an existing signal**, not new IP/ASN/datacenter infrastructure. Three questions to answer before any code:
+
+1. **What thresholds are available, and what does each catch?** `Ve` composes three weights — `webdriver === true` (60), any of 17 automation globals present (40), and Chrome-UA-without-`window.chrome` (10) — capped at 100. So the reachable scores are a small, enumerable set, not a continuum.
+2. **What is the false-positive exposure at each?** A drop is **irreversible** (§6): the 2026-07-14 incident deleted real humans by tightening ingestion on the wrong axis. The 10-point Chrome-UA rule in particular fires on legitimate embedded browsers.
+3. **Should `header_shape` and `ua_extra` be promoted alongside it?** Both already run **log-only** (`bot-filter.js:126-141`, wired at `track.js:177`) and were built to be measured before being trusted. If a threshold ships, deciding these three together beats three separate reversals.
+
+**Do not treat this as urgent.** Blast radius is the pageview meter only — revenue is verified clean — and the affected sites are two free test sites and the founder's test domain, so it currently costs quota **nobody is paying for**. Real, not urgent. See also KI-45 (the silent-success class): a signal that is collected, logged, and ignored is the same failure shape as a status that is reported without being checked.
+
 ---
 ## Recently fixed
 
