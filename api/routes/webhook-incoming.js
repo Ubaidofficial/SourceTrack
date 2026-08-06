@@ -138,8 +138,12 @@ router.post('/:api_key', async (req, res) => {
       }
     }
 
-    // Log raw payload for debugging
-    console.log(`[webhook-incoming] site=${site.site_key} type=${fields.conversionType} value=${fields.value} order=${fields.orderId} resolved=${resolved.anonymousId ? 'yes' : 'no'}`)
+    // Debug line. Identifies the tenant by site_id, NEVER site_key: site_id is the
+    // internal identifier, site_key is the customer-facing tracking credential and
+    // must not reach logs (§6.5). Same debuggability — site_id joins to `sites` —
+    // without putting a live credential in log storage, where retention and access
+    // are wider than the code path that produced it.
+    console.log(`[webhook-incoming] site_id=${site.id} type=${fields.conversionType} value=${fields.value} order=${fields.orderId} resolved=${resolved.anonymousId ? 'yes' : 'no'}`)
 
     // Monthly conversion METER (fail-open on DB errors). Metering only — it never
     // refuses the write. This is the generic inbound-webhook rail (ClickFunnels, CRMs,
