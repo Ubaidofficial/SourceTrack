@@ -51,7 +51,7 @@
         {
           "title": "AI visibility",
           "description": "Which AI crawlers and assistants fetch your pages — GPTBot, ClaudeBot, PerplexityBot and others — with honest per-hit verification rather than trusting a user agent that anyone can spoof.",
-          "note": "Detection and reporting are merged. The data store behind the report is not live yet, so it would show an empty state today.",
+          "note": "Detection and reporting are merged. The data store behind the report is not live yet, so the report would error rather than show an empty state — which is why the page is currently withheld.",
           "verified_note": "Verified 2026-07-30: the crawler_hits datasource and both crawler_* pipes are absent from the workspace (3 datasources, 435 endpoints, zero crawler_*). Move to shipped only once those are deployed AND a real hit has landed."
         },
         {
