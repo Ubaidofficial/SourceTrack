@@ -98,7 +98,20 @@ const PAIRS = [
   // JourneyShowcase gained a frame but kept its paper surface and type colours.
   { id: 'Journey h2 on paper',          sel: 'JourneyShowcase h2',     fg: 'var(--color-text)',  bg: 'var(--color-body)',      level: 'AA-large' },
   { id: 'Journey lede on paper',        sel: 'JourneyShowcase p',      fg: 'var(--color-text-light)', bg: 'var(--color-body)', level: 'AA' },
-  { id: 'Journey frame chrome url',     sel: '.demo-chrome .url',      fg: '#8a9494',            bg: '#12100c',                level: 'AA' }
+  { id: 'Journey frame chrome url',     sel: '.demo-chrome .url',      fg: '#8a9494',            bg: '#12100c',                level: 'AA' },
+
+  // ── Phase 2c ──
+  // ProofStrip and ComparisonTable both had TRANSLUCENT section surfaces (/70 and /60
+  // dark over the paper page). Both are now opaque, and every pair below is measured
+  // against the real rendered surface. Pinned rather than checked-and-discarded so a
+  // later re-tint cannot silently reintroduce the failure.
+  { id: 'ProofStrip heading',           sel: 'ProofStrip h2',          fg: '#F6F3EB',            bg: '#18150F',                level: 'AA-large' },
+  { id: 'ProofStrip lede',              sel: 'ProofStrip p',           fg: '#A79E8C',            bg: '#18150F',                level: 'AA' },
+  { id: 'IconTrio h3',                  sel: 'IconTrio h3',            fg: '#F6F3EB',            bg: '#18150F',                level: 'AA' },
+  { id: 'IconTrio body',                sel: 'IconTrio p',             fg: '#A79E8C',            bg: '#18150F',                level: 'AA' },
+  { id: 'ComparisonTable lede',         sel: '.comparison-section p',  fg: 'var(--color-gray)',  bg: 'var(--color-body)',      level: 'AA' },
+  { id: 'ComparisonTable cell',         sel: 'comparison card td',     fg: '#A79E8C',            bg: '#1B1811',                level: 'AA' },
+  { id: 'Footer §29.8 disclosure',      sel: 'Footer p.text-gray',     fg: 'var(--color-gray)',  bg: 'var(--color-body)',      level: 'AA' }
 ]
 
 // Pairs whose background is TRANSLUCENT and therefore has no resolvable hex in the
@@ -119,19 +132,26 @@ if (!cssPath) {
   const dir = 'dist/_astro'
   const html = readFileSync('dist/index.html', 'utf8')
   const linked = [...html.matchAll(/href="(\/_astro\/[^"]+\.css)"/g)].map(m => m[1])
+  // ALL linked stylesheets, not just the first. R4 scoped home-design.css to the
+  // homepage entry, so `/` now links two files and the tokens are split across them:
+  // --color-* live in the Base bundle, --lime/--paper/--gray-* in the homepage one.
+  // Reading only linked[0] silently turned 12 pairs into "UNRESOLVED" — an audit that
+  // reports "cannot score" instead of PASS/FAIL is a false-pass surface, so it reads
+  // the whole set the page actually loads.
   cssPath = linked.length
-    ? join('dist', linked[0].replace(/^\//, ''))
+    ? linked.map(h => join('dist', h.replace(/^\//, ''))).join(',')
     : join(dir, readdirSync(dir).find(f => f.endsWith('.css')))
 }
 
-const css = readFileSync(cssPath, 'utf8')
+const cssFiles = cssPath.split(',')
+const css = cssFiles.map(f => readFileSync(f, 'utf8')).join('\n')
 // home-design.css tokens are only measurable once they reach dist; fall back to source so
 // the orange pairs are still scored pre-wiring, and label them.
 let srcVars = {}
 try { srcVars = readVars(readFileSync('src/styles/home-design.css', 'utf8')) } catch {}
 const distVars = readVars(css)
 
-console.log(`stylesheet: ${cssPath}  (${css.length} bytes)\n`)
+console.log(`stylesheets (${cssFiles.length}): ${cssFiles.join(" + ")}  (${css.length} chars total)\n`)
 console.log('pair'.padEnd(34) + 'fg'.padEnd(10) + 'bg'.padEnd(10) + 'ratio'.padEnd(9) + 'need'.padEnd(7) + 'verdict')
 console.log('-'.repeat(84))
 

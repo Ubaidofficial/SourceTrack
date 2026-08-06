@@ -35,18 +35,6 @@
   @import "./buttons.css";
 }
 
-/* Homepage v1.4 design system. Unlayered and after @layer components on purpose:
-   its rules are nested under `.st-home`, and the wrapper has to outrank the base
-   element selectors in base.css without a single !important.
-
-   Shipped INERT since #643 — imported here for the first time in the v1.4 homepage
-   build. Safe to import ahead of the markup that uses it: every rule in the file is
-   nested under `.st-home`, `:root`, or `@keyframes`, so nothing applies until a
-   component carries the wrapper. Verified structurally, not assumed — all 64
-   top-level blocks are one of those three. Do NOT un-scope anything in it: the file
-   restyles bare `a`, `button`, `section` and `h1`-`h4`, and `a { color:
-   var(--orange-700) }` alone would repaint every link on every page. */
-@import "./home-design.css";
 
 /* Unlayered on purpose — must outrank every layer above. Keep last. */
 @import "./reduced-motion.css";
