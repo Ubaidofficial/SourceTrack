@@ -1,0 +1,164 @@
+---
+/**
+ * V3 USE CASES — Ecommerce. Preview route, noindex.
+ *
+ * ⚠️ THE DESIGN'S §6 IS CUT ENTIRELY. Ruled 2026-08-06. It was "What our DTC
+ * users actually change", opening "Three patterns we see when DTC brands
+ * install SourceTrack" and asserting "reallocating ~22% of spend off
+ * duplicate-claimed clicks". That asserts an observed DTC customer base with
+ * measured outcomes. Production has four sites — two free, one founder test,
+ * one localhost — and zero paying customers, so there are no DTC users and the
+ * 22% is measurable from nothing.
+ *
+ * CUT, not rewritten. A rewrite ("three patterns attribution surfaces") keeps
+ * the shape of evidence we do not have. This is a worse failure than
+ * overstating capability: it fabricates proof.
+ *
+ * ⚠️ "126 verified conversions in the demo fixture" is also dropped — it is not
+ * in homeFixtures.js. The fixture figures that ARE real are used instead.
+ *
+ * §3's $84 / $252 arithmetic is KEPT. It is explicitly hypothetical — three
+ * platforms each claiming the same single order — and it makes the
+ * over-attribution point without asserting anything about a real customer.
+ * Platform names are TEXT ONLY, no brand marks (§35.3), same treatment as
+ * compare-ga4.
+ *
+ * ⚠️ Shopify is a WEBHOOK, not an app-store integration. ReportBuilder.jsx:137
+ * labels both ecom_orders and ecom_shopify "(Manual webhook)". Nothing on this
+ * page implies a one-click install.
+ */
+import Base from "@/layouts/Base.astro";
+import Wrap from "@/layouts/v3/Wrap.astro";
+import SectionHead from "@/layouts/v3/SectionHead.astro";
+import StatRow from "@/layouts/v3/StatRow.astro";
+import "@/styles/v3-tokens.css";
+import "@/styles/v3-home.css";
+import "@/styles/v3-pages.css";
+
+const stats = [
+  { value: "9", label: "attribution models, all on every plan" },
+  { value: "16", label: "AI assistants classified on arrival" },
+  { value: "$21,430", label: "order revenue reconciled · demo workspace fixture" },
+  { value: "4", label: "ecommerce report templates, ready to run" },
+];
+
+// Hypothetical by construction — one order, three platforms each claiming it.
+const claims = [
+  { who: "Meta Ads", claimed: "$84", note: "Counts the order: someone saw an ad inside its attribution window." },
+  { who: "Google Ads", claimed: "$84", note: "Counts the same order, for the same reason, from its own window." },
+  { who: "TikTok Ads", claimed: "$84", note: "Also counts it. None of the three is lying; each measures alone." },
+  { who: "SourceTrack", claimed: "$84", note: "One order, counted once, then split across the journey by the model you pick." },
+];
+
+const channels = [
+  { h: "Paid social and paid search", p: "Click IDs and campaign params preserved through the landing page, so the order still knows which campaign earned it." },
+  { h: "Organic and referral", p: "Referrer kept rather than discarded, including the affiliate and creator traffic that usually collapses into direct." },
+  { h: "AI assistants", p: "Sixteen answer engines classified on arrival — the newest channel, and the one that files as direct in every default report." },
+  { h: "Email and SMS", p: "Campaign metadata carried across the session boundary, so a flow-driven repeat order is not credited to direct." },
+];
+---
+
+<Base
+  title="Ecommerce attribution — stop letting ad platforms grade their own homework | SourceTrack"
+  description="Meta, Google and TikTok each claim the same order. See what one first-party dataset says actually happened."
+  noindex={true}
+>
+  <div class="v3">
+    {/* 1 — hero */}
+    <section class="v3-hero">
+      <Wrap>
+        <h1>Stop letting Meta and Google grade their own homework.</h1>
+        <p class="v3-hero-sub">
+          Every ad platform reports the conversions it believes it caused. Add
+          them up and you have sold more than you shipped. One first-party
+          dataset keeps a single count.
+        </p>
+      </Wrap>
+    </section>
+
+    {/* 2 — stat band */}
+    <section class="v3-section v3-section--tight">
+      <Wrap><StatRow stats={stats} /></Wrap>
+    </section>
+
+    {/* 3 — soft band, table card. Hypothetical arithmetic, not a customer. */}
+    <section class="v3-section v3-section--soft">
+      <Wrap>
+        <SectionHead
+          eyebrow="Over-attribution"
+          heading="Three platforms. One sale."
+          lede="Take a single $84 order. If you add up what each platform reports, you sold $252 of product. You sold $84. This is the arithmetic every DTC team quietly lives with."
+        />
+        <div class="v3-table-card">
+          <table>
+            <thead><tr><th>Reported by</th><th>Claims</th><th>What it is counting</th></tr></thead>
+            <tbody>
+              {claims.map((c) => (
+                <tr><th scope="row">{c.who}</th><td>{c.claimed}</td><td>{c.note}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 4 — paper, channel cards */}
+    <section class="v3-section">
+      <Wrap>
+        <SectionHead
+          eyebrow="DTC channel mix"
+          heading="Every channel a DTC team actually uses."
+          lede="Channel classification runs on arrival, from one shared list — so a new AI assistant is recognised the same way a paid-search click is, without a per-report rule."
+        />
+        <div class="v3-cards">
+          {channels.map((c) => (
+            <div class="v3-card"><h3>{c.h}</h3><p>{c.p}</p></div>
+          ))}
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 5 — soft band, compare split. Claims about the Shopify default report are
+        limited to what it does by default, the same discipline compare-ga4 uses
+        for GA4. Shopify support here is a webhook, and says so. */}
+    <section class="v3-section v3-section--soft">
+      <Wrap>
+        <SectionHead
+          eyebrow="Alongside Shopify"
+          heading="Better than the default traffic report."
+          lede="Shopify's own report is fine for sessions. It was never built to explain why those sessions became orders, or which of three platforms deserves the credit."
+        />
+        <div class="v3-compare-split">
+          <div class="v3-compare-panel">
+            <h3>Default traffic report</h3>
+            <p class="v3-compare-value">Sessions by source</p>
+            <p>Counts visits. Untagged and referrer-stripped traffic collapses into direct, and one order can still be claimed by three ad platforms at once.</p>
+          </div>
+          <div class="v3-compare-panel">
+            <h3>SourceTrack</h3>
+            <p class="v3-compare-value">Revenue by source</p>
+            <p>Orders arrive through a Shopify or Stripe webhook, tied to the journey that produced them, then credited under whichever of the nine models you pick.</p>
+          </div>
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 6 — the design's "What our DTC users actually change". CUT. Header note. */}
+
+    {/* 7 — CTA close on paper. Lime on the button only (§2.6). */}
+    <section class="v3-cta-close">
+      <Wrap>
+        <div class="v3-cta-inner">
+          <div>
+            <h2>Run alongside Shopify. Run alongside Meta. Be the referee.</h2>
+            <p>28 days free, no card. Install the script, connect the order webhook, and see which channel actually earned the sale.</p>
+          </div>
+          <div class="v3-cta-actions">
+            <a class="v3-btn-accent" href="https://app.sourcetrack.ai/signup">Start 28-day free trial</a>
+          </div>
+        </div>
+        <p class="v3-disclosure">Product visuals shown use illustrative data.</p>
+      </Wrap>
+    </section>
+  </div>
+</Base>

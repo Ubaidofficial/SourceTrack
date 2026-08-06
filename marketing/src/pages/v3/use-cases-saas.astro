@@ -1,0 +1,180 @@
+---
+/**
+ * V3 USE CASES — SaaS. Preview route, noindex.
+ *
+ * ⚠️ RESCOPED. THE DESIGN'S SPINE CLAIMS A FEATURE THAT IS NOT BUILT.
+ *
+ * The handoff page is built around trial→paid conversion and ARR per channel.
+ * Neither exists. CLAUDE.md §7 states "MRR-by-source and trial→paid are not
+ * built", and source agrees: `trial_to_paid`, `expansion_revenue`,
+ * `net_revenue_retention`, `nrr` and `mrr_by_source` have ZERO references
+ * across api/ and dashboard/. Specifically dropped:
+ *
+ *   design                                    why not
+ *   ───────────────────────────────────────   ──────────────────────────────
+ *   §3 funnel 18,420 → 3,210 → 1,140 → 412    Invented — none of these appear
+ *      → 218 paid · $520k ARR                 in any fixture — AND it depicts
+ *                                             trial→paid, which is not built.
+ *   §5 "Trial to paid by source"              Not built. Counting trials by
+ *                                             source IS built; linking a trial
+ *                                             to a later payment is not.
+ *   §5 "expansion, and net revenue            Not built (MRR-by-source, §7).
+ *      retention"
+ *   §5 "segmented by ICP fit"                 No such dimension exists. The 15
+ *                                             real ones are in ReportBuilder's
+ *                                             DIMENSIONS array.
+ *   §2 "47 assisted journeys in the fixture"  Not in homeFixtures.js.
+ *   §4 "Watch a REAL 29-day journey"          It is fixture data. "Real" is
+ *                                             dropped from the heading.
+ *
+ * What IS built, and what this page is now about: trials, demos and signups are
+ * real conversion types, each with a real report template (saas_trials,
+ * saas_demos, saas_signups in ReportBuilder.jsx:137), and long multi-touch
+ * journeys are the actual B2B story. That is a genuine SaaS page. It is just
+ * not the one the handoff drew.
+ *
+ * Every figure below is either from homeFixtures.js (labelled as fixture) or
+ * from the code, cited at its line.
+ */
+import Base from "@/layouts/Base.astro";
+import Wrap from "@/layouts/v3/Wrap.astro";
+import SectionHead from "@/layouts/v3/SectionHead.astro";
+import StatRow from "@/layouts/v3/StatRow.astro";
+import "@/styles/v3-tokens.css";
+import "@/styles/v3-home.css";
+import "@/styles/v3-pages.css";
+
+// $21,430 is the fixture total (homeFixtures.js:63). 19 is its AI conversion
+// count (:28). 9 and 16 are code counts. Nothing here is a customer measurement.
+const stats = [
+  { value: "9", label: "attribution models, all on every plan" },
+  { value: "16", label: "AI assistants classified on arrival" },
+  { value: "$21,430", label: "attributed revenue · demo workspace fixture" },
+  { value: "19", label: "assistant-attributed conversions · same fixture" },
+];
+
+// Real conversion types (api/lib), each one a thing the tracker actually records.
+const moments = [
+  { h: "Demo booked", p: "Source and campaign land on the invite before anyone joins the call, so the meeting is attributed at the moment it is booked rather than reconstructed afterwards." },
+  { h: "Trial started", p: "A trial signup is a conversion with a journey attached — including the touchpoints that happened weeks before anyone filled in a form." },
+  { h: "Signup and form", p: "Every submission arrives with its source, with no hidden fields to wire and no UTMs lost between steps of a multi-page flow." },
+];
+
+// Fixture journey. B2B length is the point; no invented ARR figure.
+const journey = [
+  { when: "Day 1", what: "<b>ChatGPT</b><em>Researching options. No UTM, no ad click — files as direct almost everywhere else.</em>", val: "First touch" },
+  { when: "Day 4", what: "<b>Organic search</b><em>Came back on a comparison query and read two docs pages.</em>", val: "Assist" },
+  { when: "Day 12", what: "<b>Newsletter</b><em>Email click, campaign preserved across the session boundary.</em>", val: "Assist" },
+  { when: "Day 18", what: "<b>Paid search</b><em>A brand-term click. Last-touch would hand the whole deal to this one.</em>", val: "Assist" },
+  { when: "Day 25", what: "<b>Demo booked</b><em>Five touchpoints over 25 days, on one journey, with no cookie involved.</em>", val: "Conversion", won: true },
+];
+
+// The three SaaS templates that actually ship. Names and scopes are verbatim
+// from ReportBuilder.jsx:137 — not paraphrased into something better-sounding.
+const reports = [
+  { h: "Trials by Source", p: "Attributed trial signups by traffic source, last touch, 30 days. Counts trials — it does not claim to follow one into a payment." },
+  { h: "Demo Bookings by Source", p: "Demo bookings by traffic source. The report most B2B teams open first, because a booked demo is the outcome the pipeline actually runs on." },
+  { h: "Signup Landing Pages", p: "Landing pages where signup conversions occur, credited on first touch — which page created the intent, not which one happened to be last." },
+];
+---
+
+<Base
+  title="SaaS attribution — demos, trials and long sales cycles | SourceTrack"
+  description="B2B journeys run for weeks and last-touch throws that away. Attribute demos, trials and signups to the source that actually earned them."
+  noindex={true}
+>
+  <div class="v3">
+    {/* 1 — hero */}
+    <section class="v3-hero">
+      <Wrap>
+        <h1>Attribution built for demos, trials and long sales cycles.</h1>
+        <p class="v3-hero-sub">
+          A B2B buyer reads for three weeks before they ever fill in a form. By
+          the time they do, last-touch has thrown away everything that
+          convinced them — and hands the credit to a brand-term click.
+        </p>
+      </Wrap>
+    </section>
+
+    {/* 2 — stat band */}
+    <section class="v3-section v3-section--tight">
+      <Wrap><StatRow stats={stats} /></Wrap>
+    </section>
+
+    {/* 3 — soft band, conversion moments that genuinely exist */}
+    <section class="v3-section v3-section--soft">
+      <Wrap>
+        <SectionHead
+          eyebrow="SaaS conversions"
+          heading="The signup is not the start of the story."
+          lede="B2B conversions happen in the places a pageview tool cannot see — a booking link, a trial form, a docs page read at midnight. Each one arrives with its journey attached."
+        />
+        <div class="v3-cards">
+          {moments.map((m) => (
+            <div class="v3-card"><h3>{m.h}</h3><p>{m.p}</p></div>
+          ))}
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 4 — window frame, STATIC journey. Islands are Phase 6 (§37.1). */}
+    <section class="v3-section">
+      <Wrap>
+        <SectionHead
+          eyebrow="Long sales cycles"
+          heading="A 25-day journey, kept whole."
+          lede="B2B is not last-touch. Every touchpoint stays on the journey, so you can re-credit the same conversion under any of the nine models and watch which channel the answer moves to."
+        />
+        <div class="v3-frame">
+          <div class="v3-frame-chrome">
+            <span class="v3-frame-dots"><i /><i /><i /></span>
+            <span class="v3-frame-url">app.sourcetrack.example / journeys / b2b</span>
+          </div>
+          <div class="v3-frame-body">
+            <div class="v3-journey">
+              {journey.map((r) => (
+                <div class:list={["v3-journey-row", r.won && "v3-journey-row--won"]}>
+                  <span class="v3-journey-when">{r.when}</span>
+                  <span class="v3-journey-what" set:html={r.what} />
+                  <span class="v3-journey-val">{r.val}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 5 — soft band, divided. The three SaaS templates that actually ship. */}
+    <section class="v3-section v3-section--soft">
+      <Wrap>
+        <SectionHead
+          eyebrow="SaaS reports"
+          heading="Three SaaS reports, ready to run."
+          lede="Three of the eleven templates in the report builder are SaaS-specific. They open pre-scoped — or start from a blank canvas and build your own."
+        />
+        <div class="v3-divided">
+          {reports.map((r) => (
+            <div><h3>{r.h}</h3><p>{r.p}</p></div>
+          ))}
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 6 — CTA close on paper. Lime on the button only (§2.6). */}
+    <section class="v3-cta-close">
+      <Wrap>
+        <div class="v3-cta-inner">
+          <div>
+            <h2>Built for the way SaaS actually closes.</h2>
+            <p>28 days free, no card. Install the script and watch your first demo booking arrive with its journey attached.</p>
+          </div>
+          <div class="v3-cta-actions">
+            <a class="v3-btn-accent" href="https://app.sourcetrack.ai/signup">Start 28-day free trial</a>
+          </div>
+        </div>
+        <p class="v3-disclosure">Product visuals shown use illustrative data.</p>
+      </Wrap>
+    </section>
+  </div>
+</Base>
