@@ -640,3 +640,63 @@
   0%, 100% { transform: translate(-50%, -50%) scale(1); }
   50%      { transform: translate(-50%, -50%) scale(1.12); }
 }
+
+/* ============================================================================
+   PATH BEAM — mechanism illustration, CSS-only
+   ============================================================================
+   🔴 NO JS ANYWHERE. The motion is pure @keyframes, which is why a single
+   prefers-reduced-motion media query is SUFFICIENT here. #697's two-layer problem
+   (a media query cannot stop a setInterval that mutates state, only stop styling
+   it) does not arise, because there is no timer to stop.
+
+   ⚠️ TOKEN SUBSTITUTION, and why. The brief specified --color-spend (#FF7A33) for
+   the orange. That property is declared NOWHERE in marketing/src — --v3-spend
+   aliases it and resolves to nothing, and #FF7A33 appears in no v3 stylesheet.
+   Using either would render `unset`: KI-112's mechanism, fourth instance. Uses
+   --v3-orange-400 (#FF9459, concrete) and --v3-accent (-> --color-primary ->
+   #D2EC2A, concrete). Both verified in built output.
+
+   §3.4 ACCENT DENSITY: the lime here is a ~22px-wide capsule inside a 200px box —
+   well under the ~15% ceiling — and it sits in its OWN row with nothing behind it.
+   §2.6 forbids lime as a wash behind primary content; this is adjacent to copy,
+   never underneath it.
+
+   STILL IS THE DEFAULT. The pulses are declared with no animation and are
+   invisible until the no-preference query turns them on, so a reduced-motion user
+   gets solid capsules and a visible gap — not a slower or subtler version.
+   ========================================================================== */
+.v3 .v3-beam {
+  width: 200px;
+  height: 200px;
+  margin: 28px auto 0;
+  flex: none;
+}
+.v3 .v3-beam-rail { opacity: 0.28; }
+.v3 .v3-beam-rail--o { fill: var(--v3-orange-400); }
+.v3 .v3-beam-rail--l { fill: var(--v3-accent); }
+
+/* Pulses are HIDDEN by default and revealed only under no-preference. A reduced-motion
+   reader sees two solid capsules with the break visible — the mechanism still reads
+   statically, which is the point of showing a gap rather than animating one. */
+.v3 .v3-beam-pulse { opacity: 0; }
+.v3 .v3-beam-pulse--o { fill: var(--v3-orange-400); }
+.v3 .v3-beam-pulse--l { fill: var(--v3-accent); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .v3 .v3-beam-pulse {
+    opacity: 1;
+    animation: v3-beam-travel 3.2s var(--v3-ease-in-out) infinite;
+  }
+  /* Offset so the two paths do not read as one synchronised object — the contrast
+     between them is the whole message. */
+  .v3 .v3-beam-pulse--l { animation-delay: 0.45s; }
+}
+
+/* Travels the capsule's long axis, bottom to top. The orange group carries the break
+   mask, so its pulse vanishes at the gap; the lime group is unmasked, so its pulse
+   completes and leaves the top. Same keyframes for both — the difference is the mask,
+   not the motion. */
+@keyframes v3-beam-travel {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-84px); }
+}
