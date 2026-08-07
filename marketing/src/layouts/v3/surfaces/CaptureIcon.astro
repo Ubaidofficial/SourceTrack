@@ -1,0 +1,36 @@
+---
+// Capture-surface icons — FIRST-PARTY line icons, drawn here.
+//
+// §35.4 bans reconstructed THIRD-PARTY brand marks. These are not that: they are our own
+// category glyphs for our own surface types (a form, a chat bubble, a calendar…), the same
+// thing the handoff drew for itself — its §6 ships 5 inline <svg> of exactly this kind.
+// PR 2 substituted letter monograms, which was defensible under §35.4 but IS the visual
+// downgrade behind "no icons". First-party glyphs close that without touching the rule.
+//
+// 1.5px strokes on a 24-box, currentColor throughout, so the tile controls the colour and
+// no paint value lands in a style attribute (v3-page-pairs.mjs:552-553).
+interface Props { name: string }
+const { name } = Astro.props;
+
+const P: Record<string, string> = {
+  // form: a sheet with two filled lines and a check
+  forms: 'M6 3h9l3 3v15H6z M9 9h6 M9 13h6 M9 17h3',
+  // chat: rounded bubble with a tail
+  chat: 'M4 6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H9l-4 4V6z M8 9h8 M8 12h5',
+  // meetings: calendar with a marked day
+  meetings: 'M4 6h16v14H4z M4 10h16 M8 3v4 M16 3v4 M9 14h3v3H9z',
+  // signups: person with a plus
+  signups: 'M12 12a3.5 3.5 0 100-7 3.5 3.5 0 000 7z M5 20a7 7 0 0111.2-5.6 M17 17h5 M19.5 14.5v5',
+  // payments: card with a stripe
+  payments: 'M3 6h18v12H3z M3 10h18 M6.5 14.5h4',
+  // orders: box with a lid seam
+  orders: 'M4 8l8-4 8 4v9l-8 4-8-4z M4 8l8 4 8-4 M12 12v9',
+};
+const d = P[name.toLowerCase().replace(/\s+/g, '')] ?? P.forms;
+---
+<span class="v3-card-icon" aria-hidden="true">
+  <svg viewBox="0 0 24 24" width="19" height="19" fill="none"
+       stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    {d.split(' M').map((seg, i) => <path d={(i ? 'M' : '') + seg} />)}
+  </svg>
+</span>
