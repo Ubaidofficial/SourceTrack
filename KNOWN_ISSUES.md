@@ -3128,6 +3128,7 @@ bookmentions.net (`free`) and `eb7f68c3-…` **www.techrupt.pk (`growth`)** — 
 return **0 rows** in staging (`nrsvpwzekfrdrzkoecfk`). **This raises the severity: the inflated
 visitor counts are on a live growth-plan site, not a staging sandbox.** Both sites are
 founder-owned, so no paying third party is affected today.
+**This is KI-54 recurring three weeks on, in the opposite direction: KI-54 was the WRITE path (fixtures seeded into prod); this was the READ path (prod data reported as staging) — same root cause, so fix the cause there, not here.**
 
 *Provenance — CORRECTED. The previous line read "orchestrator-supplied … not re-queried by CC, which
 has no Tinybird access." **Every clause of that was wrong and it is replaced, not softened**, because
