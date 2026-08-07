@@ -44,12 +44,13 @@ const captureCards = [
   { h: "Forms", p: "Every submission arrives with its source already attached — no hidden fields to wire up, no lost UTMs on multi-step forms." },
   { h: "Chat", p: "Conversations that start in a widget stop being anonymous. The chat lead inherits the session that led to it." },
   { h: "Meetings", p: "Know where a booked demo came from before you walk into it — source and campaign land on the calendar invite." },
+  { h: "Signups", p: "Trial starts and account signups classify as leads on arrival — signup, sign_up, trial and trial_start are all recognised by the taxonomy, so a self-serve funnel is attributed without extra wiring." },
   { h: "Payments", p: "Revenue, not just conversions. Each charge, upgrade, and renewal rolls up to the channel that originally earned it." },
   { h: "Store orders", p: "Order-level attribution with LTV and repeat rate by acquisition source — the numbers your ad platform will never show you." },
 ];
 
 const stats = [
-  { value: "5", label: "conversion types captured — forms, chat, meetings, signups, payments, orders" },
+  { value: "6", label: "conversion types captured — forms, chat, meetings, signups, payments, orders" },
   { value: "9", label: "attribution models running on one first-party dataset" },
   { value: "1", label: "script tag to install — no tag manager, no data engineer" },
   { value: "16", label: "AI assistants and answer engines classified on arrival" },
@@ -260,29 +261,14 @@ const comparison = [
         />
         <div class="v3-cards">
           <div class="v3-card">
-            <h3>First-party and server-side, so the data survives</h3>
-            <p>Cookie loss, ad blockers, and tracking prevention quietly delete conversions from browser-only pixels. Server-side ingest and click-ID stitching keep the path intact.</p>
+            <h3>Server-side ingest carries the source</h3>
+            <p>Revenue that lands outside the browser — a Stripe charge, a CRM update, an offline conversion — still arrives with its click IDs and source attached.</p>
           </div>
           <div class="v3-card">
-            <h3>Ask your attribution data in plain language</h3>
-            <p>Connect SourceTrack to your AI assistant and interrogate the dataset instead of building another chart nobody opens.</p>
+            <h3>Check your setup from your AI assistant</h3>
+            <p>Connect Claude or ChatGPT to SourceTrack's read-only diagnostics — verify the install, debug the data flow, and pull lead and campaign volume without leaving the chat.</p>
           </div>
         </div>
-      </Wrap>
-    </section>
-
-    {/* 12 — soft band */}
-    <section class="v3-section v3-section--soft">
-      <Wrap>
-        <SectionHead
-          eyebrow="Send it back"
-          heading="Same budget. Better spend."
-          lede="Your ad platforms optimise toward whatever you send them. Send form fills, and they buy form fills."
-        />
-        <p class="v3-disclosure">
-          Server-side egress is in beta for Stripe and Shopify sources. We would rather
-          say that than imply a number we can't stand behind.
-        </p>
       </Wrap>
     </section>
 
@@ -368,7 +354,7 @@ const comparison = [
       <Wrap>
         <SectionHead
           eyebrow="The question you can’t answer today"
-          heading="“Where did this $1,480 deal actually come from?”"
+          heading="“Where did this deal actually come from?”"
           lede="Every founder asks it at the end of the month. Your CRM answers “Unknown,” GA4 answers “Direct,” and the ad platforms all answer “me.”"
         />
         <div class="v3-cards">

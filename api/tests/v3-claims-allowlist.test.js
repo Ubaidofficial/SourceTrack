@@ -150,3 +150,92 @@ test('the baseline still matches live pricing.md — drift detector', () => {
     'live pricing.md claims strings the v3 baseline does not know about — the baseline is stale:\n' +
     missing.map(m => `  - "${m}"`).join('\n'))
 })
+
+// ── §12 RETRACTION GUARD ──────────────────────────────────────────────────────────────
+// NOTE ON THIS FILE'S REACH: the tests above scan V3_PRICING_CANDIDATES — v3 PRICING
+// content. They have never read marketing/src/pages/v3/index.astro, so the §11/§12 claims
+// on the landing page were unguarded. This section closes that gap for the retracted §12.
+//
+// §12 ("Same budget. Better spend.") and its "server-side egress is in beta" disclosure
+// were cut because the capability has never run: capi_deliveries holds 0 rows ALL-TIME,
+// re-verified against PROD Supabase on 2026-08-07 before the cut (the file header's claim
+// was checked, not trusted). §12 restated the same ad-platform-egress claim the header
+// records as already cut from §11.
+//
+// A softer rewording is NOT a fix — a quieter phrasing keeps the claim. So this matches the
+// CLAIM, not the exact sentence: any reappearance of egress/send-back-to-ad-platforms
+// copy on the v3 landing page fails, however it is worded.
+const V3_LANDING = 'marketing/src/pages/v3/index.astro'
+
+const RETRACTED_V3_CLAIMS = [
+  { pattern: /same budget\.?\s*better spend/i,        why: '§12 heading — ad-platform egress, capi_deliveries has 0 rows all-time' },
+  { pattern: /server-side egress/i,                    why: '§12 disclosure — beta claim for a capability that has never delivered' },
+  { pattern: /send (it |them )?back to (your )?ad platforms?/i, why: '§12 claim, reworded — egress is egress however it is phrased' },
+
+  // §11 MCP card. The MCP server IS built, mounted (api/index.js:73, transport at :414) and
+  // documented at a PUBLISHED /docs/mcp — so "we have MCP" is true. What is NOT true is what
+  // the card claimed. All 10 tools are diagnostics plus two volume counts: detect_platform,
+  // get_install_snippet, verify_installation, get_workspace_context, get_site_health,
+  // get_data_quality, debug_data_flow, verify_events, get_leads_volume, get_campaign_volume
+  // (docs/mcp_tool_policy.md:22 — "5 diagnostic + 2 volume"). There is NO attribution,
+  // revenue-by-source or model-comparison tool; that is the V1.1 attribution MCP. The card
+  // also contradicted the published doc's own wording, "setup diagnostics, read-only".
+  { pattern: /interrogate the dataset/i,          why: '§11 MCP — no tool queries the dataset; 10 tools are diagnostics + 2 volume counts' },
+  { pattern: /ask your attribution data/i,        why: '§11 MCP — there is no attribution tool at all (V1.1)' },
+  { pattern: /query (your )?attribution (data|dataset)/i, why: '§11 MCP, reworded — same unsupported claim' },
+
+  // §17. An unsourced dollar figure: 1480 appears NOWHERE else in the repo — not in
+  // scripts/, api/, marketing/src/content/ or dashboard/src/. Same class as the "$2,388 ARR"
+  // #665 cut, though weaker: it sat inside a quoted question rather than asserting an
+  // outcome. Removed anyway — a specific figure in a heading reads as real, and the question
+  // works without it. Matches ANY invented-looking deal figure in that heading shape, not
+  // just the one string, so the next draft cannot reintroduce a different number.
+  { pattern: /\$\s?1,?480/,                        why: '§17 — unsourced deal figure, zero occurrences anywhere else in the repo' },
+  { pattern: /where did this \$[\d,]+ deal/i,       why: '§17, reworded — any dollar figure in this heading is unsourced' },
+]
+
+test('the retracted §12 egress claim cannot return to the v3 landing page', () => {
+  const src = readFileSync(join(REPO, V3_LANDING), 'utf8')
+  const returned = RETRACTED_V3_CLAIMS.filter(c => c.pattern.test(src))
+  assert.deepEqual(
+    returned.map(c => c.why), [],
+    `retracted §12 copy is back on ${V3_LANDING}:\n` +
+    returned.map(c => `  - ${c.pattern} <- ${c.why}`).join('\n')
+  )
+})
+
+test('🔴 POSITIVE CONTROL — the §12 guard fires on the exact copy that was cut', () => {
+  // Fed the real removed strings. If this passes silently the guard above is decoration.
+  const wasCut = [
+    'heading="Same budget. Better spend."',
+    'Server-side egress is in beta for Stripe and Shopify sources.',
+    'Send it back to your ad platforms',   // the softer rewording the ruling forbids
+    '<h3>Ask your attribution data in plain language</h3>',
+    'Connect SourceTrack to your AI assistant and interrogate the dataset instead of building another chart nobody opens.',
+    'heading="“Where did this $1,480 deal actually come from?”"',
+    'Where did this $9,999 deal actually come from?',   // a DIFFERENT figure must also fail
+  ]
+  for (const line of wasCut) {
+    assert.ok(
+      RETRACTED_V3_CLAIMS.some(c => c.pattern.test(line)),
+      `the guard MUST reject this retracted claim and did not: ${line}`
+    )
+  }
+})
+
+test('NEGATIVE CONTROL — surviving §11 copy is not flagged', () => {
+  // A guard that rejects the page's real copy would be reverted the first time it fired.
+  const kept = [
+    'Server-side ingest carries the source',
+    'Revenue that lands outside the browser — a Stripe charge, a CRM update, an offline conversion — still arrives with its click IDs and source attached.',
+    'Check your setup from your AI assistant',
+    "Connect Claude or ChatGPT to SourceTrack's read-only diagnostics — verify the install, debug the data flow, and pull lead and campaign volume without leaving the chat.",
+    '“Where did this deal actually come from?”',
+  ]
+  for (const line of kept) {
+    assert.ok(
+      !RETRACTED_V3_CLAIMS.some(c => c.pattern.test(line)),
+      `the guard over-fires on surviving copy: ${line}`
+    )
+  }
+})
