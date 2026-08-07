@@ -52,6 +52,9 @@ import "@/styles/v3-tokens.css";
 import "@/styles/v3-home.css";
 import "@/styles/v3-surfaces.css";
 
+import HeroTicker from "@/components/v3/HeroTicker.jsx";
+import SurfaceTabs from "@/components/v3/SurfaceTabs.jsx";
+import LiveVisitors from "@/components/v3/LiveVisitors.jsx";
 import ChannelMarquee from "@/layouts/v3/surfaces/ChannelMarquee.astro";
 import ChipRow from "@/layouts/v3/surfaces/ChipRow.astro";
 import JourneyChips from "@/layouts/v3/surfaces/JourneyChips.astro";
@@ -142,6 +145,9 @@ const comparison = [
             Re-homed rather than deleted — fixture-only, carries the §29.8 not-a-customer
             disclaimer, and four guards in homepage-fixture-sections.test.js were asserting
             against it while it rendered nowhere. */}
+        {/* handoff `hero-ticker`. client:visible — it is below the fold on most
+            viewports and there is no reason to hydrate it before it is seen. */}
+        <HeroTicker client:visible />
         <HeroStatCallout />
       </Wrap>
     </section>
@@ -188,6 +194,9 @@ const comparison = [
           heading="Attribution that works with the stack you already have."
           lede="Lead source tracking only matters if it reads the tools your conversions actually happen in. One script tag covers all of them."
         />
+          {/* handoff `surface-logos`. Text labels only — §35.4 bans reconstructed
+              marks, and the handoff draws none either (0 <svg> in its source). */}
+          <SurfaceTabs client:visible />
       </Wrap>
     </section>
 
@@ -209,6 +218,10 @@ const comparison = [
                   The fourth, `live` (the realtime session feed), needs JS and is PR 3 —
                   it is absent here rather than faked with a still frame. */}
               <ChannelMiniTable />
+              {/* handoff `live` — the fourth surface of this section, absent in PR 2
+                  because it needs JS. Its tick moves a session between pages and
+                  advances a timer; it NEVER invents a conversion (§6). */}
+              <LiveVisitors client:visible />
               <div class="v3-frame-split">
                 <ChipRow items={["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot"]} more="+11 more" />
                 <ChipRow items={["HubSpot", "Salesforce", "Stripe", "Shopify"]} more="+8 more" />
