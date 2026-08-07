@@ -658,7 +658,9 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
           referrer: 'https://example.com?email=test@example.com'
         }
       },
-      headers: {}
+      // UA required: /sp/e applies the ingestion bot filter, and an EMPTY UA is a DROP
+      // (bot-filter.js:71-72, `!ua`) — without it the request never reaches sanitisation.
+      headers: { 'user-agent': 'Mozilla/5.0' }
     }
     const res = makeMockRes()
     await handler(req, res)
@@ -680,7 +682,10 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
         anonymous_id: 'anon-1',
         properties: {}
       },
+      // UA required: /sp/e applies the ingestion bot filter, and an EMPTY UA is a DROP
+      // (bot-filter.js:71-72, `!ua`) — without it the request never reaches sanitisation.
       headers: {
+        'user-agent': 'Mozilla/5.0',
         referer: 'https://example.com?phone=%2B12345'
       }
     }
@@ -706,7 +711,10 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
           referrer: 'https://example.com?email=leak@leak.com'
         }
       },
+      // UA required: /sp/e applies the ingestion bot filter, and an EMPTY UA is a DROP
+      // (bot-filter.js:71-72, `!ua`) — without it the request never reaches sanitisation.
       headers: {
+        'user-agent': 'Mozilla/5.0',
         referer: 'https://example.com?email=otherleak@leak.com'
       }
     }
@@ -778,7 +786,9 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
           ai_source: 'ChatGPT'
         }
       },
-      headers: {}
+      // UA required: /sp/e applies the ingestion bot filter, and an EMPTY UA is a DROP
+      // (bot-filter.js:71-72, `!ua`) — without it the request never reaches sanitisation.
+      headers: { 'user-agent': 'Mozilla/5.0' }
     }
     const res = makeMockRes()
     await handler(req, res)

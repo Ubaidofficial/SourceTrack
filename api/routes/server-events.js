@@ -131,6 +131,29 @@ router.post('/event', trackGlobalIpLimit, async (req, res) => {
       //
       // Runs BEFORE storeIdentityLink below, so a rejected event leaves nothing behind.
       let hardCapped = false
+      // ⚠️ NO INGESTION BOT FILTER HERE, DELIBERATELY. DO NOT "COMPLETE THE SET".
+      //
+      // /api/track, /sp/e and /sp/pixel all drop bot UAs via isIngestionBotUserAgent.
+      // This route does NOT, and the asymmetry is correct: those three are BROWSER-FACING,
+      // this one is SERVER-TO-SERVER. It authenticates with `Authorization: Bearer <key>`
+      // against api_keys + SCOPE_WRITE_EVENTS — the caller is the CUSTOMER'S BACKEND.
+      //
+      // So the User-Agent on a legitimate request here is an HTTP client library, and
+      // INGESTION_BOT_UA_PATTERN contains exactly those: curl/ · python-requests · axios/ ·
+      // go-http · java/ · ruby/ · php/ · okhttp · node-fetch · guzzlehttp ·
+      // apache-httpclient. Wiring the filter here would silently drop essentially EVERY
+      // legitimate server-side event, irreversibly — §6: an ingestion drop deletes the
+      // event forever, and raw user_agent is never persisted, so the loss would be
+      // unmeasurable as well as permanent.
+      //
+      // That is the 2026-07-14 incident's exact failure mode: tightening ingestion on the
+      // wrong axis and deleting real data. The filter's own axis is "does the agent EXECUTE
+      // JAVASCRIPT?" (bot-filter.js:48) — a server-to-server API call never executes JS and
+      // is not a bot, so the question does not apply to this rail at all.
+      //
+      // Guarded by api/tests/proxy-bot-filter.test.js, which asserts an axios/1.6 UA is
+      // still ingested here. If that test fails because someone added a filter, the filter
+      // is the bug — not the test.
       try {
         // Explicit id for the same reason the conversion gate above needs it: the `sites` select
         // returns no id, claimPageviewUsage THROWS without one, and the fail-open catch would
