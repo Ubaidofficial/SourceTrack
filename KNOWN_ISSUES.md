@@ -3243,6 +3243,19 @@ Preferred over the alternative (a build-time assertion per token) because it is 
 
 **Note for whoever builds it:** it must read the **built** CSS, not source. The alias chain is only resolvable after the bundle is assembled, and a source-level check reproduces exactly the blind spot described above.
 
+**⚠️ AMENDED 2026-08-08 — FOURTH INSTANCE, and it did not come from an agent.** The beam-illustration dispatch specified the orange as **`--color-spend #FF7A33`**. `--v3-spend` aliases `var(--color-spend)`, which is declared nowhere in `marketing/src`; `#FF7A33` appears in no v3 stylesheet. Referencing either would have rendered `unset`. It was caught pre-build by checking every named token against its declaration, and substituted with `--v3-orange-400` (#FF9459, concrete), with `--color-spend`'s **absence** asserted as a control.
+
+**That instance is why this entry needed amending.** The dispatch was written by the orchestrator, citing a spec, roughly an hour after approving this very KI. So the lesson is **not** "agents make this mistake" — the mechanism defeats anyone reading a token NAME and assuming a value stands behind it, and a name in a spec, a handoff or a dispatch carries no more guarantee than one in code.
+
+**OPERATING RULE: verify a custom property is DECLARED before referencing it — wherever the reference came from.** A dispatch, a design doc, a handoff and an existing stylesheet are all equally capable of naming a token that resolves to nothing. The check is one grep for `--name:` (a *declaration*, not a usage), and on a built bundle rather than source, because the alias chain only resolves after bundling.
+
+**⚠️ A RELATED CLASS, recorded here because it has the same shape: a brief can assert PAGE STRUCTURE that does not hold.** The same dispatch carried two placement premises, both false and both checkable in under a minute:
+- *"the dark hero band"* — there is none. `.v3-hero` is **light** (`color: var(--v3-ink)` on paper, pills on `--v3-gray-100`), and `.v3-frame` is `--v3-paper-card` with only its ~40px chrome bar in ink. `§4 .v3-section--dark` is the **only** dark section on the page.
+- *"§2's hero band"* as the placement — §2's frame body was **already fully occupied** by `MarketingInteractiveDemo`, wired there by #700 the same day.
+
+Neither was malicious or careless; both are simply what happens when a brief is written from memory of a page that has changed underneath it. **Verify a brief's structural claims against the page before building against them** — the same discipline as verifying a token, applied to layout.
+
+
 ### KI-113 — "success is lime" cannot express through TEXT COLOUR (2026-08-08, a real constraint §3.4 omits)
 
 **`design.md` §3.4:439 says:** *"Success is lime, not green… There must be no separate success green, no terminal green, no info blue, no purple, and no slate in the shipped app."* It says **what** colour means success. It does **not** say **where** that colour may sit — and that omission is a trap.
