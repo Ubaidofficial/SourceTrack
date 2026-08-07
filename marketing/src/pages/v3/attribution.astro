@@ -1,0 +1,190 @@
+---
+/**
+ * V3 ATTRIBUTION — preview route, noindex. Not the live /attribution.
+ *
+ * ⚠️ TWO STRUCTURAL CHANGES FROM THE DESIGN. Ruled 2026-08-06 (option 2).
+ *
+ * 1. §2 REFRAMED. The design ships "One platform. Five ways to count the same
+ *    conversion" and names First / Last / Linear / U-shaped / Time-decay. That
+ *    five is not a subset of anything the code defines — it omits both
+ *    non-direct models, W-shaped, and AI journey influence. Rather than ship
+ *    "five of the nine" (which reads as an omission a competitor will check),
+ *    this section ships ALL NINE grouped by the families the registry actually
+ *    defines. There is then no missing four to explain.
+ *
+ *    Settled from source, three independent agreeing places:
+ *      api/lib/report-config-validation.js:33  ALLOWED_MODELS       — 9 keys
+ *      api/lib/report-config-validation.js:72  MULTI_TOUCH_MODELS   — 4 keys
+ *      dashboard/src/hooks/useDashboardData.js:23  MODELS           — same 9
+ *      dashboard/src/pages/ReportBuilder.jsx:40    MODELS           — same 9
+ *    The weightings below (40/20/40, 30/30/30/10, 7-day half-life) are the
+ *    labels ReportBuilder.jsx:40 actually renders, not marketing rounding.
+ *
+ * 2. §5 "Why teams switch from GA4" DROPPED. It duplicated an entire page we
+ *    already ship at /v3/compare-ga4, heading for heading. The reader need it
+ *    served is met by a link in the CTA instead of a second copy that will
+ *    drift out of sync with the first.
+ *
+ * §3 keeps the design's referee framing but NOT its three cards, which were
+ * "First touch attribution / Last touch attribution / Revenue attribution" —
+ * a restatement of §2's model list one section later. The referee point is
+ * cross-platform double-counting, so the cards now make that point instead.
+ *
+ * Claims about Meta/Google/LinkedIn/TikTok are limited to the fact that each
+ * reports a conversion it believes it caused. No competitor brand marks (§35.3).
+ */
+import Base from "@/layouts/Base.astro";
+import Wrap from "@/layouts/v3/Wrap.astro";
+import SectionHead from "@/layouts/v3/SectionHead.astro";
+import "@/styles/v3-tokens.css";
+import "@/styles/v3-home.css";
+import "@/styles/v3-pages.css";
+
+// All nine. Grouped as the registry groups them, not as a marketing shortlist.
+const families = [
+  {
+    kicker: "Single touch",
+    lede: "One channel takes the whole conversion. Fast to explain, and still the right answer for a short journey.",
+    models: [
+      { name: "First Touch", note: "credits the channel that introduced them" },
+      { name: "Last Touch", note: "credits the channel that closed them" },
+    ],
+  },
+  {
+    kicker: "Single touch, direct excluded",
+    lede: "The same two models with direct sessions skipped, so a bookmarked return visit can't quietly take credit for the work that earned it.",
+    models: [
+      { name: "First Touch (Non-Direct)", note: "first source that wasn't direct" },
+      { name: "Last Touch (Non-Direct)", note: "last source that wasn't direct" },
+    ],
+  },
+  {
+    kicker: "Multi touch",
+    lede: "Credit split across the journey. Four distributions, because a nurture sequence and an impulse purchase do not deserve the same shape.",
+    models: [
+      { name: "Linear", note: "even split across every touchpoint" },
+      { name: "Time Decay", note: "7-day half-life" },
+      { name: "U-Shaped", note: "40 / 20 / 40" },
+      { name: "W-Shaped", note: "30 / 30 / 30 / 10" },
+    ],
+  },
+  {
+    kicker: "Journey influence",
+    lede: "A lens rather than a split: which conversions had an AI assistant anywhere in the path, whether or not it took the final click.",
+    models: [
+      { name: "AI journey influence", note: "assistant present anywhere in the journey" },
+    ],
+  },
+];
+
+const referee = [
+  { h: "Meta says it won.", p: "Its attribution window counts the conversion because someone saw an ad within it. That is a real signal, measured entirely inside Meta." },
+  { h: "Google says it won.", p: "Its own window counts the same conversion, for the same reason, from the other side. Both numbers can be defensible and still not add up." },
+  { h: "Your data says what happened.", p: "One first-party dataset, one journey per visitor, and nine ways to divide the credit — none of which have a budget to defend." },
+];
+
+const captured = [
+  { h: "UTMs and source params", p: "Campaign data preserved across landing pages and session boundaries, not dropped at the first redirect." },
+  { h: "Referrers and AI traffic", p: "Traditional referrers plus sixteen named assistants and answer engines, which arrive with no UTM at all." },
+  { h: "Landing page paths", p: "Which pages created intent and which merely assisted it, per journey rather than per session." },
+  { h: "Conversion events", p: "Forms, chats, meetings, trials, signups and payments — business outcomes, not pageviews." },
+];
+---
+
+<Base
+  title="Attribution — know the source behind every lead and customer | SourceTrack"
+  description="Nine attribution models on one first-party dataset. Re-credit the same conversions under any model without re-tagging anything."
+  noindex={true}
+>
+  <div class="v3">
+    {/* 1 — hero */}
+    <section class="v3-hero">
+      <Wrap>
+        <h1>Know the source behind every lead and customer.</h1>
+        <p class="v3-hero-sub">
+          Not which platform claimed it — which channel actually earned it. One
+          first-party dataset, nine ways to divide the credit, and no re-tagging
+          when you change your mind.
+        </p>
+      </Wrap>
+    </section>
+
+    {/* 2 — soft band. REFRAMED: all nine, grouped as the registry groups them. */}
+    <section class="v3-section v3-section--soft">
+      <Wrap>
+        <SectionHead
+          eyebrow="Attribution models"
+          heading="One dataset. Nine ways to count the same conversion."
+          lede="Switching model does not re-run your tracking or re-tag a campaign — the journeys are already stored, so a model is only a question you ask of them. All nine are on every plan."
+        />
+        <div class="v3-models">
+          {families.map((f) => (
+            <div class="v3-model-family">
+              <h3>{f.kicker}</h3>
+              <p>{f.lede}</p>
+              <ul>
+                {f.models.map((m) => (
+                  <li><b>{m.name}</b><span>{m.note}</span></li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 3 — paper, divided band. Referee framing kept; cards remade so they do
+        not restate §2's model list one section later. */}
+    <section class="v3-section">
+      <Wrap>
+        <SectionHead
+          eyebrow="Attribution problems"
+          heading="When every platform claims credit, you need a referee."
+          lede="Add up what each ad platform reports and you will exceed the number of orders you actually shipped. Nobody is lying — each one is measuring inside its own walls. SourceTrack runs alongside them and keeps one count."
+        />
+        <div class="v3-divided">
+          {referee.map((r) => (
+            <div><h3>{r.h}</h3><p>{r.p}</p></div>
+          ))}
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 4 — FULL-BLEED DARK. Non-adjacent to any other dark treatment here.
+        Cards keep their paper-card fill on the dark band, so card-interior
+        pairs are unchanged; the band's own pairs are registered in
+        scripts/v3-page-pairs.mjs in this PR. */}
+    <section class="v3-section v3-section--dark">
+      <Wrap>
+        <SectionHead
+          eyebrow="Attribution data captured"
+          heading="Designed for modern customer journeys."
+          lede="Attribution is only as good as what got captured on the way in. These are the details that explain why a conversion happened rather than just that it did."
+        />
+        <div class="v3-cards">
+          {captured.map((c) => (
+            <div class="v3-card"><h3>{c.h}</h3><p>{c.p}</p></div>
+          ))}
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 5 — CTA close on paper. Lime on the button only (§2.6). The GA4
+        comparison lives on its own page; this links rather than repeats it. */}
+    <section class="v3-cta-close">
+      <Wrap>
+        <div class="v3-cta-inner">
+          <div>
+            <h2>Turn messy journeys into one clear count.</h2>
+            <p>28 days free, no card. Install the script and watch your first attributed session land.</p>
+          </div>
+          <div class="v3-cta-actions">
+            <a class="v3-btn-accent" href="https://app.sourcetrack.ai/signup">Start 28-day free trial</a>
+            <a class="v3-link-quiet" href="/v3/compare-ga4">Compare with GA4 →</a>
+          </div>
+        </div>
+        <p class="v3-disclosure">Product visuals shown use illustrative data.</p>
+      </Wrap>
+    </section>
+  </div>
+</Base>

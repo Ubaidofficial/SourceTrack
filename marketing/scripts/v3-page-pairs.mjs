@@ -189,11 +189,75 @@ export const V3_PAGE_PAIRS = {
     { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
     { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
   ],
+  // ── /v3/product ───────────────────────────────────────────────────────────
+  '/v3/product': [
+    // Steps sit DIRECTLY on the soft band with no card between them, so the
+    // surface is --v3-gray-50 (#FAF8F1) and not the paper-card every other card
+    // pair on this page is scored against.
+    { id: 'step number', sel: '.v3-step-num', fg: '#5B5548', bg: '#FAF8F1', level: 'AA' },
+    { id: 'step title', sel: '.v3-step h3', fg: '#12100C', bg: '#FAF8F1', level: 'AA' },
+    { id: 'step body', sel: '.v3-step p', fg: '#665F50', bg: '#FAF8F1', level: 'AA' },
+    // Journey rows sit inside .v3-frame-body, so the surface is paper-card, NOT
+    // the page paper. Scored against the surface they are actually on.
+    { id: 'journey timestamp', sel: '.v3-journey-when', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
+    { id: 'journey body', sel: '.v3-journey-what', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
+    { id: 'journey sub', sel: '.v3-journey-what em', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'journey value', sel: '.v3-journey-val', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
+    // The converting row is the page's single accent data point (§2.6, fourth
+    // acceptable use). Ink on lime, same pair as the button — scored anyway.
+    { id: 'journey won chip', sel: '.v3-journey-row--won .v3-journey-val', fg: '#12100C', bg: '#D2EC2A', level: 'AA' },
+    { id: 'card body on paper-card', sel: '.v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'stat label', sel: '.v3-stat-label', fg: '#5B5548', bg: '#F7F4ED', level: 'AA' },
+    { id: 'frame chrome url', sel: '.v3-frame-url', fg: '#8a9494', bg: '#12100C', level: 'AA' },
+    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
+    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
+  ],
+  // ── /v3/attribution ───────────────────────────────────────────────────────
+  '/v3/attribution': [
+    { id: 'family kicker', sel: '.v3-model-family > h3', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
+    { id: 'family lede', sel: '.v3-model-family > p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'model name', sel: '.v3-model-family li b', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
+    { id: 'model weighting', sel: '.v3-model-family li span', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'divided band h3', sel: '.v3-divided h3', fg: '#12100C', bg: '#FFFDF8', level: 'AA' },
+    { id: 'divided band body', sel: '.v3-divided p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    // ⚠️ THIS PAGE PUTS .v3-cards ON THE DARK BAND — a combination the homepage
+    // never shipped. The cards keep their paper-card fill, so the card INTERIOR
+    // pairs are light-on-light and unchanged. Registered explicitly rather than
+    // assumed: assuming a carried-forward ratio survives a surface flip is the
+    // TrustBar 10.54 -> 1.22 failure, and "the card didn't change" is exactly the
+    // reasoning that produced it.
+    { id: 'dark band title', sel: '.v3-section--dark .v3-section-title', fg: '#f6f3eb', bg: '#0B0A07', level: 'AA-large' },
+    { id: 'dark band lede', sel: '.v3-section--dark .v3-section-lede', fg: '#a79e8c', bg: '#0B0A07', level: 'AA' },
+    { id: 'dark band eyebrow', sel: '.v3-section--dark .v3-eyebrow', fg: '#a79e8c', bg: '#0B0A07', level: 'AA' },
+    { id: 'card h3 on dark band', sel: '.v3-section--dark .v3-card h3', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
+    { id: 'card body on dark band', sel: '.v3-section--dark .v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'quiet link on paper', sel: '.v3-link-quiet', fg: '#161310', bg: '#F7F4ED', level: 'AA' },
+    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
+    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
+  ],
+  // ── /v3/ai-referral-tracking ──────────────────────────────────────────────
+  '/v3/ai-referral-tracking': [
+    { id: 'stat number', sel: '.v3-stat-num', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
+    { id: 'stat label', sel: '.v3-stat-label', fg: '#5B5548', bg: '#F7F4ED', level: 'AA' },
+    { id: 'card body on paper-card', sel: '.v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'journey timestamp', sel: '.v3-journey-when', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
+    { id: 'journey body', sel: '.v3-journey-what', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
+    { id: 'journey sub', sel: '.v3-journey-what em', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'journey won chip', sel: '.v3-journey-row--won .v3-journey-val', fg: '#12100C', bg: '#D2EC2A', level: 'AA' },
+    { id: 'bento dark h3', sel: '.v3-bento-cell-dark', fg: '#f6f3eb', bg: '#2A251E', level: 'AA' },
+    { id: 'bento dark body', sel: '.v3-bento-cell-dark', fg: '#a79e8c', bg: '#2A251E', level: 'AA' },
+    { id: 'frame chrome url', sel: '.v3-frame-url', fg: '#8a9494', bg: '#12100C', level: 'AA' },
+    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
+    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
+  ],
 }
 
 // Pages that exist in the build and must therefore be registered above.
 // Populated as v3 pages land; a page here with no pairs is an error, not a skip.
-export const V3_ROUTES = ['/v3', '/v3/pricing', '/v3/compare-ga4']
+export const V3_ROUTES = [
+  '/v3', '/v3/pricing', '/v3/compare-ga4',
+  '/v3/product', '/v3/attribution', '/v3/ai-referral-tracking'
+]
 
 const DIST = 'dist'
 let fails = 0

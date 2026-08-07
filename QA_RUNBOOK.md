@@ -13,6 +13,39 @@ Use this as the checklist for GPT, Claude, DeepSeek, or any agent making code ch
 - If tracker source changes, rebuild minified tracker files.
 - Manual QA matters for tracking, attribution, saved reports, and UI state.
 
+## Claim scans run against BUILT OUTPUT, never source alone
+
+Any scan for customer-facing claims — banned absolutes ("100% accurate", "perfect
+attribution", "ad-block-proof", "guaranteed attribution" per
+`docs/release_checklist_gate.md`), unsupported feature claims, stale figures — must be run
+against `marketing/dist/` after a build, not against `marketing/src/`.
+
+**Why: `marketing/public/` bypasses `src/` entirely.** Files there are copied to `dist/`
+unprocessed. A `grep` over `marketing/src` is structurally incapable of seeing them, and it
+returns clean — which reads as "no hits" rather than "did not look".
+
+That is not hypothetical. `marketing/public/llms.txt` shipped
+`"Cookieless Identity Moat: 100% first-party, cookieless, zero cross-site tracking or
+fingerprinting."` — **two** banned absolutes in one line — while a `marketing/src` scan for
+the same claim came back clean. It was found only by grepping `dist/` and noticing the built
+page carried a string the source did not. `llms.txt` is footer-linked as "AI info", so it is
+the copy other AI systems ingest and repeat as fact, with no surrounding page context.
+
+**The rule:**
+
+```bash
+cd marketing && npm run build
+grep -rniE '100%|perfect(ly)? (attribut|accur)|ad-?block[- ]?proof|guarantee' dist/
+```
+
+Then trace each hit back to its source file before editing — a `dist/` hit may originate in
+`src/`, in `public/`, or in a generated file, and the fix differs.
+
+⚠️ **The same reasoning applies to any scan whose scope is a source directory.** If the
+build can emit something the directory does not contain, the directory is not the surface.
+Ask what the build adds before trusting a clean scan — and when the built output disagrees
+with source, follow the build.
+
 ## Standard branch start
 
     cd "$HOME/Desktop/trackiq"
