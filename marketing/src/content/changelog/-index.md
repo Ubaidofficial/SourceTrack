@@ -63,7 +63,7 @@ changelog_list:
       - name: "NEW FEATURES"
         items:
           - icon: "check"
-            text: "Cookieless Identity Moat: 100% first-party tracking without third-party cookies or invasive device fingerprinting."
+            text: "Cookieless Identity Moat: first-party tracking without third-party cookies or invasive device fingerprinting."
           - icon: "check"
             text: "Stripe & Shopify Webhooks: Automated conversion and revenue event ingestion."
           - icon: "check"
