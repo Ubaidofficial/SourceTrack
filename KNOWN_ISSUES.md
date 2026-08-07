@@ -2858,3 +2858,168 @@ reason, and its positive control executes `origin/main`'s route to prove the ass
 
 **Status: VERIFIED** (source read at `:211-215` and `:228` on `main`; nested-form behaviour confirmed
 by execution during #676).
+
+### KI-105 — the managed-proxy gate IS executing on registered domains ✅ REFUTES A SUSPICION (one divergence left open)
+
+**The suspicion, now refuted for registered domains.** We suspected `managedProxyEarlyGate` never
+ran in production — that Bunny masked the customer hostname, the `Host` header matched
+`ST_PLATFORM_HOSTS`, and the gate returned `next()` at `api/middleware/managed-proxy.js:76-78`
+(*"Skip managed proxy checks for standard API/dashboard traffic"*), bypassing the lookup, the 404,
+the status check and the path allowlist. That would have made the whole managed proxy decorative.
+
+**THE DISCRIMINATOR.** `/robots.txt` is **not** in `ALLOWED_PATHS` (`managed-proxy.js:21-33`
+— verified: the set holds the two tracker bundles, `/api/track`, `/api/collect`, `/track`,
+`/api/conversion`, `/api/tracker/id`, `/api/identify` and the proxy-health path, and nothing else).
+If the gate runs, step 7 (`managed-proxy.js:124-126`, `if (!ALLOWED_PATHS.has(req.path))`) returns
+`res.status(404).send('Not Found')` — a **9-byte** body. If the gate does *not* run, the request
+falls through to Express's default 404, which is a **149-byte HTML page**. The two are trivially
+distinguishable, and nothing else in the stack produces a 9-byte `Not Found`.
+
+**VERIFIED live (2026-08-06, reproduced independently 2026-08-07).** Both responses were
+`cdn-cache: MISS` with **distinct** `x-railway-request-id` values, so the origin was genuinely
+reached in each case and the two are independent observations, not one cached answer served twice:
+
+| host | status | content-length | body | `x-powered-by` |
+|---|---|---|---|---|
+| `track2.bookmentions.net/robots.txt` | 404 | **9** | `Not Found` | `Express` |
+| `track.bookmentions.net/robots.txt` | 404 | **149** | Express default HTML (`Cannot GET /robots.txt`) | *absent in capture* |
+
+**CONCLUSION (verified): on the registered domain the gate executes and the path allowlist is
+enforced.** `track2.` — the hostname actually present in `managed_proxy_domains` — returns the
+gate's own step-7 rejection byte for byte. **The managed proxy is not decorative.**
+
+⚠️ **UNRESOLVED — DO NOT RESOLVE THIS BY REASONING.** Per `managed-proxy.js:107-109`, an
+unregistered non-platform host should hit `record === null` and return the **same 9-byte
+`Not Found`**. `track.bookmentions.net` returned Express's default instead, so it **never entered
+the custom-domain branch at all**. Either it resolved as a platform host, or it reached a different
+origin. **Cause UNKNOWN. Do not assert one.**
+
+**What would settle it:** capture `cdn-host`, `x-st-proxy-secret` and `cdn-pullzoneid` **as the
+origin sees them** for each hostname. Those three inputs decide which branch
+`managed-proxy.js:60-62` takes, and they are not observable from the client side — which is
+precisely why this is open rather than answered.
+
+⚠️ **A NOTE ON THE TEST'S OWN VALIDITY, recorded so it is not misread in either direction.** The
+control in the original run was **VOID** (`cdn-cache: HIT` — see KI-106: query-string cache-busting
+does not work on this pull zone, so the intended busting control never established freshness).
+**The result stands anyway**, because both targets independently returned `MISS` with distinct
+request IDs — which is the property the control existed to establish, arrived at by another route.
+A void control does not make a void test, and a valid test does not retroactively validate its
+control. Both halves are stated so neither is inherited.
+
+### KI-106 — query-string cache-busting does NOT work on Bunny pull zone 6119064 ⚠️ COMPOUNDS KI-101
+
+**VERIFIED live (2026-08-06, reproduced 2026-08-07).** A GET for
+`/tracker.min.js?cb=<unique-epoch-value-never-requested-before>` returned:
+
+    HTTP/2 200
+    etag: W/"57d3-19fd4221fd0"
+    cdn-cachedat: 08/05/2026 23:16:58
+    cdn-cache: HIT
+
+— the **same etag and the same `cdn-cachedat`** as the un-busted baseline captured hours earlier.
+**Bunny is ignoring the query string in the cache key for static assets on this pull zone.** A URL
+that has provably never been requested before returns a day-old cached object.
+
+**CONSEQUENCE — this is why it matters.** KI-101 records an up-to-8-day stale-tracker tail
+(`max-age=86400` + `stale-while-revalidate=604800` + `immutable`). This entry establishes that the
+tail has **no client-side escape hatch**:
+
+* a cache-busting query parameter does **not** force a fresh fetch (verified above);
+* a `Cache-Control: no-cache` **request** header does not bypass it either (verified, KI-101).
+
+**So a tracker defect cannot be rolled back from the caller's side at all.** Purging requires the
+**Bunny API** or a **filename change** — both of which are operator actions, not deploy actions.
+
+⚠️ **This raises KI-101's severity from "propagation is slow" to "propagation is slow AND cannot be
+bypassed."** The distinction matters for incident planning: a slow-but-bustable cache means a fix
+plus a query param; an unbustable one means the old bundle keeps executing until Bunny is purged
+out-of-band.
+
+**Directly affects A2 (the click-ID restorer), which is tracker-side.** Cost the purge path before
+A2 ships, not during the incident that needs it.
+
+**Not fixed. Recorded, not acted on** — the caching is correct for a static asset, and the fix is an
+operational runbook step (how to purge) rather than a code change. See KI-101 for the propagation
+window this compounds, and KI-105 for the void-control note that depends on this finding.
+
+---
+
+## Amendments to KI-100 and KI-102 — citations ported from #677 (closed as a duplicate)
+
+**Why these are here rather than inside the entries.** #677 recorded `KI-100`…`KI-104` from a parallel
+session against a different base, and was closed as a duplicate of the #678 line that merged. Its
+entries duplicated what merged — but its **citations were richer**, and closing the PR would have
+discarded them. They are ported as **amendments referencing the entries by number**; `KI-100` and
+`KI-102` are **not edited**.
+
+Every citation below was **re-verified from source at the cited `file:line`**, not copied forward
+from the closed PR.
+
+### Amends KI-100 — the full self-serve Bunny flow, not just the certificate call
+
+`KI-100` records *that* Bunny issues the certificates. `api/lib/bunny-edge.js:1-13` documents the
+**whole** managed-custom-domain flow, of which issuance is only the middle step:
+
+| Function | Line | Endpoint (`bunny-edge.js:8-10`) | Expected |
+|---|---|---|---|
+| `addPullZoneHostname()` | `:106` | `POST https://api.bunny.net/pullzone/{id}/addHostname` body `{"Hostname"}` | `204` |
+| `loadFreeCertificate()` | `:122` | `GET https://api.bunny.net/pullzone/loadFreeCertificate?hostname=<host>` | `200`/`201` |
+| `removePullZoneHostname()` | `:135` | `DELETE https://api.bunny.net/pullzone/{id}/removeHostname` body `{"Hostname"}` | `204` |
+
+Auth is an **`AccessKey: <BUNNY_API_KEY>` header on every request** (`:11`). That variable is
+account-scoped and **server-side only** — referenced here **by name only, never by value** (§0).
+
+> ⚠️ **THE ORDERING CONSTRAINT — operationally the sharpest part, and recorded nowhere until now.**
+> `bunny-edge.js:11-12`: **the hostname MUST already exist on the pull zone before
+> `loadFreeCertificate` is called — otherwise Bunny returns `404 (hostname_not_found)`.**
+>
+> `addPullZoneHostname` → *then* `loadFreeCertificate`. Reversing them does not fail in a way that
+> names its cause: you get a **404 from a certificate call**, which reads as *"certificate issuance is
+> broken"* rather than *"the hostname was never registered"*. **This is the same misdiagnosis shape as
+> `KI-102`'s 401** — a correct response from a step that ran in the wrong order. Two of the four
+> entries in this batch are instances of it.
+
+The module is **fail-CLOSED** when the key or zone id is unset (returns `{ disabled: true }` rather
+than crashing) and **fail-SAFE** (never throws to the caller). Note the interaction with the
+suppressed-warning defect recorded separately: `disabled` is exactly the state whose warning is gated
+out by `if (!reg.ok && !reg.disabled)` at `integrations.js:914`, so a wholly unconfigured Bunny is the
+one case that stays silent.
+
+### Amends KI-102 — the exact responses we nearly misdiagnosed
+
+`KI-102` explains *why* a `401` on a registered proxy domain is correct. These are the literal
+sources of that `401` — ordinary `site_key` validation in `api/middleware/auth.js`, **not** the
+managed-proxy layer:
+
+| Line | Response |
+|---|---|
+| `:32` | `401 { success: false, data: null, error: 'Missing site_key' }` |
+| `:79` | `401 … error: 'Invalid site_key'` |
+| `:91` | `401 … error: 'Invalid site_key'` |
+| `:188` | `401 … error: 'Invalid site_key'` |
+
+`:31-33` is the whole of the first one — `if (!siteKey) { return res.status(401)… }`. **This is
+`KI-102`'s payoff:** that response was investigated as a proxy failure across three separate rounds
+before the guard's actual behaviour — `bindManagedProxySiteKey` passes keyless requests through by
+design — made it clear the 401 is the ingestion layer doing its job (§6.5: never fall through to a
+default tenant).
+
+### Method and provenance — why the search kept failing
+
+Three facts about *how* `KI-100` was reached, recorded because the pattern is reusable:
+
+1. **The ACME scan returns exactly two files, and both are tests.** `grep -rlniE "acme"` across
+   `*.js`/`*.mjs` (excluding `node_modules`) matches **only**
+   `api/tests/tracker-booking-detection.test.js` and
+   `api/tests/ad-platforms-status-connected.test.js`.
+2. **Both matches are incidental fixture names, not certificate code** —
+   `tracker-booking-detection.test.js:223` contains `answer: 'ACME Corp'`, and
+   `ad-platforms-status-connected.test.js:25` contains `account_name: 'Acme Ads'`. Repeated sessions
+   read *"two hits, no cert code"* as *"the code must be somewhere else"* rather than the correct
+   conclusion, *"there is no such code because we do not do this."* **A near-zero-hit scan whose only
+   hits are fixture strings is evidence of ABSENCE, not of a failed search** — the same
+   two-explanations trap as a zero-hit grep, one step along.
+3. **The certificates were read from the TLS handshake** — `openssl s_client -servername <host>`
+   piped to `openssl x509` — **not from a provider console.** That is what makes the issuer and the
+   per-hostname CN properties of *what is actually served*, rather than of what a dashboard reports.
