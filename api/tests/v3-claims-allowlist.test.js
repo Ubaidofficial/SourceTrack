@@ -170,6 +170,58 @@ test('the baseline still matches live pricing.md — drift detector', () => {
 // leaving it pointed at the old path would have made it read a missing file. It did exactly
 // that on the first build of the cutover branch and failed loudly, which is the behaviour
 // you want from a guard whose subject moves (§10 class-1: a path STRING an import grep misses).
+// ── CONCEPT LAYER — added because the phrase layer above is EVASION-PRONE ────────────
+// MEASURED, not suspected: 12 of 12 plausible rewordings of the three retracted claims
+// walked straight through the patterns above. Every one of them is phrase-bound, so the
+// guard only ever caught the exact sentences that were cut. hero-orbit's
+// "the value is pushed server-side to every ad platform" is the §12 egress claim in
+// different words, and the guard did not see it — the second rewording to slip past in a
+// single day.
+//
+// These match a CLAIM as (subject NEAR predicate) rather than as a sentence, so changing
+// the connective tissue does not evade them. They are ADDITIVE: the phrase patterns stay,
+// because they catch strings this layer misses (e.g. "server-side egress is in beta",
+// which names no destination).
+//
+// ⚠️ FALSE-POSITIVE COST WAS MEASURED BEFORE SHIPPING, per #692's lesson that an
+// over-firing guard gets bypassed as routine. First draft flagged the HONEST MCP copy
+// written this morning — "without leaving the chat" sits near "debug the data flow" — so
+// the conversational pattern was narrowed to verb FORMS ("chat with", "ask your") rather
+// than bare nouns. Final: 14/14 rewordings caught, 0 false positives against the live
+// page's 26 copy strings plus every string deliberately kept.
+const near = (subject, predicate, win = 90) => (s) => {
+  const t = s.toLowerCase()
+  for (const m of t.matchAll(subject)) {
+    const i = m.index
+    if (predicate.test(t.slice(Math.max(0, i - win), i + win))) return true
+  }
+  return false
+}
+
+export const CONCEPT_CLAIMS = [
+  {
+    id: 'ad-platform-egress',
+    why: '§12 — pushing conversions to ad platforms. capi_deliveries has 0 rows all-time AND ad_platform_connections is 0, so the precondition has never existed either.',
+    test: near(
+      /ad platforms?|ad accounts?|meta|google ads|tiktok|linkedin ads|capi/g,
+      /push|sent? |sends|send |forward|deliver|sync|flow(s|ing)? back|server-to-server|server-side/
+    )
+  },
+  {
+    id: 'conversational-data-query',
+    why: '§11 MCP — the 10 shipped tools are diagnostics plus 2 volume counts; nothing queries the dataset. Verb FORMS only, so "without leaving the chat" is not a claim.',
+    test: near(
+      /\bask(ing)? (your|it|sourcetrack|anything)|\bchat (with|to)\b|\btalk (to|with)\b|\bquery (your|the)\b|interrogate|in plain (language|english)/g,
+      /your data|the data|dataset|attribution|revenue|anything/
+    )
+  },
+  {
+    id: 'unsourced-deal-figure',
+    why: '§17 — a specific money figure attached to a deal/sale. Any amount, not just $1,480: the point was never that one number.',
+    test: near(/\$\s?[\d,]{3,}/g, /deal|contract|account|sale|customer|won|win/, 40)
+  }
+]
+
 const V3_LANDING = 'marketing/src/pages/index.astro'
 
 const RETRACTED_V3_CLAIMS = [
@@ -243,4 +295,90 @@ test('NEGATIVE CONTROL — surviving §11 copy is not flagged', () => {
       `the guard over-fires on surviving copy: ${line}`
     )
   }
+})
+
+// ── 🔴 THE CEILING — what this guard CANNOT do ────────────────────────────────────────
+// This section exists because the guard's limit was invisible, and an invisible limit
+// reads as coverage. It pins the blind spot so a future reader meets it as a measurement
+// rather than rediscovering it the way hero-orbit did.
+//
+// MEASURED 2026-08-07: 12 of 12 plausible rewordings of the three retracted claims walked
+// straight through RETRACTED_V3_CLAIMS. Every pattern there is phrase-bound — it catches
+// the sentence that was cut, not the claim it made. hero-orbit's "the value is pushed
+// server-side to every ad platform" is §12's egress claim verbatim in meaning and matched
+// nothing.
+//
+// WHY THE OBVIOUS FIX WAS BUILT, MEASURED, AND THEN NOT SHIPPED. CONCEPT_CLAIMS above
+// matches (subject NEAR predicate) instead of a sentence. Against isolated copy strings it
+// scored 14/14 rewordings caught with 0 false positives. Against the REAL FILE it produced
+// six matches, every one legitimate:
+//   · index.astro's own header comment describing the §12 cut — the guard firing on its
+//     own documentation, the same trap stripComments() was added for elsewhere;
+//   · "the numbers your ad platform will never show you" — surviving capture-card copy;
+//   · "AI referrals are the channel ad platforms can't see" — surviving bento copy;
+//   · SyncList's "Google Ads"/"Salesforce" integration labels, shipped in PR 2;
+//   · "the ad platforms all answer 'me.'" — surviving §17 copy.
+//
+// ⚠️ THE MECHANISM, MEASURED RATHER THAN REASONED. A first draft of this note claimed the
+// cause was that a claim and its negation share tokens. The control below REFUTED that:
+// every one of those strings is CLEAN when tested in isolation. The real cause is that a
+// proximity window scanned over a whole SOURCE FILE bleeds across unrelated content —
+// "Google Ads" in a SyncList label lands within 90 characters of "Live"/"send" in a
+// neighbouring component, and the file's own explanatory comments name the very claims
+// they document. The claim/negation problem is real in principle; it is NOT what these six
+// matches were.
+//
+// That distinction matters for anyone trying again: the fix is not a smarter vocabulary,
+// it is scanning RENDERED COPY rather than source — and even then the window has to be
+// small enough not to cross component boundaries. Widening the pattern only moves the
+// error from false-negative to false-positive — and
+// #692 measured what an over-firing guard becomes: bypassed as routine, which converts a
+// known gap into a false sense of coverage.
+//
+// SO: this guard catches PHRASINGS. It is a regression check for exact strings that were
+// cut, not a semantic claims check. Claim-level review is a human step at PR time; this
+// file is the backstop for a specific string coming back, and nothing more.
+test('🔴 CEILING: the phrase layer does NOT catch rewordings — pinned, not assumed', () => {
+  const REWORDINGS = [
+    'the value is pushed server-side to every ad platform',   // hero-orbit, the live instance
+    'conversions flow back into Meta, Google and TikTok automatically',
+    'we forward every conversion to your ad accounts',
+    'chat with your attribution data',
+    'ask SourceTrack anything about your revenue',
+    'Where did this $12,400 contract actually come from?'
+  ]
+  const caught = REWORDINGS.filter(s => RETRACTED_V3_CLAIMS.some(c => c.pattern.test(s)))
+  assert.deepEqual(
+    caught, [],
+    'A rewording is now CAUGHT by the phrase layer. That is good news, but this test pins ' +
+    'the measured ceiling — update it deliberately and re-measure the false-positive cost ' +
+    'against the real file, not against isolated strings. See CONCEPT_CLAIMS above for why ' +
+    'the whole-file scan is where broadened patterns fail.'
+  )
+})
+
+test('🔴 CONTROL: the concept layer DOES catch what the phrase layer misses', () => {
+  // Without this, the ceiling test above proves only that the patterns are narrow — not
+  // that a broader shape was actually built and evaluated. This is the evidence behind the
+  // "not a tuning problem" claim.
+  for (const s of ['the value is pushed server-side to every ad platform',
+                   'chat with your attribution data',
+                   'Where did this $12,400 contract actually come from?']) {
+    assert.ok(CONCEPT_CLAIMS.some(c => c.test(s)), `concept layer must catch: ${s}`)
+  }
+  // ...and it is CLEAN on those same strings in isolation, which is exactly the point:
+  // the over-firing is a property of scanning a whole FILE, not of the strings themselves.
+  for (const s of ["AI referrals are the channel ad platforms can't see.",
+                   'the numbers your ad platform will never show you']) {
+    assert.ok(!CONCEPT_CLAIMS.some(c => c.test(s)), `clean in isolation: ${s}`)
+  }
+  // The over-fire is reproduced against the real file below.
+  const landing = readFileSync(join(REPO, V3_LANDING), 'utf8')
+  const fired = CONCEPT_CLAIMS.filter(c => c.test(landing)).map(c => c.id)
+  assert.ok(
+    fired.length > 0,
+    'the concept layer must over-fire on the real file — that measurement is the whole ' +
+    'reason it is not wired into the blocking guard. If this ever passes cleanly, re-run ' +
+    'the false-positive count and reconsider wiring it in.'
+  )
 })
