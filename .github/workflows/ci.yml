@@ -15,6 +15,15 @@ on:
   # no checks until this commit is merged INTO that branch too.
   pull_request:
     branches: [ main, feat/home-v14 ]
+  # Manual trigger. Added 2026-08-07 after getting a verdict on `main` required pushing an
+  # EMPTY COMMIT (3e495e6b) purely to move the head — the only way to make `push` fire.
+  # That is a bad tool for the job: it rewrites main's history for a diagnostic, and under
+  # `cancel-in-progress` a second push can cancel the run you were waiting for.
+  #
+  # Particularly needed on `main`, where runs are scarce for a structural reason: rapid
+  # sequential squash-merges cancel each other (see `concurrency` below), so a batch can
+  # leave main untested with no way to ask for a verdict after the fact. This gives one.
+  workflow_dispatch:
 
 # Cancel a superseded in-flight run when a branch is pushed again, so a rapid
 # push sequence bills one full run instead of N. Keyed by ref, so a PR branch and
