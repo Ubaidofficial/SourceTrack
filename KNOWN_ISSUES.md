@@ -3196,3 +3196,31 @@ That would be harmless if the defaults governed. They do not: `getPvLimit(plan, 
 **Status: migration DRAFTED, NOT APPLIED** (`supabase/migrations/20260807000000_backfill_pv_limit_to_plan_defaults.sql`). Per §8, CC writes the file and the founder applies it. It re-derives `pv_limit` from the current plan under a `GREATEST()` ceiling so **no row is ever lowered** — lowering a live cap is the one way this fix could cause the data loss it exists to prevent.
 
 **A backfill corrects today's four rows; it does not prevent the next repricing drifting identically.** The column default guarantees an override always exists, and the override always wins, so any future change to `PLAN_DEFAULT_PV_LIMIT` will again reach nobody. The recurrence options are set out in the PR that files this entry; **none is implemented here.**
+
+### KI-111 — the v3 claims guard catches PHRASINGS, not claims: every cut claim can be restated and pass (2026-08-07, measured, deliberately NOT "fixed")
+
+**Numbered 111, not 110, deliberately.** `KI-110` is cited in the standing agent rules (the four-suite naming requirement) but has **0 occurrences in this file** — it was referenced and never written. Taking 110 for unrelated content would make that citation resolve to the wrong entry. Whoever writes the suite-naming KI should use **110**; this is 111.
+
+**The defect.** `api/tests/v3-claims-allowlist.test.js`'s `RETRACTED_V3_CLAIMS` protects the claims cut on 2026-08-07 (§12 ad-platform egress, §11 MCP dataset-querying, §17's unsourced deal figure). Every one of its 8 patterns is **phrase-bound**: it matches the sentence that was cut, not the claim that sentence made.
+
+**Measured, not suspected — 12 plausible rewordings tested, 12 walked through, 0 caught:**
+
+| family | originals | rewordings that PASS |
+|---|---|---|
+| §12 egress | 3/3 caught | **0/5** — "the value is pushed server-side to every ad platform" · "conversions flow back into Meta, Google and TikTok automatically" · "we forward every conversion to your ad accounts" · "server-to-server conversion delivery to your ad platforms" · "your ad platforms get the revenue, not just the click" |
+| §11 MCP | 2/2 caught | **0/4** — "chat with your attribution data" · "ask SourceTrack anything about your revenue" · "talk to your data in plain English" · "your AI assistant can read your attribution" |
+| §17 figure | 1/1 caught | **0/3** — "Where did this $12,400 contract actually come from?" · "How did we win this $9,900 account?" · "That $5,000 sale — which channel earned it?" |
+
+**⚠️ Even the "reworded" catch-all is phrase-bound.** Pattern 8 (`/where did this \$[\d,]+ deal/i`) was added specifically to catch a different figure in the same heading — but it is bound to the noun **deal**. Swap in **contract**, **account** or **sale** and it misses. A pattern written to defeat rewording was itself defeated by rewording.
+
+**This was found live, not hypothetically.** `hero-orbit.jsx` in the design handoff carries *"the value is pushed server-side to every ad platform"* — §12's claim verbatim in meaning — and the guard did not see it. It also carries `$1,480.00`, which the guard **did** catch, so the file would have failed CI for the smaller of its two problems.
+
+**A concept-matching fix was built, measured, and NOT shipped.** `CONCEPT_CLAIMS` (exported from the same test file) matches `(subject NEAR predicate)` instead of a sentence. Against isolated copy strings it scored **14/14 rewordings caught, 0 false positives**. Against the **real file** it produced **six matches, every one legitimate** — including `index.astro`'s own header comment describing the §12 cut, `SyncList`'s "Google Ads"/"Salesforce" integration labels, and "AI referrals are the channel ad platforms can't see." Per **#692**, a guard that over-fires is bypassed as routine, which converts a known gap into a false sense of coverage. It is therefore exported and tested but **not wired into the blocking assertion**.
+
+**⚠️ THE MECHANISM — the first explanation was wrong, and the wrong one would have misdirected the fix.** The initial write-up said the cause was *"a claim and its negation share tokens"* — that "we push to your ad platforms" and "ad platforms can't see this" are lexically adjacent and inseparable by regex. **A control refuted it: those strings are CLEAN in isolation.** The real cause is that a **proximity window scanned over a whole SOURCE FILE bleeds across unrelated content** — "Google Ads" in one component's label lands within 90 characters of a verb in a neighbouring one, and the file's own comments name the claims they document.
+
+**So the direction for whoever tries next is: scan RENDERED COPY, not source** — and keep the window small enough that it cannot cross component boundaries. It is **not** a vocabulary problem, and chasing a smarter word list is the wrong road. The claim/negation difficulty is real in principle; it is not what these six matches were.
+
+**Status: NOT fixed, and the ceiling is pinned by test rather than left implicit.** Two tests in `v3-claims-allowlist.test.js` (added by the PR that filed this entry) assert the blind spot and reproduce the over-fire, so broadening the patterns forces a deliberate re-measurement against the real file instead of a quiet widening. The 8 phrase patterns are unchanged and still blocking.
+
+**What this means in practice:** every claim cut on 2026-08-07 is protected **only against its exact wording**. Claim-level review is a **human step at PR time**; this guard is a regression check for a specific string coming back, and nothing more. Treating a green run as "no false claims shipped" is the misreading this entry exists to prevent.
