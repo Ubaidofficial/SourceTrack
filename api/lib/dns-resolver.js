@@ -133,7 +133,20 @@ export async function verifySslAndRouting(domain) {
     if (!res.ok) return false
     
     const body = await res.json()
-    return body && body.ok === true && body.service === 'sourcetrack-proxy'
+    // ⚠️ `origin === true` IS THE LOAD-BEARING ASSERTION, not a nicety.
+    //
+    // managedProxyEarlyGate also answers this path (pending-safe, so a domain still
+    // provisioning DNS/SSL stays reachable), but its reply carries `gate: true` and NOT
+    // `origin: true`. Only the post-gate handler in api/index.js sets `origin`. So
+    // requiring it here means a pass proves the request traversed the gate AND reached
+    // the origin — the gate is structurally incapable of certifying itself.
+    //
+    // Without this clause the two responses are indistinguishable, which is precisely
+    // what #648 found: a 200 proved the gate was up and nothing more. Deleting this
+    // assertion silently restores that defect, and the run stays green either way.
+    return body && body.ok === true &&
+      body.service === 'sourcetrack-proxy' &&
+      body.origin === true
   } catch (err) {
     // Any network connection failure, SSL handshake error, or timeout fails closed
     return false

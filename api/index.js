@@ -180,6 +180,28 @@ app.use((req, res, next) => {
 // Stage 1 Early Managed Proxy Gate
 app.use(managedProxyEarlyGate)
 
+// ── Managed-proxy health, answered by the ORIGIN ────────────────────────────────
+// Mounted AFTER managedProxyEarlyGate on purpose. The gate admits this path but its
+// own reply carries `gate: true` and NOT `origin: true`, so the gate's response cannot
+// satisfy verifySslAndRouting(). Only this handler can — and reaching it proves the
+// request traversed the gate AND arrived at the origin.
+//
+// That is the fix for #648's one real gap: the gate used to answer with the exact shape
+// the verifier asserted, so a 200 proved the gate was up and nothing else. `origin: true`
+// is the discriminator, and it is set in exactly one place — here.
+//
+// ⚠️ NO-STORE IS LOAD-BEARING, NOT HYGIENE. This response was edge-cached with
+// `public, max-age=2592000` (30 days) on the live pull zone. Measured: a cache-buster
+// query string still returned `cdn-cache: HIT` (the zone ignores query strings) and a
+// `Cache-Control: no-cache` REQUEST header did not bypass it either. The client cannot
+// force freshness, so the origin must refuse to be cached. Same mechanism the tracking
+// pixel already uses (proxy.js: 'no-cache, no-store' on the 1x1 GIF).
+app.get('/.well-known/sourcetrack/proxy-health', (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+  res.set('Pragma', 'no-cache')
+  res.json({ ok: true, service: 'sourcetrack-proxy', origin: true })
+})
+
 // Request ID assignment and sanitization
 app.use(requestIdMiddleware)
 

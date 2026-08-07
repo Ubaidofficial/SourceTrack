@@ -8,6 +8,32 @@ import { writeJobRun } from '../lib/job-runs.js'
 const SLACK = process.env.SLACK_WEBHOOK_URL
 const API_URL = process.env.API_URL || 'http://localhost:3000'
 
+// ═══ ⚠️ THIS MONITOR'S OWN LIVENESS IS UNMONITORABLE. Recorded 2026-08-06. ═══
+//
+// It WRITES NOTHING, ANYWHERE. Every database call here is a .select() — sites (:49,
+// :176), job_runs (:220), sites count (:232), attributed_conversions count (:249). There
+// is no effect table, so there is no way to ask the database whether this job has ever
+// run. Its zero row-count in job_runs is not evidence of anything.
+//
+// Its only outputs are console.log and a Slack webhook, and the webhook stays SILENT
+// unless SLACK_WEBHOOK_URL is configured AND severity is already non-ok (:311). A healthy
+// run is indistinguishable from a run that never happened.
+//
+// That is a monitor whose purpose is catching silent failure, failing silently.
+//
+// ⚠️ AND ITS COVERAGE IS INCOMPLETE BY THE SAME MECHANISM IT EXISTS TO CATCH. The
+// liveness check at :113 ("No job runs found in job_runs table") judges the system by
+// READING job_runs — but three jobs never write there: this one, proxy-domain-recheck,
+// and data-quality-check. So this monitor cannot see the silent failure of a job that is
+// invisible to its only data source. See api/lib/job-runs.js for the full list and for
+// how a substring grep got that wrong once already.
+//
+// NOT FIXED HERE — giving this job an observable output is its own change, deliberately
+// not bundled with the proxy-verification work. The open question a fix must answer is
+// what makes an output prove the RUN happened rather than merely that the PROCESS
+// STARTED: a row written at entry proves boot, not completion, and a row written only on
+// failure reproduces the current silence.
+//
 // Checks that failing immediately classify the whole system as critical.
 // Everything else is warning-level. The money-rail business-logic checks
 // (nightly_job, conversions) are CRITICAL: a job that "succeeds" while processing

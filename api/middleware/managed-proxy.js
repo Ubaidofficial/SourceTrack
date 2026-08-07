@@ -110,9 +110,29 @@ export async function managedProxyEarlyGate(req, res, next) {
     }
 
     // 5. Handle pending-safe health check path first (accessible regardless of status).
-    // Shape must match what dns-resolver.js verifySslAndRouting() asserts.
+    //
+    // ⚠️ THIS RESPONSE DELIBERATELY OMITS `origin: true`, AND THAT IS THE WHOLE POINT.
+    // verifySslAndRouting() now requires `origin === true`, which is set ONLY by the
+    // real origin handler that sits BEHIND this gate (api/index.js). So this reply is
+    // structurally INCAPABLE of passing verification — the gate cannot certify itself.
+    //
+    // Before this change it returned the exact shape the verifier asserted, so a 200
+    // here proved the gate was up and nothing more: the check never reached the origin
+    // or its static files, and #648 recorded that as its one real gap. Making the gate
+    // unable to produce a passing body is stronger than trusting it not to.
+    //
+    // The path stays pending-safe (answered regardless of status) because a domain
+    // still provisioning DNS/SSL must be reachable for the pending loop — the caller
+    // just learns "gate up, origin unproven", which is the honest answer.
+    //
+    // ⚠️ DO NOT "FIX" THE SHAPE MISMATCH BY ADDING origin:true HERE. That would restore
+    // the exact defect. If a future check needs a gate-level probe, give it its own
+    // path and its own assertion.
     if (req.path === '/.well-known/sourcetrack/proxy-health') {
-      return res.json({ ok: true, service: 'sourcetrack-proxy' })
+      return res
+        .set('Cache-Control', 'no-store, no-cache, must-revalidate')
+        .set('Pragma', 'no-cache')
+        .json({ ok: true, service: 'sourcetrack-proxy', gate: true })
     }
 
     // 6. Enforce active status
