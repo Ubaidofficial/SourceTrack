@@ -105,7 +105,7 @@ export const V3_PAGE_PAIRS = {
   // is untouched: TrustBar's badge went 10.54 -> 1.22 on exactly this kind of flip
   // in 2b because the surface beneath it changed. Every pair on a dark surface
   // below is computed against that surface, not inherited from a light one.
-  '/v3': [
+  '/': [
     // dark band — section 4, the new surface
     { id: 'dark band title', sel: '.v3-section--dark .v3-section-title', fg: '#f6f3eb', bg: '#0B0A07', level: 'AA-large' },
     { id: 'dark band lede', sel: '.v3-section--dark .v3-section-lede', fg: '#a79e8c', bg: '#0B0A07', level: 'AA' },
@@ -156,8 +156,8 @@ export const V3_PAGE_PAIRS = {
     // became a class. See the INLINE STYLE GUARD below.
     { id: 'plan blurb on card', sel: '.v3-plan-blurb', fg: '#665F50', bg: '#FFFDF8', level: 'AA' }
   ],
-  // ── /v3/pricing ───────────────────────────────────────────────────────────
-  '/v3/pricing': [
+  // ── /pricing ───────────────────────────────────────────────────────────
+  '/pricing': [
     { id: 'plan name on card', sel: '.v3-plan h3', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
     { id: 'plan feature li', sel: '.v3-plan li', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
     { id: 'plan-alt small', sel: '.v3-plan-alt', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
@@ -175,8 +175,8 @@ export const V3_PAGE_PAIRS = {
     { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
     { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
   ],
-  // ── /v3/compare-ga4 ───────────────────────────────────────────────────────
-  '/v3/compare-ga4': [
+  // ── /compare/ga4 ───────────────────────────────────────────────────────
+  '/compare/ga4': [
     { id: 'compare panel label', sel: '.v3-compare-panel h3', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
     { id: 'compare value', sel: '.v3-compare-value', fg: '#12100C', bg: '#FFFDF8', level: 'AA-large' },
     { id: 'compare panel body', sel: '.v3-compare-panel p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
@@ -189,8 +189,8 @@ export const V3_PAGE_PAIRS = {
     { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
     { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
   ],
-  // ── /v3/product ───────────────────────────────────────────────────────────
-  '/v3/product': [
+  // ── /product ───────────────────────────────────────────────────────────
+  '/product': [
     // Steps sit DIRECTLY on the soft band with no card between them, so the
     // surface is --v3-gray-50 (#FAF8F1) and not the paper-card every other card
     // pair on this page is scored against.
@@ -212,8 +212,8 @@ export const V3_PAGE_PAIRS = {
     { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
     { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
   ],
-  // ── /v3/attribution ───────────────────────────────────────────────────────
-  '/v3/attribution': [
+  // ── /attribution ───────────────────────────────────────────────────────
+  '/attribution': [
     { id: 'family kicker', sel: '.v3-group > h3', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
     { id: 'family lede', sel: '.v3-group > p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
     { id: 'model name', sel: '.v3-group li b', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
@@ -236,7 +236,7 @@ export const V3_PAGE_PAIRS = {
     { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
   ],
   // ── /v3/ai-referral-tracking ──────────────────────────────────────────────
-  '/v3/ai-referral-tracking': [
+  '/ai-referral-tracking': [
     { id: 'stat number', sel: '.v3-stat-num', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
     { id: 'stat label', sel: '.v3-stat-label', fg: '#5B5548', bg: '#F7F4ED', level: 'AA' },
     { id: 'card body on paper-card', sel: '.v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
@@ -251,7 +251,7 @@ export const V3_PAGE_PAIRS = {
     { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
   ],
   // ── /v3/use-cases-saas ────────────────────────────────────────────────────
-  '/v3/use-cases-saas': [
+  '/use-cases-saas': [
     { id: 'stat number', sel: '.v3-stat-num', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
     { id: 'stat label', sel: '.v3-stat-label', fg: '#5B5548', bg: '#F7F4ED', level: 'AA' },
     { id: 'card body on paper-card', sel: '.v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
@@ -266,7 +266,7 @@ export const V3_PAGE_PAIRS = {
     { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
   ],
   // ── /v3/use-cases-ecommerce ───────────────────────────────────────────────
-  '/v3/use-cases-ecommerce': [
+  '/use-cases-ecommerce': [
     { id: 'stat number', sel: '.v3-stat-num', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
     { id: 'stat label', sel: '.v3-stat-label', fg: '#5B5548', bg: '#F7F4ED', level: 'AA' },
     { id: 'table cell', sel: '.v3-table-card td', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
@@ -279,7 +279,7 @@ export const V3_PAGE_PAIRS = {
     { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
   ],
   // ── /v3/report-builder ────────────────────────────────────────────────────
-  '/v3/report-builder': [
+  '/report-builder': [
     // The grouped list is the same frame attribution §2 uses, on the same soft
     // band, so the surfaces match — scored here anyway rather than carried over.
     { id: 'group kicker', sel: '.v3-group > h3', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
@@ -303,10 +303,16 @@ export const V3_PAGE_PAIRS = {
 
 // Pages that exist in the build and must therefore be registered above.
 // Populated as v3 pages land; a page here with no pairs is an error, not a skip.
+// PROMOTED ROUTES. These were '/v3/*' until the cutover; the pages now serve at the site
+// root. The list is repointed rather than dropped: dist/v3/* still exists but holds only
+// meta-refresh redirect stubs, and auditing a stub would return "no colours, no problems"
+// — a clean report from a file with nothing in it. Keys in V3_PAGE_PAIRS above must match
+// these exactly, or the coverage check below fails loudly (which is how this list was
+// found: the pairs map was repointed first and every route reported NO PAIRS).
 export const V3_ROUTES = [
-  '/v3', '/v3/pricing', '/v3/compare-ga4',
-  '/v3/product', '/v3/attribution', '/v3/ai-referral-tracking',
-  '/v3/use-cases-saas', '/v3/use-cases-ecommerce', '/v3/report-builder'
+  '/', '/pricing', '/compare/ga4',
+  '/product', '/attribution', '/ai-referral-tracking',
+  '/use-cases-saas', '/use-cases-ecommerce', '/report-builder'
 ]
 
 const DIST = 'dist'
