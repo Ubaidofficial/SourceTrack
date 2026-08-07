@@ -1,0 +1,190 @@
+---
+/**
+ * V3 PRODUCT — preview route, noindex. Not the live /product.
+ *
+ * ⚠️ TWO CLAIMS FROM THE DESIGN'S STAT BAND ARE NOT SHIPPED. Ruled 2026-08-06.
+ *
+ *   design said                          why it is not here
+ *   ──────────────────────────────────   ─────────────────────────────────────
+ *   "4 minute median time-to-install"    A MEASURED claim. There is no install
+ *                                        telemetry anywhere in main, and a
+ *                                        "median" asserts a distribution over
+ *                                        real installs that does not exist.
+ *   "42+ channels auto-classified"       channelFromEvent returns ~13 distinct
+ *                                        channel labels, not 42. The number
+ *                                        could not be settled from source, so
+ *                                        per the standing rule the claim ships
+ *                                        WITHOUT a number rather than with a
+ *                                        wrong one.
+ *
+ * Every value in the band below is settled from source and cited at its line.
+ *
+ * ⚠️ The design's §4 card "AI search visibility — track emerging discovery
+ * channels" is reworded to AI REFERRAL DETECTION. Those are two different
+ * features and only one ships: AI Visibility is flag-OFF behind
+ * AI_VISIBILITY_ENABLED=false (dashboard/src/featureFlags.js, #655), while
+ * inbound AI classification is live (channel-classifier.js:221 returns the
+ * 'AI Search' channel). Marketing the first would market a disabled feature.
+ *
+ * §3's drag-through timeline renders STATIC, same reasoning as compare-ga4's
+ * slider: the island is Phase 6 and §37.1 requires motion to depict real
+ * behaviour. All journey values are fixture data; §29.8 line is at the foot.
+ */
+import Base from "@/layouts/Base.astro";
+import Wrap from "@/layouts/v3/Wrap.astro";
+import SectionHead from "@/layouts/v3/SectionHead.astro";
+import StatRow from "@/layouts/v3/StatRow.astro";
+import "@/styles/v3-tokens.css";
+import "@/styles/v3-home.css";
+import "@/styles/v3-pages.css";
+
+// Every value settled from source. No value here is a measurement of customers.
+const stats = [
+  { value: "9", label: "attribution models on one first-party dataset" },
+  { value: "16", label: "AI assistants and answer engines classified on arrival" },
+  { value: "11", label: "report templates, or start from a blank canvas" },
+  { value: "1", label: "script tag, no tag manager required" },
+];
+
+const steps = [
+  {
+    num: "01",
+    title: "Capture visitor source.",
+    body: "UTMs, referrers, landing pages, campaign params, click IDs, AI assistants and direct traffic — preserved across sessions in first-party storage, without a cookie.",
+  },
+  {
+    num: "02",
+    title: "Connect the journey.",
+    body: "Every touchpoint stitched into one timeline — form, chat, meeting, trial, purchase — so a conversion arrives with the path that produced it rather than as an orphan session.",
+  },
+  {
+    num: "03",
+    title: "Build revenue reports.",
+    body: "Pick a metric, scope it, group it, pin it. Start from a blank canvas or one of eleven templates, then re-credit the same dataset under any of the nine models without re-tagging anything.",
+  },
+];
+
+// Fixture. Mirrors the demo workspace, not a customer. §29.8 line at the foot.
+const journey = [
+  { when: "Day 1", what: "<b>ChatGPT</b><em>Arrived with no UTM. Classified against 16 named assistants instead of falling into direct.</em>", val: "First touch" },
+  { when: "Day 3", what: "<b>Organic search</b><em>Returned via a landing page that already had a source attached.</em>", val: "Assist" },
+  { when: "Day 9", what: "<b>Newsletter</b><em>Email click, campaign preserved across the session boundary.</em>", val: "Assist" },
+  { when: "Day 19", what: "<b>Demo booked</b><em>Source and campaign land on the invite before anyone joins the call.</em>", val: "Conversion" },
+  { when: "Day 26", what: "<b>Stripe checkout</b><em>Revenue tied back to the click that earned it, then re-credited under whichever model you pick.</em>", val: "$1,480", won: true },
+];
+
+const capabilities = [
+  { h: "Source capture", p: "UTMs, referrers, landing pages, source params and campaign metadata, preserved across sessions." },
+  { h: "Customer journeys", p: "Follow each visitor from first touch to conversion as one timeline, not a pile of sessions." },
+  { h: "Conversion tracking", p: "Purchases, demos, trials, forms, signups, meetings and custom events." },
+  { h: "AI referral detection", p: "Sixteen assistants and answer engines classified on arrival, so they stop landing in direct." },
+  { h: "Report builder", p: "Blocks, not templates. Measure, scope, group, pin — then save it to the dashboard." },
+  { h: "Cookieless by default", p: "No cookie, no fingerprint, DNT and GPC honoured. Privacy is the architecture, not a setting." },
+];
+---
+
+<Base
+  title="Product — attribution without the analytics maze | SourceTrack"
+  description="Capture the source, connect the journey, report on revenue. One script tag, nine attribution models, one first-party dataset."
+  noindex={true}
+>
+  <div class="v3">
+    {/* 1 — hero */}
+    <section class="v3-hero">
+      <Wrap>
+        <h1>Attribution without the analytics maze.</h1>
+        <p class="v3-hero-sub">
+          Most tools make you choose between a report you can't change and a
+          setup project you can't finish. Capture the source, connect the
+          journey, report on revenue — and stop there.
+        </p>
+      </Wrap>
+    </section>
+
+    {/* 2 — soft band, numbered step rail (§2.7: a sequence, not three peers) */}
+    <section class="v3-section v3-section--soft">
+      <Wrap>
+        <SectionHead
+          eyebrow="The model"
+          heading="Three steps. One source of truth."
+          lede="Most analytics tools force every business through the same default template. SourceTrack keeps the story small: capture → attribute → report."
+        />
+        <div class="v3-steps">
+          {steps.map((s) => (
+            <div class="v3-step">
+              <span class="v3-step-num">{s.num}</span>
+              <h3>{s.title}</h3>
+              <p>{s.body}</p>
+            </div>
+          ))}
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 3 — window frame, STATIC journey (see the header note) */}
+    <section class="v3-section">
+      <Wrap>
+        <SectionHead
+          eyebrow="Customer journeys"
+          heading="Watch a conversion unfold."
+          lede="Every touchpoint, source and revenue handoff reconstructed from a single visitor — no cookie, no login, no cross-site identifier."
+        />
+        <div class="v3-frame">
+          <div class="v3-frame-chrome">
+            <span class="v3-frame-dots"><i /><i /><i /></span>
+            <span class="v3-frame-url">app.sourcetrack.example / journeys</span>
+          </div>
+          <div class="v3-frame-body">
+            <div class="v3-journey">
+              {journey.map((r) => (
+                <div class:list={["v3-journey-row", r.won && "v3-journey-row--won"]}>
+                  <span class="v3-journey-when">{r.when}</span>
+                  <span class="v3-journey-what" set:html={r.what} />
+                  <span class="v3-journey-val">{r.val}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 4 — soft band, capability cards */}
+    <section class="v3-section v3-section--soft">
+      <Wrap>
+        <SectionHead
+          eyebrow="Why it matters"
+          heading="Ad platforms are biased. Analytics tools are noisy."
+          lede="Every ad platform grades its own homework, and a pageview tool was never built to answer a revenue question. SourceTrack sits closer to the journey and reports on outcomes."
+        />
+        <div class="v3-cards">
+          {capabilities.map((c) => (
+            <div class="v3-card"><h3>{c.h}</h3><p>{c.p}</p></div>
+          ))}
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 5 — stat band. Every value settled from source; see the header note for
+        the two the design shipped that are not here. */}
+    <section class="v3-section v3-section--tight">
+      <Wrap><StatRow stats={stats} /></Wrap>
+    </section>
+
+    {/* 6 — CTA close on paper. Lime on the button only (§2.6). */}
+    <section class="v3-cta-close">
+      <Wrap>
+        <div class="v3-cta-inner">
+          <div>
+            <h2>Make attribution usable for your whole team.</h2>
+            <p>28 days free, no card. Install the script and watch your first attributed session land.</p>
+          </div>
+          <div class="v3-cta-actions">
+            <a class="v3-btn-accent" href="https://app.sourcetrack.ai/signup">Start 28-day free trial</a>
+          </div>
+        </div>
+        <p class="v3-disclosure">Product visuals shown use illustrative data.</p>
+      </Wrap>
+    </section>
+  </div>
+</Base>

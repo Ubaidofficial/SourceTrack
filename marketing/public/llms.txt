@@ -7,7 +7,7 @@
 - Multi-Touch Attribution: Supports first-touch, last-touch, linear, and time-decay attribution models.
 - Visitor Journey Inspector: View the complete pre-conversion touchpoint timeline for any lead or customer.
 - Search Console Integration: Matches GSC organic queries and landing pages to revenue.
-- Cookieless Identity Moat: 100% first-party, cookieless, zero cross-site tracking or fingerprinting.
+- Cookieless Identity Moat: first-party and cookieless, without cross-site tracking or fingerprinting.
 
 ## Links
 - Website: https://www.sourcetrack.ai
