@@ -64,6 +64,9 @@ export default function DocsInstall() {
           <DocsCodeBlock lang="html" replaceKey={true} pasteOnce={true}>
 {`<script async src="https://api.srctk.com/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
           </DocsCodeBlock>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            <strong>Using a custom tracking domain?</strong> Your snippet is different from the example above &mdash; it loads the tracker from your own subdomain, not from <code>api.srctk.com</code>. Copy the exact snippet from Setup in the app rather than this page; it is generated for your site and already points at the right host.
+          </p>
         </section>
 
         {/* What captures section */}

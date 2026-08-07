@@ -40,7 +40,10 @@ const PAGE_TITLES = {
   '/leads': 'All Leads',
   '/campaigns': 'Campaigns',
   '/report-builder': 'Report Builder',
-  '/ai-visibility': 'AI Visibility',
+  // '/ai-visibility' is deliberately absent while AI_VISIBILITY_ENABLED is false. A
+  // PAGE_TITLES key whose route no longer resolves is the stale-title-map trap in
+  // CLAUDE.md §10 — an import grep cannot see it, because the key is a path STRING.
+  // Restore this line in the same change that flips the flag.
   '/app/integrations': 'Integrations',
   '/snippet': 'Install Tracking',
   '/settings': 'Settings',

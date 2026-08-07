@@ -7,12 +7,14 @@
   @apply relative flex flex-wrap items-center justify-between;
 }
 
-/* text-text, NOT text-text-dark: `text_dark` is #161310 in BOTH themes (theme.json's default
-   and darkmode blocks both set it), so on the dark body (#12100C) the wordmark rendered at
-   1.03:1 — invisible. `text` is the theme-responsive token (#161310 light / #F6F3EB dark),
-   which lands at 16.85:1 and 17.14:1. This is the shipped wordmark: config.site.logo is ""
-   by design and Logo.astro falls back to logo_text, so this rule IS the brand in the nav —
-   and in the footer, which renders the same <Logo /> component. */
+/* Uses the `text` token, not `text_dark`. Kept as a note because the names invite the
+   swap: back when the site shipped two themes, `text_dark` was #161310 in BOTH of them,
+   so on the dark body it rendered at 1.03:1 — invisible. The site is light-only now
+   (design.md §3.1) so that failure can no longer occur, but `text` remains the correct
+   token: it is the one that carries body-text semantics, and `text_dark` only survives as
+   a palette entry. This is the shipped wordmark: config.site.logo is "" by design and
+   Logo.astro falls back to logo_text, so this rule IS the brand in the nav — and in the
+   footer, which renders the same <Logo /> component. */
 .navbar-brand {
   @apply text-text  text-xl font-semibold;
   image {

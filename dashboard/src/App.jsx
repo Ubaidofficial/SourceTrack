@@ -92,6 +92,9 @@ const DoNotSell = lazy(() => import('./pages/DoNotSell'))
 const Terms = lazy(() => import('./pages/Terms'))
 const SEORevenue = lazy(() => import('./pages/SEORevenue'))
 const AIVisibility = lazy(() => import('./pages/AIVisibility'))
+// Gate for the route below. Carried over from main during the #620 merge — the lazy
+// rewrite predates it (base ee93b755) and would otherwise ship the route UNGATED.
+import { AI_VISIBILITY_ENABLED } from './featureFlags'
 const PublicIntegrations = lazy(() => import('./pages/PublicIntegrations'))
 const Security = lazy(() => import('./pages/Security'))
 const Demo = lazy(() => import('./pages/Demo'))
@@ -408,7 +411,13 @@ export default function App() {
               <Route path="/demo" element={<Demo />} />
               <Route path="/report-builder" element={<ReportBuilderGate />} />
               <Route path="/seo-revenue" element={<ProtectedRoute><SEORevenue /></ProtectedRoute>} />
-              <Route path="/ai-visibility" element={<ProtectedRoute><AIVisibility /></ProtectedRoute>} />
+              {/* AI Visibility is BUILT but its backend is not deployed — the route is
+                  withheld rather than served, because readPipe() fails closed and the
+                  page would throw on every request. See featureFlags.js for the five
+                  conditions that must hold before this flips. */}
+              {AI_VISIBILITY_ENABLED && (
+                <Route path="/ai-visibility" element={<ProtectedRoute><AIVisibility /></ProtectedRoute>} />
+              )}
               <Route path="/old-analytics" element={<Navigate to="/analytics" replace />} />
               <Route path="/snippet" element={<Navigate to="/setup" replace />} />
               <Route path="/setup" element={<ProtectedRoute><Setup /></ProtectedRoute>} />

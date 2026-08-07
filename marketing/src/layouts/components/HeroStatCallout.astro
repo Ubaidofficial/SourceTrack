@@ -37,7 +37,15 @@ const AI_SOURCES = ["ChatGPT", "Perplexity", "Claude", "Gemini"];
 ---
 
 <div class="mx-auto mt-8 w-full max-w-[560px]">
-  <div class="rounded-[20px] border border-[#2D3333] bg-[#121616]/80 px-5 py-4 backdrop-blur-xl">
+  {/* Solid fill, no backdrop blur. `bg-[#121616]/80 backdrop-blur-xl` was
+      glassmorphism, barred by §25.1 (open founder decision, binding on generation
+      until ruled) — and this section was regenerated in Phase 2a, so "it was already
+      here" does not exempt it. Legibility was checked before the change rather than
+      after: composited over the hero's paper canvas the fill goes #404241 -> #121616,
+      and contrast IMPROVES on both text pairs — white 10.13 -> 18.23, the #C7CFCF
+      chips 5.52 -> 10.14. Opaque, not a substitute effect: no replacement blur,
+      scrim, or shadow. */}
+  <div class="rounded-[20px] border border-[#2D3333] bg-[#121616] px-5 py-4">
     <div class="flex items-center gap-3">
       <p class="text-left text-sm font-black tracking-tight text-white sm:text-base">
         AI tools influenced {LEAD_COUNT} leads this month

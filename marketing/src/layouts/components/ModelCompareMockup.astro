@@ -72,9 +72,9 @@ const comparisons = [
   },
 ];
 
-// Bar fills. Theme tokens where one exists — both --color-primary and --color-accent-warm
-// are declared identically under :root and :root[data-theme="dark"] in generated-theme.css,
-// so these resolve the same in either site theme and follow a future palette change.
+// Bar fills. Theme tokens where one exists — --color-primary and --color-accent-warm are
+// declared once in generated-theme.css (the site is light-only, design.md §3.1), so these
+// follow a future palette change without being restated here.
 // The muted tone has no token; it is the literal DashboardMockup.astro and
 // DirectRescueMockup.astro already use for de-emphasised text. Direct is deliberately the
 // muted one: it is the touch that carries no source information.

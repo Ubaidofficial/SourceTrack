@@ -26,9 +26,20 @@ function parseFontString(fontStr) {
   return { name: cleanName, weights };
 }
 
+// Families listed in theme.json's `self_hosted` array are served from
+// marketing/public/fonts via a hand-written @font-face in src/styles/fonts.css
+// (design.md §3.1 — Geist + Geist Mono self-hosted, no third-party font host).
+// They still earn a --font-<key> token from theme.json so Tailwind can build the
+// utility, but they must NOT be routed through a remote provider here: that would
+// register a second, competing @font-face for the same family.
+//
+// Base.astro reads the same array to skip rendering <Font> for these — keep the
+// two in sync via theme.json, never by duplicating the list.
+const SELF_HOSTED_FONTS = new Set(theme.fonts.self_hosted || []);
+
 // Build fonts configuration from theme.json
 const fontsConfig = Object.entries(theme.fonts.font_family)
-  .filter(([key]) => !key.includes("_type"))
+  .filter(([key]) => !key.includes("_type") && !SELF_HOSTED_FONTS.has(key))
   .map(([key, fontStr]) => {
     const { name, weights } = parseFontString(fontStr);
     const typeKey = `${key}_type`;
@@ -57,7 +68,11 @@ export default defineConfig({
   fonts: fontsConfig,
   integrations: [
     react(),
-    sitemap(),
+    // /v3 is a noindex PREVIEW route. A noindex page listed in the sitemap is a
+    // contradiction — it tells crawlers "index this" and "do not index this" at
+    // once, and Search Console reports it as an error rather than ignoring it.
+    // Filtered here so the two signals agree.
+    sitemap({ filter: (page) => !page.includes("/v3") }),
     AutoImport({
       imports: [
         "@/shortcodes/Button",

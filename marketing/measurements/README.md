@@ -1,0 +1,96 @@
+# V3 measurement gates
+
+Any §2.6 or geometry figure quoted for a v3 page must come from a browser run that passed
+the gates in `v3-sanity-gates.json`. **Analytic figures do not close a claim.**
+
+## Why the gates exist
+
+A whole measurement round was voided when `devicePixelRatio 0.8` made a nominal 390px
+viewport render at ~625px CSS pixels. Every rect in that run was real; the viewport was not
+what it was believed to be. The h1 looked like it overflowed by 235px, and the conclusion —
+"the branch ships a mobile layout bug" — was wrong. It cost four rounds.
+
+A gate is one element whose width is **derivable from CSS**, so a mismatch proves the
+viewport is wrong before any figure is taken.
+
+## MEASURED 2026-08-06 at ref a6a21e40 — and the warning below still stands
+
+| viewport | emulate argument | true innerWidth | resulting dpr | `.v3-wrap` |
+|---|---|---|---|---|
+| desktop — **prefer this** | `1152x720x1.25` | 1440 | **1.0** | 1320px |
+| desktop — also correct | `1152x720x1` | 1440 | 0.8 | 1320px |
+| mobile | `390x844x1,mobile,touch` | 390 | — | 390px |
+
+⚠️ **TWO DESKTOP ENTRIES, AND BOTH ARE RIGHT. Do not delete one as stale.**
+Measured 2026-08-06. `1152x720x1` yields the correct **innerWidth 1440** but leaves
+`devicePixelRatio` at this host's native **0.8**. `1152x720x1.25` yields innerWidth 1440
+**and** dpr **1.0** — the `x1.25` cancels the host's 0.8 exactly.
+
+A run at dpr 0.8 is **not wrong**: CSS-pixel geometry is what §2.6 and §2.7 are scored in,
+and that is identical at either dpr. Prefer `x1.25` anyway, because at dpr 1.0 a screenshot's
+device pixels map 1:1 to CSS pixels, so what a reviewer measures off the image matches what
+the tool reported. At 0.8 they differ by 25% and someone eventually reconciles two correct
+numbers as a discrepancy.
+
+The pair is recorded rather than collapsed because a single entry invites the next reader to
+assume the other was a mistake. Both were measured; the preference is about screenshot
+fidelity, not correctness.
+
+⚠️ **These are ENVIRONMENT-SPECIFIC.** On this host `devicePixelRatio` is 0.8, so
+`1440x900x1` yields innerWidth **1800**. The LIVE site needed `1440x900x1`. Both arguments
+are correct in their own context, which is exactly why the gate exists: **its value is the
+verification step, not the argument.** Always read `window.innerWidth` and compare before
+trusting a single rect.
+
+## ⚠️ The emulate argument is NOT hardcoded, deliberately
+
+An earlier instruction fixed it at `1152x720x1` to yield a real 1440. That was
+**environment-specific** — it compensated for one machine's `devicePixelRatio 0.8` — and
+was later contradicted: on the live site, `1440x900x1` yields a real 1440.
+
+**Both figures are right somewhere and wrong somewhere else.** So `emulateArg` starts
+`null` and is filled by measuring what the tool actually produces:
+
+1. Set a viewport, read `window.innerWidth`, record both.
+2. If `innerWidth` != `expectedInnerWidth`, the argument is wrong for this environment —
+   adjust and repeat. Do not proceed.
+3. Read the gate selector's width and compare to `derivedExpectation`.
+4. Only when both match, record `measuredValue`, `measuredAt`, `measuredRef` and set
+   `status` to `MEASURED`.
+
+Re-measure whenever the container CSS or `--v3-max` changes. `measuredRef` is what makes
+staleness detectable: a gate recorded against a ref that is no longer HEAD is a gate that
+describes markup which may no longer exist.
+
+## Method rules, learned the hard way
+
+- **`getClientRects()`, never `getBoundingClientRect()`** for anything that can wrap. On a
+  multi-line inline the latter returns the union box, which made a two-fragment highlight
+  read as one and produced a figure that was wrong by ~2x.
+- **Report `window.innerWidth` and `innerHeight` beside every value.** A rect without its
+  viewport is not interpretable.
+- **Measure the element that carries the property.** A gradient's geometry derives from the
+  box painting it, not from the screen. Measuring the viewport where the hero was painted
+  reported 8.1% for a surface that is really ~26.9%.
+
+## ⚠️ §2.7: ask for a distinct TREATMENT, not a distinct CONTAINER
+
+When commissioning a §2.7 check, the question is **"do these two adjacent sections share a
+TREATMENT?"** — never *"does this section read as a distinct container?"*
+
+§2.7 governs container-shape **variety** across a sequence. A ruled band is one of the seven
+treatments, and a treatment does **not** have to be an enclosed box. Asking whether something
+reads as a "container" invites a **no** for a band that is correctly distinct, because a band
+is not a container.
+
+This cost a round trip on 2026-08-06: the stat band was asked about as a container, answered
+accurately as one, and the accurate answer was to the wrong question. The follow-up — *does
+it read as a distinct treatment from its neighbours* — cleared all five boundaries
+immediately, with nothing about the page having changed.
+
+Same failure family as everything else in this file: the run was correct, the instrument was
+pointed at the wrong property. Phrase the question in the spec's own terms.
+
+**Also ask about BOTH neighbours, not just the one under suspicion.** A section can differ
+from the one above and repeat the one below; a check that names only the reported boundary
+cannot see it.

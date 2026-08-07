@@ -4,7 +4,27 @@
 // No competitor logos (design.md §35.3 compliant). Text column headers only.
 ---
 
-<section class="py-20 relative overflow-hidden bg-[#12100C]/60 border-y border-white/5">
+{/* §2.7 POSITION 7 — TABLE CARD. The section is now a plain paper-surface container
+    holding the single bounded card the table already lived in, rather than another
+    full-bleed tinted band. Position 5 is a full-bleed grid and 6 is a divided band, so
+    a third band here would be the run §2.7 exists to break.
+
+    IT ALSO REMOVES AN AA FAILURE — but not the one first diagnosed, and the distinction
+    is the useful part of this comment.
+
+    The failing pair was the section LEDE (`text-gray`, --color-gray #6e675c), which sat
+    directly on the old `bg-[#12100C]/60` surface. 60% dark over the paper page
+    composites to roughly #55534e, and grey-on-grey measured **1.05:1** against a 4.5
+    requirement — effectively invisible, and the worst pair on the homepage by a wide
+    margin. On the paper surface the same colour is 5.09:1.
+
+    The table CELLS (#A79E8C) were never the problem. They are inside the opaque
+    #1B1811 card and measure 6.68:1 — passing before this change and unchanged by it.
+    An earlier pass reported them as the 2.00:1 failure by compositing them against the
+    section tint instead of the card they actually sit in. Recorded because the mistake
+    is easy to repeat: when a section is translucent, WHICH element a colour sits on
+    decides the result, and the nearest opaque ancestor is the one that counts. */}
+<section class="comparison-section py-20 relative overflow-hidden">
   <div class="main-container">
     <div class="container px-4">
       <div class="mb-12 text-center">
@@ -57,7 +77,13 @@
               <td class="py-4 px-4 font-black text-primary">
                 <span class="inline-flex items-center gap-1.5 text-primary">
                   <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                  <span>22 AI domains</span>
+                  {/* COUNT IS GUARDED. api/tests/ai-assistant-count-copy.test.js reads this
+                      literal and asserts it equals the number of distinct canonical labels in
+                      AI_DOMAINS_MAP (api/lib/channel-classifier.js). Change the classifier and
+                      this string must move with it, or the suite fails.
+                      Counting labels, not domains, on purpose: chatgpt.com and openai.com are
+                      one product to a buyer, and a domain total drifts on every alias added. */}
+                  <span>16 AI assistants and answer engines</span>
                 </span>
               </td>
               <td class="py-4 px-4 text-[#D5D0C3]">ChatGPT focus</td>

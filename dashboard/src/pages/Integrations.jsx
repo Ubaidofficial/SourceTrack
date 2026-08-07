@@ -360,6 +360,36 @@ export default function Integrations() {
     ? 'error'
     : 'warning'
 
+  // §6 — "Active" on its own is a claim about the past tense. Verification now runs on
+  // a schedule (api/jobs/proxy-domain-recheck.js: hourly while pending, daily once
+  // active), so the honest thing to show alongside it is WHEN that last happened. One
+  // production row read `active` with last_checked_at frozen for three weeks; a badge
+  // with no age cannot distinguish that from a domain verified a minute ago.
+  //
+  // Renders nothing when there is no timestamp — an empty state, never a fabricated
+  // "just now".
+  const proxyLastCheckedLabel = (() => {
+    const iso = proxyData?.last_checked_at
+    if (!iso) return null
+    const ms = Date.now() - new Date(iso).getTime()
+    if (!Number.isFinite(ms) || ms < 0) return null
+    const mins = Math.floor(ms / 60000)
+    if (mins < 1) return 'Checked just now'
+    if (mins < 60) return `Checked ${mins}m ago`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24) return `Checked ${hrs}h ago`
+    return `Checked ${Math.floor(hrs / 24)}d ago`
+  })()
+
+  // Daily cadence once active, so anything past ~48h means the sweep itself is not
+  // running — a different failure from the domain being down, and worth saying so.
+  const proxyCheckStale = (() => {
+    const iso = proxyData?.last_checked_at
+    if (!iso || proxyData?.status !== 'active') return false
+    const ms = Date.now() - new Date(iso).getTime()
+    return Number.isFinite(ms) && ms > 48 * 60 * 60 * 1000
+  })()
+
   const crossDomainConfigured = site?.cross_domain_domains && site.cross_domain_domains.length > 0
 
   const stripeConnected =
@@ -704,7 +734,14 @@ export default function Integrations() {
   // (https://api.srctk.com) even when the dashboard is running on localhost or staging.
   // This prevents copy-paste errors where local/staging domains would leak into customer emails/sites.
   // This value is only used for UI code examples and does not affect staging integrations or API fetch calls.
-  const apiBase = window.location.origin.includes('localhost') ? 'https://api.srctk.com' : 'https://api.srctk.com'
+  // Deliberately a constant, not a ternary. It used to read
+  // `origin.includes('localhost') ? 'https://api.srctk.com' : 'https://api.srctk.com'`
+  // — identical branches, which reads as a copy-paste bug on every review. The
+  // BEHAVIOUR was right (see the two lines above) and is unchanged; only the
+  // conditional-shaped way of writing a constant is gone. The webhook URLs at :190,
+  // :200 and :280 keep their ternaries on purpose: those are pasted into Stripe and
+  // Shopify by a developer working locally, where localhost is the wanted value.
+  const apiBase = 'https://api.srctk.com'
   const pixelBase = site?.site_key ? `${apiBase}/api/pixel?site_key=${site.site_key}` : ''
   const emailPixelExample = pixelBase ? `${pixelBase}&event=email_open&uid={{USER_ID}}&campaign={{CAMPAIGN_NAME}}` : ''
   const serverPixelExample = pixelBase ? `${pixelBase}&event=pageview&uid={{USER_ID}}&url={{PAGE_URL}}` : ''
@@ -1762,7 +1799,11 @@ export default function Integrations() {
             <CollapsibleRow
               icon={ShieldCheck}
               title="Custom Tracking Domain / Managed Proxy"
-              subtitle="Bypass standard browser ad-blockers and run tracking as a first-party resource"
+              subtitle={
+                proxyLastCheckedLabel
+                  ? `Bypass standard browser ad-blockers and run tracking as a first-party resource · ${proxyLastCheckedLabel}${proxyCheckStale ? ' — re-check overdue' : ''}`
+                  : "Bypass standard browser ad-blockers and run tracking as a first-party resource"
+              }
               status={proxyStatusBadgeType === 'verified' ? 'success' : proxyStatusBadgeType}
               badgeLabel={proxyStatusLabel}
               actionButton={

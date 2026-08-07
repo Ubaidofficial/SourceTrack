@@ -71,12 +71,35 @@ This version expands the prior V1.1 design system with the missing product surfa
   must depict a real, verifiable product behaviour, never decoration disconnected from what the product
   does. It is a constraint on the other §37.1 rows rather than a new motion type. JourneyTrail (PR #571)
   and ModelCompareMockup (PR #576) are named as the compliant-before-the-rule reference implementations.
-- v1.4, **OPEN — founder decision required, deliberately not settled here:** glassmorphism. §25.1
-  lists it under "avoid" as an AI-generation guardrail; §26, the master V1 prohibited list, does not
-  address it in either direction. Needed call: a full V1-wide ban, or a guardrail scoped to
-  AI-generated mockups only. Raised when a "liquid glass" card technique was considered and retracted
-  without a clear answer either way. Until this is answered, treat §25.1 as binding on generation and
-  do not read it as a V1-wide product ban.
+- v1.4 (2026-08-05): §23's **Dark mode** row amended — the app keeps both themes with the top-bar
+  toggle (§4), the **marketing site is light-only with no toggle**. PR #643 is named as the shipped
+  reference implementation; it deleted `marketing/src/layouts/components/ThemeToggle.astro` and removed
+  it from `Header.astro`. The row previously read *"Full, both app and marketing. Toggle in top bar."*,
+  so §23 — which declares itself authority ("if anything conflicts, this table wins") — was asserting
+  behaviour `main` no longer ships. §3.3's dark tokens are **unchanged** and remain live for the app;
+  the app-side references in §4 (top-bar item 5) and §30.8 were checked and are **not** affected.
+  **§29.2 still reads "light-first with a dark toggle" and is contradicted by the same PR — left
+  unamended here deliberately, scoped to a follow-up so this row lands alone.**
+- v1.4 (2026-08-05): §29.2 rewritten for **light-only**, closing the contradiction flagged but
+  deliberately left unfixed by #644. The opening paragraph read *"light-first with a dark toggle,
+  defaulting to the visitor's OS preference … render on warm ink in both themes"*; PR #643 deleted the
+  toggle and collapsed marketing to a single light palette, so the spec Phase 2 builds from described
+  behaviour that no longer exists. **The design intent is preserved, not deleted:** the warm-ink product
+  band and final CTA stay, *and so does the stated reason* — they are what give the light page its
+  structure and keep the product frame reading as a lit object rather than a flat screenshot. Only the
+  theme mechanics (toggle, OS-preference default, "both themes", canvas inversion) are dropped. PR #643
+  named as the shipped reference implementation.
+- v1.4 (2026-08-05): §29.2's **"soft lime glow behind the product preview"** reconciled with §2.6 in the
+  §29.2 text itself, so the homepage spec no longer has to be read alongside §2 to be applied safely.
+  Both limits restated inline (~15% of visible area, never a full-bleed wash or glow behind primary
+  content; computed WCAG AA verified, never eyeballed), and §2.6's **OPEN live-hero defect** —
+  glow at ~70–80% of view, white-on-lime below AA — is cross-referenced explicitly as a defect and
+  **not** a reference implementation, so Phase 2 cannot re-ship it by copying the current hero.
+- v1.4 → **CLOSED 2026-08-06: glassmorphism is a full V1-WIDE BAN.** Was open pending a founder
+  call between a V1-wide product ban and a guardrail scoped to AI-generated mockups only. **Ruled:
+  V1-wide.** It is now listed in §26 (which is what makes it binding on shipped UI) and explained in
+  §26.2; §25.1 is unchanged and still binds generation. Raised when a "liquid glass" card technique
+  was considered and retracted without a clear answer either way.
 
 ---
 
@@ -144,7 +167,10 @@ SourceTrack has two major pillars:
 - Not a heatmap/session-recording product
 - Not a CRM
 - Not a full SEO suite
-- Not a native Shopify app in V1
+- Not a **shipped** native Shopify app in V1 — ⚠️ **corrected 2026-08-06: the app IS BUILT.** It is
+  **not deployed** and **Shopify Level 1 approval has not been granted**, so it is not available to
+  any customer and must not be claimed. The prohibition stands; the old wording implied the code did
+  not exist, which is false. See §17.6.
 - Not a public report-sharing platform in V1
 
 ### 1.5 Safe V1 claims
@@ -165,7 +191,9 @@ SourceTrack has two major pillars:
 
 - No PII in transit
 - Full Stripe production attribution
-- Native Shopify integration
+- Native Shopify integration — ⚠️ **still unclaimable, but for a different reason than this list
+  implies (2026-08-06): the app is BUILT, not deployed, and not Level 1 approved.** Do not claim it
+  until it ships and is approved
 - CRM sync
 - ROAS reporting unless ad cost data exists
 - Full SEO suite
@@ -241,6 +269,22 @@ ceiling regardless of how soft it is.
 background glow covers roughly 70–80% of visible area, and white text sits on a bright-lime highlight
 block at a computed contrast below AA. This is the motivating case for the rule and is tracked as a
 follow-up task; it is recorded here as an open defect, not as a shipped example.
+
+> ⚠️ **RECORDED CONTRADICTION — NOT RESOLVED. Founder ruling 2026-08-06: record it, do not fix it.**
+>
+> **The heading and the rule disagree about scope.** This section is titled *"Accent-density
+> **ceiling**"* — which reads as a cap on accents generally — but every sentence of the rule itself
+> names **lime only**. §3.1:309 lists a second accent, `#FF7A33`, explicitly labelled *"Accent —
+> counterweight"*, and §3.1's token block adds `#F2A93B` as a gradient-only bridge.
+>
+> **The gap that follows: no rule caps TOTAL accent density.** A screen could hold 15% lime plus an
+> unbounded amount of `#FF7A33` and violate nothing written here, while plainly breaking the intent
+> stated in the opening line — *"a signal stops signalling once it covers the screen."* Whether the
+> ceiling should be per-accent or aggregate is an open design decision.
+>
+> **Do not silently reconcile this** by widening the rule text to "accents" or by narrowing the
+> heading to "Lime-density ceiling". Either edit would look like a typo fix and would quietly decide
+> the open question. It needs a ruling, not a wording pass.
 
 ### 2.7 Container-shape variety
 
@@ -2211,7 +2255,19 @@ Do not build:
 
 ### 17.6 Shopify V1 boundary
 
-Shopify is manual webhook only in V1.
+Shopify is manual webhook only in V1 — **as the shipped surface.**
+
+> ⚠️ **CORRECTED 2026-08-06 — "manual webhook only" describes what CUSTOMERS CAN USE, not what exists.**
+> **A native Shopify app IS BUILT** (see `Ubaidofficial/sourcetrack-shpfy-app`). It is **not
+> deployed**, and **Shopify Level 1 approval has not been granted.**
+>
+> **Both halves matter and neither cancels the other.** The customer-facing boundary is unchanged:
+> manual webhook is the only path a customer can take today, and the no-native-app claim rule below
+> **stands exactly as written**. What was wrong is the *reason* — this section read as "the app does
+> not exist", and a reader planning work from it would have scoped a build that is already done.
+>
+> **Founder ruling, recorded: rewrite the claims, DO NOT deploy the app.** Deployment is not a
+> follow-up implied by this correction.
 
 Required copy:
 
@@ -2219,7 +2275,7 @@ Required copy:
 - HMAC verification guidance
 - order ID dedupe guidance
 - line item handling docs
-- no native app claim
+- no native app claim — **unchanged; built-but-undeployed is still unclaimable**
 
 ---
 
@@ -2468,7 +2524,7 @@ This table is authority. If anything conflicts, this table wins.
 | Landing page performance | V1 verified | Full |
 | Cookieless visitor ID | V1 verified | Full |
 | Privacy-minimized tracking | V1 verified | Full |
-| Dark mode | V1 | Full, both app and marketing. Toggle in top bar. |
+| Dark mode | V1 (app only) | **App: both themes, toggle in the app top bar (§4).** **Marketing site: light-only, no toggle.** Reference implementation — PR #643, merged 2026-08-05, which deleted `marketing/src/layouts/components/ThemeToggle.astro` and removed it from `Header.astro`. §3.3's dark tokens remain live for the app and are unchanged. |
 | Manual lead qualification | V1 verified | Full |
 | Lead quality metrics | V1 | No revenue required |
 | Manual conversion webhook | V1 verified | Full |
@@ -2486,9 +2542,11 @@ This table is authority. If anything conflicts, this table wins.
 | HubSpot sync | V1.1 | Locked card only |
 | PDF export | V1.1 | Locked state only |
 | Activity heatmap | V1.1 | Locked. Currently shipping in the journey panel and must be gated. |
-| Google Ads cost import | V2 | Not active V1 UI |
-| Meta Ads cost import | V2 | Not active V1 UI |
-| TikTok cost import | V2 | Not active V1 UI |
+| CSV/API cost import | V1 live | Unlocks ROAS/CPL/CAC when cost data exists. `api/lib/ad-cost-imports.js` + `/api/campaign-costs`; UI is Campaigns "Import Costs" and the Integrations CSV card. This is the ONLY shipped cost path. |
+| Google Ads cost import | V2 · backend built, no connect UI | Backend real (`api/lib/google-ads.js` GAQL, `runGoogleSync`), but `POST /google/save-account` has zero dashboard callers, so no customer can complete a connection. End-to-end unproven. |
+| Meta Ads cost import | V2 · backend built, no connect UI | Backend real (`api/lib/meta-ads.js` `/insights`, `runMetaSync`), but `POST /meta/connect` has zero dashboard callers. End-to-end unproven. |
+| TikTok Ads cost import | V2 · not built | No lib, route, or worker exists. TikTok is CAPI-export only (`conversion-sync.js`). "Not active V1 UI" previously implied something was being withheld — nothing is. |
+| LinkedIn Ads cost import | V2 · not built | No lib, route, or worker exists. LinkedIn is CAPI-export only (`conversion-sync.js`). |
 | Team roles | V2 | Future component |
 | API playground | V2 | Future component |
 | Alerts/notification bell | V2 | Not V1 top bar. Currently shipping and must be removed. |
@@ -2698,6 +2756,38 @@ Remove from active V1 UI:
 - URL inspection
 - live map
 - per-card "Sample data" badges on marketing mockups — disclosure is one footer line per page, see §29.8
+- **glassmorphism / "liquid glass" surfaces — V1-WIDE BAN (founder ruling, 2026-08-06)**
+- **any "edge compute" claim — see §26.2**
+
+### 26.2 Two additions ruled on 2026-08-06
+
+**Glassmorphism — the open question is CLOSED as a full V1-wide ban.**
+
+The changelog previously carried this as *"OPEN — founder decision required"*: §25.1 listed
+glassmorphism under "avoid" as an AI-generation guardrail, while this section — the master V1
+prohibited list — did not address it in either direction. That gap meant §25.1 bound *generation*
+only, and a hand-built glass surface was prohibited by nothing.
+
+**Ruling: full V1-wide product ban, not a generation-only guardrail.** It now appears in the list
+above, which is what makes it binding on shipped UI. §25.1 is unchanged and still applies to
+generation. Raised originally when a "liquid glass" card technique was considered and retracted
+without a clear answer either way.
+
+**"Edge compute" is unclaimable — all four investigations returned NEGATIVE.**
+
+⚠️ **Recorded as a prohibition rather than a removal, and the difference is deliberate: there was
+never an edge-compute claim in this document to delete.** A repo-wide grep on 2026-08-06 found
+**zero** such claims in `design.md` and zero in the marketing site. The findings that settled it
+live in `SESSION_HANDOFF_2026-08-06.md:209-215`; the only surviving related claim is
+**"first-party subdomain"**, which is accurate and stays.
+
+**Nothing runs at the edge.** Bunny is a pull-zone CDN in front of the origin — caching and TLS
+termination, not execution. Any existing or proposed "edge compute" / "runs at the edge" /
+"edge worker" phrasing is false until something actually executes there.
+
+*(Not in scope of this ban: the path-allowlisted Cloudflare Worker and Next.js rewrite templates in
+the self-hosted proxy docs. Those are examples a CUSTOMER runs on their own infrastructure, not a
+claim about SourceTrack's, and they remain correct.)*
 
 ### 26.1 Lead intelligence & enrichment — not built, not planned pre-paid-beta
 
@@ -2813,12 +2903,13 @@ Website positioning, hero copy, and voice are owned by `docs/SourceTrack_GTM.md`
 
 ### 29.2 Website visual direction
 
-> The marketing site is **light-first with a dark toggle**, defaulting to the visitor's OS preference. Both themes share the same warm neutrals; only the canvas inverts. The product band and the final CTA render on warm ink in **both** themes — that is what gives the light theme its structure and keeps the product frame reading as a lit object rather than a flat screenshot.
+> The marketing site is **light-only**. There is no dark theme, no toggle, and no OS-preference switching — the page renders the same for every visitor. The product band and the final CTA render on **warm ink**; that contrast against the light canvas is what gives the page its structure and keeps the product frame reading as a **lit object rather than a flat screenshot**. Those ink bands are structural, not a dark-theme artefact — dropping them would flatten the page, so they stay. Reference implementation — PR #643, merged 2026-08-05, which deleted `marketing/src/layouts/components/ThemeToggle.astro`, removed it from `Header.astro`, and collapsed the marketing theme to a single light palette.
 
 Borrow the premium lightweight SaaS feel from modern lime-glow landing pages:
 
 - product-first hero
-- soft lime glow behind the product preview
+- soft lime glow behind the product preview — **bounded to the product-preview object, never the page.**
+  See the constraint below.
 - clean rounded cards
 - clear three-step explanation
 - simple pricing cards
@@ -2835,6 +2926,22 @@ Do not borrow:
 - heavy animation
 - decorative blobs
 - workflow-builder metaphors
+
+**The lime glow is bounded by §2.6 — read that before building the hero.** "Behind the product
+preview" means behind a **bounded object**; a glow that reads as page background violates the
+accent-density ceiling no matter how soft it is. Both §2.6 limits apply here in full:
+
+- **~15% of any single screen's visible area**, and **never** a full-bleed background wash or a glow
+  behind primary content.
+- If lime ends up behind body text, **verify computed WCAG AA contrast before shipping — do not
+  eyeball it.**
+
+⚠️ **This is an OPEN defect on the live site, not a solved problem** (§2.6, confirmed via screenshot
+2026-08-03, still unfixed): the live marketing hero's background glow covers roughly **70–80% of
+visible area**, with white text on a bright-lime highlight block at a **computed contrast below AA**.
+That hero is the motivating case for the ceiling — it is **not** a reference implementation and must
+not be copied forward. Any Phase 2 homepage work has to measure the glow's coverage and run the
+computed-AA check rather than inheriting the current hero's treatment.
 
 ### 29.3 Homepage structure
 
@@ -2922,7 +3029,8 @@ Avoid:
 
 - SOC 2 certified unless true
 - GDPR compliant unless legally verified
-- native Shopify app
+- native Shopify app — ⚠️ **2026-08-06: the app is BUILT but not deployed and not Level 1 approved.**
+  It stays on this Avoid list until both change. "We built it" is not "it ships"
 - native Stripe app
 - automatic Meta/Google Ads sync unless built and verified
 - perfect attribution

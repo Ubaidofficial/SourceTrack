@@ -1,0 +1,30 @@
+{
+  "_comment": "V3 measurement sanity gates. See README.md in this directory before using or editing.",
+  "status": "MEASURED",
+  "measuredAt": "2026-08-06",
+  "measuredRef": "a6a21e40",
+  "viewports": {
+    "desktop": {
+      "emulateArg": "1152x720x1",
+      "expectedInnerWidth": 1440,
+      "actualInnerWidth": 1440,
+      "gateSelector": ".v3-wrap",
+      "gateProperty": "getBoundingClientRect().width",
+      "derivedExpectation": 1320,
+      "derivedFrom": "--v3-max 1320px; at any viewport >= 1320 + 2*32 padding the wrap clamps to its max",
+      "measuredValue": 1320,
+      "_note": "1440x900x1 gave innerWidth 1800 on this host (dpr 0.8). Verify, do not assume."
+    },
+    "mobile": {
+      "emulateArg": "390x844x1,mobile,touch",
+      "expectedInnerWidth": 390,
+      "actualInnerWidth": 390,
+      "gateSelector": ".v3-wrap",
+      "gateProperty": "getBoundingClientRect().width",
+      "derivedExpectation": 390,
+      "derivedFrom": "below 900px the wrap takes full width; padding is inside the border box, so the element width equals the viewport",
+      "measuredValue": 390
+    }
+  },
+  "_environmentWarning": "The emulate arguments below are ENVIRONMENT-SPECIFIC, not universal. On this host devicePixelRatio is 0.8, so 1440x900x1 yields innerWidth 1800 and 1152x720x1 is needed for a true 1440. The LIVE site needed 1440x900x1. Both are correct in their own context. The gate's value is the VERIFICATION STEP, not the argument \u2014 always read window.innerWidth and compare before trusting any rect."
+}

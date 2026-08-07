@@ -29,6 +29,9 @@ import {
 // its own 8-host AI_DOMAINS map (a third divergent copy) and accepted properties.ai_source
 // verbatim; both are gone — KI-32.
 import { detectAiPlatformFromReferrer, resolveAiSource } from '../lib/channel-classifier.js'
+// Ingestion bot filter. Same module, same pattern, same predicate as track.js:171 —
+// this rail had NO filter at all until 2026-08-06. See the block at /sp/e for why.
+import { isIngestionBotUserAgent } from '../lib/bot-filter.js'
 
 const router = express.Router()
 
@@ -57,6 +60,34 @@ router.post('/e',
   try {
     const { site_key, event, anonymous_id, properties = {} } = req.body || {}
     if (!site_key || !event) return
+
+    // ── INGESTION BOT FILTER ────────────────────────────────────────────────────
+    // ⚠️ THIS RAIL HAD NO BOT FILTER AT ALL until 2026-08-06, and it was an ACCIDENT
+    // OF SCOPE rather than a decision. proxy.js landed 2026-05-16; bot-filter.js was
+    // consolidated 2026-07-07 as an explicitly "pure refactor" of the crawler regex
+    // "duplicated byte-for-byte in track.js and analytics.js". proxy.js never had a
+    // copy to consolidate, so the refactor had no reason to look at it. Nobody
+    // excluded this route — it was simply not in the frame. Checked before wiring:
+    // no comment, no test, no KNOWN_ISSUES entry, and the commit that added the rail
+    // is titled "for adblocker bypass" with no mention of bots.
+    //
+    // NOT GATED ON $pageview, deliberately — the one place this differs from the
+    // metering gate below. track.js:171 drops EVERY event from a bot UA; only its
+    // METER (track.js:400) is $pageview-gated. Gating the filter here would let a
+    // bot's custom event through /sp/e that /api/track rejects — two policies
+    // instead of one, which is the defect this change removes, one layer down.
+    //
+    // The response was already sent (res.json at the top of this handler), so a drop
+    // is a silent return: the same observable behaviour as track.js's silent 200,
+    // which exists so crawlers do not retry.
+    const ua = req.headers['user-agent'] || ''
+    if (isIngestionBotUserAgent(ua)) {
+      // Same shape as track.js's logOutcome. site_id is safe to log; site_key and
+      // body never are (§6.5) — and site_id is not resolved yet at this point.
+      try { console.log(`[ingest-obs] rejected event=${event} reason=bot route=proxy/e`) } catch (_) {}
+      return
+    }
+
     const supabase = getSupabase()
     // Select plan + pv_limit so claimPageviewUsage can enforce quota
     const { data: site } = await supabase.from('sites').select('id, plan, pv_limit, trial_ends_at').eq('site_key', site_key).single()
@@ -193,6 +224,21 @@ router.get('/pixel.gif',
   try {
     const { site_key, uid } = req.query
     if (!site_key) return
+
+    // ── INGESTION BOT FILTER ────────────────────────────────────────────────────
+    // Same omission, same fix, same predicate as /sp/e above — see that block for
+    // why this rail had no filter until 2026-08-06.
+    //
+    // The GIF was already written and the response ended, so a drop is a silent
+    // return. That is the correct shape for a pixel: a crawler that requested the
+    // image still receives a valid 1x1 GIF and has no reason to retry — it simply
+    // does not produce an event or consume quota.
+    const ua = req.headers['user-agent'] || ''
+    if (isIngestionBotUserAgent(ua)) {
+      try { console.log('[ingest-obs] rejected event=$pageview reason=bot route=proxy/pixel') } catch (_) {}
+      return
+    }
+
     const supabase = getSupabase()
     // Select plan + pv_limit so claimPageviewUsage can enforce quota
     const { data: site } = await supabase.from('sites').select('id, plan, pv_limit, trial_ends_at').eq('site_key', site_key).single()

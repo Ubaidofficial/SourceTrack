@@ -196,7 +196,53 @@
    box-decoration-break:clone is what keeps the padding and the rounded ends on EVERY line
    fragment once the headline wraps — without it a wrapped highlight loses its right padding
    on line one and its left padding on line two. */
-.hero-text > mark {
+/* RE-TARGETED, not restored (2026-08-06). Phase 2a rebuilt the homepage hero and dropped
+   `class="hero-text"` from its <h1> (87a34b7f: `-<h1 class="hero-text mb-4"` ->
+   `+<h1 id="hero-title" …>`). This selector then matched NOTHING on the homepage, so the
+   <mark> fell through to the browser default — bright yellow, square corners, no padding —
+   for the whole of 2a, 2b and 2c. Every numeric check passed throughout; a human looking at
+   a screenshot is what caught it.
+
+   The class is NOT restored, deliberately: `.hero-text` also carries
+   `text-4xl md:text-5xl lg:text-6xl font-semibold mb-4`, which would override the rebuilt
+   hero's `clamp(40px, 4.6vw, 70px)` and its `font-weight: 800`. Restoring it to fix the
+   highlight would silently revert 2a's typography. `#hero-title` is added to the selector
+   instead, so /pricing and /contact keep matching via `.hero-text` and the homepage matches
+   by id — one rule, one visual definition, no divergent copy (CLAUDE.md §11).
+
+   ⚠️ If the homepage <h1> ever gains a class or loses `id="hero-title"`, this breaks again
+   the same silent way. scripts/contrast-audit.mjs now fails loudly on a zero-match selector,
+   which is the durable half of this fix. */
+/* FAQ accordion — visible keyboard focus. (Phase 2d)
+   The accordion trigger is a `div[role="button"] tabindex="0"`, so it IS reachable by
+   keyboard and DOES respond to Enter/Space — but nothing rendered a focus ring, for two
+   independent reasons. home-design.css's focus rule lists `a, button, summary, input`,
+   which a div matches none of; and that rule is nested under `.st-home`, which the FAQ has
+   no ancestor of. Keyboard users could tab through all six items with no indication of
+   where they were.
+
+   CSS-ONLY, DELIBERATELY. The structural fix — a real <button> wrapping only the question,
+   the panel a sibling carrying an id, `aria-controls` joining them — is a separate held PR,
+   because Accordion.tsx is shared by /, /pricing, /contact and /integrations and changing
+   SSR'd markup on four routes risks a hydration mismatch that CI cannot catch. A focus ring
+   changes no markup, so it carries none of that risk and needs no re-hydration check.
+
+   Blast radius is exactly the accordions: every `role="button"` in the built site is one
+   (24 = 6 items x 4 routes, verified against dist/). The rule is purely additive — it adds
+   an indicator where there was none and alters nothing else.
+
+   ⚠️ WHEN THE STRUCTURAL PR LANDS, DELETE THIS. A real <button> is already covered by the
+   `button:focus-visible` rule, and leaving both would be two rules for one behaviour —
+   the divergence CLAUDE.md §11 warns about. Values match that rule exactly so the two are
+   indistinguishable on screen in the meantime. */
+[role="button"]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.hero-text > mark,
+#hero-title > mark {
   @apply bg-primary text-text rounded-2xl px-4 py-1;
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;

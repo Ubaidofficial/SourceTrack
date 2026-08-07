@@ -20,12 +20,14 @@
 // runtime — a privacy-first product must not make a third-party request per logo.
 // Unnamed nodes (a page view, the conversion itself) keep the dot treatment.
 //
-// The OpenAI mark is INLINE rather than an <img>: it is monochrome and has to follow
-// the light/dark toggle via currentColor, which an <img> cannot inherit. Google's is
-// multicolour and theme-independent, so it loads from the committed file.
+// The OpenAI mark is INLINE rather than an <img> so it inherits currentColor, which an
+// <img> cannot. That began as dark-mode support; the site is light-only now (design.md
+// §3.1) but inline is still the right call — it keeps the mark tied to the surrounding
+// text colour instead of hard-coding a second ink value that a palette change would miss.
+// Google's is multicolour and colour-independent, so it loads from the committed file.
 //
 // Colours are theme tokens (bg-card, border-border, text-text, text-text-light,
-// bg-primary), so the trail follows the dark-mode toggle from #570 with no dark:.
+// bg-primary), so the trail follows a palette change without restating any value.
 
 const steps = [
   { label: "ChatGPT", meta: "First touch · AI referral", mark: "openai" },

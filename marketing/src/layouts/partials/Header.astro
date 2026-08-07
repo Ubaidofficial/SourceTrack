@@ -1,6 +1,5 @@
 ---
 import Logo from "@/components/Logo.astro";
-import ThemeToggle from "@/components/ThemeToggle.astro";
 import config from "@/config/config.json";
 import menu from "@/config/menu.json";
 
@@ -343,7 +342,6 @@ const iconPaths: Record<string, string> = {
 
     <!-- Desktop CTA button -->
     <div class="order-1 ml-auto flex items-center gap-4 md:order-2 xl:ml-0">
-      <ThemeToggle />
       {
         navigation_button.enable && (
           <a

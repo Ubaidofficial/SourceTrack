@@ -13,6 +13,7 @@ import { dualWriteEvent, isDualWriteEnabled } from '../../tinybird/adapter/dual-
 import { resolveClientIp } from '../lib/ip-resolver.js'
 import { hasScope, SCOPE_WRITE_EVENTS } from '../lib/api-key-scopes.js'
 import { normalizeCurrencyCode } from '../lib/currency.js'
+import { normalizeClickIds } from '../lib/utils.js'
 
 const router = Router()
 
@@ -130,6 +131,29 @@ router.post('/event', trackGlobalIpLimit, async (req, res) => {
       //
       // Runs BEFORE storeIdentityLink below, so a rejected event leaves nothing behind.
       let hardCapped = false
+      // ⚠️ NO INGESTION BOT FILTER HERE, DELIBERATELY. DO NOT "COMPLETE THE SET".
+      //
+      // /api/track, /sp/e and /sp/pixel all drop bot UAs via isIngestionBotUserAgent.
+      // This route does NOT, and the asymmetry is correct: those three are BROWSER-FACING,
+      // this one is SERVER-TO-SERVER. It authenticates with `Authorization: Bearer <key>`
+      // against api_keys + SCOPE_WRITE_EVENTS — the caller is the CUSTOMER'S BACKEND.
+      //
+      // So the User-Agent on a legitimate request here is an HTTP client library, and
+      // INGESTION_BOT_UA_PATTERN contains exactly those: curl/ · python-requests · axios/ ·
+      // go-http · java/ · ruby/ · php/ · okhttp · node-fetch · guzzlehttp ·
+      // apache-httpclient. Wiring the filter here would silently drop essentially EVERY
+      // legitimate server-side event, irreversibly — §6: an ingestion drop deletes the
+      // event forever, and raw user_agent is never persisted, so the loss would be
+      // unmeasurable as well as permanent.
+      //
+      // That is the 2026-07-14 incident's exact failure mode: tightening ingestion on the
+      // wrong axis and deleting real data. The filter's own axis is "does the agent EXECUTE
+      // JAVASCRIPT?" (bot-filter.js:48) — a server-to-server API call never executes JS and
+      // is not a bot, so the question does not apply to this rail at all.
+      //
+      // Guarded by api/tests/proxy-bot-filter.test.js, which asserts an axios/1.6 UA is
+      // still ingested here. If that test fails because someone added a filter, the filter
+      // is the bug — not the test.
       try {
         // Explicit id for the same reason the conversion gate above needs it: the `sites` select
         // returns no id, claimPageviewUsage THROWS without one, and the fail-open catch would
@@ -198,6 +222,27 @@ router.post('/event', trackGlobalIpLimit, async (req, res) => {
 
     const eventTimeStr = req.body.timestamp || new Date().toISOString()
 
+    // Click IDs, read from the TOP LEVEL of the request body — the same contract the
+    // sibling server-side route uses (`conversion-offline.js:202`). The nested
+    // `properties: { gclid }` form already reached the typed column before this change
+    // (the `...req.body.properties` spread below, then the adapter's flatten); top-level
+    // keys were the gap, and are what `/v3` claims to accept.
+    //
+    // The SAME normaliser as every other path — `normalizeClickIds` (`utils.js:745`) —
+    // so the LinkedIn alias rule (`li_fat_id` falls back to `li_fatid`; `li_fatid` does
+    // not fall back) stays defined in exactly one place. It reads only its own 14 keys
+    // and returns a fresh object, so passing `req.body` neither mutates nor leaks.
+    //
+    // Nulls are STRIPPED rather than spread. `normalizeClickIds` always returns all 14
+    // keys, so spreading it raw would add 14 explicit nulls to EVERY server event,
+    // including the overwhelming majority that carry no click ID at all — a payload and
+    // row-shape change for every existing caller. Omitting them keeps a click-ID-free
+    // event byte-identical to what it emits today, and an absent JSON path and an
+    // explicit null are the same NULL to Tinybird (`normalize.js:259-261`).
+    const clickIds = Object.fromEntries(
+      Object.entries(normalizeClickIds(req.body)).filter(([, v]) => v !== null)
+    )
+
     // Properties hoisted to a const (behavior-identical) so the additive Tinybird
     // dual-write below reuses the exact same object the existing ph.capture sends.
     const properties = {
@@ -225,6 +270,13 @@ router.post('/event', trackGlobalIpLimit, async (req, res) => {
       country,
       server_timestamp: eventTimeStr,
       ingestion_method: 'server_sdk',
+      // BEFORE the caller's own `properties` spread, deliberately: a caller already
+      // sending `properties: { gclid }` reaches the typed column today, and that must
+      // keep winning. Nested is the more specific signal; top-level is the new fallback.
+      // BEFORE the caller's own `properties` spread, deliberately: a caller already
+      // sending `properties: { gclid }` reaches the typed column today, and that must
+      // keep winning. Nested is the more specific signal; top-level is the new fallback.
+      ...clickIds,
       ...(req.body.properties || {})
     }
 

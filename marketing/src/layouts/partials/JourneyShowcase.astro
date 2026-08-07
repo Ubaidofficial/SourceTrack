@@ -1,11 +1,28 @@
 ---
-// Section wrapper for the second product surface. Follows the same section conventions as
-// the rest of the homepage (main-container > container > container-padding-*, badge + h2)
-// so the vertical rhythm matches its neighbours.
+// Section wrapper for the second product surface.
+//
+// ── §2.7 POSITION 4 — WINDOW-FRAME MOCKUP ────────────────────────────────────
+// The mockup was previously unframed: it sat directly on the page with no container
+// treatment of its own, which left positions 2, 3 and 4 reading as band / dark band /
+// nothing. It is now wrapped in the same `.demo-frame` + `.demo-chrome` idiom the Hero
+// uses at position 1.
+//
+// Position 1 and position 4 sharing the frame idiom is deliberate and is NOT a §2.7
+// repeat: the rule bars CONSECUTIVE sections from repeating a treatment, and these are
+// separated by the contrast band (2) and the dark band (3). Reusing the idiom rather
+// than inventing a fourth container is what makes the page read as one system.
+//
+// ⚠️ 2c CONSTRAINT: ProofStrip is position 5, immediately after this one, and therefore
+// must NOT be a window frame. This section deliberately does not consume any treatment
+// ProofStrip would plausibly need — it takes the frame, leaving band, dark, card, and
+// bare-on-paper all available to 5.
+//
+// The frame is on PAPER, not ink: position 3 immediately above is full-bleed dark, and a
+// dark frame on a dark band would erase the boundary this position exists to draw.
 import JourneyMockup from "@/components/JourneyMockup.astro";
 ---
 
-<section class="relative overflow-hidden">
+<section class="st-home relative overflow-hidden">
   <div class="main-container">
     <div class="container">
       <div class="container-padding-y container-padding-x">
@@ -24,8 +41,48 @@ import JourneyMockup from "@/components/JourneyMockup.astro";
           </p>
         </div>
 
-        <JourneyMockup />
+        <div class="journey-frame">
+          <div class="demo-frame">
+            <div class="demo-chrome">
+              <span class="tl" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="url">app.sourcetrack.ai/journey</span>
+            </div>
+            <div class="journey-body">
+              <JourneyMockup />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </section>
+
+<style>
+  /* `.demo-frame` / `.demo-chrome` come from home-design.css and are nested under
+     `.st-home`, which is why the section carries that wrapper — the same reason the
+     Hero does. Only the body surface is local, because the frame was written for a
+     dark embedded demo and this one holds a light mockup. */
+  .journey-frame {
+    min-width: 0;
+  }
+  .journey-body {
+    background: var(--paper);
+    padding: 18px;
+  }
+
+  /* §21 — visible focus inside a clipping frame. `.demo-frame` sets overflow:hidden, so
+     an outward ring would be cut off; drawn inside instead. JourneyMockup renders
+     interactive nodes, so this is a real requirement here, not a precaution. */
+  .journey-frame :global(a:focus-visible),
+  .journey-frame :global(button:focus-visible) {
+    outline: 3px solid var(--ink);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  @media (max-width: 900px) {
+    .journey-body {
+      padding: 12px;
+    }
+  }
+</style>

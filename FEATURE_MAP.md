@@ -2,7 +2,37 @@
 
 > ⚠️ **FRESHNESS GUARD — read before trusting.** This doc goes stale the moment features change (a 139M-inventory doc misled this very session). **Rules:** (1) verify against current code / `git log -1`, not this doc, for anything load-bearing; (2) CC must update this file in the SAME PR that adds/removes any feature; (3) keep the "Verified @" line below current.
 >
-> **Verified @ `44dd620` (2026-07-31)** — partial re-baseline: §15 GDPR corrections + the #528–#535 currency-labelling rail. Previous baseline: `93da62d` (2026-07-26). **Built:** 2026-07-16.
+> ## ⚠️ THIS DOCUMENT HAS NO WHOLE-FILE VERIFICATION DATE. It never has.
+>
+> **There is deliberately no "Verified @ `<sha>`" line here any more.** Every such line this file
+> has carried has been a *partial* re-baseline of a named handful of sections, presented in the
+> position where a reader expects a whole-document guarantee. Provenance is real, but it is
+> **per-section** — each section carries its own `cb17cc2` / `fc00e406` / `c9a4113` / `93da62d` /
+> `44dd620` tag, and that tag is the only claim you may rely on. A section with no tag is unverified.
+>
+> **Last partial re-baseline: `44dd620` (2026-07-31)** — scope, exhaustively: **§15's two GDPR
+> bullets** and **§10 + §27's currency-labelling rail (#528 · #529 · #532 · #534 · #535)**. Nothing
+> else. Previous partial: `93da62d` (2026-07-26). **Built:** 2026-07-16.
+>
+> **Drift since that partial: 92 PRs (#466 → #664), 94 commits** — measured 2026-08-06 against
+> `origin/main @ 2e65b821`. Not re-verified, and deliberately not re-verified: re-checking 92 PRs to
+> justify a new SHA would cost more than it is worth and would produce the same partial guarantee
+> in a more convincing font.
+>
+> ### ⚠️ The range caveat is now a PATTERN, not an incident — read this before adding another baseline
+>
+> The `44dd620` block below already admits its own delta list was **incomplete for ~100 PRs**
+> (#431–#536, of which seven were inventoried). This header now records the **same admission a
+> second consecutive time**, for a comparable span. Two in a row is not bad luck; it is what this
+> document does under its own update rule.
+>
+> **So do not "fix" this by re-baselining harder.** The mechanism that keeps failing is rule (2) of
+> the freshness guard — *"CC must update this file in the SAME PR"* — which loses every race against
+> the empty-session-doc-diff requirement in the PR gate (the conflict is named at the bottom of this
+> header and is still unaddressed). Until that conflict is resolved, a new "Verified @" line
+> **advertises a guarantee the process cannot produce.** The recommended CI check — fail when
+> `api/routes/**` or `dashboard/src/pages/**` changes without `FEATURE_MAP.md` — is the fix; a
+> fresher SHA is not.
 >
 > ### Re-baseline `93da62d` → `44dd620` (2026-07-31) — WHAT WAS AND WAS NOT RE-VERIFIED
 >
@@ -58,6 +88,10 @@
 - ✅ **UTM Link Builder** — `components/UTMBuilder.jsx` + standalone page `pages/tools/UtmBuilder.jsx` (route `/tools/utm-builder`) + embedded in Setup/Settings (GTM "audit in flight" → RESOLVED: it exists)
 - ✅ **Cross-domain link decoration** — opt-in `data-cross-domains="..."`; auto-rewrites cross-domain link hrefs to carry `__st_id` + attribution
 - ✅ **Booking-host attribution passthrough** — for known booking hosts (Calendly etc.), auto-appends UTMs + click IDs to the booking URL (a real lead-gen edge)
+- ✅ **Confirmed-booking DETECTION and conversion promotion** (added 2026-08-04 @ `ee93b755`; this was absent from the map entirely). The tracker detects completed bookings in an **embedded** Calendly or Cal.com widget — origin-validated `postMessage` for Calendly, the `window.Cal` embed hook for Cal.com (`tracker/tracker.js`, both minified builds) — and `track.js:332` allowlists the provenance fields on ingest. **#592** then promotes a confirmed booking to a real `$conversion` with `conversion_type: 'meeting'` (in `LEAD_TYPES`, so it counts as a lead; `'booking'` deliberately NOT used — it is absent from the classifier and would silently classify as `'other'`). **#605** hardened the gate to require **full** provenance — `booking_provider && booking_detection_method && booking_event_type` (`track.js:631`) — so a partial payload no longer promotes. ⚠️ **Link-only Calendly flows are NOT detected** (redirect to the provider's own page) — UTM passthrough only, which is the row above. 🔴 **Zero `conversion_type='meeting'` rows have ever existed in prod** (founder-reported; needs a real embedded booking on a live site). Untested by any committed regression test — **#602**.
+- ⚠️ **Chat lead capture — DETECT-ONLY, does NOT promote to a conversion** (added 2026-08-04 @ `ee93b755`; absent from the map entirely). **#594** auto-detects an in-widget lead capture for **Intercom and Crisp** and emits a `chat_lead_captured` event through `/api/track`. 🔴 **It is stored and nothing more.** Verified at `ee93b755`: `track.js:481` writes it with a FIXED schema and `:498` excludes it from custom-property passthrough (the comment at `:492-497` warns that removing it "silently reopens the hole"). There is **no `$conversion` promotion block for chat** — grep for one returns nothing, unlike the booking path above. That asymmetry is **deliberate**, not an oversight: promoting chat would compound the cross-path double-count risk in **#590**. So chat data exists in Tinybird and reaches no conversion, lead count, or attribution model. 🚫 Do not sell chat attribution. Phase 2 (Tawk.to) is **#595**; Facebook Messenger is blocked on a privacy review, **#596**.
+- ✅ **Frontend/backend entitlement parity — ENFORCED and pinned** (added 2026-08-04 @ `ee93b755`). `dashboard/src/lib/planFeatures.js` had drifted from `api/lib/plan-features.js` on **17 (key, tier) pairs**: 13 Starter features the UI locked while the backend granted them, plus `multi_user` offered on trial/starter/growth/scale while the backend grants it on **no tier at any price**. Because the backend repackage (`plan-features.js:31-38`) existed to close a downgrade-on-purchase gap, the UI was still showing the exact bug the backend had fixed. **#604** synced all 27 keys × 5 tiers and added `api/tests/plan-features-parity.test.js` (4 tests, verified present at `ee93b755`) comparing `hasFeature()` rather than the raw tables, so legacy plan aliases are covered too. `reportGating.js:8` had documented the lockstep rule for months with nothing enforcing it.
+- ✅ **Ops Console Feature Status panel self-corrects** (added 2026-08-04 @ `ee93b755`). It was stateless: the recheck compared live probes against a **hardcoded** baseline that #574 never updated, so it re-announced the same five already-happened changes on every run — a diff list that could not reach empty. **#589** persists each run's `{name,status}` into the existing `admin_audit_log.metadata` jsonb (no schema change) and reads the most recent run as the baseline, seeding from a hand-verified array only on a cold database. It also corrected **three more false entries** (deduplication, widgetized dashboard, period-over-period) on top of #574's two.
 - ⛔ **"Direct Rescue" / synthetic AI UTMs** — NOT built (by design). AI detection is built + stored as separate `ai_source`; never injected as synthetic `utm_source`. GTM §4 flags surfacing-into-CRM as the top unshipped quick-win moat.
 
 ## 3. Analytics (lightweight)
@@ -159,7 +193,7 @@
 - ✅ **`getSiteByCustomerId` error handling** — now propagates Supabase errors as 500 (so Stripe retries) instead of silently treating a DB failure as an absent customer (200, no retry). Previously `{ data }` was destructured without `error`, so a PostgREST 5xx / connection loss / RLS denial was indistinguishable from "no such site" — a paid customer could stay `plan: 'inactive'` with Stripe never retrying. (#448, 2026-07-27)
 - 🧪 **Shopify** — manual webhook (orders/paid + orders/create); **refund netting added #384** (`refunds/create` → negative `$conversion`, resolves the original order by `order_id`, mirrors the Stripe design) — but **NOT yet live** (no prod webhook, no real refund processed); not a native app
 - 🧪 **Google Search Console (GSC SEO-revenue)** — built + truth-gated. **The automated pipeline was DEAD 2026-06-29 → 2026-07-20:** the daily sync failed on a missing then malformed `ENCRYPTION_KEY` on the `nightly-attribution` service; each failure set `gsc_connections.status='error'`, which the `.eq('status','connected')` eligibility filter (`gsc-daily-sync.js:152`) then **permanently disqualifies** — so subsequent nights returned `{eligible:0}` and the job wrote a hardcoded `success` (fixed in #332). `gsc_performance_daily` froze at 2026-07-16 (67 rows, 1 site). **Fixed 2026-07-20** (key aligned, connection reset, #332 derives the status). **Manual sync works** (2026-06-26, 2026-07-18); the **automated path is unverified since 2026-06-29** — 🧪 pending its first successful 02:00 UTC run after 2026-07-20. ⚠️ **Live design flaw:** a transient failure permanently disqualifies a connection with no retry/backoff/self-heal — #332 made it visible, it does not prevent recurrence. **✅ Full chain now VERIFIED WORKING (2026-07-20 19:58:35 UTC):** `gsc_sync_runs` manual success, `records_synced 39`, error null; `gsc_connections` = `https://www.techrupt.pk/`, connected, `last_synced_at` moved off 07-18; `gsc_performance_daily` 2026-06-20→2026-07-18, 39 rows (3 clicks, 42 impressions). `latest=2026-07-18` is **correct, not stale** — GSC lags 2–3 days by design. Chain proven: well-formed key → OAuth re-encrypt → decrypt → Google API → rows land. **STILL PENDING: first successful AUTOMATED (cron) sync.** ⚠️ **SECOND, DISTINCT ROOT CAUSE found 2026-07-21 — the automated path had a *different* blocker underneath the `ENCRYPTION_KEY` one:** `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` were **absent from the `nightly-attribution` service**, so the cron could not complete OAuth regardless of key health. **Two evidence grades, and they are NOT the same — do not read them as one:** ① **DIRECT (the diagnosis, queried):** `job_runs` 2026-07-21 02:04:03 `gsc-daily-sync` **FAILED** — `"1/1 connection(s) failed, 0 records synced"`; `gsc_connections.status='error'`, `last_error_message` `"Google OAuth credentials are not configured"`, `property_url` `https://www.techrupt.pk/` (correct, post-repair), `last_synced_at` 2026-07-20 19:58:35, `updated_at` 2026-07-21 02:04:03. **The cleanest evidence for the diagnosis is the asymmetry: the MANUAL sync SUCCEEDED at 19:58 through `SourceTrack-Api` while the CRON FAILED at 02:04 through `nightly-attribution` — same code, same token, same property, different container.** That isolates the fault to per-service env, not to the key, the token, or the code. ② **INDIRECT (the fix, inferred — NOT verified):** both environments redeployed on the **unchanged** commit `9a3f464` (prod `0f1080fa` SUCCESS 08:12:33Z, staging `59f03cdd` SUCCESS 08:16:00Z), replacing 00:25 deployments on the identical commit — a redeploy with no code change is the signature of a variable change, **but presence and correctness of the values are UNVERIFIED** (Railway MCP exposes no variable-read tool — orchestrator constraint #2, §11). **Proof point: the 02:00 UTC 2026-07-22 run** — `success` + records synced = proven; the same OAuth error = vars missing or misnamed on that service. 📋 **Follow-up recommended, NOT built — env-var parity audit across all services:** which vars each service *needs* versus *has*. This is the **second instance of the class** (KI-34 was `ENCRYPTION_KEY` on this same service); both were invisible until a job failed at runtime, and neither is caught by CI, code review, or any code-only audit. ⚠️ **Caveat:** techrupt.pk has only 3 clicks / 42 impressions in a month — the SEO-revenue allocation model has almost nothing to allocate; **GSC cannot be demonstrated as a moat on this site.** Proving the allocation math needs a property with real search volume.
-- ✅🔒📜 **CAPI (server-side Conversions API)** — Meta + Google; token encryption at rest, `capi_deliveries` log, event-ID dedup, hashed PII, plan-gated (`requireFeature('capi_server_side')`), wired into conversion routes (PRs #57–60). **Meta + Google only.** ⚠️ **Correction (2026-07-24):** the previous "MS/LinkedIn senders reachable+tested" was **false** — `sendMicrosoftConversion` / `sendLinkedInConversion` exist in the fan-out but are **absent from `CAPI_PLATFORMS` and the hardcoded CAPI-column SELECT lists**, so no config UI can write their tokens and they silently no-op (see the "Dead CAPI senders" KI, #380). TikTok deliberately stripped. ⚠️ don't claim "live forwarding" until a merchant uses it.
+- ⚠️🔒📜 **CAPI (server-side Conversions API)** — **CORRECTED 2026-08-04 @ `ee93b755`. The prior "Meta + Google only / TikTok deliberately stripped / MS+LinkedIn silently no-op" text was STALE.** `CAPI_PLATFORMS` (`api/routes/capi.js:61-67`) now holds **five** platforms: `meta`, `google` (via `ad_platform_connections`, OAuth), `ga4`, `tiktok`, `linkedin` — each with a real token column and id cols, so each is configurable. Token encryption at rest, `capi_deliveries` log, event-ID dedup, hashed PII, plan-gated (`requireFeature('capi_server_side')`), wired into conversion routes (PRs #57–60). 🔴 **ZERO DELIVERIES EVER — `capi_deliveries` is EMPTY in prod (founder-reported 2026-08-04, NOT code-verifiable: CC has no prod DB access; the only repo reference is the retention purge at `api/lib/retention-purge.js:44`).** So five configured platforms and no evidence any of them has forwarded a single conversion. 🚫 **Do not claim CAPI works, for any platform** — "code exists" and "has ever delivered" are different claims, and only the first is established. This is the specific finding behind GTM §5.1's "only once production-verified" condition. `⏸ delivery state not verifiable by CC`
 - ✅📜 **Outbound webhook** — HMAC-signed, SSRF-guarded, plan-gated; carries `ai_source` + 14 click IDs into customers' CRMs (**gap in all 4 competitors**)
 - ✅ Incoming/manual conversion webhook (HMAC, replay-bound)
 - ⚠️ GSC / CSV-cost error UX returns generic 500/400 (SELF_SERVE P1-2)
@@ -324,3 +358,91 @@
 - **#416** (conversion taxonomy: 5 Stripe lifecycle types + `add_to_cart`; trial-start `$0` regression fix) — noted on **§20 row 1**. **Two NEW deferred items recorded here so they are not lost:**
   1. 🔻 **The `obj.subscription` gap** — carried as a known deferral out of #416. **What the code does @ `c9a4113`:** on `invoice.paid`, `stripe-subscription.js:29` takes the subscription id from the **flat** `obj.subscription` field (`out.subscriptionId = obj.subscription || null`); that id is what scopes the subscription-lifecycle idempotency keys. `⏸` **the precise failure mode is NOT stated here on purpose** — I could not confirm from the repo alone which condition makes `obj.subscription` absent or wrong (a Stripe API-version field relocation is the obvious candidate, but asserting that unverified is exactly the habit that made this doc untrustworthy). Read the #416 PR body before acting.
   2. ❓ **PRODUCT QUESTION (open, deliberately undecided in code):** a genuinely $0-priced plan has `subtotal === 0` and is therefore skipped by the trial-start discriminator, exactly like a trial-start invoice — so **a free-plan signup does not count as a "customer"** (`stripe-subscription.js:56-60`). Today's answer matches what `customers` means everywhere else, but it is a **founder call**, not a bug. Documented at the source.
+
+---
+
+## 28. STATE RECONCILIATION — 2026-08-06
+
+Four buckets that the ✅/🚧/🧪 tags do not separate on their own. The distinction that matters to a
+reader is **not** "is there code?" — it is **"has this ever produced a result for a real customer?"**
+A feature can be fully built, fully wired, plan-gated correctly, and have fired **zero** times.
+
+Provenance: code claims below are grepped against `origin/main @ 2e65b821` this session. Rows
+marked *(prod)* rest on read-only prod inspection by the orchestrator, 2026-08-06 — CC has no prod
+DB access and did not re-query them.
+
+### 28.1 ⛔ DOES NOT EXIST — no code, no route, no table
+
+Listed because each has been referred to as though it were built or nearly built. None is.
+
+| Feature | Note |
+|---|---|
+| CRM sync | No integration, no route, no scheduled job |
+| Warehouse streaming | No export path, no destination config |
+| `lead_status` / `lead_score` | Columns do not exist; lead qualification does not score |
+| White-label reports | No branding-override surface anywhere |
+| Trial → paid funnel | Named in CLAUDE.md §7 as explicitly **not built** — do not assume it exists |
+| Slack **delivery** | ⚠️ Distinguish: `health-agent` posts to a Slack webhook (§17). There is **no customer-facing Slack delivery** for reports or alerts |
+| Install telemetry | Nothing reports whether a customer's snippet is live except the on-demand setup doctor |
+
+### 28.2 🧪 BUILT, NEVER FIRED — code exists and is wired; zero real executions
+
+**The most dangerous bucket**: it greps as ✅ and demos as working.
+
+| Feature | Evidence |
+|---|---|
+| CAPI — **all four** platforms | Delivery code, config, event-id and dedup tests all present. No platform has delivered a real customer event *(prod)* |
+| Ad-platform cost import | Corroborates §20 row 11's existing 🧪 — "no real ad account has run it" *(prod)* |
+| Identity stitching | **3 tables, 0 rows** *(prod)*. The code path is exercised only by tests |
+| Over-reporting detection | Built; never triggered on real data *(prod)* |
+| Server-side event **API keys** | **0 rows** *(prod)*. ⚠️ Note this does **not** contradict §20 row 2 — that row corrected a stale *"no UI"* claim and is right: the UI exists and works. Both are true: fully built, never used |
+
+### 28.3 ⚠️ RUNS, PRODUCES NOTHING — scheduled and executing, output empty or absent
+
+| Job | State |
+|---|---|
+| `email-reports-weekly` | ⚠️ **Stopped entirely 2026-07-27** *(prod)*. Distinct from the older "sends 0 emails" defect — that one runs and produces nothing; this one does not run. Fixing either leaves the other live. `KNOWN_ISSUES` **KI-86** |
+| `anomaly-watcher` | Runs, writes `job_runs`, surfaces nothing |
+| `gsc-daily-sync` | **534 processed vs 56 stored** *(prod)* — a ~90% drop between fetch and persist, not a "no data" state. Relates to §20 row 4's 🧪 pending-first-sync note, but is a *different* problem: it is syncing and losing rows |
+| `ai-crawler-range-refresh` | ✅ **Code-verified: scheduled NOWHERE.** No cron entry, no invocation. `dashboard/src/featureFlags.js:31` says so in its own comment — *"today nothing invokes it"*. Only its own file and two tests reference it |
+
+### 28.4 ⚠️ CORRECTION — `data-quality-check` RUNS DAILY. Fix it wherever listed as dead
+
+**305 reports across 79 distinct days** *(prod)*. Any document, audit or row calling it dead or
+dormant is **wrong** — correct it in place.
+
+**The inference that produced the error, so it is not repeated:** `data-quality-check` writes
+**nothing** to `job_runs`, and an audit read that absence as "never ran". `job_runs` is **not a
+reliable negative** — verified on `main`, its only writers are `nightly-attribution.js` (3 sites),
+`anomaly-watcher.js` (1) and the `api/lib/job-runs.js` helper. `health-agent.js` and
+`data-quality-check.js` reference it **only via `.select()` reads**, filtered to
+`job_name = 'nightly-attribution'`; `proxy-domain-recheck.js` does not reference it at all.
+
+So the table is a log about **one** job, consumed as if it were a registry of **all** jobs — by two
+jobs that are themselves missing from it. Full detail: `KNOWN_ISSUES` **KI-83**. (§17 row 7 already
+records the `health-agent` half — "Writes no `job_runs` row" — that observation was right and its
+generalisation is what was missing.)
+
+### 28.5 ⛔ AI Visibility — flagged OFF (#655), and it could not have been switched on
+
+The page is flagged off. Recording **why deploying the pipes was never a one-step fix**:
+
+- `tinybird/datasources/crawler_hits.datasource` is **authored in-repo but NEVER DEPLOYED** to the
+  workspace — `SELECT count() FROM crawler_hits` returns `Resource 'crawler_hits' not found` *(prod
+  workspace check, orchestrator)*.
+- ✅ **Code-verified on `main`:** **both** dependent pipes read FROM it —
+  `tinybird/pipes/crawler_pages.pipe` and `tinybird/pipes/crawler_agents.pipe`.
+- Therefore **deploying those pipes would fail outright**, not merely return empty. The datasource
+  must land first (founder-gated, CLAUDE.md §8).
+
+Compounding: `ai-crawler-range-refresh` — the job that would populate it — is scheduled nowhere
+(§28.3). Three stacked breakages, not one.
+
+### 28.6 ✅ COUNTS FROM SOURCE — grepped this session, not carried forward
+
+| Claim | Verified value | Source of truth |
+|---|---|---|
+| AI assistants | **16** | `marketing/src/lib/homeFixtures.js:147` (`AI_ASSISTANTS`), derived from the live classifier's label set. ⚠️ **`tracker/tracker.js:248` carries 13** distinct labels, and `homeFixtures.js:28` ships copy implying **22**. Three surfaces, three numbers — the classifier's 16 is correct. `KNOWN_ISSUES` **KI-94** |
+| Report templates | **11** | `dashboard/src/pages/ReportBuilder.jsx:137` `PRESET_TEMPLATES` — counted: `univ_channel_rev`, `univ_campaign_rev`, `saas_trials`, `saas_demos`, `saas_signups`, `ecom_orders`, `ecom_revenue`, `ecom_aov`, `ecom_shopify`, `lead_leads`, `lead_forms` |
+| Attribution models | **9** | `ALLOWED_MODELS` in `api/routes/campaigns.js`, stated as "all 9" by `api/tests/campaigns-model-guard.test.js:5` |
+| Models on **Campaigns** | **2 — and that is CORRECT, not a gap** | ✅ Deliberate. The guard test explains it at `:24`: *"the UI hardcodes `model=last_touch` and narrows the tab bar."* The route validates against all 9 then fails closed on models it cannot answer honestly — narrowing the UI is the honest behaviour, not missing work. **Do not "restore" the other 7 here.** |
