@@ -3256,3 +3256,28 @@ Preferred over the alternative (a build-time assertion per token) because it is 
 **The correct move is neither.** Keep the text neutral (`--v3-ink` or a gray token) and carry the state in an adjacent lime fill. Weight and capitalisation do the rest of the work — `.v3-syncrow .st` is already 900-weight uppercase, which signals state without relying on hue at all.
 
 **A prediction that did NOT hold, recorded so it is not treated as a law:** after two greens it looked like every ported section would bring a third. PR #699 scanned every rule behind its sections' classes and found **no green at all**. The pattern is real and worth checking for; it is not inevitable.
+
+### KI-114 — SCOPE: the demo workspace is CUT, not deferred (2026-08-08)
+
+Recorded here because the decision previously lived only in a source comment (`marketing/src/pages/index.astro`'s header) and in PR bodies. **There is no v3 plan doc** — `docs/SESSION_HANDOFF.md` has 0 v3 mentions — so a scope decision in a source comment is findable only by someone already in that file. An item that sits on a list forever is how the v3 missing-visual count stayed wrong for three PRs; **"cut" and "deferred" must not blur.**
+
+**The handoff's `demo-app` mount is NOT being ported.** That is `demo-app.jsx` + `demo-screens.jsx` + `full-dashboard.jsx` + `tweaks-panel.jsx` + `demo-data.jsx` — ~120KB, ~2,753 lines, 37 hooks. **Two independent reasons, either sufficient:**
+
+1. **`design.md` §29.4 names it as the wrong visual:** *"The hero visual should show an attribution story, not a generic dashboard."* `demo-app` **is** the six-screen KPI dashboard. `MarketingInteractiveDemo` — which §2 renders as of #700 — is the attribution story, already exists, already truthful.
+2. **Truth.** Five capability assertions across **four of its six screens** have never run: `demo-screens.jsx:195` *"written to HubSpot and pushed to Google Ads"* (CRM sync has 0 references in `api/`; `capi_deliveries` and `ad_platform_connections` are both 0); `:228-229` *"white-labelled"* and *"Scheduled to Slack"* (`white_label` false on every tier; `email-reports-weekly` logs "Sent 0" every run); `:124` CRM chips; and `full-dashboard.jsx:82,90` *"Best ROAS 6.2x"* plus a ROAS column (§6 cost-gated, 0 ad-platform connections). `TrackingPanel` was **already** rewritten for this reason — four more screens is a redesign, not a trim.
+
+**Consequences, stated so they are not rediscovered:**
+- The **Integrations** and **Leads** screens are **not on the roadmap at all**.
+- **The fallback**, if the query builder is later judged too dense for the hero, is **today's state** — `JourneyMockup` in §2 and §3 empty. **NOT the port.** That option is closed on the two grounds above, and reopening it needs both to change.
+
+### KI-115 — KI-111 is not theoretical: the claims guard missed TWO live false claims in one afternoon (2026-08-08)
+
+**KI-111** records that `v3-claims-allowlist.test.js` matches **phrasings, not claims**. That entry is correct and was measured (12 of 12 rewordings walked through). But a ceiling recorded in the abstract gets discounted. **Two concrete misses, both on 2026-08-07, both would have shipped:**
+
+**1. "White-label reports" (#699, §13 audience badges).** The guard flagged **none** of the handoff's badge strings — control confirmed the guard itself was working. `api/lib/plan-features.js` has `white_label: false` on **every** tier. A flatly false capability claim, caught only by reading the badge and checking it against the feature matrix.
+
+**2. Two gated metrics in `CompareSlider` (§11, blocked before build).** Its SourceTrack pane headlines **"AI Search revenue"** and **"Best conversion rate"**. `ai_revenue` and `conversion_rate` are both in `GATED_METRICS` (`dashboard/src/lib/gate-constants.js`), which that file calls *"the SINGLE source of truth for which report shapes the server can actually serve"* — a gated metric returns `gated_dead_store`, **unservable at any tier, not plan-gating**. The guard passed all four tiles.
+
+**⚠️ Note how the second is WORSE than the class of claim already cut.** §12 and hero-orbit asserted capabilities that had never **run** (`capi_deliveries` = 0). These assert capabilities the server actively **REFUSES** with a 422 — and in a credibility comparison against GA4, which is the worst place on the site to overstate.
+
+**THE OPERATING RULE, plainly: a green claims guard is NOT clearance.** Read the copy. For every asserted capability, check it against code before shipping — the feature matrix for entitlements (`plan-features.js`), the gate constants for metrics and dimensions (`gate-constants.js`), and the live tables for anything claiming delivery. The guard is a regression check for exact strings that were already cut; it has never been able to tell you whether a *new* claim is true.
