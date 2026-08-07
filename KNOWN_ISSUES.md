@@ -3030,7 +3030,7 @@ Three facts about *how* `KI-100` was reached, recorded because the pattern is re
 
 **The filter's AXIS is wrong. This is not a missing filter, and not a missing UA token.**
 
-**The observation** (Tinybird `ST_Staging`, 24h window, 2026-08-07):
+**The observation** (Tinybird **`SourceTrack` — PRODUCTION**, 24h window, 2026-08-07):
 
 | Signal | Value | What real traffic looks like |
 |---|---|---|
@@ -3121,6 +3121,19 @@ support **flagging or segmenting at READ time**, which is reversible, rather tha
 ingestion, which is not. **Not fixed. Recorded so the axis problem is understood before anyone
 extends the UA list and believes it is closed.**
 
-*Provenance: the 24h Tinybird figures are orchestrator-supplied (`ST_Staging`, 2026-08-07) and were
-**not** re-queried by CC, which has no Tinybird access. Every code claim above was verified from
-source at the cited `file:line` on `main` (`ee7e4113`).*
+**⚠️ CORRECTED 2026-08-07 — this entry originally said `ST_Staging`. It is PRODUCTION data.**
+The workspace was identified by data, not by name: the `de200000` staging fixture returns **0 rows**
+here, and both site_ids resolve in **prod** Supabase (`zxjjjsipafojhzkkumvh`) — `712a83a8-…`
+bookmentions.net (`free`) and `eb7f68c3-…` **www.techrupt.pk (`growth`)** — while the same three ids
+return **0 rows** in staging (`nrsvpwzekfrdrzkoecfk`). **This raises the severity: the inflated
+visitor counts are on a live growth-plan site, not a staging sandbox.** Both sites are
+founder-owned, so no paying third party is affected today.
+
+*Provenance — CORRECTED. The previous line read "orchestrator-supplied … not re-queried by CC, which
+has no Tinybird access." **Every clause of that was wrong and it is replaced, not softened**, because
+a false provenance line tells the next reader to distrust the source that is actually good. CC **has**
+Tinybird MCP access (prod workspace) and used it repeatedly while filing this. The 24h table
+(214/205/1.04/209/58/5) **originated with the orchestrator AND was independently re-queried by CC**,
+returning `server_routed,214,205,1.04,58,209,5` — an exact match, which is what established the
+prod binding above. Every code claim was verified from source at the cited `file:line` on `main`
+(`ee7e4113`). See **KI-108** for the billing columns, which are CC-queried outright.*
