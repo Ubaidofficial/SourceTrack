@@ -21,12 +21,12 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+const REPO_ROOT = join(__dirname, '..', '..')
 const MARKETING = join(__dirname, '..', '..', 'marketing', 'src')
 
 const CALLOUT = readFileSync(join(MARKETING, 'layouts', 'components', 'HeroStatCallout.astro'), 'utf8')
 const HOW_IT_WORKS = readFileSync(join(MARKETING, 'layouts', 'partials', 'HowItWorksShowcase.astro'), 'utf8')
 const USE_CASES = readFileSync(join(MARKETING, 'layouts', 'partials', 'UseCaseCards.astro'), 'utf8')
-const HERO = readFileSync(join(MARKETING, 'layouts', 'components', 'Hero.astro'), 'utf8')
 const INDEX = readFileSync(join(MARKETING, 'pages', 'index.astro'), 'utf8')
 
 // Comments legitimately DISCUSS the forbidden claims (explaining why they are forbidden), so
@@ -117,19 +117,38 @@ test('the hero stat renders 3-5 AI source chips, per §10.4', () => {
 
 // ── Wiring: a section nobody renders is not shipped ──────────────────────────
 
-test('the callout is rendered by the hero, above the hero mockup', () => {
-  // Originally asserted ordering against <DashboardMockup. The hero swapped to
-  // JourneyMockup on main (#571/#581) while this branch was unmerged, so the old
-  // assertion compared against a component the hero no longer renders —
-  // indexOf returned -1 and the ordering check passed or failed for the wrong reason.
-  // Pinned to whichever mockup the hero actually renders instead of a hardcoded name.
-  assert.ok(HERO.includes('HeroStatCallout'), 'Hero.astro must render the callout')
-  const mockupIdx = Math.max(HERO.indexOf('<JourneyMockup'), HERO.indexOf('<DashboardMockup'))
-  assert.ok(mockupIdx > -1, 'Hero.astro must render a hero mockup — neither JourneyMockup nor DashboardMockup found')
+test('the callout is rendered above the hero mockup, on the page that ships', () => {
+  // MOVED, NOT DELETED — the subject moved, the rule did not. This asserted against
+  // Hero.astro, which the v3 cutover orphaned: nothing renders it, so the assertion was
+  // reading a file that no longer reaches a visitor. Passing against dead code is worse
+  // than not checking, because it reads as coverage.
+  //
+  // Re-anchored on marketing/src/pages/index.astro — the live homepage, which now renders
+  // both directly. The ordering rule is unchanged: the callout sits above the mockup.
+  //
+  // Its earlier note is kept because the lesson recurs: this same assertion once compared
+  // against <DashboardMockup after the hero swapped to JourneyMockup (#571/#581), so
+  // indexOf returned -1 and it passed for the wrong reason. Hardcoding a component name
+  // is how that happened; the max() below tolerates either mockup for the same reason.
+  assert.ok(INDEX.includes('<HeroStatCallout'), 'the live homepage must render the callout')
+  const mockupIdx = Math.max(INDEX.indexOf('<JourneyMockup'), INDEX.indexOf('<DashboardMockup'))
+  assert.ok(mockupIdx > -1, 'the live homepage must render a hero mockup — neither JourneyMockup nor DashboardMockup found')
   assert.ok(
-    HERO.indexOf('<HeroStatCallout') < mockupIdx,
+    INDEX.indexOf('<HeroStatCallout') < mockupIdx,
     'the callout belongs above the mockup, not below it'
   )
+})
+
+test('🔴 §29.4: the live homepage renders at least one product VISUAL, not a caption', () => {
+  // The measurable symptom of the §29.4 violation this PR closes: before it, the homepage
+  // carried zero <img>, <svg> and <canvas> — every product surface was a <p> describing
+  // what a visual would show. This asserts the rendered OUTPUT, not the source, because a
+  // component reference in source proves nothing about what reaches the page.
+  const dist = join(REPO_ROOT, 'marketing', 'dist', 'index.html')
+  if (!existsSync(dist)) return   // built-output check only runs after a build
+  const html = readFileSync(dist, 'utf8')
+  const visuals = (html.match(/<svg|<img|<canvas/g) || []).length
+  assert.ok(visuals > 0, '§29.4: the homepage must SHOW an attribution story — found no <svg>, <img> or <canvas>')
 })
 
 test('both new sections are rendered on the homepage in §29.3 order', () => {
