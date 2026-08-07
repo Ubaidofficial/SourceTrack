@@ -3023,3 +3023,104 @@ Three facts about *how* `KI-100` was reached, recorded because the pattern is re
 3. **The certificates were read from the TLS handshake** — `openssl s_client -servername <host>`
    piped to `openssl x509` — **not from a provider console.** That is what makes the issuer and the
    per-hostname CN properties of *what is actually served*, rather than of what a dashboard reports.
+
+---
+
+### KI-107 — UA-based bot filtering is structurally blind to UA-spoofing scrapers, and the inflation reaches visitor counts and CVR denominators
+
+**The filter's AXIS is wrong. This is not a missing filter, and not a missing UA token.**
+
+**The observation** (Tinybird `ST_Staging`, 24h window, 2026-08-07):
+
+| Signal | Value | What real traffic looks like |
+|---|---|---|
+| `ingestion_method = server_routed` | **214 pageviews** | — |
+| distinct visitors | **205** | — |
+| **pages per visitor** | **1.04** | real content traffic runs **2–4** |
+| no referrer | **209 / 214** | — |
+| `browser_name` NULL | **58 / 214** | — |
+| countries | 5 | — |
+
+A 1.04 ratio means essentially **one page per visitor, then gone** — the shape of a scraper sweep,
+not of reading.
+
+**Blast radius: none, today.** Both affected sites are **founder-owned** (`techrupt.pk`,
+`bookmentions.net`), so **no customer is looking at these numbers.** It is recorded anyway because
+**it is the number a founder reads** when judging whether the product works.
+
+#### Why these requests pass — by construction, not by oversight
+
+`api/lib/bot-filter.js:71-72` — `isIngestionBotUserAgent(ua)` returns true **only** when the UA is
+**empty** or matches `INGESTION_BOT_UA_PATTERN` (`:66`), a token list: `googlebot`, `bingbot`,
+`headlesschrome`, `selenium`, `puppeteer`, `curl/`, `python-requests`, `axios/`, `scrapy`, and so on.
+`:70` states the design in its own words: *"Everything else … is LET IN."*
+
+**A scraper that sends a plausible desktop-Chrome UA is neither empty nor a token match.** It reports
+`chrome`/`desktop`, `UAParser` resolves it cleanly, and it is admitted. **Adding more UA tokens
+cannot fix this** — the evasion is the spoof itself, and the list can only ever name UAs that are
+honest about being automated.
+
+⚠️ **The sharpest part: the filter WAS applied to these requests.** `ingestion_method =
+'server_routed'` is emitted by `api/routes/track.js:464`, `:586`, `:713` (and `conversion.js:288`) —
+that is **`/api/track`**, and `/api/track` **does** run the filter, at `track.js:171`. So these 214
+rows are not traffic that slipped past an unguarded rail; **they are traffic that passed the guard on
+the one rail every shipped tracker actually uses.**
+
+#### Why it reaches visitor counts and CVR denominators
+
+`server_routed` is not treated as a lesser signal downstream. `api/lib/attribution-engine.js` maps it
+to `provider = 'browser'` (`:106`, `:319`), `stitching_method = 'browser'` (`:110`, `:320`) and
+`attribution_status = 'attributed'` (`:108`). **Spoofed traffic therefore lands as attributed browser
+visitors** — inflating unique-visitor counts and sitting in the **denominator** of every conversion
+rate, which pushes CVR down. The metric moves in the direction that looks like a product problem.
+
+#### ⚠️ DISTINCT FROM KI-77 — do not merge these two
+
+| | KI-77 | **KI-107** |
+|---|---|---|
+| Claim | the automation score is **log-only** | the **filter's axis is wrong** |
+| Evidence | `track.js:188-191` — `auto_score` is read and `console.log`'d, never gated. Same shape at `bot-filter.js:127-137`, where `logWouldDropBot` observes and never drops | `bot-filter.js:66,71-72` — the predicate cannot match a spoofed UA at all |
+| Fix shape | a **threshold decision** on a signal that already exists | **a different signal.** No threshold on `auto_score` and no UA token helps |
+
+**KI-77 is "we measure it and do nothing." KI-107 is "we are not measuring the right thing."**
+Closing KI-77 would leave KI-107 wholly untouched.
+
+#### What #666 and #667 did, and why neither is this
+
+Both were **correct fixes to real defects**, and **neither addressed this one**:
+
+- **#666** fixed `/api/analytics/collect` — the *reporting* predicate running at *ingestion*
+  (`api/routes/analytics.js`). Wrong predicate, wrong layer.
+- **#667** wired the filter to `/sp/e` and `/sp/pixel` (`api/routes/proxy.js`), and documented why
+  `server-events.js` must stay exempt.
+
+⚠️ **Neither touched the rail carrying this traffic**, and #667's own body says why that is expected:
+*"**No shipped tracker calls either rail** — all four builds POST to `/api/track`; `/sp/e` and
+`/sp/pixel` appear only in `rate-limit.js`'s allowlist and a QA script."* Those PRs hardened rails
+that no shipped tracker uses. **This defect is on the rail every shipped tracker does use**, and it is
+not a gap in coverage — the guard is present and admits the traffic.
+
+#### §6 constrains any remedy — read before proposing one
+
+1. **The 214 rows CANNOT be retro-analysed.** Raw `user_agent` is **never persisted**: it is in
+   `FORBIDDEN_KEYS` (`tinybird/adapter/normalize.js:92`) and is **not a column** in
+   `events.datasource`. `track.js:186-187` states the reason — §6 treats a raw UA as
+   **fingerprinting-adjacent**, so only a coarse hash is ever logged. Any investigation must be
+   **forward-looking**; there is no stored UA to mine.
+2. **An ingestion drop is irreversible.** A filter that drops on a heuristic — session shape, request
+   cadence, a scoring threshold — deletes the event permanently, with **no** recovery path, and a
+   false positive silently deletes a real customer's real visitor. That is why this is recorded
+   rather than fixed in place.
+3. **Do not "fix" it by fingerprinting.** Cookieless, no-fingerprinting is a **security and privacy
+   boundary** (CLAUDE.md §6, §6.5), not a preference. A remedy that identifies scrapers by
+   device-fingerprint entropy trades a metrics defect for a moat breach and is not available.
+
+**A viable direction, not a decision:** the discriminating signals here are already non-PII and
+already present — **pages-per-visitor**, **referrer absence**, **`browser_name` NULL rate**. Those
+support **flagging or segmenting at READ time**, which is reversible, rather than dropping at
+ingestion, which is not. **Not fixed. Recorded so the axis problem is understood before anyone
+extends the UA list and believes it is closed.**
+
+*Provenance: the 24h Tinybird figures are orchestrator-supplied (`ST_Staging`, 2026-08-07) and were
+**not** re-queried by CC, which has no Tinybird access. Every code claim above was verified from
+source at the cited `file:line` on `main` (`ee7e4113`).*
