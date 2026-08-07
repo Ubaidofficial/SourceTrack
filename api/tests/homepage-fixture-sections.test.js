@@ -133,16 +133,40 @@ test('the callout is rendered by the hero, above the hero mockup', () => {
 })
 
 test('both new sections are rendered on the homepage in §29.3 order', () => {
+  // REPOINTED AT THE V3 CUTOVER. The homepage is now the promoted v3 page, so the anchors
+  // this test ordered against changed — but the RULE did not, and neither did the subject:
+  // docs/design/design.md:2946-2954 still mandates how-it-works (3) then use-case cards (4),
+  // between the product preview (2) and pricing (5). Both components are ported onto the v3
+  // page rather than dropped, so this guard survives with a new anchor set.
+  //
+  // The old '<DirectRescueShowcase' anchor is GONE, not weakened: §29.3 never required that
+  // section, v3 covers the same claim in its FAQ and comparison table, and the component was
+  // retired with its test. Substituting a softer ordering assertion to keep the line would
+  // have been the wrong repair — an anchor that no longer exists cannot order anything.
   const howIdx = INDEX.indexOf('<HowItWorksShowcase')
   const useIdx = INDEX.indexOf('<UseCaseCards')
-  const priceIdx = INDEX.indexOf('<Pricing')
-  const rescueIdx = INDEX.indexOf('<DirectRescueShowcase')
+  const priceIdx = INDEX.indexOf('eyebrow="Pricing"')
+  const previewIdx = INDEX.indexOf('eyebrow="Product tour"')
   assert.ok(howIdx > -1, 'HowItWorksShowcase must be rendered on the homepage')
   assert.ok(useIdx > -1, 'UseCaseCards must be rendered on the homepage')
+  assert.ok(previewIdx > -1, 'the §29.3 product-preview section must exist to order against')
+  assert.ok(priceIdx > -1, 'the §29.3 pricing section must exist to order against')
   // §29.3: product preview (2) -> how it works (3) -> use-case cards (4) -> pricing (5).
-  assert.ok(rescueIdx < howIdx, 'how-it-works belongs after the product-preview cluster')
+  assert.ok(previewIdx < howIdx, 'how-it-works belongs after the product-preview cluster')
   assert.ok(howIdx < useIdx, 'use-case cards belong after how-it-works')
   assert.ok(useIdx < priceIdx, 'use-case cards belong above pricing')
+})
+
+test('🔴 CONTROL: the §29.3 order check CAN fail', () => {
+  // Every ok() above passes trivially if indexOf returns -1 for the anchors AND the
+  // comparison happens to hold. Feed the same logic a homepage with the sections in the
+  // WRONG order and require it to be detected — otherwise this is four assertions that
+  // cannot distinguish a correct page from a missing one.
+  const scrambled = 'eyebrow="Pricing"  <UseCaseCards />  <HowItWorksShowcase />  eyebrow="Product tour"'
+  const how = scrambled.indexOf('<HowItWorksShowcase')
+  const use = scrambled.indexOf('<UseCaseCards')
+  const price = scrambled.indexOf('eyebrow="Pricing"')
+  assert.ok(!(how < use && use < price), 'the ordering logic must reject a scrambled homepage')
 })
 
 // ── The failure mode a card grid actually has: a link to nowhere ─────────────

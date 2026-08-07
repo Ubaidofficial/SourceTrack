@@ -66,13 +66,37 @@ export default defineConfig({
     server: { watch: { ignored: ["**/.claude/**"] } },
   },
   fonts: fontsConfig,
+  // /v3/* redirects — the preview paths were shared and may be linked or indexed, so they
+  // must survive the cutover rather than 404. NOTE WHAT THESE COMPILE TO: this project is
+  // static (no `output`/`adapter` set, so Astro defaults to output:'static'), and the static
+  // build emits redirects as META-REFRESH HTML, not 301s. Verified empirically, not assumed:
+  // dist/compare/index.html already ships `http-equiv="refresh" content="0;url=/compare/ga4"`
+  // from the existing compare redirect. That is fine for a human following an old link; it is
+  // NOT a 301 and search engines treat it more weakly. If a true 301 is wanted for these,
+  // it belongs at the Railway/edge layer — it cannot be produced from this file.
+  redirects: {
+    "/v3": "/",
+    "/v3/pricing": "/pricing",
+    "/v3/compare-ga4": "/compare/ga4",
+    "/v3/product": "/product",
+    "/v3/report-builder": "/report-builder",
+    "/v3/use-cases-saas": "/use-cases-saas",
+    "/v3/use-cases-ecommerce": "/use-cases-ecommerce",
+    "/v3/attribution": "/attribution",
+    "/v3/ai-referral-tracking": "/ai-referral-tracking",
+  },
   integrations: [
     react(),
-    // /v3 is a noindex PREVIEW route. A noindex page listed in the sitemap is a
+    // The /v3 filter was removed at the cutover. It existed because /v3 was a
+    // noindex PREVIEW route, and a noindex page listed in the sitemap is a
     // contradiction — it tells crawlers "index this" and "do not index this" at
     // once, and Search Console reports it as an error rather than ignoring it.
-    // Filtered here so the two signals agree.
-    sitemap({ filter: (page) => !page.includes("/v3") }),
+    // Those pages are now the live routes (/, /pricing, /compare/ga4, /product,
+    // /report-builder, /use-cases-saas, /use-cases-ecommerce, /attribution,
+    // /ai-referral-tracking), they carry no noindex, and /v3/* no longer exists
+    // as a source route — so there is nothing left to filter and the two signals
+    // already agree. Re-adding a filter here would silently drop live pages.
+    sitemap(),
     AutoImport({
       imports: [
         "@/shortcodes/Button",

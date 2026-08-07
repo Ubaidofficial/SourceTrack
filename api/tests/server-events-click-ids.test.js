@@ -1,6 +1,6 @@
 // A1 — server-side click-ID capture on POST /api/server/event.
 //
-// WHY THIS EXISTS: marketing/src/pages/v3/index.astro:264 claims "Server-side ingest and
+// WHY THIS EXISTS: marketing/src/pages/index.astro (promoted from /v3 at the cutover) claims "Server-side ingest and
 // click-ID stitching keep the path intact." Before this change, `grep -E "gclid|fbclid"
 // api/routes/server-events.js` returned ZERO — the server-side half of that claim was false.
 // This suite makes it true and pins it.

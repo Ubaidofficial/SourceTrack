@@ -153,7 +153,7 @@ test('the baseline still matches live pricing.md — drift detector', () => {
 
 // ── §12 RETRACTION GUARD ──────────────────────────────────────────────────────────────
 // NOTE ON THIS FILE'S REACH: the tests above scan V3_PRICING_CANDIDATES — v3 PRICING
-// content. They have never read marketing/src/pages/v3/index.astro, so the §11/§12 claims
+// content. They have never read the v3 landing page (now marketing/src/pages/index.astro), so the §11/§12 claims
 // on the landing page were unguarded. This section closes that gap for the retracted §12.
 //
 // §12 ("Same budget. Better spend.") and its "server-side egress is in beta" disclosure
@@ -165,7 +165,12 @@ test('the baseline still matches live pricing.md — drift detector', () => {
 // A softer rewording is NOT a fix — a quieter phrasing keeps the claim. So this matches the
 // CLAIM, not the exact sentence: any reappearance of egress/send-back-to-ad-platforms
 // copy on the v3 landing page fails, however it is worded.
-const V3_LANDING = 'marketing/src/pages/v3/index.astro'
+// PATH UPDATED AT THE CUTOVER: this page was promoted from /v3 to the site root, so the
+// file moved to marketing/src/pages/index.astro. The guard follows the FILE, not the route —
+// leaving it pointed at the old path would have made it read a missing file. It did exactly
+// that on the first build of the cutover branch and failed loudly, which is the behaviour
+// you want from a guard whose subject moves (§10 class-1: a path STRING an import grep misses).
+const V3_LANDING = 'marketing/src/pages/index.astro'
 
 const RETRACTED_V3_CLAIMS = [
   { pattern: /same budget\.?\s*better spend/i,        why: '§12 heading — ad-platform egress, capi_deliveries has 0 rows all-time' },
