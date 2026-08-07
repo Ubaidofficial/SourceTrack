@@ -214,10 +214,10 @@ export const V3_PAGE_PAIRS = {
   ],
   // ── /v3/attribution ───────────────────────────────────────────────────────
   '/v3/attribution': [
-    { id: 'family kicker', sel: '.v3-model-family > h3', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
-    { id: 'family lede', sel: '.v3-model-family > p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'model name', sel: '.v3-model-family li b', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
-    { id: 'model weighting', sel: '.v3-model-family li span', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'family kicker', sel: '.v3-group > h3', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
+    { id: 'family lede', sel: '.v3-group > p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'model name', sel: '.v3-group li b', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
+    { id: 'model weighting', sel: '.v3-group li span', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
     { id: 'divided band h3', sel: '.v3-divided h3', fg: '#12100C', bg: '#FFFDF8', level: 'AA' },
     { id: 'divided band body', sel: '.v3-divided p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
     // ⚠️ THIS PAGE PUTS .v3-cards ON THE DARK BAND — a combination the homepage
@@ -250,13 +250,63 @@ export const V3_PAGE_PAIRS = {
     { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
     { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
   ],
+  // ── /v3/use-cases-saas ────────────────────────────────────────────────────
+  '/v3/use-cases-saas': [
+    { id: 'stat number', sel: '.v3-stat-num', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
+    { id: 'stat label', sel: '.v3-stat-label', fg: '#5B5548', bg: '#F7F4ED', level: 'AA' },
+    { id: 'card body on paper-card', sel: '.v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'journey timestamp', sel: '.v3-journey-when', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
+    { id: 'journey body', sel: '.v3-journey-what', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
+    { id: 'journey sub', sel: '.v3-journey-what em', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'journey won chip', sel: '.v3-journey-row--won .v3-journey-val', fg: '#12100C', bg: '#D2EC2A', level: 'AA' },
+    { id: 'divided band h3', sel: '.v3-divided h3', fg: '#12100C', bg: '#FFFDF8', level: 'AA' },
+    { id: 'divided band body', sel: '.v3-divided p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'frame chrome url', sel: '.v3-frame-url', fg: '#8a9494', bg: '#12100C', level: 'AA' },
+    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
+    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
+  ],
+  // ── /v3/use-cases-ecommerce ───────────────────────────────────────────────
+  '/v3/use-cases-ecommerce': [
+    { id: 'stat number', sel: '.v3-stat-num', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
+    { id: 'stat label', sel: '.v3-stat-label', fg: '#5B5548', bg: '#F7F4ED', level: 'AA' },
+    { id: 'table cell', sel: '.v3-table-card td', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'table row header', sel: '.v3-table-card th', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
+    { id: 'card body on paper-card', sel: '.v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'compare panel label', sel: '.v3-compare-panel h3', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
+    { id: 'compare value', sel: '.v3-compare-value', fg: '#12100C', bg: '#FFFDF8', level: 'AA-large' },
+    { id: 'compare panel body', sel: '.v3-compare-panel p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
+    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
+  ],
+  // ── /v3/report-builder ────────────────────────────────────────────────────
+  '/v3/report-builder': [
+    // The grouped list is the same frame attribution §2 uses, on the same soft
+    // band, so the surfaces match — scored here anyway rather than carried over.
+    { id: 'group kicker', sel: '.v3-group > h3', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
+    { id: 'group lede', sel: '.v3-group > p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'template name', sel: '.v3-group li b', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
+    { id: 'template note', sel: '.v3-group li span', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'journey timestamp', sel: '.v3-journey-when', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
+    { id: 'journey body', sel: '.v3-journey-what', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
+    { id: 'journey sub', sel: '.v3-journey-what em', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'journey won chip', sel: '.v3-journey-row--won .v3-journey-val', fg: '#12100C', bg: '#D2EC2A', level: 'AA' },
+    // Dark band — cards keep their paper-card fill, band text is its own pair.
+    { id: 'dark band title', sel: '.v3-section--dark .v3-section-title', fg: '#f6f3eb', bg: '#0B0A07', level: 'AA-large' },
+    { id: 'dark band lede', sel: '.v3-section--dark .v3-section-lede', fg: '#a79e8c', bg: '#0B0A07', level: 'AA' },
+    { id: 'card h3 on dark band', sel: '.v3-section--dark .v3-card h3', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
+    { id: 'card body on dark band', sel: '.v3-section--dark .v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'quiet link on paper', sel: '.v3-link-quiet', fg: '#161310', bg: '#F7F4ED', level: 'AA' },
+    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
+    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
+  ],
 }
 
 // Pages that exist in the build and must therefore be registered above.
 // Populated as v3 pages land; a page here with no pairs is an error, not a skip.
 export const V3_ROUTES = [
   '/v3', '/v3/pricing', '/v3/compare-ga4',
-  '/v3/product', '/v3/attribution', '/v3/ai-referral-tracking'
+  '/v3/product', '/v3/attribution', '/v3/ai-referral-tracking',
+  '/v3/use-cases-saas', '/v3/use-cases-ecommerce', '/v3/report-builder'
 ]
 
 const DIST = 'dist'

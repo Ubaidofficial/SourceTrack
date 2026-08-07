@@ -1,0 +1,213 @@
+---
+/**
+ * V3 REPORT BUILDER — preview route, noindex.
+ *
+ * ⚠️ THIS PAGE REQUIRED THE MOST CORRECTION IN THE BATCH. The handoff names
+ * five templates, and all five are invented — none of them is one of the eleven
+ * that ship. Its mockup and its "Measure" list also lean on metrics that are
+ * gated dead. Settled against source, not against the handoff:
+ *
+ *   design                                   source
+ *   ──────────────────────────────────────   ───────────────────────────────
+ *   "Five opinionated templates":            ELEVEN templates in four
+ *   Channel ROI · AI search impact ·         categories, none of them named
+ *   Demo funnel · Content attribution ·      that. ReportBuilder.jsx:137.
+ *   Board view                               All eleven are listed below,
+ *                                            under the names they actually
+ *                                            carry in the product.
+ *   mockup: "Conv. rate 5.1%"                conversion_rate is in
+ *   §3 Measure: "conv. rate"                 GATED_METRICS — gated ENTIRELY,
+ *                                            dead on all 15 dimensions.
+ *   mockup: "AI revenue $48,860"             ai_revenue is gated too, and
+ *                                            $48,860 contradicts the $21,430
+ *                                            fixture total (homeFixtures:63).
+ *   §3 Measure: "visits"                     `sessions` is gated.
+ *   §3 Measure: "CAC"                        Cost-gated (§6): hidden unless ad
+ *                                            cost exists for the range. Not a
+ *                                            headline capability.
+ *   §3 Measure: "ARR"                        Not built (CLAUDE.md §7).
+ *   §3 Pin: "Slack-bot if you want"          No Slack path in the builder.
+ *                                            CSV export IS real
+ *                                            (handleExportCSV ->
+ *                                            /api/export/report).
+ *   §4 "included on every plan — even the    saved_reports is TRUE on trial,
+ *      free trial"                           starter, growth and scale, FALSE
+ *                                            on free (plan-features.js:76).
+ *                                            True as written for every plan
+ *                                            sold, so it is kept — but stated
+ *                                            as "every paid plan and the
+ *                                            28-day trial", which is the
+ *                                            precise version.
+ *
+ * The eight usable metrics below are METRICS minus GATED_METRICS. Listing a
+ * gated metric on a marketing page sells a click that dead-ends — which is the
+ * exact failure the univ_cvr template comment in ReportBuilder.jsx describes,
+ * where two templates rendered as working cards and only failed after the click.
+ */
+import Base from "@/layouts/Base.astro";
+import Wrap from "@/layouts/v3/Wrap.astro";
+import SectionHead from "@/layouts/v3/SectionHead.astro";
+import "@/styles/v3-tokens.css";
+import "@/styles/v3-home.css";
+import "@/styles/v3-pages.css";
+
+// All eleven, under their real names and real categories (ReportBuilder.jsx:137).
+const templateGroups = [
+  {
+    kicker: "Universal",
+    lede: "Two that suit any business with revenue attached.",
+    items: [
+      { name: "Channel revenue", note: "revenue by channel, 30 days" },
+      { name: "Campaign revenue", note: "revenue by campaign, 90 days" },
+    ],
+  },
+  {
+    kicker: "SaaS",
+    lede: "Three built around demos, trials and signups.",
+    items: [
+      { name: "Trials by Source", note: "trial conversions by source" },
+      { name: "Demo Bookings by Source", note: "demos by source" },
+      { name: "Signup Landing Pages", note: "signups by landing page, first touch" },
+    ],
+  },
+  {
+    kicker: "Ecommerce",
+    lede: "Four for order-level attribution. Shopify arrives by webhook.",
+    items: [
+      { name: "Orders by Source", note: "purchase conversions by source" },
+      { name: "Revenue by Source", note: "revenue by source" },
+      { name: "AOV by Campaign", note: "average order value by campaign" },
+      { name: "Shopify Webhook Orders", note: "orders via the Shopify webhook" },
+    ],
+  },
+  {
+    kicker: "Lead gen and agency",
+    lede: "Two for businesses where the conversion is a form, not a checkout.",
+    items: [
+      { name: "Leads by Source", note: "new leads by source" },
+      { name: "Form Conversions by Landing Page", note: "forms by landing page" },
+    ],
+  },
+];
+
+const blocks = [
+  { h: "Measure", p: "Conversions, revenue, leads, average conversion value, session count, average session duration, pages per session, conversion sessions. Eight measurements, each one servable on the dimensions below." },
+  { h: "Scope", p: "Narrow to a channel, source, campaign, landing page, conversion type, country, device or browser — fifteen dimensions, and any of them can be the filter." },
+  { h: "Group", p: "By time, or by any of the same fifteen. Group by channel to settle a budget argument; group by landing page to settle a content one." },
+  { h: "Pin", p: "Save it to the dashboard so it is there next week, or export the underlying rows to CSV when someone wants the working rather than the chart." },
+];
+---
+
+<Base
+  title="Report builder — start with a blank canvas | SourceTrack"
+  description="Eleven templates, or start empty. Pick a measurement, scope it, group it, pin it — and export the rows behind any chart."
+  noindex={true}
+>
+  <div class="v3">
+    {/* 1 — hero */}
+    <section class="v3-hero">
+      <Wrap>
+        <h1>Start with a blank canvas.</h1>
+        <p class="v3-hero-sub">
+          Most analytics tools hand you a default dashboard you cannot leave.
+          This one ships empty: pick a measurement, scope it, group it, pin it.
+          Bury the rest.
+        </p>
+      </Wrap>
+    </section>
+
+    {/* 2 — window frame. Blocks shown are real, servable metrics only — no
+        conversion rate, no AI revenue, both gated dead. */}
+    <section class="v3-section v3-section--tight">
+      <Wrap>
+        <div class="v3-frame">
+          <div class="v3-frame-chrome">
+            <span class="v3-frame-dots"><i /><i /><i /></span>
+            <span class="v3-frame-url">app.sourcetrack.example / reports / new</span>
+          </div>
+          <div class="v3-frame-body">
+            <div class="v3-journey">
+              <div class="v3-journey-row">
+                <span class="v3-journey-when">Measure</span>
+                <span class="v3-journey-what"><b>Revenue</b><em>The number the argument is actually about.</em></span>
+                <span class="v3-journey-val">metric</span>
+              </div>
+              <div class="v3-journey-row">
+                <span class="v3-journey-when">Scope</span>
+                <span class="v3-journey-what"><b>Last 30 days</b><em>Any range; the journeys are already stored.</em></span>
+                <span class="v3-journey-val">filter</span>
+              </div>
+              <div class="v3-journey-row">
+                <span class="v3-journey-when">Group</span>
+                <span class="v3-journey-what"><b>By channel</b><em>Or source, campaign, landing page, conversion type — fifteen in all.</em></span>
+                <span class="v3-journey-val">dimension</span>
+              </div>
+              <div class="v3-journey-row v3-journey-row--won">
+                <span class="v3-journey-when">Pin</span>
+                <span class="v3-journey-what"><b>Saved to the dashboard</b><em>And exportable to CSV when someone wants the rows, not the chart.</em></span>
+                <span class="v3-journey-val">Saved</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 3 — soft band, grouped list. All eleven templates, real names. */}
+    <section class="v3-section v3-section--soft">
+      <Wrap>
+        <SectionHead
+          eyebrow="Start fast"
+          heading="Or start from one of eleven templates."
+          lede="Each one opens pre-scoped around a question a marketing team already asks. They are a starting point, not a ceiling — every one of them is editable the moment it loads."
+        />
+        <div class="v3-grouped">
+          {templateGroups.map((g) => (
+            <div class="v3-group">
+              <h3>{g.kicker}</h3>
+              <p>{g.lede}</p>
+              <ul>
+                {g.items.map((i) => (
+                  <li><b>{i.name}</b><span>{i.note}</span></li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 4 — FULL-BLEED DARK. Only non-gated metrics named; see the header note. */}
+    <section class="v3-section v3-section--dark">
+      <Wrap>
+        <SectionHead
+          eyebrow="How it thinks"
+          heading="Blocks, not templates."
+          lede="A report is four decisions, and every combination of them is a report nobody had to build for you in advance."
+        />
+        <div class="v3-cards">
+          {blocks.map((b) => (
+            <div class="v3-card"><h3>{b.h}</h3><p>{b.p}</p></div>
+          ))}
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 5 — CTA close on paper. Lime on the button only (§2.6). */}
+    <section class="v3-cta-close">
+      <Wrap>
+        <div class="v3-cta-inner">
+          <div>
+            <h2>Build the report you've been copy-pasting into a deck.</h2>
+            <p>The builder is on every paid plan and the 28-day trial. No card to start.</p>
+          </div>
+          <div class="v3-cta-actions">
+            <a class="v3-btn-accent" href="https://app.sourcetrack.ai/signup">Start 28-day free trial</a>
+            <a class="v3-link-quiet" href="/v3/pricing">See pricing →</a>
+          </div>
+        </div>
+        <p class="v3-disclosure">Product visuals shown use illustrative data.</p>
+      </Wrap>
+    </section>
+  </div>
+</Base>
