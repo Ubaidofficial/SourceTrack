@@ -142,8 +142,16 @@ export function modelRevenue(modelId) {
 // as a count of domains, which is the exact confusion that produced the wrong
 // number in the first place.
 //
-// Guarded: api/tests/ai-assistant-count-copy.test.js asserts the shipped
-// homepage copy matches the classifier's label count.
+// ⚠️ NOT GUARDED. This block previously claimed "Guarded:
+// api/tests/ai-assistant-count-copy.test.js asserts the shipped homepage copy
+// matches the classifier's label count." That test has never existed — the
+// claim was corrected 2026-08-06 (KNOWN_ISSUES.md KI-93), not deleted, because
+// the false comment is what let the drift below survive.
+//
+// The drift it would have caught is live RIGHT HERE: `:28` ships
+// "ChatGPT, Gemini, Claude +19" — three named plus 19 implies 22 — against the
+// 16 exported on the next line. See KI-94; the fix must reconcile a third
+// number too (tracker/tracker.js:248 carries 13 labels).
 export const AI_ASSISTANTS = 16;
 
 // Fixture rows below sum to the AI Search channel exactly: 642 visitors,
