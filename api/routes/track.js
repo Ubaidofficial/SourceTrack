@@ -424,11 +424,28 @@ export async function track(req, res) {
     // would silently break visitor stitching between PostHog and Tinybird for
     // anonymous pageviews (tinybird/archive/PHASE2C_PAGEVIEW_DUALWRITE_PLAN.md §2.1).
     const distinctId = req.body.anonymous_id || uuidv4()
+    // LOG-ONLY instrumentation. NOTHING branches on this value — it is recorded and
+    // never read to drop, filter, meter, or classify. Asserted by
+    // api/tests/anon-id-absent.test.js.
+    //
+    // WHY IT EXISTS: the `|| uuidv4()` above silently mints an id when a request omits
+    // anonymous_id, and the minted uuid is INDISTINGUISHABLE in shape from the
+    // server-issued visitor_id the legitimate cookieless build fetches and sends back
+    // (tracker/tracker.cookieless.js:300). Both are uuidv4, so "the tracker never ran"
+    // and "a real cookieless visitor" look identical in storage — which is why every one
+    // of the 214 suspect pageviews and all 2847 historical ones matched the same shape
+    // (#682). Every real browser page load runs the tracker and therefore SENDS an
+    // anonymous_id; a client POSTing straight to /api/track does not. Recording the
+    // distinction at the only point where it is still visible is the whole point.
+    //
+    // NOT PII: a boolean about request shape. No UA, no IP, no identifier (§6).
+    const anonIdAbsent = !req.body.anonymous_id
     // properties hoisted to a const (behavior-identical) so the dual-write call
     // reuses the exact same object the existing ph.capture sends.
     const pageviewProps = {
       site_id: req.site.id,
       anonymous_id: req.body.anonymous_id,
+      anon_id_absent: anonIdAbsent,
       page_url: req.body.page_url,
       referrer: req.body.referrer,
       utm_source: normalizeUtm(req.body.utm_source),
