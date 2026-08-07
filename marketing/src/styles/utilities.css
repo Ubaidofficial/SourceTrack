@@ -94,3 +94,25 @@
     rgba(255, 255, 255, 0.025) 105.18%
   );
 }
+
+/* ── MarketingInteractiveDemo chart bars ────────────────────────────────────
+   Paint moved OUT of the style attribute. v3-page-pairs.mjs:552-553 fails on any
+   paint property in style="", and wiring this component into the v3 homepage
+   (§2's hero frame) took the page from 0 to 22 paint-bearing inline styles —
+   a blocking failure, exit code 1.
+
+   Only `height` stays inline, because it is genuinely per-bar and computed. The
+   fills are a BINARY hover state, not a computed value, so they belong here.
+   Lives in utilities.css because main.css imports it and the component renders
+   on both / and /demo — a v3-scoped rule would leave /demo unstyled.
+
+   NOTE: the visitors bar's original ternary read `isHovered ? '#6E6656' :
+   '#6E6656'` — identical in both branches, so hover never changed it. Preserved
+   as a single colour rather than inventing a hover state the design never had. */
+.mid-bar-visitors { background-color: #6E6656; }
+.mid-bar-revenue {
+  background: linear-gradient(180deg, rgba(210, 236, 42, 0.85) 0%, rgba(210, 236, 42, 0.06) 100%);
+}
+.mid-bar-revenue.is-hovered {
+  background: linear-gradient(180deg, #D2EC2A 0%, rgba(210, 236, 42, 0.3) 100%);
+}

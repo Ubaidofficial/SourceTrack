@@ -173,21 +173,13 @@ export default function MarketingInteractiveDemo() {
                     >
                       {/* Visitors Bar */}
                       <div
-                        className="w-1.5 sm:w-2.5 rounded-t-sm transition-all duration-100"
-                        style={{
-                          height: `${visitorsHeight}%`,
-                          backgroundColor: isHovered ? '#6E6656' : '#6E6656'
-                        }}
+                        className="w-1.5 sm:w-2.5 rounded-t-sm transition-all duration-100 mid-bar-visitors"
+                        style={{ height: `${visitorsHeight}%` }}
                       />
                       {/* Revenue Bar */}
                       <div
-                        className="w-1.5 sm:w-2.5 rounded-t-sm transition-all duration-100"
-                        style={{
-                          height: `${revenueHeight}%`,
-                          background: isHovered
-                            ? 'linear-gradient(180deg, #D2EC2A 0%, rgba(210,236,42,0.3) 100%)'
-                            : 'linear-gradient(180deg, rgba(210,236,42,0.85) 0%, rgba(210,236,42,0.06) 100%)'
-                        }}
+                        className={`w-1.5 sm:w-2.5 rounded-t-sm transition-all duration-100 mid-bar-revenue${isHovered ? ' is-hovered' : ''}`}
+                        style={{ height: `${revenueHeight}%` }}
                       />
                     </div>
                   );
