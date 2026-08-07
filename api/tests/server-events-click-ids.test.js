@@ -134,7 +134,7 @@ async function emit (handler, body) {
 }
 
 // ── THE POSITIVE CONTROL ────────────────────────────────────────────────────────────────────
-// Loads the route AS IT EXISTS ON origin/main and runs the IDENTICAL request through it.
+// Loads the route AS IT EXISTS AT THE PINNED PRE-CHANGE REF and runs the IDENTICAL request through it.
 // This is the only control that actually proves the assertions discriminate: a hand-written
 // "simulation" of the old behaviour is a copy that can drift, and would keep passing after
 // the real code changed underneath it.
@@ -144,23 +144,59 @@ async function emit (handler, body) {
 // module registry by resolved path, so BOTH copies share one dual-write module — the same
 // recorder observes both.
 //
-// If the ref cannot be read this THROWS. It must never skip: a control that quietly
-// no-ops is the assertion-free pass KI-49 exists to prevent (CI checks out with
-// fetch-depth: 0, so origin/main is present).
+// ⚠️ PINNED TO A SHA, NOT origin/main. THIS IS THE WHOLE POINT — DO NOT "MODERNISE" IT BACK.
+//
+// GENERAL RULE, worth carrying beyond this file:
+//
+//     A positive control that reads a MUTABLE ref has a shelf life ending at its own merge.
+//
+// This control originally read `origin/main`. That was correct at review and broken the
+// instant the PR landed: #676 merged at 09:52 on 2026-08-07, main gained click-ID handling,
+// and the precondition below — "the pre-change route must contain NO click-ID handling" —
+// started failing on main and on every branch that merged main. Four open PRs went red on
+// code they had never touched. Run 31168556649 (head 3e495e6b) is the failure:
+//
+//     not ok 847 - CONTROL — the identical request on the pre-change ref emits NO click-ID columns
+//     not ok 851 - CONTROL — li_fatid alone on the pre-change ref populates NEITHER column
+//
+// ⚠️ THE ASSERTION WAS NOT WRONG — IT FIRED CORRECTLY. It exists to say "this ref no longer
+// proves anything", and that is exactly what it reported. The defect is the REF, not the
+// approach: loading the real pre-change route still beats a hand-written simulation, which
+// would have silently drifted and kept passing. So the fix pins the ref; it does not delete
+// the control. Deleting it would lose the proof and leave the feature unfalsifiable, which
+// is the precise thing these controls exist to prevent.
+//
+// 2e65b821 is main immediately BEFORE #676. Verified: it contains 0 occurrences of
+// gclid|fbclid|normalizeClickIds, and it is an ancestor of main, so CI's fetch-depth: 0
+// checkout always has it.
+//
+// If the ref cannot be read this THROWS. It must never skip: a control that quietly no-ops
+// is the assertion-free pass KI-49 exists to prevent. There is deliberately NO fallback ref
+// — a fallback would reintroduce the mutable-ref defect by another route.
+const PRE_CHANGE_REF = '2e65b821'   // main @ 2026-08-06, immediately before #676
+
 let _mainHandler = null
 let _tmpPath = null
 async function mainRouteHandler () {
   if (_mainHandler) return _mainHandler
   let src
   try {
-    src = execFileSync('git', ['show', 'origin/main:api/routes/server-events.js'], { cwd: REPO, encoding: 'utf8' })
-  } catch {
-    src = execFileSync('git', ['show', 'main:api/routes/server-events.js'], { cwd: REPO, encoding: 'utf8' })
+    src = execFileSync('git', ['show', `${PRE_CHANGE_REF}:api/routes/server-events.js`], { cwd: REPO, encoding: 'utf8' })
+  } catch (err) {
+    // THROW, never skip. A missing ref means the control cannot run, and a control that
+    // cannot run must fail loudly rather than pass silently.
+    throw new Error(
+      `control: could not read ${PRE_CHANGE_REF}:api/routes/server-events.js — ` +
+      `the pinned pre-change ref is unreadable, so the control proves nothing. ` +
+      `CI checks out with fetch-depth: 0; if this fires there, the pin is wrong or the ` +
+      `history was rewritten. Original error: ${err?.message || err}`
+    )
   }
-  assert.ok(src && src.length > 500, 'control: origin/main copy of the route must load')
+  assert.ok(src && src.length > 500, `control: the ${PRE_CHANGE_REF} copy of the route must load`)
   assert.ok(
     !/gclid|fbclid|normalizeClickIds/.test(src),
-    'control precondition: the pre-change route must contain NO click-ID handling — if this fails, main already has the feature and the control proves nothing'
+    `control precondition: ${PRE_CHANGE_REF} must contain NO click-ID handling — if this fails, ` +
+    `the pin has drifted onto a commit that already has the feature and the control proves nothing`
   )
   _tmpPath = join(HERE, '.control-server-events-main.mjs')
   writeFileSync(_tmpPath, src)
@@ -191,7 +227,7 @@ test('top-level click IDs land at the ROOT of the emitted row (= the typed colum
   assert.strictEqual(row.dclid, 'DC-789', 'dclid must be a root key')
 })
 
-test('CONTROL — the identical request on origin/main emits NO click-ID columns', async (t) => {
+test('CONTROL — the identical request on the pre-change ref emits NO click-ID columns', async (t) => {
   install(); t.after(() => { restore(); if (_tmpPath) { try { unlinkSync(_tmpPath) } catch {} _tmpPath = null; _mainHandler = null } })
   const row = await emit(await mainRouteHandler(), CLICK_BODY)
 
@@ -245,7 +281,7 @@ test('li_fatid alone populates BOTH li_fat_id (via fallback) and li_fatid', asyn
   assert.strictEqual(row.li_fatid, 'LI-ALT', 'li_fatid must carry its own raw value')
 })
 
-test('CONTROL — li_fatid alone on origin/main populates NEITHER column', async (t) => {
+test('CONTROL — li_fatid alone on the pre-change ref populates NEITHER column', async (t) => {
   install(); t.after(() => { restore(); if (_tmpPath) { try { unlinkSync(_tmpPath) } catch {} _tmpPath = null; _mainHandler = null } })
   const row = await emit(await mainRouteHandler(), { event: '$pageview', anonymous_id: 'anon-1', li_fatid: 'LI-ALT' })
 
