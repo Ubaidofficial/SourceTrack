@@ -2624,3 +2624,237 @@ All three verified present on `origin` (2026-08-06). Work sitting outside the re
 never reviewed, never CI'd, and invisible to any process that enumerates PRs. The `resolve/xff-…`
 branch name suggests security-relevant content, which makes its status worth deciding rather than
 leaving.
+# KI-100 … KI-104 — appended 2026-08-07
+
+> **Numbering:** `KI-78` … `KI-99` are added by **#670** (`docs/reconcile-known-issues-2026-08-06`),
+> open and blocked behind the CI throttle at the time of writing. #670 merges **before** this file,
+> so the gap below `KI-100` closes on that merge. These entries are **append-only** — nothing above
+> this line was touched, so the two branches meet in one tail hunk.
+
+### KI-100 — Bunny issues the managed-proxy TLS certificates (RESOLVED — closes a long-open unknown)
+
+**We searched for ACME code across several sessions and never found it. The reason is that we do not
+issue certificates at all — BunnyCDN does.**
+
+Verified live 2026-08-07 against pull zone `6119064`:
+
+| Host | Subject | Issuer | Validity |
+|---|---|---|---|
+| `track.bookmentions.net` | `CN=track.bookmentions.net` | `C=US, O=Let's Encrypt, CN=YE2` | Jul 7 → Oct 5 2026 |
+| `track2.bookmentions.net` | `CN=track2.bookmentions.net` | `C=US, O=Let's Encrypt, CN=YE2` | Jul 7 → Oct 5 2026 |
+
+Both return `HTTP/2 200` with `server: BunnyCDN-…` and `cdn-pullzone: 6119064`, each holding a
+**distinct certificate whose CN matches its own hostname** — per-hostname issuance, not a shared or
+wildcard cert.
+
+**This also settles the older "Bunny custom-hostname / per-tenant-certificate API capability —
+UNVERIFIED" item: the capability is not merely available, it is already in production.** Any future
+plan that plans to *build* certificate issuance is duplicating something Bunny is doing today.
+
+**Status: VERIFIED** (live TLS chain + response headers, re-checked independently 2026-08-07).
+
+### KI-101 — Tracker updates carry an up-to-8-day propagation tail (OPERATIONAL HAZARD — not fixed)
+
+Live response header on the proxy-served tracker, confirmed on **both** hosts 2026-08-07:
+
+```
+cache-control: public, max-age=86400, stale-while-revalidate=604800, immutable
+```
+
+**A tracker change takes up to 24h to propagate (`max-age=86400`) and can then be served stale for a
+further 7 days (`stale-while-revalidate=604800`) — an 8-day worst-case tail.** `immutable` tells the
+browser not to revalidate even on reload, so there is no client-side bypass (see also the
+edge-caching entry: the same response is unbypassable from the client).
+
+**Why this is recorded now rather than after the fact: it blocks fast rollback of ANY tracker-side
+defect.** It directly affects **A2 (the click-ID restorer)**, which is tracker-side — so an A2 bug
+cannot be rolled back quickly, and the tail has to be **costed before A2 ships, not discovered
+after**. This is the same ~8-day window already accepted for `tracker.min.js`; naming it as a
+constraint on A2 is the new part.
+
+**Not fixed.** Shortening `max-age` trades propagation speed against edge load and is a decision, not
+a cleanup.
+
+**Status: VERIFIED** (live headers, both hosts).
+
+### KI-102 — `bindManagedProxySiteKey` is a BINDING guard, not a host allowlist
+
+`api/middleware/managed-proxy.js:141-155`. The whole body:
+
+```js
+export function bindManagedProxySiteKey(req, res, next) {
+  if (req.managedProxy) {
+    const siteKey = req.body?.site_key || req.query?.site_key
+    if (siteKey && siteKey !== req.managedProxy.site_key) {
+      return res.status(403).json({ … error: 'Host-site key binding violation' })
+    }
+  }
+  next()
+}
+```
+
+Three properties that are easy to assume and are all false:
+
+- **It does not inject a `site_key`.** A request without one passes straight through to `next()`.
+- **It does not reject unregistered hosts.** An unregistered host has no `req.managedProxy`, so the
+  outer `if` is false and the guard is **skipped entirely** for exactly the host you might expect it
+  to stop.
+- **It acts only on the narrow case:** a `site_key` that is present **and** mismatched → `403`.
+
+**The consequence worth recording — we nearly filed this as a defect:** a `401 Missing site_key` on a
+**registered** managed-proxy domain is **CORRECT behaviour, not a proxy failure.** The guard passes a
+keyless request through by design, and the 401 comes from the downstream ingestion route doing its
+job (§6.5: an ingestion endpoint must reject a missing/unknown `site_key` rather than fall through to
+a default tenant).
+
+**Status: VERIFIED** — source read at `:141-155`, plus a live `401` on **both** hosts with a cache
+`MISS` and **distinct `x-railway-request-id`** values, which is what proves the request actually
+reached the origin rather than being answered by the edge.
+
+### KI-103 — Two hand-maintained `llms.txt` files, already divergent, neither generated
+
+**Recurring-defect surface, not a one-off.** Nothing generates either file, nothing keeps either in
+step with `key-features.md` or the changelog, and `public/` ships verbatim — so **no `src` scan can
+see either**. Repo-wide, the only references to `llms.txt` in any `.js`/`.mjs`/`.json`/`.yml` are the
+serve route itself: **no generator, no sync step, and no check that the two agree.**
+
+They have already diverged — **874 B vs 2074 B, different content**:
+
+| File | Size | Carries the absolutes? |
+|---|---|---|
+| `marketing/public/llms.txt` | 874 B | **YES** — `:10`, *"100% first-party, cookieless, zero cross-site tracking"*. This is the file **#675 fixes** |
+| `dashboard/public/llms.txt` | 2074 B | **No** — `grep -nE "100%\|zero "` returns nothing |
+
+> ⚠️ **TWO CORRECTIONS TO THIS ENTRY (2026-08-07), recorded rather than silently rewritten.**
+>
+> **(a) The original filing treated this as ONE file.** It cited
+> *"`marketing/public/llms.txt` has no generator"* alongside *"`dashboard/server.mjs:101` only serves
+> it"* — but those clauses are about **different files**. There are two, and they have diverged.
+>
+> **(b) A first draft of this entry then claimed *"the customer-visible surface still carries the old
+> text"*. THAT IS WITHDRAWN — it inverted the severity.** The absolutes live **only** in the 874 B
+> marketing copy, which is exactly the file #675 corrects. The 2074 B dashboard copy has none.
+> **Nothing unfixed is shipping.** The draft assumed that "the copy #675 did not touch" meant "the
+> copy that is wrong"; the opposite is true — #675 touched the one that needed it.
+
+**What remains true, and is the actual finding: the routing is ambiguous.**
+`dashboard/src/components/MarketingFooter.jsx:61` links to a **relative** `/llms.txt`, and
+`dashboard/server.mjs:101-103` serves that path from `dashboard/dist` (`DIST` at `:6`). **Which file
+answers depends on which SERVICE handles the request**, and the services have since been split:
+marketing now runs as its own Railway service (`sourcetrack-marketing`, www + apex), while Dashboard
+holds `app.sourcetrack.ai` only. `MarketingFooter.jsx` living under `dashboard/src` **predates that
+split**, so its location no longer implies which origin renders it.
+
+**VERIFIED by live request (2026-08-07)** — the byte length is an unambiguous discriminator:
+
+| URL | Bytes | ⇒ file |
+|---|---|---|
+| `https://www.sourcetrack.ai/llms.txt` | **874** | the marketing copy |
+| `https://app.sourcetrack.ai/llms.txt` | **2074** | the dashboard copy |
+
+Both `HTTP/2 200`, both `server: railway-hikari`, distinct `x-railway-request-id`.
+
+⚠️ **INFERRED — UNKNOWN, deliberately NOT asserted: which of the two the FOOTER LINK resolves to.**
+Source alone cannot settle it. What is verified is only that `www/docs` is server-rendered (36 KB)
+and contains **no** *"AI info"* string, while `app/docs` returns a **2971 B SPA shell** — so if the
+footer renders at all it renders **client-side**, where `curl` cannot observe it. The plausible
+reading is that `MarketingFooter` renders only in the dashboard SPA and its relative link therefore
+resolves to the 2074 B copy — **but that is inference, not evidence, and it is not recorded as fact.**
+
+**What would settle it:** a headless-browser render of a `MarketingPage`/`DocsLayout` route on
+`app.sourcetrack.ai`, confirming the *"AI info"* link is present and reading its resolved `href` —
+i.e. a browser-agent check, not a source read.
+
+**Why any of this matters more than an ordinary stale doc:** this is the file AI systems fetch as the
+product's self-description, so drift is **repeated back as fact about the product** by other AI
+systems. Two hand-maintained copies with no generator and no parity check is a surface that will
+drift again — it already has once.
+
+**Cross-reference:** the `QA_RUNBOOK` entry added in **#675** — *scan built output, not source* — is
+the right shape of check and is why source scans miss this class. ⚠️ **#675 is still OPEN at the time
+of writing, so neither that entry nor its `llms.txt` correction exists on `main` yet.**
+
+**Status: VERIFIED** for the file inventory, the divergence, the absence of a generator, and the
+per-origin serve mapping (live). **INFERRED-unknown** for the footer's resolution target, as above.
+
+#### KI-103 addendum — the routing map is CONFIRMED, and it exposes a LIVE claims defect
+
+**The serve mapping is now VERIFIED TWICE, independently** — once by CC and once by the browser
+agent (2026-08-06 22:46–22:49Z), and re-confirmed by CC at **2026-08-06 22:52:13Z**. All three runs
+agree. This is no longer inferred anywhere:
+
+| URL | `content-length` | ⇒ file | Absolutes? |
+|---|---|---|---|
+| `https://www.sourcetrack.ai/llms.txt` | **874** | `marketing/public/llms.txt` | ⚠️ **PRESENT** |
+| `https://app.sourcetrack.ai/llms.txt` | **2074** | `dashboard/public/llms.txt` | clean |
+
+All responses `HTTP/2 200`, `server: railway-hikari`, distinct `x-railway-request-id`.
+
+**🔴 LIVE EXPOSURE — open now.** A grep against the **live** `www` response body returns:
+
+```
+10:- Cookieless Identity Moat: 100% first-party, cookieless, zero cross-site tracking or fingerprinting.
+```
+
+**The false absolute is serving on the public marketing site at this moment, in the one file written
+specifically for LLMs to ingest.** Every AI system that fetches `/llms.txt` during this window takes
+the absolute as fact and may repeat it as a claim about the product — which is the failure mode this
+entry exists to describe, now actually occurring rather than hypothesised.
+
+**Window:** opens now, closes when **#675** merges. Duration is **throttle-dependent and currently
+unbounded** — #675 is pushed and sitting at **0 CI runs** behind GitHub incident **#6249** (~15% of
+webhooks trigger a run), so there is no predictable close time.
+
+> ⚠️ **THIS DOES NOT REINSTATE THE WITHDRAWN CLAIM — and the difference is the point of this entry.**
+> The withdrawal above was about the **DASHBOARD** copy (2074 B), which has **no** absolutes. That
+> withdrawal **STANDS and is still correct.** The exposure is on the **MARKETING** side, through a
+> **different file than either party was tracking when the original claim was made.**
+>
+> **The finding survived its own retraction and changed surfaces.** Recording it as a reinstatement
+> would erase the fact that the first version was wrong about *which file*; recording only the
+> retraction would erase a live defect. Both are true at once, and neither cancels the other.
+
+**RULING — recorded so it is not re-opened: do NOT hand-edit the deployed file out-of-band.**
+Patching the live `llms.txt` directly would trade a claims defect for a **provenance defect** —
+deployed state diverging from git, with no commit explaining why — which is *precisely* the class of
+problem this KI documents (two hand-maintained copies, no generator, no parity check). A second
+untracked edit path would make the next drift harder to detect, not easier. **Wait for #675.**
+
+**SEQUENCING CONSEQUENCE.** **#674** (*cut the "100%" absolute from the changelog's cookieless line*)
+and **#675** (*cut four remaining absolutes, incl. two in the AI-facing `llms.txt`*) are the **ONLY**
+open PRs whose delay carries an **ongoing EXTERNAL cost** — every other queued PR costs only internal
+time while it waits. **Merge order revised: both promoted to TIER 1, ahead of the v3 chain.** Both
+verified OPEN at **0 CI runs** (2026-08-06 22:52Z).
+
+**Footer resolution remains INFERRED-UNKNOWN** — unchanged by any of the above. Knowing which origin
+serves which *file* does not establish which origin renders the *footer*; that still needs a
+headless-browser render of a `MarketingPage`/`DocsLayout` route on `app.sourcetrack.ai`.
+
+### KI-104 — `/api/server/event` accepted click IDs ONLY when nested under `properties` (pre-#676)
+
+⚠️ **Recorded as a CORRECTION, not a discovery — the original claim was that the route could not
+accept click IDs at all. It could; the capability was undiscoverable rather than absent.**
+
+On `main` before #676 (`api/routes/server-events.js`):
+
+- The route read **UTMs from top-level body keys** — `req.body.utm_source` … `req.body.utm_term`
+  at `:211-215`. That is the convention the route teaches a caller.
+- It had **no top-level click-ID equivalent** — `grep -cE "req\.body\.(gclid|fbclid|dclid)"` → **0**.
+- But the catch-all `...(req.body.properties || {})` spread at **`:228`** quietly carried **nested**
+  click IDs through — into the typed columns, via the adapter's flatten
+  (`tinybird/adapter/normalize.js:216-220`, top-level wins on collision).
+
+**So the capability EXISTED but was undiscoverable.** A caller following the route's own UTM
+convention (`{ gclid: … }`) **failed silently**; a caller who happened to nest
+(`{ properties: { gclid: … } }`) **succeeded**. Same documented endpoint, opposite outcomes, no error
+either way — the worst shape for a data-capture gap, because the failing caller gets a `200`.
+
+**#676 makes the contract consistent by accepting the top-level form. It did NOT create the
+capability**, and any claim that it "added click-ID support" overstates it.
+
+**The testing consequence, which is the durable lesson:** a test written with the *nested* form would
+have **passed on `main`** and measured nothing. #676's tests post at **top level** for exactly this
+reason, and its positive control executes `origin/main`'s route to prove the assertion discriminates.
+
+**Status: VERIFIED** (source read at `:211-215` and `:228` on `main`; nested-form behaviour confirmed
+by execution during #676).
