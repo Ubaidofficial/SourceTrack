@@ -55,6 +55,7 @@ import "@/styles/v3-surfaces.css";
 import HeroTicker from "@/components/v3/HeroTicker.jsx";
 import SurfaceTabs from "@/components/v3/SurfaceTabs.jsx";
 import LiveVisitors from "@/components/v3/LiveVisitors.jsx";
+import CaptureIcon from "@/layouts/v3/surfaces/CaptureIcon.astro";
 import ChannelMarquee from "@/layouts/v3/surfaces/ChannelMarquee.astro";
 import ChipRow from "@/layouts/v3/surfaces/ChipRow.astro";
 import JourneyChips from "@/layouts/v3/surfaces/JourneyChips.astro";
@@ -70,13 +71,16 @@ import UseCaseCards from "@/partials/UseCaseCards.astro";
 // `icon` is a MONOGRAM, not a logo. §35.4 bans reconstructed third-party marks, and the
 // handoff's own pattern is a letter or text label. These are OUR surface categories, so a
 // letter tile is honest rather than standing in for a mark we may not draw.
+// `tools` is the handoff's §6 tool-row: the integrations each surface captures from.
+// Text labels only (§35.4) — the row is evidence for the card's claim, and a card that
+// asserts coverage while showing none is the shell this closes.
 const captureCards = [
-  { icon: "F", h: "Forms", p: "Every submission arrives with its source already attached — no hidden fields to wire up, no lost UTMs on multi-step forms." },
-  { icon: "C", h: "Chat", p: "Conversations that start in a widget stop being anonymous. The chat lead inherits the session that led to it." },
-  { icon: "M", h: "Meetings", p: "Know where a booked demo came from before you walk into it — source and campaign land on the calendar invite." },
-  { icon: "S", h: "Signups", p: "Trial starts and account signups classify as leads on arrival — signup, sign_up, trial and trial_start are all recognised by the taxonomy, so a self-serve funnel is attributed without extra wiring." },
-  { icon: "P", h: "Payments", p: "Revenue, not just conversions. Each charge, upgrade, and renewal rolls up to the channel that originally earned it." },
-  { icon: "O", h: "Store orders", p: "Order-level attribution with LTV and repeat rate by acquisition source — the numbers your ad platform will never show you." },
+  { icon: "F", h: "Forms", tools: ["HubSpot", "Typeform", "Webflow", "Gravity Forms"], p: "Every submission arrives with its source already attached — no hidden fields to wire up, no lost UTMs on multi-step forms." },
+  { icon: "C", h: "Chat", tools: ["Intercom", "Drift", "Crisp"], p: "Conversations that start in a widget stop being anonymous. The chat lead inherits the session that led to it." },
+  { icon: "M", h: "Meetings", tools: ["Calendly", "Cal.com", "Chili Piper"], p: "Know where a booked demo came from before you walk into it — source and campaign land on the calendar invite." },
+  { icon: "S", h: "Signups", tools: ["Stripe", "Auth0", "Clerk"], p: "Trial starts and account signups classify as leads on arrival — signup, sign_up, trial and trial_start are all recognised by the taxonomy, so a self-serve funnel is attributed without extra wiring." },
+  { icon: "P", h: "Payments", tools: ["Stripe", "Paddle", "Chargebee"], p: "Revenue, not just conversions. Each charge, upgrade, and renewal rolls up to the channel that originally earned it." },
+  { icon: "O", h: "Store orders", tools: ["Shopify", "WooCommerce", "BigCommerce"], p: "Order-level attribution with LTV and repeat rate by acquisition source — the numbers your ad platform will never show you." },
 ];
 
 const stats = [
@@ -255,8 +259,9 @@ const comparison = [
         />
         <div class="v3-cards">
           {captureCards.map((c) => (
-            <span class="v3-card-icon" aria-hidden="true">{c.icon}</span>
+            <CaptureIcon name={c.h} />
             <div class="v3-card"><h3>{c.h}</h3><p>{c.p}</p></div>
+            <div class="v3-toolrow">{c.tools.map((t) => <span class="v3-toolchip">{t}</span>)}</div>
           ))}
         </div>
       </Wrap>
@@ -303,6 +308,29 @@ const comparison = [
           <div class="v3-bento-cell v3-bento-cell-dark" style="grid-column: span 7">
             <h3>Stitch first touch, last touch, assists, and revenue into one view.</h3>
             <p>Attribution engine</p>
+            {/* Replaces the handoff's `bento-attr` mount, which derived revenue from
+                fixtures (D.modelRevenue) and was cut in PR 2 on §6 grounds. The CELL is
+                honest — nine models over one dataset is true (ALLOWED_MODELS,
+                api/lib/report-config-validation.js:33) — so it is refilled rather than
+                dropped. What is shown is the SHAPE of a credit split and the model names:
+                no amounts, no percentages, nothing derived. The bars are illustrative
+                weighting only, which is why they carry no numeric label. */}
+            <div class="v3-modelsplit">
+              {[
+                { m: "First touch", w: [70, 15, 15] },
+                { m: "Last touch",  w: [15, 15, 70] },
+                { m: "Linear",      w: [34, 33, 33] },
+                { m: "U-shaped",    w: [40, 20, 40] },
+              ].map(({ m, w }) => (
+                <div class="v3-modelsplit-row">
+                  <span class="v3-modelsplit-name">{m}</span>
+                  <span class="v3-modelsplit-bar" aria-hidden="true">
+                    {w.map((x) => <i style={`flex:${x}`} />)}
+                  </span>
+                </div>
+              ))}
+              <p class="v3-modelsplit-foot">…and five more, over the same dataset.</p>
+            </div>
           </div>
           <div class="v3-bento-cell v3-bento-cell-accent" style="grid-column: span 5">
             <h3>AI referrals are the channel ad platforms can't see.</h3>
@@ -310,10 +338,28 @@ const comparison = [
           <div class="v3-bento-cell" style="grid-column: span 5">
             <h3>Report builder</h3>
             <p>Pick a template, name it, pin it. The preview updates as you type.</p>
+            {/* The handoff's three inline rows (index.html:294-298). Ported as classes,
+                not inline styles — a paint value in style="" fails
+                v3-page-pairs.mjs:552-553 and is invisible to the contrast audit. The lime
+                row is the pinned one; §2.6 caps accent density, so exactly one row carries
+                it. No revenue figure — the handoff's read "$21,430", which is the same
+                derived-number problem as bento-attr. */}
+            <div class="v3-rb">
+              <span class="v3-rb-row v3-rb-row--pinned"><b>Channel revenue</b><i>PINNED</i></span>
+              <span class="v3-rb-row"><b>AI referral leads</b><i>PIN</i></span>
+              <span class="v3-rb-row"><b>Campaign ROAS</b><i>PIN</i></span>
+            </div>
           </div>
           <div class="v3-bento-cell" style="grid-column: span 4">
             <h3>One script tag</h3>
             <p>Drop it in your head, via GTM or your own tag. No data engineer required.</p>
+            {/* ⚠️ NOT the handoff's snippet. index.html:304 ships
+                `cdn.sourcetrack.io/st.js` — a CDN that does not exist; porting it verbatim
+                would put a non-functional install line on the homepage. The canonical
+                customer-facing URL is the ROOT ALIAS /tracker.min.js (CLAUDE.md §11, and
+                dashboard Onboarding.jsx ships `${trackerUrl}/tracker.min.js`). Never
+                /tracker/loader.min.js. */}
+            <code class="v3-embed">&lt;script src="https://api.srctk.com/tracker.min.js" defer&gt;&lt;/script&gt;</code>
           </div>
           <div class="v3-bento-cell" style="grid-column: span 3">
             <h3>Channels</h3>
@@ -461,7 +507,17 @@ const comparison = [
       <Wrap>
         <div class="v3-cta-inner">
           <div>
-            <h2>Ready to see which channels <em>actually</em> pay?</h2>
+            {/* The handoff's §18 carries one inline <svg> here — a small directional mark on the
+                  close. First-party glyph, drawn here, currentColor so the surface controls
+                  the paint and nothing lands in a style attribute. */}
+              <span class="v3-cta-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+                     stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 15l5-5 4 4 7-7" />
+                  <path d="M15 7h5v5" />
+                </svg>
+              </span>
+              <h2>Ready to see which channels <em>actually</em> pay?</h2>
             <p>Click through the demo workspace first — every screen is live. Or install the script and watch your own first attributed session land.</p>
           </div>
           <div class="v3-cta-actions">
