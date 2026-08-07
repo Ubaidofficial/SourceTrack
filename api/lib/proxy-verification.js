@@ -64,6 +64,72 @@ function isJavaScriptContentType (ct) {
  * Returns { ok, code, message, httpStatus, contentType }. Never throws — a verifier
  * that throws on a customer's broken DNS would take the whole sweep down with it.
  *
+ * ⚠️ KNOWN LIMIT — THIS CHECK CAN BE UP TO ~8 DAYS STALE, AND THAT IS ACCEPTED.
+ * Ruled 2026-08-06. Read this before trusting a pass, and before "fixing" it.
+ *
+ * tracker.min.js is served through Bunny with (measured on a live customer domain):
+ *
+ *     cache-control: public, max-age=86400, stale-while-revalidate=604800, immutable
+ *     cdn-cache: HIT
+ *
+ * That is 1 day fresh + 7 days stale-while-revalidate = up to 8 days during which the
+ * edge can answer without the origin. THE CLIENT CANNOT FORCE FRESHNESS: a cache-buster
+ * query string still returned HIT (the zone ignores query strings), and a
+ * `Cache-Control: no-cache` REQUEST header did not bypass it either. Both measured, not
+ * assumed.
+ *
+ * WHY IT IS NOT FIXED. That caching is CORRECT for a static asset — degrading a
+ * customer-facing tracker cache to serve a monitor is the wrong trade, and a Bunny-side
+ * cache-bypass rule would add a founder-gated console dependency. So the staleness is
+ * accepted and documented here instead. The sibling proxy-health check IS made
+ * uncacheable (no-store at the origin, api/index.js) because nothing depends on caching
+ * it — the two paths differ deliberately.
+ *
+ * ⚠️ THERE ARE TWO DIFFERENT DETECTION LATENCIES, AND THE SLOW ONE IS NARROWER THAN IT
+ * LOOKS. verifyProxyDelivery() runs the HEALTH stage first and only reaches the tracker
+ * stage if health passes, so which stage catches a failure decides how fast it is caught.
+ *
+ *   ORIGIN / GATE / TLS / DNS OUTAGE      -> caught by the HEALTH stage
+ *     verifySslAndRouting's endpoint is no-store at the origin (api/index.js) and the
+ *     gate reply is no-store too, so the edge cannot serve a cached success. Each check
+ *     is an independent live observation. At DUE_AFTER_MS.active = 24h that is
+ *     detection within ~24h, and demotion after two strikes within ~48h. The two-strike
+ *     rule works as designed here: two checks ARE two observations.
+ *
+ *   TRACKER-DELIVERY-ONLY FAILURE          -> caught by the TRACKER stage
+ *     i.e. the gate and origin answer correctly but tracker.min.js specifically is not
+ *     served as the tracker — a 404/5xx on the object, an HTML error page, or a wrong
+ *     content-type, while health still passes. THIS is where the cache window bites, and
+ *     only this. Up to ~8 days of edge answers plus ~2 days of strikes ≈ 10 days.
+ *
+ * ⚠️ SO THE TWO-STRIKE DEMOTION IS DEFEATED ONLY ON THE TRACKER STAGE. nextProxyState()
+ * assumes two consecutive checks see two INDEPENDENT responses. For a cached
+ * tracker.min.js they may not: at a 24h cadence inside an 8-day window, consecutive
+ * strikes can read the SAME cached success, so no strike is recorded while the object is
+ * broken. For two strikes to be two observations the interval would have to EXCEED the
+ * whole cache window (>8 days), making demotion take >16 days — worse than the problem,
+ * so the interval is NOT the fix and was not changed.
+ *
+ * Detection is DELAYED, not prevented: once the stale-while-revalidate window expires the
+ * edge must reach the origin, the check fails, and strikes proceed normally.
+ *
+ * WHAT `status === 'active'` ACTUALLY MEANS, and Setup.jsx:77 keys the install snippet
+ * off exactly this:
+ *   • the gate + origin were reachable within about the last 24-48h, AND
+ *   • the tracker file was being served within about the last 10 days.
+ * NOT "is serving now", and the two halves have different ages. Quote both, never one.
+ *
+ * ⚠️ THIS PARAGRAPH WAS WRONG IN ITS FIRST VERSION and the correction is the point: it
+ * applied the ~10-day window to ALL failure modes. It does not. Layer 3a made the health
+ * endpoint uncacheable, which fixed the fast path and left only the tracker path slow —
+ * and the fix narrowed the defect without anyone re-deriving what remained. Re-check the
+ * blast radius of a finding after fixing part of it; do not inherit the original scope.
+ *
+ * ⚠️ ONE PART OF THIS IS DERIVED, NOT MEASURED: the max-age portion was observed
+ * directly (a fresh HIT ~20h after cdn-cachedat). Bunny's exact stale-while-revalidate
+ * behaviour was NOT observed — the 7-day extension is read from the declared header
+ * semantics. If it matters to a decision, measure it rather than inheriting this line.
+ *
  * @param {string} domain          customer hostname (no scheme)
  * @param {boolean} cookielessMode pick the cookieless bundle, matching Setup.jsx:134
  */
