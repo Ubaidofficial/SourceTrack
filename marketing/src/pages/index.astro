@@ -94,6 +94,7 @@ import ChannelTiles from "@/layouts/v3/surfaces/ChannelTiles.astro";
 import MarkRow from "@/layouts/v3/surfaces/MarkRow.astro";
 import SyncList from "@/layouts/v3/surfaces/SyncList.astro";
 import ChannelMiniTable from "@/layouts/v3/surfaces/ChannelMiniTable.astro";
+import CompareSlider from "@/components/v3/CompareSlider.jsx";
 import MarketingInteractiveDemo from "@/components/MarketingInteractiveDemo";
 import JourneyMockup from "@/components/JourneyMockup.astro";
 import HeroStatCallout from "@/components/HeroStatCallout.astro";
@@ -370,6 +371,12 @@ const comparison = [
           heading="The GA4 alternative built for revenue, not pageviews."
           lede="Compare a default GA4 report with the SourceTrack revenue view. Same week, same traffic — but one of them can tell you which channel paid for itself."
         />
+          {/* handoff `compare`. TWO of its four SourceTrack tiles were REPLACED, not
+              ported: it headlines "AI Search revenue" and "Best conversion rate", and
+              ai_revenue + conversion_rate are both in GATED_METRICS — unservable at any
+              tier (422), not plan-gating. conversions and leads were verified against
+              GATED_METRICS *and* ALLOWED_METRICS before use. See KI-115. */}
+          <CompareSlider client:visible />
       </Wrap>
     </section>
 
