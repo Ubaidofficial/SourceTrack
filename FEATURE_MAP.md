@@ -19,6 +19,18 @@
 > justify a new SHA would cost more than it is worth and would produce the same partial guarantee
 > in a more convincing font.
 >
+> > ⚠️ **READ "92 PRs" CORRECTLY — it counts ALL PRs, not feature PRs, and that distinction is why
+> > two re-baselines failed.** Measured on the last 30 merged PRs (#661–#691, 2026-08-07, PR #692):
+> > only **5** touched `api/routes/**` or `dashboard/src/pages/**` at all, and of those exactly
+> > **one** (#676, accepting click IDs on `/api/server-events`) was a capability change this map
+> > should record — the rest were a log-only boolean, two bug fixes and a display refactor. Of the
+> > **10** `feat(` PRs in that window, most were marketing pages, a brand mark, or internal
+> > instrumentation: presentation and internals, **not** catalogued capability. So the real backlog
+> > is a small fraction of 92, and the headline number **overstates the work while understating the
+> > mechanism** — which is what made "re-baseline harder" look like the answer twice. The mechanism
+> > is rule (2) vs the §9 merge gate, addressed by the `FEATURE_MAP.md` carve-out and the advisory
+> > guard in #692; the arithmetic never was.
+>
 > ### ⚠️ The range caveat is now a PATTERN, not an incident — read this before adding another baseline
 >
 > The `44dd620` block below already admits its own delta list was **incomplete for ~100 PRs**
