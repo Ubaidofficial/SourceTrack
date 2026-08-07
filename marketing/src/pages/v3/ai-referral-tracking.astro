@@ -1,0 +1,190 @@
+---
+/**
+ * V3 AI REFERRAL TRACKING — preview route, noindex.
+ *
+ * ⚠️ THE DESIGN'S §3 IS CUT ENTIRELY. Ruled 2026-08-06. It was a testimonial:
+ * a styled pull-quote — "We thought our AI traffic was a rounding error. Turns
+ * out it was 42% of pipeline." — attributed to "Dianne Russell, Head of Growth,
+ * Linear-adjacent SaaS" with a DR avatar. Dianne Russell is a stock placeholder
+ * persona from the standard UI name set. There are no paying customers, so the
+ * quote, the person, the company and the 42% are all fabricated. It is CUT, not
+ * reworded: a rewrite keeps the shape of evidence we do not have.
+ *
+ * ⚠️ "$2,388 ARR signup" IS NOT SHIPPED AND IS NOT FIXTURE DATA. It appears
+ * nowhere in main. The AI fixture is marketing/src/lib/homeFixtures.js:28 —
+ * `{ visitors: 642, leads: 38, conv: 19, rev: 2480 }` — under which a single
+ * $2,388 signup would be 96% of all AI revenue across 19 conversions. So the
+ * figure is not merely unsourced, it contradicts the fixture the rest of the
+ * site renders. The journey below therefore carries NO invented ARR figure;
+ * every number on this page traces to that fixture line or to the classifier.
+ *
+ * ⚠️ NO VIOLET. The design's `hero violet` / `cta violet-c` are not renamed but
+ * DROPPED as a treatment: `--violet*` is a Tier-1 REJECTED token in
+ * v3-tokens.css. These render as the standard v3 paper hero and CTA close. A
+ * rename alone would have kept a rejected hue behind a compliant class name.
+ *
+ * "16 assistants" is settled from api/lib/channel-classifier.js AI_DOMAINS_MAP:
+ * 16 distinct assistant values across 23 domain keys. Named here: ChatGPT,
+ * Gemini, Claude, Perplexity, Copilot, Grok, DeepSeek, Mistral, Poe, You.com,
+ * Kagi, Phind, Pi, Meta AI, Character.ai, Inflection AI.
+ */
+import Base from "@/layouts/Base.astro";
+import Wrap from "@/layouts/v3/Wrap.astro";
+import SectionHead from "@/layouts/v3/SectionHead.astro";
+import StatRow from "@/layouts/v3/StatRow.astro";
+import Bento from "@/layouts/v3/Bento.astro";
+import "@/styles/v3-tokens.css";
+import "@/styles/v3-home.css";
+import "@/styles/v3-pages.css";
+
+// One capability figure from the classifier; the funnel from homeFixtures.js:28,
+// labelled as the fixture it is. No figure here is a customer measurement.
+const stats = [
+  { value: "16", label: "AI assistants and answer engines classified on arrival" },
+  { value: "642", label: "AI-referred visitors · demo workspace fixture" },
+  { value: "19", label: "assistant-attributed conversions · same fixture" },
+  { value: "$2,480", label: "AI Search revenue · same fixture" },
+];
+
+const engines = [
+  { h: "ChatGPT", p: "Arrives with no UTM and a referrer most tools discard, so it files as direct almost everywhere else. Classified on arrival here." },
+  { h: "Gemini and AI Overviews", p: "Answer-engine traffic that never reaches a blue link. Detected by referrer and source param rather than guessed at." },
+  { h: "Perplexity, Claude and twelve more", p: "Sixteen assistants in total, from Copilot and Grok to Kagi, Poe and You.com — one list, kept in the classifier, not per-report." },
+];
+
+// Fixture journey. No invented ARR figure — see the header note.
+const journey = [
+  { when: "Day 1", what: "<b>ChatGPT</b><em>Asked for a comparison, followed a link out. No UTM, no ad click, no cookie set.</em>", val: "First touch" },
+  { when: "Day 2", what: "<b>Pricing page</b><em>Returned directly. Most tools would credit this session and lose the assistant entirely.</em>", val: "Assist" },
+  { when: "Day 6", what: "<b>Perplexity</b><em>A second assistant in the same journey — visible because the journey is stored, not just the last click.</em>", val: "Assist" },
+  { when: "Day 11", what: "<b>Signup</b><em>The conversion carries its whole path, so AI journey influence can credit both assistants without either taking the whole deal.</em>", val: "Conversion", won: true },
+];
+---
+
+<Base
+  title="AI referral tracking — see revenue from ChatGPT, Gemini and Perplexity | SourceTrack"
+  description="AI assistants send buyers with no UTM, so most tools file them as direct. SourceTrack classifies 16 assistants on arrival and ties them to revenue."
+  noindex={true}
+>
+  <div class="v3">
+    {/* 1 — hero. Standard paper treatment; the design's violet is a rejected token. */}
+    <section class="v3-hero">
+      <Wrap>
+        <h1>Track visitors and revenue from AI search.</h1>
+        <p class="v3-hero-sub">
+          Assistants send buyers without a UTM, a click ID, or a referrer most
+          tools keep — so the traffic lands in direct and the channel looks like
+          it does not exist. It does. Here is what it earned.
+        </p>
+      </Wrap>
+    </section>
+
+    {/* 2 — stat band */}
+    <section class="v3-section v3-section--tight">
+      <Wrap><StatRow stats={stats} /></Wrap>
+    </section>
+
+    {/* 3 — the design's testimonial section. CUT. See the header note. */}
+
+    {/* 4 — soft band, engine cards */}
+    <section class="v3-section v3-section--soft">
+      <Wrap>
+        <SectionHead
+          eyebrow="A new acquisition channel"
+          heading="AI discovery is becoming a channel, whether or not you can see it."
+          lede="Answer engines increasingly sit between a question and your site. The visit is real and the buyer is real — only the attribution is missing, and only because nobody kept the referrer."
+        />
+        <div class="v3-cards">
+          {engines.map((e) => (
+            <div class="v3-card"><h3>{e.h}</h3><p>{e.p}</p></div>
+          ))}
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 5 — window frame, STATIC journey (island is Phase 6; §37.1) */}
+    <section class="v3-section">
+      <Wrap>
+        <SectionHead
+          eyebrow="A journey through AI"
+          heading="Watch ChatGPT become a customer."
+          lede="Most tools treat an AI referral as direct or drop it. Because the whole journey is stored, a second assistant showing up nine days later is still visible — and still creditable."
+        />
+        <div class="v3-frame">
+          <div class="v3-frame-chrome">
+            <span class="v3-frame-dots"><i /><i /><i /></span>
+            <span class="v3-frame-url">app.sourcetrack.example / journeys / ai</span>
+          </div>
+          <div class="v3-frame-body">
+            <div class="v3-journey">
+              {journey.map((r) => (
+                <div class:list={["v3-journey-row", r.won && "v3-journey-row--won"]}>
+                  <span class="v3-journey-when">{r.when}</span>
+                  <span class="v3-journey-what" set:html={r.what} />
+                  <span class="v3-journey-val">{r.val}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 6 — soft band, bento. A different frame from §4's cards (§2.7). No accent
+        cell: the page already spends its §2.6 budget on the journey chip and the
+        CTA button. */}
+    <section class="v3-section v3-section--soft">
+      <Wrap>
+        <SectionHead
+          eyebrow="What SourceTrack shows"
+          heading="Not just AI visits. AI-assisted revenue."
+          lede="Separating curiosity traffic from buyers is the whole point — a thousand assistant visits that never convert is a different finding from twenty that do."
+        />
+        <Bento>
+          <div class="v3-bento-cell v3-bento-cell-dark" style="grid-column: span 6">
+            <h3>AI source</h3>
+            <p>Which assistant or answer engine sent the visitor, from a list of sixteen kept in one place.</p>
+          </div>
+          <div class="v3-bento-cell" style="grid-column: span 6">
+            <h3>Landing page</h3>
+            <p>Where assistant traffic actually arrives — rarely the page you optimised for search.</p>
+          </div>
+          <div class="v3-bento-cell" style="grid-column: span 4">
+            <h3>Journey path</h3>
+            <p>Every page visited before converting, stored per visitor rather than per session.</p>
+          </div>
+          <div class="v3-bento-cell" style="grid-column: span 4">
+            {/* ⚠️ NOT "conversion rate". `conversion_rate` and `sessions` are in
+                GATED_METRICS (gate-constants.js) — gated ENTIRELY, dead on all 15
+                dimensions for every site, so a conversion-rate comparison is not a
+                report anyone can run. `ai_conversions` and `ai_revenue` are gated
+                too. What IS servable is re-crediting AI journeys under the models,
+                which is what this cell claims instead. */}
+            <h3>Model comparison</h3>
+            <p>Re-credit the same AI journeys under any of the nine models — the gap between first and last touch is what tells you whether assistants introduce buyers or close them.</p>
+          </div>
+          <div class="v3-bento-cell" style="grid-column: span 4">
+            <h3>Revenue</h3>
+            <p>Revenue grouped by channel, with AI Search as one of them, tied back through Stripe and Shopify webhooks.</p>
+          </div>
+        </Bento>
+      </Wrap>
+    </section>
+
+    {/* 7 — CTA close on paper. Lime on the button only (§2.6). */}
+    <section class="v3-cta-close">
+      <Wrap>
+        <div class="v3-cta-inner">
+          <div>
+            <h2>Don't let AI referrals disappear into direct traffic.</h2>
+            <p>28 days free, no card. Install the script and see which assistants are already sending buyers.</p>
+          </div>
+          <div class="v3-cta-actions">
+            <a class="v3-btn-accent" href="https://app.sourcetrack.ai/signup">Start 28-day free trial</a>
+          </div>
+        </div>
+        <p class="v3-disclosure">Product visuals shown use illustrative data.</p>
+      </Wrap>
+    </section>
+  </div>
+</Base>

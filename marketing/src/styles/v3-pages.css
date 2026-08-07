@@ -92,3 +92,127 @@
   font-weight: 800;
   letter-spacing: 0.04em;
 }
+
+/* ── quiet secondary link (attribution CTA) ──────────────────────────────────
+   Sits beside the primary button where a second filled button would put two
+   lime surfaces in one block — §2.6 budgets the button, not a pair of them.
+   --v3-ink on paper rather than a mid-grey: this is a real destination, and the
+   underline carries the affordance so colour is not the only signal (§3.6). */
+.v3 .v3-link-quiet {
+  align-self: center;
+  color: var(--v3-ink);
+  font-size: 15px;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ── numbered step sequence (product §2) ─────────────────────────────────────
+   A distinct §2.7 FRAME, not .v3-cards with numbers bolted on: one continuous
+   rail with the steps hung off it, so the shape reads as a sequence rather than
+   as three peers. The rail is a border, never a lime fill.
+
+   ⚠️ NOT the install sequence. This is capture → attribute → report, the
+   conceptual model. features.html's 01/02 "Add one script tag" install steps are
+   a different sequence and are deferred to their own PR after Phase 5 — do not
+   merge the two, they answer different questions. */
+.v3 .v3-steps { display: grid; gap: 0; border-left: 2px solid var(--v3-border); }
+.v3 .v3-step { position: relative; padding: 0 0 34px 28px; }
+.v3 .v3-step:last-child { padding-bottom: 0; }
+.v3 .v3-step::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--v3-paper);
+  border: 2px solid var(--v3-gray-400);
+}
+.v3 .v3-step:last-child::before { background: var(--v3-accent); border-color: var(--v3-ink); }
+.v3 .v3-step-num {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--v3-gray-700);
+}
+.v3 .v3-step h3 { margin: 6px 0 8px; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+.v3 .v3-step p { margin: 0; max-width: 60ch; color: var(--v3-gray-600); font-size: 15px; line-height: 1.55; }
+
+/* ── attribution model families (attribution §2) ─────────────────────────────
+   All NINE models, grouped by the families the registry actually defines, not a
+   subset. Settled from source: api/lib/report-config-validation.js:33
+   (ALLOWED_MODELS, 9) and :72 (MULTI_TOUCH_MODELS, 4), with the same nine keys
+   in dashboard/src/hooks/useDashboardData.js:23 and
+   dashboard/src/pages/ReportBuilder.jsx:40.
+
+   A grouped list, deliberately NOT .v3-cards — four peer cards would flatten the
+   families into a menu, which is the thing the homepage's one-liner already does. */
+.v3 .v3-models { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--v3-gutter); }
+.v3 .v3-model-family {
+  background: var(--v3-paper-card);
+  border: 1px solid var(--v3-border);
+  border-radius: var(--v3-radius-md);
+  padding: 24px;
+}
+.v3 .v3-model-family > h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--v3-gray-700);
+}
+.v3 .v3-model-family > p { margin: 0 0 16px; color: var(--v3-gray-600); font-size: 15px; line-height: 1.55; }
+.v3 .v3-model-family ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.v3 .v3-model-family li { display: flex; gap: 10px; align-items: baseline; font-size: 15px; }
+.v3 .v3-model-family li b { font-weight: 800; color: var(--v3-ink); }
+.v3 .v3-model-family li span { color: var(--v3-gray-600); font-variant-numeric: tabular-nums; }
+@media (max-width: 900px) { .v3 .v3-models { grid-template-columns: 1fr; } }
+
+/* ── static journey (product §3, ai-referral §5) ─────────────────────────────
+   ONE treatment shared by both pages. The design ships a drag-through timeline
+   on each; the interactive island is Phase 6, and §37.1 requires motion to
+   depict real behaviour — a drag handle that moves nothing depicts nothing.
+
+   Sits inside .v3-frame-body, so the window chrome is reused rather than
+   rebuilt. The converting row carries the accent as a single highlighted data
+   point, which is §2.6's fourth acceptable use — never a fill behind the prose.
+
+   ⚠️ Every value rendered through this is FIXTURE data and the page carries the
+   §29.8 disclosure line. It is not a customer figure and must never be presented
+   as one. */
+.v3 .v3-journey { display: grid; gap: 0; }
+.v3 .v3-journey-row {
+  display: grid;
+  grid-template-columns: 92px 1fr auto;
+  gap: 16px;
+  align-items: baseline;
+  padding: 14px 0;
+  border-top: 1px solid var(--v3-border);
+}
+.v3 .v3-journey-row:first-child { border-top: 0; }
+.v3 .v3-journey-when {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--v3-gray-700);
+  font-variant-numeric: tabular-nums;
+}
+.v3 .v3-journey-what { color: var(--v3-ink); font-size: 15px; line-height: 1.5; }
+.v3 .v3-journey-what b { font-weight: 800; }
+.v3 .v3-journey-what em { display: block; font-style: normal; color: var(--v3-gray-600); font-size: 14px; }
+.v3 .v3-journey-val { font-size: 14px; font-weight: 800; color: var(--v3-gray-700); font-variant-numeric: tabular-nums; }
+.v3 .v3-journey-row--won .v3-journey-val {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--v3-accent);
+  color: var(--v3-ink);
+}
+@media (max-width: 700px) {
+  .v3 .v3-journey-row { grid-template-columns: 1fr auto; }
+  .v3 .v3-journey-when { grid-column: 1 / -1; }
+}
