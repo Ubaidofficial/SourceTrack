@@ -228,7 +228,14 @@
   color: var(--v3-gray-500);
 }
 /* was #5E7A08 — conflict 3. §3.4: success is lime, never a second green. */
-.v3 .v3-syncrow .st--on { color: var(--v3-spend-text); }
+/* 🔴 WAS var(--v3-spend-text), which is UNRESOLVABLE: it aliases --color-spend-text,
+   declared NOWHERE in marketing/src (0 occurrences), so it rendered as unset — #660
+   exactly, shipped by me in #694 while the comment above it discussed avoiding #660.
+   Lime cannot carry this either: it is TEXT on a light card, and lime-on-light scores
+   1.33 against a 4.5 floor (contrast-audit's own control). §3.4's "success is lime"
+   therefore expresses through FILLS and DOTS, not text colour — the uppercase 900-weight
+   already signals the state. */
+.v3 .v3-syncrow .st--on { color: var(--v3-ink); }
 
 /* ── Capture-surface icon tiles ──────────────────────────────────────────── */
 /* The "no icons" symptom: captureCards shipped as {h, p} pairs with no icon
@@ -294,7 +301,10 @@
 }
 .v3 .v3-ticker-dot {
   width: 7px; height: 7px; border-radius: 99px;
-  background: var(--v3-spend-text);   /* was #63A002 — §3.4, no second green */
+  background: var(--v3-accent);       /* was #63A002 (§3.4, no second green), then
+                                         var(--v3-spend-text) which never resolved — see
+                                         the .st--on note. A filled DOT, so lime's
+                                         contrast floor does not apply. */
   flex: none;
 }
 .v3 .v3-ticker-slot { display: inline-flex; align-items: center; gap: 8px; }

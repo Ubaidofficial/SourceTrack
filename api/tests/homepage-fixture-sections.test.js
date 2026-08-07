@@ -147,8 +147,24 @@ test('🔴 §29.4: the live homepage renders at least one product VISUAL, not a 
   const dist = join(REPO_ROOT, 'marketing', 'dist', 'index.html')
   if (!existsSync(dist)) return   // built-output check only runs after a build
   const html = readFileSync(dist, 'utf8')
-  const visuals = (html.match(/<svg|<img|<canvas/g) || []).length
-  assert.ok(visuals > 0, '§29.4: the homepage must SHOW an attribution story — found no <svg>, <img> or <canvas>')
+
+  // SCOPED TO THE HERO FRAME, not the page. The page-wide version of this check went
+  // BLIND: PR 4/5 added capture-card icons, a CTA mark and tour glyphs across the page,
+  // so `<svg> > 0` became true no matter what the hero contained. Proven by experiment —
+  // deleting the hero's component left the page-level assertion passing 12/12. A guard
+  // that cannot fail for the reason it was written is the defect this repo keeps hitting,
+  // so it is narrowed to the region it was always meant to protect.
+  const frame = html.match(/<div class="v3-frame">[\s\S]*?<\/div>\s*<\/div>/)
+  assert.ok(frame, '§29.4: the hero frame is missing entirely')
+  // An <svg>/<img>/<canvas> OR a hydrated island both count: the hero currently renders a
+  // React island (MarketingInteractiveDemo), which is a product visual even though it
+  // ships no inline SVG. Requiring a raw tag here would fail a legitimate hero.
+  const filled = /<svg|<img|<canvas|astro-island/.test(frame[0])
+  assert.ok(
+    filled,
+    '§29.4: the HERO FRAME shows no product visual — it holds only text. The frame with a ' +
+    'caption where the product should be is exactly what this guard was written for.'
+  )
 })
 
 test('both new sections are rendered on the homepage in §29.3 order', () => {

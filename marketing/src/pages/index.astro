@@ -4,6 +4,37 @@
  * this line used to carry was left behind by the cutover and contradicted the line
  * beneath it.
  *
+ * ── SCOPE: THE DEMO WORKSPACE IS CUT, NOT DEFERRED ────────────────────────────
+ * Recorded here because there is no v3 plan doc — the plan has lived in PR bodies,
+ * and an item that sits on a list forever is how the missing-visual count stayed
+ * wrong for three PRs. CUT means it is off the roadmap; it is not waiting.
+ *
+ * The handoff's `demo-app` mount (demo-app.jsx + demo-screens.jsx +
+ * full-dashboard.jsx + tweaks-panel.jsx + demo-data.jsx — ~120KB, ~2,753 lines,
+ * 37 hooks) is NOT being ported. Two independent reasons, either sufficient:
+ *
+ *   1. §29.4 names it as the WRONG visual: "The hero visual should show an
+ *      attribution story, not a generic dashboard." demo-app IS the six-screen KPI
+ *      dashboard. MarketingInteractiveDemo, which §2 now renders, is the
+ *      attribution story — and already exists, already truthful.
+ *   2. TRUTH. Five capability assertions across FOUR of its six screens have never
+ *      run: JourneyDrawer's "written to HubSpot and pushed to Google Ads"
+ *      (demo-screens.jsx:195 — CRM sync has 0 references in api/, and
+ *      capi_deliveries + ad_platform_connections are both 0); ScreenReports'
+ *      "white-labelled" and "Scheduled to Slack" (:228-229 — white_label false on
+ *      every tier; email-reports-weekly logs "Sent 0" every run); ScreenLeads' CRM
+ *      chips (:124); and full-dashboard.jsx's "Best ROAS 6.2x" plus a ROAS column
+ *      (:82,90 — §6 cost-gated, and there are 0 ad-platform connections).
+ *      TrackingPanel was ALREADY rewritten for this reason; four more screens is a
+ *      redesign, not a trim.
+ *
+ * CONSEQUENCES, stated so they are not rediscovered:
+ *   · The Integrations and Leads SCREENS are not on the roadmap at all.
+ *   · PR 6 is §11's `compare` alone.
+ *   · FALLBACK if the query builder is later judged too dense for the hero: revert
+ *     to JourneyMockup in §2 and §3 empty (the state before this change). NOT the
+ *     port — that option is closed on the two grounds above.
+ *
  * ── WHERE THE HANDOFF ACTUALLY IS ──────────────────────────────────────────────
  * `design_handoff_sourcetrack/` — 334 files, OUTSIDE VERSION CONTROL, which is why
  * "the design handoff" below cannot be resolved from this repo alone. Its README is
@@ -63,6 +94,7 @@ import ChannelTiles from "@/layouts/v3/surfaces/ChannelTiles.astro";
 import MarkRow from "@/layouts/v3/surfaces/MarkRow.astro";
 import SyncList from "@/layouts/v3/surfaces/SyncList.astro";
 import ChannelMiniTable from "@/layouts/v3/surfaces/ChannelMiniTable.astro";
+import MarketingInteractiveDemo from "@/components/MarketingInteractiveDemo";
 import JourneyMockup from "@/components/JourneyMockup.astro";
 import HeroStatCallout from "@/components/HeroStatCallout.astro";
 import HowItWorksShowcase from "@/partials/HowItWorksShowcase.astro";
@@ -165,13 +197,15 @@ const comparison = [
             <span class="v3-frame-url">app.sourcetrack.example / dashboard</span>
           </div>
           <div class="v3-frame-body">
-            {/* §29.4 requires the hero visual to SHOW an attribution story, not describe
-                one. Until this line the frame held a caption — prose standing in for the
-                product shot — and the whole homepage carried zero <img>, <svg> and <canvas>.
-                JourneyMockup is in-repo, fixture-only (no fetch, no Supabase — §29.5), and
-                rendered in this exact role on the v2 homepage until the cutover orphaned it.
-                Restored rather than rebuilt. */}
-            <JourneyMockup />
+            {/* §29.4: "The hero visual should show an attribution story, NOT a generic
+                dashboard." That line is why the handoff's `demo-app` mount is NOT ported
+                here — it is a six-screen KPI dashboard, i.e. exactly what §29.4 names as
+                wrong. This component is literally an attribution story: pick a dimension,
+                switch First↔Last Touch, watch attributed value move, open a stitched
+                journey. Fixture-only and §29.5-clean (0 fetch/fetchApi/supabase/axios).
+                JourneyMockup moved to §3, whose heading already promises a six-touchpoint
+                journey and which rendered as a shell until now. */}
+            <MarketingInteractiveDemo client:visible />
           </div>
         </div>
       </Wrap>
@@ -187,6 +221,10 @@ const comparison = [
           eyebrow="Customer journeys"
           heading="One customer. Six touchpoints. Six sources trying to take credit."
         />
+          {/* Moved here from §2. #691 put it there only because §2 was an empty
+              frame and §29.4 needed closing; this heading promises one customer and
+              six touchpoints, so §3 stops being a heading-plus-paragraph shell. */}
+          <JourneyMockup />
       </Wrap>
     </section>
 
