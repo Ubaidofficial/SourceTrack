@@ -3224,3 +3224,35 @@ That would be harmless if the defaults governed. They do not: `getPvLimit(plan, 
 **Status: NOT fixed, and the ceiling is pinned by test rather than left implicit.** Two tests in `v3-claims-allowlist.test.js` (added by the PR that filed this entry) assert the blind spot and reproduce the over-fire, so broadening the patterns forces a deliberate re-measurement against the real file instead of a quiet widening. The 8 phrase patterns are unchanged and still blocking.
 
 **What this means in practice:** every claim cut on 2026-08-07 is protected **only against its exact wording**. Claim-level review is a **human step at PR time**; this guard is a regression check for a specific string coming back, and nothing more. Treating a green run as "no false claims shipped" is the misreading this entry exists to prevent.
+
+### KI-112 — an alias to an UNDECLARED custom property renders `unset`, and nothing in the build catches it (2026-08-08, #660's mechanism for the THIRD time)
+
+**THE CLASS, not the instance.** A `var(--x)` naming a custom property that was never declared is **invalid at computed-value time**: the declaration falls to the property's *initial* value — `transparent` for a background, inherited black for a colour. Nothing errors. Nothing warns. The page renders, slightly wrong, and no test written against **source** can see it.
+
+**Third occurrence.** #660 was the original (`--v3-accent` → `var(--color-accent)`, undeclared). This entry records instances two and three: **`--v3-spend-text` aliases `--color-spend-text`, which is declared NOWHERE in `marketing/src` — 0 occurrences.** It shipped in **#694** (`.v3-syncrow .st--on`) and again in **#697** (the hero-ticker dot), and left `main` failing `marketing/scripts/v3-page-pairs.mjs` with **exit 1** until #700 replaced both usages.
+
+**⚠️ WHY IT KEEPS RECURRING — three mechanics that compound.** Recording these is the point of the entry; the fix for one instance teaches nothing.
+
+1. **Silent fallback.** There is no such thing as a CSS "undefined variable error". The failure mode is a *plausible-looking page*, so it survives visual review.
+2. **A grep for the hex cannot see through an alias chain.** `--v3-spend-text: var(--color-spend-text)` contains no colour value, so searching source for `#B4420E` — or for any hex — returns nothing and reads as clean. The author in #694 and #697 was **actively writing comments about avoiding #660** in the same file, and still shipped it, because the check they were applying (grep the source for banned hexes) is structurally incapable of catching an alias to nothing.
+3. **The token layer invites it.** `v3-tokens.css` deliberately declares aliases marked `UNRESOLVED · 0 uses` as a *record* of what the design handoff proposed. That is reasonable, but it means **a declared-but-unresolvable token sits in the file looking usable**. Using one converts a documented placeholder into a live defect, and the diff looks like ordinary token adoption.
+
+**WHAT WOULD ACTUALLY CATCH IT — recommended, NOT built here.** A **resolve-check over declared vs referenced custom properties**: collect every `--x:` declaration and every `var(--y)` reference across the built CSS, and fail when a referenced property has no declaration anywhere in the bundle. It is a pure set-difference over `dist/_astro/*.css`, needs no browser, and would have caught all three instances at build time rather than at review time.
+
+Preferred over the alternative (a build-time assertion per token) because it is **exhaustive by construction** — it cannot miss a token nobody thought to list, which is exactly how instances two and three shipped. `v3-page-pairs.mjs` already does a narrower version of this for its own registry and is what eventually caught it; the gap is that it only checks tokens the registry names.
+
+**Note for whoever builds it:** it must read the **built** CSS, not source. The alias chain is only resolvable after the bundle is assembled, and a source-level check reproduces exactly the blind spot described above.
+
+### KI-113 — "success is lime" cannot express through TEXT COLOUR (2026-08-08, a real constraint §3.4 omits)
+
+**`design.md` §3.4:439 says:** *"Success is lime, not green… There must be no separate success green, no terminal green, no info blue, no purple, and no slate in the shipped app."* It says **what** colour means success. It does **not** say **where** that colour may sit — and that omission is a trap.
+
+**Lime cannot be text on a light surface.** Lime-on-light scores **1.33** against §21's **4.5** floor — measured by `marketing/scripts/contrast-audit.mjs`'s own positive control (`lime on white = 1.33 vs 4.5 -> FAILS correctly`). Any "Live", "Healthy", "Synced" or "Active" label rendered *in lime* on a paper/bone surface is unreadable and fails the audit.
+
+**So: lime expresses through FILLS, DOTS and BARS — never through text colour.** In #700 the fix was a lime **dot** beside **ink** text: the signal survives, the contrast floor is met, and no second colour enters the system.
+
+**⚠️ THE TRAP, and it is a good one.** When lime text fails contrast, the instinct is to darken it — and a darkened lime is a **green**, which §3.4 bans outright. That instinct has already produced two bans-in-waiting in the v3 port: **`#5E7A08`** (PR #694, a sync-row "live" state) and **`#63A002`** (PR #697, a ticker dot), both from the design handoff, both zero occurrences in `design.md`, both resolved to lime-family. The handoff reaches for a success green *whenever it needs a live state*, precisely because lime does not work as text.
+
+**The correct move is neither.** Keep the text neutral (`--v3-ink` or a gray token) and carry the state in an adjacent lime fill. Weight and capitalisation do the rest of the work — `.v3-syncrow .st` is already 900-weight uppercase, which signals state without relying on hue at all.
+
+**A prediction that did NOT hold, recorded so it is not treated as a law:** after two greens it looked like every ported section would bring a third. PR #699 scanned every rule behind its sections' classes and found **no green at all**. The pattern is real and worth checking for; it is not inevitable.
