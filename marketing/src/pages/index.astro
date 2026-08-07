@@ -86,6 +86,7 @@ import "@/styles/v3-surfaces.css";
 import HeroTicker from "@/components/v3/HeroTicker.jsx";
 import SurfaceTabs from "@/components/v3/SurfaceTabs.jsx";
 import LiveVisitors from "@/components/v3/LiveVisitors.jsx";
+import PathBeam from "@/layouts/v3/surfaces/PathBeam.astro";
 import CaptureIcon from "@/layouts/v3/surfaces/CaptureIcon.astro";
 import ChannelMarquee from "@/layouts/v3/surfaces/ChannelMarquee.astro";
 import ChipRow from "@/layouts/v3/surfaces/ChipRow.astro";
@@ -186,6 +187,10 @@ const comparison = [
             viewports and there is no reason to hydrate it before it is seen. */}
         <HeroTicker client:visible />
         <HeroStatCallout />
+          {/* Mechanism illustration, CSS-only. Placed in its OWN row beneath the hero
+              copy — §2.6 forbids lime as a wash BEHIND primary content, so it sits
+              adjacent, never underneath. It labels nothing and implies no delivery. */}
+          <PathBeam />
       </Wrap>
     </section>
 
