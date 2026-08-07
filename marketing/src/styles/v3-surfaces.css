@@ -51,7 +51,9 @@
 
    ── PAINT STAYS IN CSS, NEVER IN style="" ───────────────────────────────────
    v3-page-pairs.mjs:552-553 FAILS on any paint property in a style attribute,
-   and the live baseline is 26 inline styles / 0 paint-bearing. The handoff builds
+   and the live baseline is 38 inline styles / 0 paint-bearing (26 until #698 added
+   twelve layout-only `flex:N` on the model-split bars — the COUNT moves as layout
+   is added; the number that must never move is PAINT-BEARING, which is 0). The handoff builds
    ai-chips and channel-tiles with inline `style={{ background: … }}`; recreating
    them class-first is both what that guard requires and what "recreate, don't
    lift" means. A colour in style="" is also undetectable to the contrast audit —
@@ -474,3 +476,58 @@
 
 /* ── §18: CTA mark ───────────────────────────────────────────────────────── */
 .v3 .v3-cta-mark { display: inline-flex; color: var(--v3-gray-400); margin-bottom: 10px; }
+
+/* ============================================================================
+   PR 5 — §8 nine models · §13 badges · §5 tour footer · §14 mark columns
+   ============================================================================
+   🔴 THE THIRD SUCCESS GREEN DID NOT APPEAR. #5E7A08 (PR 2) and #63A002 (PR 3)
+   made a third look likely, and it was worth checking — but scanning every rule
+   behind these sections' classes turned up no green at all. Prediction recorded
+   as NOT held rather than quietly dropped.
+
+   All colours are --v3-* tokens. No paint in any style attribute.
+   ========================================================================== */
+
+/* ── §8: nine attribution models, by family ──────────────────────────────── */
+.v3 .v3-models { display: grid; gap: 14px; margin-top: 20px; }
+.v3 .v3-models-fam { display: grid; grid-template-columns: 116px 1fr; gap: 14px; align-items: start; }
+.v3 .v3-models-label {
+  font-size: 10.5px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--v3-gray-500); padding-top: 6px;
+}
+.v3 .v3-models-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.v3 .v3-models-chip {
+  padding: 5px 12px; border-radius: 99px;
+  background: var(--v3-paper-card);
+  border: 1px solid var(--v3-border);
+  color: var(--v3-gray-700);
+  font-size: 12px; font-weight: 800; white-space: nowrap;
+}
+
+/* ── §13: audience badges ────────────────────────────────────────────────── */
+.v3 .v3-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 20px; }
+.v3 .v3-badge {
+  padding: 5px 12px; border-radius: 99px;
+  background: var(--v3-gray-50);
+  border: 1px solid var(--v3-border);
+  color: var(--v3-gray-600);
+  font-size: 12px; font-weight: 800; white-space: nowrap;
+}
+
+/* ── §5: tour footer ─────────────────────────────────────────────────────── */
+.v3 .v3-tourfoot {
+  display: flex; justify-content: center; flex-wrap: wrap;
+  gap: 22px; margin-top: 26px;
+}
+.v3 .v3-tourfoot .v3-link-quiet { display: inline-flex; align-items: center; gap: 7px; }
+
+/* ── §14: comparison mark columns ────────────────────────────────────────── */
+.v3 .v3-markcols {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px; margin-top: 18px;
+}
+.v3 .v3-markcols-cap {
+  display: block; font-size: 10px; font-weight: 900; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--v3-gray-500);
+}
+.v3 .v3-chiprow--tight { margin-top: 12px; }

@@ -222,6 +222,25 @@ const comparison = [
                   The fourth, `live` (the realtime session feed), needs JS and is PR 3 —
                   it is absent here rather than faked with a still frame. */}
               <ChannelMiniTable />
+              {/* The handoff closes §5 with a centred row carrying two 15px glyphs
+                  (index.html:124-163). First-party marks, currentColor, so no paint value
+                  lands in a style attribute (v3-page-pairs.mjs:552-553). */}
+              <div class="v3-tourfoot">
+                <a class="v3-link-quiet" href="/product">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                       stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 12h14" /><path d="M13 6l6 6-6 6" />
+                  </svg>
+                  See the full product tour
+                </a>
+                <a class="v3-link-quiet" href="/demo">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                       stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 3a9 9 0 100 18 9 9 0 000-18z" /><path d="M10 8.5l6 3.5-6 3.5z" />
+                  </svg>
+                  Open the live demo
+                </a>
+              </div>
               {/* handoff `live` — the fourth surface of this section, absent in PR 2
                   because it needs JS. Its tick moves a session between pages and
                   advances a timer; it NEVER invents a conversion (§6). */}
@@ -280,6 +299,28 @@ const comparison = [
           heading="Nine attribution models. One dataset underneath."
           lede="Attribution arguments are usually model arguments in disguise. First touch, last touch, linear, time decay, W-shaped, full path and more — the same dataset, re-credited."
         />
+          {/* NINE models, named. The heading "Nine attribution models. One dataset
+              underneath." is TRUE — ALLOWED_MODELS holds exactly 9
+              (api/lib/report-config-validation.js:33) — so the heading stands and the
+              visual supports it literally.
+              NO revenue and NO percentages: ModelCompareMockup was NOT wired here even
+              though it exists, because it shows THREE models under a nine-model heading
+              (a contradiction a reader can count) and carries $240/$80 figures — the same
+              derivation that got bento-attr cut. Names and families derive nothing. */}
+          <div class="v3-models">
+            {[
+              { fam: "Touch-based", items: ["First touch", "Last touch", "First touch (non-direct)", "Last touch (non-direct)"] },
+              { fam: "Multi-touch", items: ["Linear", "U-shaped", "W-shaped", "Time decay"] },
+              { fam: "AI-aware",    items: ["AI platforms"] },
+            ].map(({ fam, items }) => (
+              <div class="v3-models-fam">
+                <span class="v3-models-label">{fam}</span>
+                <div class="v3-models-list">
+                  {items.map((m) => <span class="v3-models-chip">{m}</span>)}
+                </div>
+              </div>
+            ))}
+          </div>
       </Wrap>
     </section>
 
@@ -393,6 +434,14 @@ const comparison = [
           <div class="v3-card">
             <h3>Check your setup from your AI assistant</h3>
             <p>Connect Claude or ChatGPT to SourceTrack's read-only diagnostics — verify the install, debug the data flow, and pull lead and campaign volume without leaving the chat.</p>
+              {/* The handoff has TWO tool-rows in §11; only this one survives. The other
+                  (:345 — HubSpot/Salesforce/Pipedrive) belongs to "Write source and revenue
+                  straight into your CRM", cut for 0 references in api/. Listed here are MCP
+                  CLIENTS only — the handoff's row also carried "Slack alerts" and
+                  "Webhooks", which are separate features and would conflate what MCP does. */}
+              <div class="v3-chiprow v3-chiprow--tight">
+                {["Claude", "ChatGPT", "Cursor"].map((t) => <span class="v3-chip">{t}</span>)}
+              </div>
           </div>
         </div>
       </Wrap>
@@ -406,6 +455,23 @@ const comparison = [
           heading="Same engine, different definition of a lead."
           lede="A signed case, a bound policy, a booked tour, and a trial signup are all “conversions.” SourceTrack ships with the channel groupings and conversion types each one needs."
         />
+          {/* The handoff's §13 badge row, audience descriptors only.
+              ⚠️ THREE OF ITS BADGES ARE DELIBERATELY ABSENT, and the claims guard passed
+              all of them — KI-111 exactly: it matches phrasings, not claims.
+                · "White-label reports" — plan-features.js white_label is FALSE on every
+                  tier. A flatly false capability claim.
+                · "No per-seat fees" — technically true (pricing is per plan) but hollow:
+                  multi_user is FALSE on every tier, so there are no seats to charge for.
+                · "Client workspaces" is KEPT — multi-SITE is real (PLAN_STRUCTURAL_LIMITS
+                  allows 3/10 sites), which is what an agency means by a workspace.
+              The section asks WHO it is for, so capability badges were off-topic here
+              regardless of whether they were true. */}
+          <div class="v3-badges">
+            {["SaaS", "E-commerce", "Lead generation", "Agencies", "Financial services",
+              "Healthcare", "Legal", "Real estate", "Home services", "Insurance",
+              "Travel & hospitality", "Founders & operators", "In-house marketing",
+              "RevOps", "Client workspaces"].map((b) => <span class="v3-badge">{b}</span>)}
+          </div>
         <div class="v3-divided">
           <div><h3>By team</h3><p>Marketing, growth, and founders running their own acquisition.</p></div>
           <div><h3>By industry</h3><p>SaaS, ecommerce, professional services, and lead-gen.</p></div>
@@ -423,7 +489,15 @@ const comparison = [
           lede="A CRM starts tracking at the form fill. Free analytics never sees revenue. Form trackers only catch the last click."
         />
           {/* handoff `mark-row` — text labels only (§35.4). */}
-          <MarkRow items={["GA4", "HubSpot", "Salesforce", "Stripe", "Shopify"]} />
+          {/* The handoff puts a mark-row under each comparison COLUMN, not one row for the
+              section: free analytics / form trackers / enterprise attribution / us. Text
+              labels only — MarkRow title-cases a slug and draws nothing (§35.4). */}
+          <div class="v3-markcols">
+            <div><span class="v3-markcols-cap">Free analytics</span><MarkRow items={["Google Analytics", "Plausible"]} /></div>
+            <div><span class="v3-markcols-cap">Form trackers</span><MarkRow items={["Attributer", "Typeform"]} /></div>
+            <div><span class="v3-markcols-cap">Enterprise attribution</span><MarkRow items={["Northbeam"]} /></div>
+            <div><span class="v3-markcols-cap">This</span><MarkRow items={["SourceTrack"]} /></div>
+          </div>
         <div class="v3-table-card">
           <table>
             <thead>
