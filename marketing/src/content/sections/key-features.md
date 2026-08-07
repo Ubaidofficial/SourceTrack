@@ -27,5 +27,5 @@ features:
     mockup: "seo-revenue"
     bullet_points:
       - "Truthful organic landing page revenue estimation"
-      - "Cookieless and 100% privacy-first identity boundary"
+      - "Cookieless and privacy-first identity boundary"
 ---
