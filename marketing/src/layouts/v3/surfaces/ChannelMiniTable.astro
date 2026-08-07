@@ -1,0 +1,34 @@
+---
+// Mini channel table — the handoff's `channel-mini` mount.
+//
+// Channel / Visitors / Conversions / Revenue. The handoff reads window.DEMO and
+// returns null without it; fixtures are local here (ruling 3) so the component
+// cannot render empty because a global was absent.
+//
+// ⚠️ REVENUE IS SHOWN, so this is a §6 surface, not just layout. Every figure is
+// an illustrative fixture and the page-level §29.8 disclosure in Footer.astro
+// states that once for the page. No per-card badge — §29.8 permits exactly one
+// disclosure line, which is why this carries none of its own.
+const rows = [
+  { name: 'Google Ads', visitors: '12,480', conv: '318', rev: '$48,200' },
+  { name: 'Google',     visitors: '9,140',  conv: '221', rev: '$31,050' },
+  { name: 'ChatGPT',    visitors: '3,620',  conv: '128', rev: '$19,400' },
+  { name: 'LinkedIn',   visitors: '2,910',  conv: '86',  rev: '$12,760' },
+  { name: 'Direct',     visitors: '2,240',  conv: '61',  rev: '$8,930'  },
+];
+---
+<table class="v3-minitbl">
+  <thead>
+    <tr><th>Channel</th><th>Visitors</th><th>Conversions</th><th>Revenue</th></tr>
+  </thead>
+  <tbody>
+    {rows.map((r) => (
+      <tr>
+        <td><span class="v3-minitbl-ch">{r.name}</span></td>
+        <td>{r.visitors}</td>
+        <td>{r.conv}</td>
+        <td>{r.rev}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>

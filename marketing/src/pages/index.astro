@@ -50,19 +50,30 @@ import StatRow from "@/layouts/v3/StatRow.astro";
 import Bento from "@/layouts/v3/Bento.astro";
 import "@/styles/v3-tokens.css";
 import "@/styles/v3-home.css";
+import "@/styles/v3-surfaces.css";
 
+import ChannelMarquee from "@/layouts/v3/surfaces/ChannelMarquee.astro";
+import ChipRow from "@/layouts/v3/surfaces/ChipRow.astro";
+import JourneyChips from "@/layouts/v3/surfaces/JourneyChips.astro";
+import ChannelTiles from "@/layouts/v3/surfaces/ChannelTiles.astro";
+import MarkRow from "@/layouts/v3/surfaces/MarkRow.astro";
+import SyncList from "@/layouts/v3/surfaces/SyncList.astro";
+import ChannelMiniTable from "@/layouts/v3/surfaces/ChannelMiniTable.astro";
 import JourneyMockup from "@/components/JourneyMockup.astro";
 import HeroStatCallout from "@/components/HeroStatCallout.astro";
 import HowItWorksShowcase from "@/partials/HowItWorksShowcase.astro";
 import UseCaseCards from "@/partials/UseCaseCards.astro";
 
+// `icon` is a MONOGRAM, not a logo. §35.4 bans reconstructed third-party marks, and the
+// handoff's own pattern is a letter or text label. These are OUR surface categories, so a
+// letter tile is honest rather than standing in for a mark we may not draw.
 const captureCards = [
-  { h: "Forms", p: "Every submission arrives with its source already attached — no hidden fields to wire up, no lost UTMs on multi-step forms." },
-  { h: "Chat", p: "Conversations that start in a widget stop being anonymous. The chat lead inherits the session that led to it." },
-  { h: "Meetings", p: "Know where a booked demo came from before you walk into it — source and campaign land on the calendar invite." },
-  { h: "Signups", p: "Trial starts and account signups classify as leads on arrival — signup, sign_up, trial and trial_start are all recognised by the taxonomy, so a self-serve funnel is attributed without extra wiring." },
-  { h: "Payments", p: "Revenue, not just conversions. Each charge, upgrade, and renewal rolls up to the channel that originally earned it." },
-  { h: "Store orders", p: "Order-level attribution with LTV and repeat rate by acquisition source — the numbers your ad platform will never show you." },
+  { icon: "F", h: "Forms", p: "Every submission arrives with its source already attached — no hidden fields to wire up, no lost UTMs on multi-step forms." },
+  { icon: "C", h: "Chat", p: "Conversations that start in a widget stop being anonymous. The chat lead inherits the session that led to it." },
+  { icon: "M", h: "Meetings", p: "Know where a booked demo came from before you walk into it — source and campaign land on the calendar invite." },
+  { icon: "S", h: "Signups", p: "Trial starts and account signups classify as leads on arrival — signup, sign_up, trial and trial_start are all recognised by the taxonomy, so a self-serve funnel is attributed without extra wiring." },
+  { icon: "P", h: "Payments", p: "Revenue, not just conversions. Each charge, upgrade, and renewal rolls up to the channel that originally earned it." },
+  { icon: "O", h: "Store orders", p: "Order-level attribution with LTV and repeat rate by acquisition source — the numbers your ad platform will never show you." },
 ];
 
 const stats = [
@@ -156,6 +167,9 @@ const comparison = [
       </Wrap>
     </section>
 
+    {/* handoff `marquee` mount — static by ruling; continuous scroll is PR 3. */}
+    <ChannelMarquee />
+
     {/* 3 — frameless cards on paper */}
     <section class="v3-section">
       <Wrap>
@@ -191,10 +205,14 @@ const comparison = [
             <span class="v3-frame-url">app.sourcetrack.example / attribution</span>
           </div>
           <div class="v3-frame-body">
-            <p>Watch active sessions move through the site, each already carrying the source that sent it. No cookie is set — a session is a pseudonymous id.</p>
-            <p>Stripe and Shopify revenue tied back to the click that earned it — then re-credited under any of nine models without re-tagging a thing.</p>
-            <p>ChatGPT, Gemini, Claude, Perplexity and Copilot arrive without UTMs, so everyone else files them as direct.</p>
-            <p>Search Console clicks matched to landing pages and revenue, so organic stops being one undifferentiated line. Labelled estimated, because it is modelled.</p>
+              {/* handoff mounts for this section: channel-mini, ai-chips, tool-row.
+                  The fourth, `live` (the realtime session feed), needs JS and is PR 3 —
+                  it is absent here rather than faked with a still frame. */}
+              <ChannelMiniTable />
+              <div class="v3-frame-split">
+                <ChipRow items={["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot"]} more="+11 more" />
+                <ChipRow items={["HubSpot", "Salesforce", "Stripe", "Shopify"]} more="+8 more" />
+              </div>
           </div>
         </div>
       </Wrap>
@@ -224,6 +242,7 @@ const comparison = [
         />
         <div class="v3-cards">
           {captureCards.map((c) => (
+            <span class="v3-card-icon" aria-hidden="true">{c.icon}</span>
             <div class="v3-card"><h3>{c.h}</h3><p>{c.p}</p></div>
           ))}
         </div>
@@ -265,6 +284,8 @@ const comparison = [
           heading="Source. Journey. Conversion. Revenue."
           lede="Every block is a real report you can pin, rebuild, or send to a client — running on the same dataset as the demo workspace above."
         />
+          {/* handoff `channel-tiles` — monogram tiles, §35.4: never a drawn mark. */}
+          <ChannelTiles />
         <Bento>
           <div class="v3-bento-cell v3-bento-cell-dark" style="grid-column: span 7">
             <h3>Stitch first touch, last touch, assists, and revenue into one view.</h3>
@@ -297,6 +318,14 @@ const comparison = [
           heading="Attribution that leaves the dashboard."
           lede="A report nobody acts on is an expensive screenshot."
         />
+          {/* handoff `sync-list`. The live state resolves to a lime-family token, not the
+              handoff's #5E7A08 — §3.4:439 forbids a second success green. */}
+          <SyncList items={[
+            { label: "HubSpot", count: "1,284 contacts", state: "Live" },
+            { label: "Salesforce", count: "962 leads", state: "Live" },
+            { label: "Google Ads", count: "48 campaigns", state: "Live" },
+            { label: "Slack", count: "alerts", state: "Paused" },
+          ]} />
         <div class="v3-cards">
           <div class="v3-card">
             <h3>Server-side ingest carries the source</h3>
@@ -334,6 +363,8 @@ const comparison = [
           heading="Your CRM records the deal. It can’t explain it."
           lede="A CRM starts tracking at the form fill. Free analytics never sees revenue. Form trackers only catch the last click."
         />
+          {/* handoff `mark-row` — text labels only (§35.4). */}
+          <MarkRow items={["GA4", "HubSpot", "Salesforce", "Stripe", "Shopify"]} />
         <div class="v3-table-card">
           <table>
             <thead>
@@ -395,6 +426,9 @@ const comparison = [
           heading="“Where did this deal actually come from?”"
           lede="Every founder asks it at the end of the month. Your CRM answers “Unknown,” GA4 answers “Direct,” and the ad platforms all answer “me.”"
         />
+          {/* handoff `journey-chips` — one visitor, source to payment. The lime sits on the
+              terminal step only (§2.6 accent density). */}
+          <JourneyChips />
         <div class="v3-cards">
           <div class="v3-card"><h3>Untagged</h3><p>No touchpoints captured.</p></div>
           <div class="v3-card"><h3>Attributed</h3><p>Journey · 5 touchpoints over 19 days.</p></div>

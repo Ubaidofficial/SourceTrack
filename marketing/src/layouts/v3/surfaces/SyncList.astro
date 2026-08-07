@@ -1,0 +1,22 @@
+---
+// Sync list — the handoff's `sync-list` mount.
+//
+// Integration rows: name, record count, state. The handoff colours the live
+// state #5E7A08, a green. §3.4:439 — "Success is lime, not green… There must be
+// no separate success green" — so the ON state resolves to a lime-family token
+// in v3-surfaces.css, not a second success colour. That mapping is the whole
+// reason this is recreated rather than lifted.
+//
+// Counts are illustrative fixtures; the page-level §29.8 disclosure covers them.
+interface Props { items: { label: string; count: string; state: string }[] }
+const { items } = Astro.props;
+---
+<div class="v3-synclist">
+  {items.map(({ label, count, state }) => (
+    <div class="v3-syncrow">
+      <span class="nm">{label}</span>
+      <span class="ct">{count}</span>
+      <span class={`st${state === 'Live' ? ' st--on' : ''}`}>{state}</span>
+    </div>
+  ))}
+</div>

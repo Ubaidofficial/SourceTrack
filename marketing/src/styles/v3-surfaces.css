@@ -1,0 +1,249 @@
+/* ============================================================================
+   V3 SURFACE COMPONENTS — the eight static mounts from the design handoff
+   ============================================================================
+
+   SCOPED TO `.v3`, same as v3-tokens.css and for the same reason: these rules
+   must not reach the 24 pages still on v1.4's visual system.
+
+   ── RECREATED, NOT LIFTED ───────────────────────────────────────────────────
+   The handoff (`design_handoff_sourcetrack/`, outside version control) ships
+   Babel-in-browser prototypes its README says explicitly must NOT be lifted —
+   target stack is Astro, recreated as real components. These rules were written
+   from the handoff's LAYOUT INTENT; every colour is re-derived against our token
+   layer rather than copied, because copying is what produces the four conflicts
+   catalogued below.
+
+   ── THE FOUR CONFLICTS, AND WHY EACH RESOLVED THE WAY IT DID ────────────────
+   Audited rule-by-rule against home-sections.css + components.css, scoped to
+   these eight components only.
+
+   1. ⚠️ `var(--black)` / `var(--white)` / `var(--lime)` — THE ONE THAT MATTERS.
+      Not a spec disagreement: a RESOLUTION FAILURE, and #660 recurring exactly.
+      Those aliases are declared only at `:root` in home-design.css:57,70,72, and
+      the homepage imports v3-tokens.css + v3-home.css and NOT home-design.css
+      (index.astro). Verified in built output: zero occurrences of `--black:`,
+      `--white:` or `--lime:` in either linked stylesheet or any inline block,
+      against a positive control (`--v3-accent:` = 1) proving the scan works.
+      A var() naming an undefined property is invalid at computed-value time and
+      falls to the property's initial value — background-color to transparent,
+      colour to inherited black. That is precisely the #660 defect the token
+      audit was built to catch. EVERY one is mapped to `--v3-*` below.
+
+   2. `#000` (handoff .mini-tbl, .marquee) -> `var(--v3-ink)` (#12100C).
+      §3.1's dark surface is #12100C; #000 is not a token in this system.
+
+   3. `#5E7A08` (handoff `.sync-row .st.on`, a "live" state) -> `var(--v3-accent)`.
+      §3.4:439 — "Success is lime, not green… There must be no separate success
+      green, no terminal green, no info blue, no purple, and no slate in the
+      shipped app." #5E7A08 appears zero times in design.md. Lime already means
+      good; a second success colour is exactly what that rule forbids.
+
+   4. `#F7F9F7` (handoff .sync-row background) -> `var(--v3-gray-50)` (#FAF8F1).
+      A green-tinted off-white; §3.1's light canvas is bone #F7F4ED and the raised
+      surface is #FFFDF8. #F7F9F7 appears zero times in design.md.
+
+   5. `rgba(18,16,12,.04–.10)` hairlines — VALUES KEPT. They are ink-derived and
+      legal. But #664 proved this exact alpha range can composite invisibly: the
+      stat band's rules "were already there and did not render" at
+      rgba(18,16,12,.08). Alphas at or below .08 are raised to the token border
+      (`--v3-border`, #E7E0D2) where the rule is structural rather than decorative,
+      so a hairline that must be seen is not left to composite against chance.
+
+   ── PAINT STAYS IN CSS, NEVER IN style="" ───────────────────────────────────
+   v3-page-pairs.mjs:552-553 FAILS on any paint property in a style attribute,
+   and the live baseline is 26 inline styles / 0 paint-bearing. The handoff builds
+   ai-chips and channel-tiles with inline `style={{ background: … }}`; recreating
+   them class-first is both what that guard requires and what "recreate, don't
+   lift" means. A colour in style="" is also undetectable to the contrast audit —
+   there is no selector to register a pair against.
+   ========================================================================== */
+
+/* ── Channel marquee ─────────────────────────────────────────────────────── */
+/* Static by ruling: no animation, no motion.css port. The handoff scrolls this
+   continuously; that is PR 3's scope, and shipping a still row now is honest
+   about what is built rather than half-animating it. */
+.v3 .v3-marquee {
+  overflow: hidden;
+  border-block: 1px solid var(--v3-border);
+  padding: 14px 0;
+}
+.v3 .v3-marquee-track {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.v3 .v3-marquee-item {
+  color: var(--v3-ink);          /* was var(--black) — conflict 1 */
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+  opacity: 0.72;
+}
+
+/* ── Chip rows: tool-row, ai-chips, journey-chips ────────────────────────── */
+.v3 .v3-chiprow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.v3 .v3-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border-radius: 99px;
+  background: var(--v3-paper-card);   /* was var(--white) — conflict 1 */
+  border: 1px solid var(--v3-border); /* was rgba(18,16,12,.1) — conflict 5 */
+  color: var(--v3-gray-700);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+/* The "+N more" affordance. Dashed and unfilled so it reads as an overflow
+   marker rather than another item. */
+.v3 .v3-chip--more {
+  background: transparent;
+  color: var(--v3-gray-500);
+  border-style: dashed;
+}
+/* Journey terminal step. §2.6 caps accent density at ~15%: lime lands on ONE
+   chip per journey — the conversion — not on the row. */
+.v3 .v3-chip--last {
+  background: var(--v3-accent);
+  border-color: transparent;
+  color: var(--v3-ink);
+}
+.v3 .v3-chip-arrow {
+  color: var(--v3-gray-400);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* ── Monogram tiles (channel-tiles) and mark row ─────────────────────────── */
+/* §35.4: no reconstructed third-party brand marks. The handoff's own answer is a
+   single-letter monogram or a text label, never a drawn logo — followed here. */
+.v3 .v3-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.v3 .v3-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border-radius: var(--v3-radius-sm);
+  background: var(--v3-gray-50);
+  border: 1px solid var(--v3-border);
+  color: var(--v3-gray-600);
+  font-size: 13px;
+  font-weight: 900;
+}
+.v3 .v3-markrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+.v3 .v3-mark {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--v3-gray-600);
+}
+
+/* ── Mini channel table ──────────────────────────────────────────────────── */
+.v3 .v3-minitbl {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  background: var(--v3-paper-card);   /* was var(--white) — conflict 1 */
+  border: 1px solid var(--v3-border);
+  border-radius: var(--v3-radius-md);
+  overflow: clip;
+  box-shadow: var(--v3-shadow-card);
+}
+.v3 .v3-minitbl th {
+  text-align: right;
+  padding: 12px 14px;
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--v3-gray-600);
+  border-bottom: 1px solid var(--v3-border);
+  white-space: nowrap;
+}
+.v3 .v3-minitbl th:first-child,
+.v3 .v3-minitbl td:first-child { text-align: left; }
+.v3 .v3-minitbl td {
+  text-align: right;
+  padding: 12px 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid var(--v3-border);
+  color: var(--v3-text);
+}
+.v3 .v3-minitbl tr:last-child td { border-bottom: 0; }
+.v3 .v3-minitbl-ch {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 800;
+  color: var(--v3-ink);               /* was var(--black) — conflict 1 */
+  white-space: nowrap;
+}
+
+/* ── Sync list ───────────────────────────────────────────────────────────── */
+.v3 .v3-synclist { display: grid; gap: 8px; }
+.v3 .v3-syncrow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: var(--v3-radius-sm);
+  background: var(--v3-gray-50);      /* was #F7F9F7 — conflict 4 */
+  border: 1px solid var(--v3-border); /* was rgba(18,16,12,.06) — conflict 5 */
+  font-size: 13px;
+  font-weight: 800;
+}
+.v3 .v3-syncrow .nm { color: var(--v3-ink); }   /* was var(--black) — conflict 1 */
+.v3 .v3-syncrow .ct {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--v3-gray-500);
+  font-variant-numeric: tabular-nums;
+}
+.v3 .v3-syncrow .st {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--v3-gray-500);
+}
+/* was #5E7A08 — conflict 3. §3.4: success is lime, never a second green. */
+.v3 .v3-syncrow .st--on { color: var(--v3-spend-text); }
+
+/* ── Capture-surface icon tiles ──────────────────────────────────────────── */
+/* The "no icons" symptom: captureCards shipped as {h, p} pairs with no icon
+   field, so nothing rendered. Monogram tiles, per §35.4 — these are OUR surface
+   categories (Forms, Chat, Meetings…), not third-party marks, so a letter tile
+   is honest rather than a stand-in for a logo we may not draw. */
+.v3 .v3-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 12px;
+  border-radius: 9px;
+  background: var(--v3-gray-50);
+  border: 1px solid var(--v3-border);
+  color: var(--v3-gray-700);
+  font-size: 14px;
+  font-weight: 900;
+}

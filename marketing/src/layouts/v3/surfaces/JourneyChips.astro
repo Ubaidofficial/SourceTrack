@@ -1,0 +1,23 @@
+---
+// Journey chips — the handoff's `journey-chips` mount.
+//
+// One visitor's path, source through conversion, as chips separated by arrows.
+// The handoff reads lead[0] from window.DEMO and maps e.kind through a label
+// table; the shape is preserved, the fixture is local (ruling 3).
+//
+// The terminal step carries the lime. §2.6 caps accent density at ~15% of a
+// screen: one chip in a row of five, once on the page, is inside that.
+//
+// FIXTURE, NOT A CUSTOMER — the page-level §29.8 disclosure in Footer.astro
+// covers it; §29.8 allows exactly one disclosure line per page, so this
+// component deliberately carries no badge of its own.
+const steps = ['ChatGPT', 'Visit', 'Demo form', 'Meeting', 'Payment'];
+---
+<div class="v3-chiprow">
+  {steps.map((label, i) => (
+    <>
+      {i > 0 && <span class="v3-chip-arrow">→</span>}
+      <span class={`v3-chip${i === steps.length - 1 ? ' v3-chip--last' : ''}`}>{label}</span>
+    </>
+  ))}
+</div>
