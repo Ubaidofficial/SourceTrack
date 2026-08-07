@@ -40,6 +40,9 @@ import Bento from "@/layouts/v3/Bento.astro";
 import "@/styles/v3-tokens.css";
 import "@/styles/v3-home.css";
 
+import HowItWorksShowcase from "@/partials/HowItWorksShowcase.astro";
+import UseCaseCards from "@/partials/UseCaseCards.astro";
+
 const captureCards = [
   { h: "Forms", p: "Every submission arrives with its source already attached — no hidden fields to wire up, no lost UTMs on multi-step forms." },
   { h: "Chat", p: "Conversations that start in a widget stop being anonymous. The chat lead inherits the session that led to it." },
@@ -174,6 +177,20 @@ const comparison = [
         </div>
       </Wrap>
     </section>
+
+    {/* §29.3 positions 3 and 4 — "How it works" then the use-case cards.
+        PORTED, not rebuilt: docs/design/design.md:2946-2954 mandates both on the homepage
+        and the v3 draft shipped neither. §13 ("Who it's for") is thematically adjacent but
+        carries ZERO links to /solutions/*, where v2 linked five — an internal-linking loss,
+        not a styling difference. Placed HERE, straight after the product-preview cluster,
+        because §29.3 orders "how it works" third; an explainer arriving after fourteen
+        sections is not doing the job the spec assigns it.
+        Both were migrated onto design-system tokens as part of this change — they carried
+        #121616/#2D3333/#C7CFCF, pre-v1.3 values outside the token set, and shipping those
+        on / is the defect #689 fixed elsewhere.
+        Guarded by api/tests/homepage-fixture-sections.test.js. */}
+    <HowItWorksShowcase />
+    <UseCaseCards />
 
     {/* 6 — frameless cards on paper (non-adjacent to 3) */}
     <section class="v3-section">
