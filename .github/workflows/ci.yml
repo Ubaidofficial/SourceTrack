@@ -80,6 +80,28 @@ jobs:
             git diff --check HEAD~1..HEAD
           fi
 
+      # FEATURE_MAP freshness guard — the check FEATURE_MAP.md's own header recommends.
+      #
+      # ⚠️ ADVISORY BY DEFAULT (FEATURE_MAP_GUARD unset => warn, exit 0). Two reasons, both
+      # measured rather than assumed:
+      #   1. It cannot BLOCK until CLAUDE.md §9 rule 3 carries the FEATURE_MAP.md carve-out.
+      #      Rule 3 requires an empty session-doc (*.md) diff; FEATURE_MAP.md is *.md. With
+      #      the guard blocking and rule 3 unamended, every feature PR is unmergeable —
+      #      update the map and fail rule 3, or skip it and fail this. That is a direct
+      #      contradiction, not a race.
+      #   2. Measured on the last 30 merged PRs (#661-#691): it fires on 5, and only ONE
+      #      (#676) was a capability change the map should record. A blocking check that is
+      #      wrong four times in five gets bypassed as routine, which converts a known gap
+      #      into a false sense of coverage — strictly worse than no check.
+      # Flip to blocking by setting FEATURE_MAP_GUARD=block here, AFTER the carve-out lands
+      # and the path list has been re-scoped against real opt-out counts.
+      - name: FEATURE_MAP freshness guard (advisory)
+        if: github.event_name == 'pull_request'
+        env:
+          GUARD_BASE: origin/${{ github.base_ref }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: node scripts/feature-map-guard.mjs
+
       - name: Static launch QA
         run: npm run qa:static
 

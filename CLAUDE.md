@@ -170,7 +170,15 @@ Pricing ladder (live, locked): Starter $49/mo · Growth $79/mo · Founder $99/yr
 Every PR delivers a **7-command bundle** with raw terminal output:
 1. `git status` (clean, N ahead)
 2. `git diff --stat`
-3. session-doc (`*.md`) diff — **must be empty**
+3. session-doc (`*.md`) diff — **must be empty**, with exactly ONE named exception: **`FEATURE_MAP.md`**, and only when the same PR changes `api/routes/**` or `dashboard/src/pages/**`. Every other `*.md` stays forbidden.
+
+   > ⚠️ **PROPOSED, NOT YET RULED — this carve-out needs founder go-ahead (see §9's own "propose but do not unilaterally change behavioural rules").**
+   >
+   > **Why a carve-out and not a relaxation.** `FEATURE_MAP.md`'s freshness guard rule (2) says *"CC must update this file in the SAME PR"*. Rule 3 forbids exactly that, because `FEATURE_MAP.md` is a `*.md` file. It is a **direct contradiction, not a race**: a PR obeying one violates the other, so the map lost every time — **92 PRs (#466 → #664) against one update**, recorded in that file's own header. Re-baselining does not fix it; the header says so twice.
+   >
+   > **Why only this file.** The empty-session-doc rule exists to stop handoff/session prose riding along with code, where it is never reviewed as content. `FEATURE_MAP.md` is the one `*.md` whose *correctness depends on shipping in the same commit as the code it describes* — updating it later is precisely the failure being fixed. Widening the exception to `*.md` generally would restore the problem rule 3 was written for.
+   >
+   > **`KNOWN_ISSUES.md` is deliberately NOT included.** It has the same shape but not the same problem: it ships as the **sole** `.md` of its own `docs(known-issues)` PR — #678, #679, #683, #685 are all exactly that — so it is the PR's *deliverable*, which rule 3 already permits, rather than a side-effect riding a feature PR. It needs no exception, and granting one would weaken rule 3 for no gain. Revisit only if a KNOWN_ISSUES entry ever genuinely must land inside a code PR.
 4. `git log --oneline`
 5. `git diff --check` (no whitespace/marker errors)
 6. `node --check` on changed JS (JSX validated by the dashboard CI build)
