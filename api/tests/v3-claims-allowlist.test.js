@@ -150,3 +150,64 @@ test('the baseline still matches live pricing.md — drift detector', () => {
     'live pricing.md claims strings the v3 baseline does not know about — the baseline is stale:\n' +
     missing.map(m => `  - "${m}"`).join('\n'))
 })
+
+// ── §12 RETRACTION GUARD ──────────────────────────────────────────────────────────────
+// NOTE ON THIS FILE'S REACH: the tests above scan V3_PRICING_CANDIDATES — v3 PRICING
+// content. They have never read marketing/src/pages/v3/index.astro, so the §11/§12 claims
+// on the landing page were unguarded. This section closes that gap for the retracted §12.
+//
+// §12 ("Same budget. Better spend.") and its "server-side egress is in beta" disclosure
+// were cut because the capability has never run: capi_deliveries holds 0 rows ALL-TIME,
+// re-verified against PROD Supabase on 2026-08-07 before the cut (the file header's claim
+// was checked, not trusted). §12 restated the same ad-platform-egress claim the header
+// records as already cut from §11.
+//
+// A softer rewording is NOT a fix — a quieter phrasing keeps the claim. So this matches the
+// CLAIM, not the exact sentence: any reappearance of egress/send-back-to-ad-platforms
+// copy on the v3 landing page fails, however it is worded.
+const V3_LANDING = 'marketing/src/pages/v3/index.astro'
+
+const RETRACTED_V3_CLAIMS = [
+  { pattern: /same budget\.?\s*better spend/i,        why: '§12 heading — ad-platform egress, capi_deliveries has 0 rows all-time' },
+  { pattern: /server-side egress/i,                    why: '§12 disclosure — beta claim for a capability that has never delivered' },
+  { pattern: /send (it |them )?back to (your )?ad platforms?/i, why: '§12 claim, reworded — egress is egress however it is phrased' },
+]
+
+test('the retracted §12 egress claim cannot return to the v3 landing page', () => {
+  const src = readFileSync(join(REPO, V3_LANDING), 'utf8')
+  const returned = RETRACTED_V3_CLAIMS.filter(c => c.pattern.test(src))
+  assert.deepEqual(
+    returned.map(c => c.why), [],
+    `retracted §12 copy is back on ${V3_LANDING}:\n` +
+    returned.map(c => `  - ${c.pattern} <- ${c.why}`).join('\n')
+  )
+})
+
+test('🔴 POSITIVE CONTROL — the §12 guard fires on the exact copy that was cut', () => {
+  // Fed the real removed strings. If this passes silently the guard above is decoration.
+  const wasCut = [
+    'heading="Same budget. Better spend."',
+    'Server-side egress is in beta for Stripe and Shopify sources.',
+    'Send it back to your ad platforms',   // the softer rewording the ruling forbids
+  ]
+  for (const line of wasCut) {
+    assert.ok(
+      RETRACTED_V3_CLAIMS.some(c => c.pattern.test(line)),
+      `the guard MUST reject this retracted claim and did not: ${line}`
+    )
+  }
+})
+
+test('NEGATIVE CONTROL — surviving §11 copy is not flagged', () => {
+  // A guard that rejects the page's real copy would be reverted the first time it fired.
+  const kept = [
+    'Server-side ingest carries the source',
+    'Revenue that lands outside the browser — a Stripe charge, a CRM update, an offline conversion — still arrives with its click IDs and source attached.',
+  ]
+  for (const line of kept) {
+    assert.ok(
+      !RETRACTED_V3_CLAIMS.some(c => c.pattern.test(line)),
+      `the guard over-fires on surviving copy: ${line}`
+    )
+  }
+})
