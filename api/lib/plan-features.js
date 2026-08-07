@@ -14,7 +14,21 @@ export function normalizePlan(plan) {
 }
 
 // Default monthly analytics event limits per plan tier.
-// Per-site overrides live in sites.pv_limit (set by Stripe webhook from price).
+//
+// ⚠️ THESE DEFAULTS DO NOT REACH AN EXISTING SITE. Per-site overrides live in
+// sites.pv_limit, getPvLimit() below returns the override whenever one is present, and the
+// column carries a DEFAULT of 5000 — so an override ALWAYS exists and this table is only
+// consulted for a plan with no row behind it. Changing a number here reprices NOTHING
+// without a backfill migration. #428 changed this table on 2026-07-26 and shipped no
+// backfill; every live site is still metered on its pre-#428 value. See KI-109.
+//
+// HOW A ROW ACTUALLY GETS ITS VALUE — the previous version of this comment said "set by
+// Stripe webhook from price", which is why the defect resisted three investigations: no
+// Stripe price carries pv_limit metadata, so the stated mechanism could not have produced
+// the stored values and each search stalled there. The real path is pvLimitFromPrice
+// (api/routes/billing.js:77-81): price.metadata.pv_limit IF PRESENT, otherwise a fallback
+// to getPvLimit(plan) — the plan default FROZEN AT WRITE TIME. The fallback is the normal
+// case; metadata is the exception nobody uses.
 export const PLAN_DEFAULT_PV_LIMIT = {
   free:     10_000,
   trial:    10_000,

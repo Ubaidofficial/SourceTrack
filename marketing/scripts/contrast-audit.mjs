@@ -397,7 +397,28 @@ console.log(`positive control (black on white): ${ctl2.toFixed(2)} — expect 21
         else if (e.name === 'index.html') built.push(base || '/')
       }
     }
-    try { walk('dist/v3', '/v3') } catch { /* no v3 pages built yet */ }
+    // CUTOVER: these pages were promoted from /v3 to live routes, so they no longer share one
+    // directory. dist/v3 now holds only meta-refresh redirect stubs, and walking THAT would
+    // audit empty files and report clean — the "check that cannot see where the answer lives"
+    // failure this harness exists to catch.
+    //
+    // Discovery is still FROM DISK, not from a list someone must remember to update: walk all
+    // of dist, then keep the routes the pairs registry covers. Walking dist unfiltered would
+    // fail ~46 unrelated v2 pages for having no pairs, so the filter keeps "built but
+    // unmeasured" meaningful for the promoted set. The reverse hole — a registered route that
+    // did not build — is checked explicitly below, because the filter would otherwise hide it
+    // by simply never discovering it.
+    const { V3_ROUTES } = await import('./v3-page-pairs.mjs').catch(() => ({ V3_ROUTES: [] }))
+    const promoted = new Set(V3_ROUTES)
+    try { walk('dist', '') } catch { /* nothing built */ }
+    const discovered = built.splice(0, built.length).filter(r => promoted.has(r))
+    built.push(...discovered)
+    for (const r of promoted) {
+      if (!discovered.includes(r)) {
+        console.error(`  \u2717 ${r}: in the pairs registry but NOT BUILT — unmeasured, not passing`)
+        fails++
+      }
+    }
 
     // Score one pair against one route. Returns null on pass, a reason on fail.
     const scorePair = (pair, vars, tokens) => {

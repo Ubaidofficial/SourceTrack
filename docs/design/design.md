@@ -317,7 +317,7 @@ There must be one SourceTrack design system. Do not create alternate palettes, a
 | Token | Value |
 |---|---|
 | Product name | SourceTrack |
-| Mark | Two lime discs on a warm-ink rounded square. Large disc upper-right, small disc lower-left. |
+| Mark | Three small agent dots in a left-hand column, one large lime source disc to their right, on a rounded square. **Meaning: three AI assistants, one earned the revenue.** Square `#12100C` light / `#1B1811` dark (§3.3 `--color-surface`); agent dots `#4A4634` both modes; source disc `#D2EC2A` (the §3.1 accent) both modes. **Never a fourth dot and never a glow** — the count is the meaning, and a glow is the background wash §2.6 exists to prevent. |
 | Ink (structure / dark canvas) | `#12100C` |
 | Bone (light canvas) | `#F7F4ED` |
 | Paper (card surface, light) | `#FFFDF8` |

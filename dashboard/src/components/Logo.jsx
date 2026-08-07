@@ -1,47 +1,77 @@
 // SourceTrack logo system — inline SVG components.
 //
-// Mark (BRAND_v2.md §1 / design.md v1.3 §3.1, word-for-word): "two lime discs on a warm-ink
-// rounded square, large disc upper-right, small disc lower-left". Two elements on a square.
+// Mark: three small agent dots in a column, one large lime source disc to their right, on a
+// rounded square. Meaning: three AI assistants, ONE earned the revenue. Four elements.
 //
-// This replaces a mark that was never built to that spec: a circular tracking ring, a journey
-// arc, two nodes and a cursor-pointer — five to six elements — and, on the app-icon and both
-// favicon sets, with the colours INVERTED (lime square, ink mark) against a spec that calls for
-// an ink square carrying lime discs. Both faults are corrected here.
+// ⚠️ DO NOT add a fourth agent dot, and do not add a glow behind the source disc. The count is
+// the meaning — a fourth dot says "four assistants", and a glow reads as the lime background
+// wash that §2.6's accent-density ceiling exists to prevent.
 //
-// Colours: #12100C warm ink (square), #D2EC2A lime (discs), #302B22 dark-mode border token.
+// This replaces the previous two-disc mark, which in turn replaced a five-to-six element ring/
+// arc/cursor drawing. Both earlier marks are gone; do not reinstate either.
 //
-// The square is #12100C, which is also the dark-mode body colour — on a dark surface it would
-// vanish and the mark would read as two floating discs, a different silhouette than in light
-// mode. The `hidden dark:block` border rect holds the shape in dark mode using the existing
-// --color-border token. It is dropped from LogoIcon on purpose: LogoIcon is the app-icon
-// artwork and must stay byte-identical to the favicon SVGs, which render on browser chrome
-// rather than on our own page and so have no theme to respond to.
+// ── COLOURS, and why these exact values ─────────────────────────────────────────────────────
+//   square      #12100C light · #1B1811 dark   (--color-bg / --color-surface, §3.2 / §3.3)
+//   agent dots  #4A4634 both modes
+//   source disc #D2EC2A both modes             (--color-accent, §3.1)
+//
+// The source disc is `#D2EC2A`, NOT `#C8F000`. §3.1:324 is the accent, and §3.8:494 lists
+// `#C8F000` as superseded and forbidden — it was the pre-v1.3 lime, migrated away at v1.3
+// (design.md :3773). A mark built on `#C8F000` would ship a §3.8-banned colour.
+//
+// The dark square is `#1B1811` (§3.3 `--color-surface`), NOT a cool `#1C1D20`. §3.8:496 bans
+// cool greys "anywhere", and #567/#569 were two merged PRs mapping cool neutrals onto the warm
+// ramp — a cool square would reintroduce exactly what they removed.
+//
+// ── WHY THE DARK-MODE BORDER RECT IS GONE ───────────────────────────────────────────────────
+// The previous mark's square was `#12100C`, which is ALSO `--color-bg` in dark mode, so on a
+// dark surface the square vanished and the mark read as floating discs. A `hidden dark:block`
+// stroked rect was used to hold the silhouette. Giving the square its own surface token
+// (`#1B1811`, distinct from `--color-bg` `#12100C`) removes the cause, so the hack is deleted
+// rather than carried forward. Nothing now depends on a Tailwind class to keep its shape.
+//
+// The theme swap is two mutually exclusive rects (`dark:hidden` / `hidden dark:block`) rather
+// than a CSS variable, because the FAVICON EXPORTS RENDER WITH NO THEME AT ALL — browser chrome
+// has no dark class to respond to. `forExport` collapses to the light square only, which is what
+// keeps LogoIcon byte-identical to the committed favicon.svg files.
 
-const INK = '#12100C'
-const LIME = '#D2EC2A'
+const INK = '#12100C'          // --color-bg, light
+const SURFACE_DARK = '#1B1811' // --color-surface, dark (§3.3)
+const AGENT = '#4A4634'        // agent dots, both modes — see note below
+const LIME = '#D2EC2A'         // --color-accent (§3.1)
 
-// The mark's artwork in an 80-unit box, shared by every export so the geometry cannot drift
-// between them again (the two favicon.svg files had already diverged from each other — r=24 vs
-// r=20, different arc and cursor paths — from being traced separately).
-function MarkArtwork({ withDarkBorder = true }) {
+// AGENT is one value for both modes deliberately. No §3.3 token sits at the light mark's
+// contrast step: #4A4634 on #12100C is 2.006:1, while --color-border #302B22 lands at 1.26
+// (too faint to read) and --color-text-faint #6E6656 at 3.12 (too strong). Reusing #4A4634
+// gives 1.87 on #1B1811 — a 0.136 drift from the light reference, closer than any token —
+// and it is warm, so it does not reintroduce the cool neutrals #567/#569 removed. The source
+// disc already works this way (#D2EC2A in both modes), so the dots now match it.
+
+// Geometry in an 80-unit box, shared by every export so it cannot drift between them again:
+// the two favicon.svg files had already diverged from each other — r=24 vs r=20, different arc
+// and cursor paths — from having been traced separately on different occasions.
+const SQUARE = { x: 4, y: 4, width: 72, height: 72, rx: 18 }
+const AGENT_DOTS = [{ cx: 21, cy: 24 }, { cx: 21, cy: 41 }, { cx: 21, cy: 58 }]
+const AGENT_R = 5.5
+const SOURCE_DOT = { cx: 55, cy: 41, r: 13 }
+
+// `forExport` — emit the light square ONLY, with no theme-conditional class. Used by LogoIcon,
+// the artwork the favicon SVGs are generated from and asserted against.
+function MarkArtwork({ forExport = false }) {
   return (
     <>
-      <rect x="4" y="4" width="72" height="72" rx="18" fill={INK} />
-      {withDarkBorder && (
-        <rect
-          x="5"
-          y="5"
-          width="70"
-          height="70"
-          rx="17"
-          fill="none"
-          stroke="#302B22"
-          strokeWidth="2"
-          className="hidden dark:block"
-        />
+      {forExport ? (
+        <rect {...SQUARE} fill={INK} />
+      ) : (
+        <>
+          <rect {...SQUARE} fill={INK} className="dark:hidden" />
+          <rect {...SQUARE} fill={SURFACE_DARK} className="hidden dark:block" />
+        </>
       )}
-      <circle cx="54" cy="26" r="14" fill={LIME} />
-      <circle cx="24" cy="56" r="8" fill={LIME} />
+      {AGENT_DOTS.map((d) => (
+        <circle key={`${d.cx}-${d.cy}`} cx={d.cx} cy={d.cy} r={AGENT_R} fill={AGENT} />
+      ))}
+      <circle cx={SOURCE_DOT.cx} cy={SOURCE_DOT.cy} r={SOURCE_DOT.r} fill={LIME} />
     </>
   )
 }
@@ -95,7 +125,7 @@ export function LogoFullDark({ className = 'h-9 w-auto' }) {
 export function LogoIcon({ className = 'w-12 h-12' }) {
   return (
     <svg className={className} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <MarkArtwork withDarkBorder={false} />
+      <MarkArtwork forExport />
     </svg>
   )
 }

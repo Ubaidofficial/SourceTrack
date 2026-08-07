@@ -31,6 +31,36 @@ export function normalizePlan(plan) {
 // Parity is enforced by api/tests/plan-features-parity.test.js. If you edit one table,
 // that test fails until you edit the other — the lockstep rule reportGating.js:8 has always
 // documented, now with something behind it.
+
+// Monthly pageview caps. MIRRORS api/lib/plan-features.js PLAN_DEFAULT_PV_LIMIT, and the
+// parity test pins these values pairwise, so the two cannot drift silently.
+//
+// This table exists because Billing.jsx carried its OWN frozen copy of it. That copy was
+// last correct before #428 (2026-07-26) repackaged the tiers, and it sat there reading
+// free 5000 / starter 50000 / growth 150000 / scale 500000 — the pre-#428 numbers — while
+// the API, the pricing page and the marketing copy all moved on. It was a fossil, not a
+// disagreement, and it was invisible in review because it looked internally consistent.
+// See KI-109. Do NOT reintroduce a local copy in a component: import from here.
+//
+// ⚠️ These are DEFAULTS. The live cap is sites.pv_limit, which overrides them and always
+// wins (api/lib/plan-features.js:149-152). A dashboard reading this table is showing what
+// the plan ENTITLES, which is not necessarily what the site is metered at.
+export const PLAN_DEFAULT_PV_LIMIT = {
+  free:     10_000,
+  trial:    10_000,
+  starter:  250_000,
+  growth:   1_000_000,
+  scale:    5_000_000,
+  inactive: 0,
+  archived: 0,
+}
+
+// Mirrors api/lib/plan-features.js getPvLimit: a per-site override always wins.
+export function getPvLimit(plan, perSiteOverride) {
+  if (perSiteOverride && Number.isFinite(perSiteOverride)) return perSiteOverride
+  return PLAN_DEFAULT_PV_LIMIT[normalizePlan(plan)] ?? 0
+}
+
 const FEATURE_MATRIX = {
   multi_touch_attribution:  { free: false, trial: true,  starter: true,  growth: true,  scale: true },
   capi_server_side:         { free: false, trial: true,  starter: true,  growth: true,  scale: true },
