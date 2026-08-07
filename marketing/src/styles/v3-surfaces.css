@@ -247,3 +247,159 @@
   font-size: 14px;
   font-weight: 900;
 }
+
+/* ============================================================================
+   V3 HERO ISLANDS — hero-ticker · surface-logos · live
+   ============================================================================
+   Recreated from the handoff's layout intent. hero-orbit is CUT (see the PR that
+   added this block); its keyframes are deliberately absent.
+
+   CONFLICTS RESOLVED, same audit as the eight static surfaces:
+   · var(--white) ×5, var(--black) ×4, var(--lime) ×2 -> --v3-*. Those aliases
+     live at :root in home-design.css, which this page does not import, so a
+     verbatim port yields var() -> initial. #660 exactly. Verified in built
+     output: 0 occurrences in either linked sheet, control --v3-accent: 1.
+   · #63A002 (the handoff's "live" green) -> --v3-spend-text, a lime-family
+     token. §3.4:439 "Success is lime, not green… There must be no separate
+     success green." #63A002 appears ZERO times in design.md — the second new
+     green found in this port, after #5E7A08 in the static set.
+   · rgba(255,255,255,.05/.09/.11) KEPT — white-alpha over the dark hero surface
+     is legal and is how the handoff separates rows. Composite check: over
+     --v3-ink (#12100C), .05 lands at ~#1B1A16 and .11 at ~#2A2825, both visibly
+     distinct from the base. #664's lesson was an .08 alpha that composited to
+     nothing over a LIGHT surface; over dark, this range separates.
+   · var(--ease-out) -> var(--v3-ease-out). The former does resolve (a Base
+     bundle declares it) but the v3 token is the one this scope owns.
+
+   MOTION: every animation is inside `prefers-reduced-motion: no-preference`, so
+   the calm state is the DEFAULT and motion is the opt-in. The two timer-driven
+   islands ALSO guard in JS (useReducedMotion.js) — a media query cannot stop a
+   setInterval that mutates state, it can only stop styling it.
+   ========================================================================== */
+
+/* ── Hero ticker ─────────────────────────────────────────────────────────── */
+.v3 .v3-ticker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px 8px 12px;
+  border-radius: 99px;
+  background: var(--v3-paper-card);
+  border: 1px solid var(--v3-border);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--v3-gray-600);
+}
+.v3 .v3-ticker-dot {
+  width: 7px; height: 7px; border-radius: 99px;
+  background: var(--v3-spend-text);   /* was #63A002 — §3.4, no second green */
+  flex: none;
+}
+.v3 .v3-ticker-slot { display: inline-flex; align-items: center; gap: 8px; }
+.v3 .v3-ticker-name { color: var(--v3-ink); font-weight: 800; }
+.v3 .v3-ticker-amt {
+  color: var(--v3-ink);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Surface tabs ────────────────────────────────────────────────────────── */
+.v3 .v3-surf { display: grid; gap: 16px; }
+.v3 .v3-surf-tabs { display: flex; flex-wrap: wrap; gap: 7px; }
+.v3 .v3-surf-tab {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 14px; border-radius: 99px;
+  background: transparent;
+  border: 1px solid var(--v3-border);
+  color: var(--v3-gray-600);
+  font-size: 12.5px; font-weight: 800; cursor: pointer;
+}
+.v3 .v3-surf-tab i {
+  font-style: normal; font-size: 10.5px; font-weight: 900;
+  color: var(--v3-gray-400);
+}
+.v3 .v3-surf-tab.is-on {
+  background: var(--v3-ink);          /* was var(--black) */
+  border-color: transparent;
+  color: var(--v3-paper);             /* was var(--white) */
+}
+.v3 .v3-surf-tab.is-on i { color: var(--v3-accent); }
+.v3 .v3-surf-head h3 { font-size: 19px; font-weight: 800; color: var(--v3-ink); }
+.v3 .v3-surf-head p { font-size: 14px; color: var(--v3-gray-600); margin-top: 4px; }
+.v3 .v3-surf-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 8px;
+}
+.v3 .v3-surf-cell {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 13px 10px; border-radius: var(--v3-radius-sm);
+  background: var(--v3-paper-card);
+  border: 1px solid var(--v3-border);
+  color: var(--v3-gray-700);
+  font-size: 12.5px; font-weight: 800; text-align: center;
+}
+.v3 .v3-surf-cell--more { background: transparent; border-style: dashed; color: var(--v3-gray-500); }
+
+/* ── Live visitor feed — dark surface ────────────────────────────────────── */
+.v3 .v3-lv {
+  background: var(--v3-ink);          /* was var(--black) */
+  border-radius: var(--v3-radius-md);
+  padding: 14px;
+  box-shadow: var(--v3-shadow-deep);
+}
+.v3 .v3-lv-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 0 4px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+}
+.v3 .v3-lv-live {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 800; color: var(--v3-paper);
+}
+.v3 .v3-lv-live i {
+  width: 7px; height: 7px; border-radius: 99px;
+  background: var(--v3-accent); flex: none;
+}
+.v3 .v3-lv-note { font-size: 11px; font-weight: 700; color: rgba(255, 255, 255, 0.52); }
+.v3 .v3-lv-rows { display: grid; gap: 2px; margin-top: 8px; }
+.v3 .v3-lv-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  align-items: center; gap: 12px;
+  padding: 9px 8px; border-radius: 9px;
+  font-size: 12.5px; font-weight: 700;
+  color: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.05);
+}
+.v3 .v3-lv-row.is-moved { background: rgba(255, 255, 255, 0.11); }
+.v3 .v3-lv-who b { font-weight: 800; color: var(--v3-paper); }
+.v3 .v3-lv-path {
+  font-family: var(--font-mono, monospace);
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.62);
+}
+.v3 .v3-lv-ago {
+  font-size: 11px; color: rgba(255, 255, 255, 0.48);
+  font-variant-numeric: tabular-nums;
+}
+.v3 .v3-lv-src {
+  font-size: 11px; font-weight: 800;
+  padding: 3px 9px; border-radius: 99px;
+  background: rgba(210, 236, 42, 0.16);
+  color: var(--v3-accent);
+}
+
+/* ── MOTION — opt-in only ────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  .v3 .v3-ticker-slot { animation: v3-ticker-in 0.34s var(--v3-ease-out) both; }
+  .v3 .v3-surf-cell { animation: v3-cell-in 0.28s var(--v3-ease-out) both; }
+  .v3 .v3-lv-row { transition: background 0.5s var(--v3-ease-out); }
+  .v3 .v3-surf-tab { transition: border-color 0.2s var(--v3-ease-out), background 0.2s var(--v3-ease-out); }
+}
+@keyframes v3-ticker-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes v3-cell-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: none; }
+}
