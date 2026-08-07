@@ -32,6 +32,40 @@
       ]
     },
     {
+      "name": "Product",
+      "url": "/product",
+      "hasChildren": true,
+      "children": [
+        {
+          "name": "Attribution",
+          "url": "/attribution"
+        },
+        {
+          "name": "AI referrals",
+          "url": "/ai-referral-tracking"
+        },
+        {
+          "name": "Report builder",
+          "url": "/report-builder"
+        }
+      ]
+    },
+    {
+      "name": "Use cases",
+      "url": "/use-cases-saas",
+      "hasChildren": true,
+      "children": [
+        {
+          "name": "For SaaS",
+          "url": "/use-cases-saas"
+        },
+        {
+          "name": "For ecommerce",
+          "url": "/use-cases-ecommerce"
+        }
+      ]
+    },
+    {
       "name": "Pricing",
       "url": "/pricing"
     },

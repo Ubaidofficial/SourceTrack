@@ -1,68 +1,143 @@
 ---
-// Copy lives in content/standalone/compare/ga4.md — hero strings, the four comparison cards,
-// and the CTA. Grid, card chrome, and every Tailwind class stay here: `highlight` is the only
-// content-side switch, and it drives the one accent variant the SourceTrack card already had.
+/**
+ * COMPARE / GA4 — promoted from /v3; indexable. This REPLACED the v2 /compare/ga4.
+ *
+ * §35.3/§35.4: "GA4" appears as TEXT ONLY. No Google brand mark, no logo, no
+ * favicon fetch — the handoff does the same and it is the correct treatment.
+ * §3.4's implementation note bars hot-linking a third-party asset per row, and
+ * the same reasoning applies to a competitor's mark on a comparison page.
+ *
+ * §2 is the design's drag-to-compare slider, rendered as a STATIC split. The
+ * slider is an interactive island and islands are Phase 6; more importantly
+ * §37.1 requires motion to depict real behaviour, and a drag handle on a
+ * non-functional slider would depict nothing.
+ *
+ * Every claim about SourceTrack comes from main. Claims about GA4 are limited to
+ * its documented default behaviour — that untagged and referrer-stripped traffic
+ * lands in "direct / (none)" — which is observable rather than asserted.
+ */
 import Base from "@/layouts/Base.astro";
-import { getListPage } from "@/lib/contentParser";
-import CallToAction from "@/partials/CallToAction.astro";
-import MarketingBeforeAfter from "@/components/MarketingBeforeAfter";
+import Wrap from "@/layouts/v3/Wrap.astro";
+import SectionHead from "@/layouts/v3/SectionHead.astro";
+import StatRow from "@/layouts/v3/StatRow.astro";
+import "@/styles/v3-tokens.css";
+import "@/styles/v3-home.css";
+import "@/styles/v3-pages.css";
 
-const { frontmatter } = await getListPage("standalone/compare/ga4.md");
-const { title, description, badge, heading, heading_accent, paragraph, comparison_cards } = frontmatter;
-const callToAction = { frontmatter: frontmatter.cta };
+const stats = [
+  { value: "16", label: "AI assistants and answer engines classified on arrival" },
+  { value: "9", label: "attribution models on one first-party dataset" },
+  { value: "1", label: "script tag, no tag manager required" },
+  { value: "28", label: "day free trial, no card" },
+];
 
-const breadcrumbSchema = {
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  "itemListElement": [
-    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.sourcetrack.ai" },
-    { "@type": "ListItem", "position": 2, "name": "Compare", "item": "https://www.sourcetrack.ai/compare/ga4" },
-    { "@type": "ListItem", "position": 3, "name": "SourceTrack vs GA4 & Alternatives", "item": "https://www.sourcetrack.ai/compare/ga4" }
-  ]
-};
+// Rows describe SourceTrack from main, and GA4 only by its documented default.
+const rows = [
+  { what: "Untagged AI assistant traffic", ga4: "Lands in direct / (none)", st: "Classified against 16 named assistants" },
+  { what: "Revenue attached to a session", ga4: "Requires ecommerce tagging", st: "Stripe & Shopify webhooks, first-party" },
+  { what: "Re-credit under another model", ga4: "Not available in the default report", st: "Nine models, one dataset, no re-tagging" },
+  { what: "Pre-form touchpoints", ga4: "Session-scoped", st: "Full journey to the conversion" },
+  { what: "Cookies", ga4: "Cookie-based by default", st: "Cookieless by default, DNT and GPC honoured" },
+  { what: "Install", ga4: "Tag manager typical", st: "One script tag" },
+];
 ---
 
 <Base
-  title={title}
-  description={description}
-  canonical="https://www.sourcetrack.ai/compare/ga4"
-  structuredData={[breadcrumbSchema]}
+  title="The GA4 alternative built for revenue, not pageviews — SourceTrack"
+  description="Same week, same traffic, two different stories. See what a revenue-first attribution view shows that a default GA4 report cannot."
 >
-  <section class="py-16 bg-[#0E1111] text-white">
-    <div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-      <span class="inline-block px-3 py-1 text-xs font-black uppercase tracking-widest text-[#0F1012] bg-[#D2EC2A] rounded-full">
-        {badge}
-      </span>
-      <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight text-white">
-        {heading} <br />
-        <span class="text-[#D2EC2A]">{heading_accent}</span>
-      </h1>
-      <p class="max-w-2xl mx-auto text-gray-400 text-base sm:text-lg leading-relaxed">
-        {paragraph}
-      </p>
-    </div>
-  </section>
+  <div class="v3">
+    {/* 1 — hero */}
+    <section class="v3-hero">
+      <Wrap>
+        <h1>Same data. Two very different stories.</h1>
+        <p class="v3-hero-sub">
+          One tool counts pageviews. The other tells you which channel paid for
+          itself. Run them side by side — most teams do.
+        </p>
+      </Wrap>
+    </section>
 
-  {/* Embedded Interactive Before/After Component */}
-  <section class="py-16 bg-[#0F1012] text-white border-t border-b border-[#2A2C30]">
-    <div class="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8">
-      <MarketingBeforeAfter mode="default" showToggle={true} client:visible />
-    </div>
-  </section>
-
-  <section class="py-16 bg-[#1B1811] text-white">
-    <div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      {comparison_cards.map((card: any) => (
-        <div class={`bg-[#1C1D20] p-6 rounded-2xl border space-y-2 ${card.highlight ? "border-[#D2EC2A]" : "border-[#2A2C30]"}`}>
-          <h3 class={`text-xl font-bold ${card.highlight ? "text-[#D2EC2A]" : "text-white"}`}>{card.title}</h3>
-          <span class={`text-xs font-extrabold block ${card.highlight ? "text-[#D2EC2A]" : "text-gray-400"}`}>{card.subtitle}</span>
-          <p class={`text-sm leading-relaxed ${card.highlight ? "text-gray-300" : "text-gray-400"}`}>
-            {card.description}
-          </p>
+    {/* 2 — static compare split (the design's drag slider; see the header note) */}
+    <section class="v3-section v3-section--tight">
+      <Wrap>
+        <div class="v3-compare-split">
+          <div class="v3-compare-panel">
+            <h3>Default analytics report</h3>
+            <p class="v3-compare-value">direct / (none)</p>
+            <p>The largest single line in most accounts. It is not a channel — it is everything the tool could not classify.</p>
+          </div>
+          <div class="v3-compare-panel">
+            <h3>SourceTrack revenue view</h3>
+            <p class="v3-compare-value">Revenue by source</p>
+            <p>The same sessions, resolved against referrer, click IDs and 16 named AI assistants, then credited under the model you pick.</p>
+          </div>
         </div>
-      ))}
-    </div>
-  </section>
+      </Wrap>
+    </section>
 
-  <CallToAction data={callToAction} />
+    {/* 3 — stat band */}
+    <section class="v3-section v3-section--tight">
+      <Wrap><StatRow stats={stats} /></Wrap>
+    </section>
+
+    {/* 4 — soft band, comparison table */}
+    <section class="v3-section v3-section--soft">
+      <Wrap>
+        <SectionHead
+          eyebrow="Side by side"
+          heading="Feature by feature, honestly."
+          lede="Where a default analytics report is genuinely fine, this table says so. It is a different job, not a worse tool."
+        />
+        <div class="v3-table-card">
+          <table>
+            <thead><tr><th>Question</th><th>Default GA4 report</th><th>SourceTrack</th></tr></thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr><th scope="row">{r.what}</th><td>{r.ga4}</td><td>{r.st}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 5 — prose on paper */}
+    <section class="v3-section">
+      <Wrap>
+        <SectionHead
+          eyebrow="Why it matters"
+          heading="It's not features. It's the story you can tell your board."
+          lede="“Direct grew 40%” is not a story anyone can act on. “AI assistants produced a quarter of new revenue this month” is."
+        />
+      </Wrap>
+    </section>
+
+    {/* 6 — full-bleed dark. Non-adjacent to any other dark treatment on this page. */}
+    <section class="v3-section v3-section--dark">
+      <Wrap>
+        <SectionHead
+          eyebrow="Migration"
+          heading="Migrate in an afternoon."
+          lede="Keep your existing analytics for traffic volume. Add one script tag, connect a form source, and watch the first attributed session land."
+        />
+      </Wrap>
+    </section>
+
+    {/* 7 — CTA close on paper. Lime on the button only (§2.6). */}
+    <section class="v3-cta-close">
+      <Wrap>
+        <div class="v3-cta-inner">
+          <div>
+            <h2>Stop staring at “direct / (none)”.</h2>
+            <p>28 days free, no card. Install the script and see where that traffic actually came from.</p>
+          </div>
+          <div class="v3-cta-actions">
+            <a class="v3-btn-accent" href="https://app.sourcetrack.ai/signup">Start 28-day free trial</a>
+          </div>
+        </div>
+        <p class="v3-disclosure">Product visuals shown use illustrative data.</p>
+      </Wrap>
+    </section>
+  </div>
 </Base>

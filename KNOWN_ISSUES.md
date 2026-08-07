@@ -3023,3 +3023,176 @@ Three facts about *how* `KI-100` was reached, recorded because the pattern is re
 3. **The certificates were read from the TLS handshake** — `openssl s_client -servername <host>`
    piped to `openssl x509` — **not from a provider console.** That is what makes the issuer and the
    per-hostname CN properties of *what is actually served*, rather than of what a dashboard reports.
+
+---
+
+### KI-107 — UA-based bot filtering is structurally blind to UA-spoofing scrapers, and the inflation reaches visitor counts and CVR denominators
+
+**The filter's AXIS is wrong. This is not a missing filter, and not a missing UA token.**
+
+**The observation** (Tinybird **`SourceTrack` — PRODUCTION**, 24h window, 2026-08-07):
+
+| Signal | Value | What real traffic looks like |
+|---|---|---|
+| `ingestion_method = server_routed` | **214 pageviews** | — |
+| distinct visitors | **205** | — |
+| **pages per visitor** | **1.04** | real content traffic runs **2–4** |
+| no referrer | **209 / 214** | — |
+| `browser_name` NULL | **58 / 214** | — |
+| countries | 5 | — |
+
+A 1.04 ratio means essentially **one page per visitor, then gone** — the shape of a scraper sweep,
+not of reading.
+
+**Blast radius: none, today.** Both affected sites are **founder-owned** (`techrupt.pk`,
+`bookmentions.net`), so **no customer is looking at these numbers.** It is recorded anyway because
+**it is the number a founder reads** when judging whether the product works.
+
+#### Why these requests pass — by construction, not by oversight
+
+`api/lib/bot-filter.js:71-72` — `isIngestionBotUserAgent(ua)` returns true **only** when the UA is
+**empty** or matches `INGESTION_BOT_UA_PATTERN` (`:66`), a token list: `googlebot`, `bingbot`,
+`headlesschrome`, `selenium`, `puppeteer`, `curl/`, `python-requests`, `axios/`, `scrapy`, and so on.
+`:70` states the design in its own words: *"Everything else … is LET IN."*
+
+**A scraper that sends a plausible desktop-Chrome UA is neither empty nor a token match.** It reports
+`chrome`/`desktop`, `UAParser` resolves it cleanly, and it is admitted. **Adding more UA tokens
+cannot fix this** — the evasion is the spoof itself, and the list can only ever name UAs that are
+honest about being automated.
+
+⚠️ **The sharpest part: the filter WAS applied to these requests.** `ingestion_method =
+'server_routed'` is emitted by `api/routes/track.js:464`, `:586`, `:713` (and `conversion.js:288`) —
+that is **`/api/track`**, and `/api/track` **does** run the filter, at `track.js:171`. So these 214
+rows are not traffic that slipped past an unguarded rail; **they are traffic that passed the guard on
+the one rail every shipped tracker actually uses.**
+
+#### Why it reaches visitor counts and CVR denominators
+
+`server_routed` is not treated as a lesser signal downstream. `api/lib/attribution-engine.js` maps it
+to `provider = 'browser'` (`:106`, `:319`), `stitching_method = 'browser'` (`:110`, `:320`) and
+`attribution_status = 'attributed'` (`:108`). **Spoofed traffic therefore lands as attributed browser
+visitors** — inflating unique-visitor counts and sitting in the **denominator** of every conversion
+rate, which pushes CVR down. The metric moves in the direction that looks like a product problem.
+
+#### ⚠️ DISTINCT FROM KI-77 — do not merge these two
+
+| | KI-77 | **KI-107** |
+|---|---|---|
+| Claim | the automation score is **log-only** | the **filter's axis is wrong** |
+| Evidence | `track.js:188-191` — `auto_score` is read and `console.log`'d, never gated. Same shape at `bot-filter.js:127-137`, where `logWouldDropBot` observes and never drops | `bot-filter.js:66,71-72` — the predicate cannot match a spoofed UA at all |
+| Fix shape | a **threshold decision** on a signal that already exists | **a different signal.** No threshold on `auto_score` and no UA token helps |
+
+**KI-77 is "we measure it and do nothing." KI-107 is "we are not measuring the right thing."**
+Closing KI-77 would leave KI-107 wholly untouched.
+
+#### What #666 and #667 did, and why neither is this
+
+Both were **correct fixes to real defects**, and **neither addressed this one**:
+
+- **#666** fixed `/api/analytics/collect` — the *reporting* predicate running at *ingestion*
+  (`api/routes/analytics.js`). Wrong predicate, wrong layer.
+- **#667** wired the filter to `/sp/e` and `/sp/pixel` (`api/routes/proxy.js`), and documented why
+  `server-events.js` must stay exempt.
+
+⚠️ **Neither touched the rail carrying this traffic**, and #667's own body says why that is expected:
+*"**No shipped tracker calls either rail** — all four builds POST to `/api/track`; `/sp/e` and
+`/sp/pixel` appear only in `rate-limit.js`'s allowlist and a QA script."* Those PRs hardened rails
+that no shipped tracker uses. **This defect is on the rail every shipped tracker does use**, and it is
+not a gap in coverage — the guard is present and admits the traffic.
+
+#### §6 constrains any remedy — read before proposing one
+
+1. **The 214 rows CANNOT be retro-analysed.** Raw `user_agent` is **never persisted**: it is in
+   `FORBIDDEN_KEYS` (`tinybird/adapter/normalize.js:92`) and is **not a column** in
+   `events.datasource`. `track.js:186-187` states the reason — §6 treats a raw UA as
+   **fingerprinting-adjacent**, so only a coarse hash is ever logged. Any investigation must be
+   **forward-looking**; there is no stored UA to mine.
+2. **An ingestion drop is irreversible.** A filter that drops on a heuristic — session shape, request
+   cadence, a scoring threshold — deletes the event permanently, with **no** recovery path, and a
+   false positive silently deletes a real customer's real visitor. That is why this is recorded
+   rather than fixed in place.
+3. **Do not "fix" it by fingerprinting.** Cookieless, no-fingerprinting is a **security and privacy
+   boundary** (CLAUDE.md §6, §6.5), not a preference. A remedy that identifies scrapers by
+   device-fingerprint entropy trades a metrics defect for a moat breach and is not available.
+
+**A viable direction, not a decision:** the discriminating signals here are already non-PII and
+already present — **pages-per-visitor**, **referrer absence**, **`browser_name` NULL rate**. Those
+support **flagging or segmenting at READ time**, which is reversible, rather than dropping at
+ingestion, which is not. **Not fixed. Recorded so the axis problem is understood before anyone
+extends the UA list and believes it is closed.**
+
+**⚠️ CORRECTED 2026-08-07 — this entry originally said `ST_Staging`. It is PRODUCTION data.**
+The workspace was identified by data, not by name: the `de200000` staging fixture returns **0 rows**
+here, and both site_ids resolve in **prod** Supabase (`zxjjjsipafojhzkkumvh`) — `712a83a8-…`
+bookmentions.net (`free`) and `eb7f68c3-…` **www.techrupt.pk (`growth`)** — while the same three ids
+return **0 rows** in staging (`nrsvpwzekfrdrzkoecfk`). **This raises the severity: the inflated
+visitor counts are on a live growth-plan site, not a staging sandbox.** Both sites are
+founder-owned, so no paying third party is affected today.
+**This is KI-54 recurring three weeks on, in the opposite direction: KI-54 was the WRITE path (fixtures seeded into prod); this was the READ path (prod data reported as staging) — same root cause, so fix the cause there, not here.**
+
+*Provenance — CORRECTED. The previous line read "orchestrator-supplied … not re-queried by CC, which
+has no Tinybird access." **Every clause of that was wrong and it is replaced, not softened**, because
+a false provenance line tells the next reader to distrust the source that is actually good. CC **has**
+Tinybird MCP access (prod workspace) and used it repeatedly while filing this. The 24h table
+(214/205/1.04/209/58/5) **originated with the orchestrator AND was independently re-queried by CC**,
+returning `server_routed,214,205,1.04,58,209,5` — an exact match, which is what established the
+prod binding above. Every code claim was verified from source at the cited `file:line` on `main`
+(`ee7e4113`). See **KI-108** for the billing columns, which are CC-queried outright.*
+### KI-108 — bot traffic that passes the UA filter is METERED against paid pageview quota (2026-08-07, no realised harm, NOT fixed)
+
+**Mechanism.** The ingestion bot filter runs at `api/routes/track.js:171` (`isIngestionBotUserAgent`). The pageview meter runs 229 lines later at `api/routes/track.js:400` (`claimPageviewUsage` → Supabase RPC `claim_site_pageview_usage`). Anything that survives the filter and is typed `$pageview` is metered **unconditionally** — there is no second gate between them. This traffic survives the filter **by construction**; see **KI-107** for why it arrives at all. KI-107 is why the traffic gets in; this entry is what it costs.
+
+**The comment that makes the meter look safe.** `api/routes/track.js:392-394` reads, verbatim (the load-bearing phrase is on `:393`):
+
+> `// Only true $pageview events consume monthly quota. Custom events, conversions,`
+> `// and outbound clicks are excluded. Claim happens here (after all filtering/validation)`
+> `// to avoid burning quota for events that would have been dropped.`
+
+The claim *"after all filtering/validation"* is **TRUE, and load-bearing in the wrong direction.** Passing the UA filter **is** passing validation — so the comment reads as a safety guarantee it does not provide. On a source read the meter looks protected; it is protected only against traffic the filter already catches, which is exactly the traffic that is not the problem. **That phrasing is why this was not noticed earlier.**
+
+**Measured, prod.** Hard caps are `3×` free / `10×` paid (`api/lib/pageview-limits.js:22-23`):
+
+| site | plan | pv_limit | soft / hard cap | month | metered | stored in TB |
+|---|---|---|---|---|---|---|
+| www.techrupt.pk | growth | 150,000 | 150,000 / 1,500,000 | 2026-08 | 541 | 538 |
+| bookmentions.net | free | 5,000 | 5,000 / 15,000 | 2026-08 | 62 | 61 |
+| bookmentions.net | free | 5,000 | 5,000 / 15,000 | 2026-07 | 1,730 | 1,693 |
+| www.techrupt.pk | growth | 150,000 | 150,000 / 1,500,000 | 2026-07 | 689 | 561 |
+| www.techrupt.pk | growth | 150,000 | 150,000 / 1,500,000 | 2026-06 | 27 | — |
+
+**Provenance.** The `metered` column is `site_usage_monthly` in **prod Supabase** (`zxjjjsipafojhzkkumvh`) — **CC-queried, and independently orchestrator-confirmed** against the same table. The `stored in TB` column is the Tinybird `events` count of `event_type='$pageview'` per site-month — **CC-queried directly via the Tinybird MCP**, which reads the **prod** workspace (established by both site_ids resolving in prod Supabase and returning zero rows in staging). The two columns were read minutes apart, which is why August shows 541 vs 538 rather than an exact tie — see the reconciliation note below before treating any gap as a defect.
+
+**No realised harm — stated plainly.** bookmentions.net peaked at **1,730 against a 5,000 soft / 15,000 hard cap**; www.techrupt.pk at **689 against 150,000 / 1,500,000**. **Neither site approached either cap.** Nothing was rejected, no overage was billed, and both sites are **founder-owned**, so **no customer is exposed today**. This entry records a live mechanism, not an incident.
+
+**The meter is NOT over-counting — do not re-derive the July gap as a defect.** August reconciles exactly: `61/61`, and `541/538` is events landing between the two reads. July shows larger gaps (`1,730` vs `1,693`; `689` vs `561`) and those are **explained, not unexplained**: the Tinybird `events` history **begins 2026-07-07**, a dual-write cutover. The meter had been running before Tinybird held any rows, so July's metered figure legitimately covers days the stored figure cannot. June shows `—` for the same reason. **This gap is not drift and not a billing defect.** It was chased once and resolved; it is written down here so it is not chased again.
+
+**Why it still matters despite zero realised harm.** On **2026-07-18** a single day produced **1,441 pageviews** on a **free 5,000/mo** site — **~29% of the monthly allowance in one day.** Four such days exhaust the soft limit. At the hard cap the route returns **402** and the event is **PERMANENTLY LOST** (`api/routes/track.js:404-412`, the `return res.status(402)` at `:408`) — **§6 data loss caused by bot volume rather than by real usage.** A free-tier customer with genuine crawler exposure would burn their allowance on traffic they never had, hit the cap, and **then lose real events**. The failure mode is not "a customer is over-billed"; it is "a customer's real analytics stop while their quota was spent on machines."
+
+**Status: NOT fixed, and deliberately so.** Any fix here is a change to what gets metered, which is billing-adjacent and must not be an agent-initiated behavioural change. Recording the mechanism is the deliverable.
+
+### KI-109 — ENTITLEMENT DEFECT: paid sites are metered at pre-#428 caps, so the customer does not receive what the pricing page sells (2026-08-07, no realised harm, migration drafted NOT applied)
+
+**This is an entitlement defect, not a billing one.** Nobody is over-charged. The customer is under-served: **www.techrupt.pk is sold 1,000,000 pageviews/mo (`marketing/src/content/sections/pricing.md:47`) and metered at 150,000** — **6.7× below** what was bought. Free sites are sold 10,000 and metered 5,000 (**2×**).
+
+**Root cause — a repricing that reached nobody.** #428 (`eda53505`, 2026-07-26, *"repackage tiers to differentiate on volume, not features"*) rewrote `PLAN_DEFAULT_PV_LIMIT` (`api/lib/plan-features.js:18-26`) from `free 5_000 / starter 50_000 / growth 150_000 / scale 500_000` to `free 10_000 / starter 250_000 / growth 1_000_000 / scale 5_000_000`. Its diff touched `plan-features.js` **plus four test files and nothing else — no migration, no backfill.**
+
+That would be harmless if the defaults governed. They do not: `getPvLimit(plan, perSiteOverride)` (`plan-features.js:149-152`) returns the **override** whenever one is present, and `sites.pv_limit` carries a column **`DEFAULT 5000`** (`supabase/migrations/00000000000000_baseline_schema.sql:900`) — **so an override always exists and `PLAN_DEFAULT_PV_LIMIT` is dead code for every live row.** The repricing changed a table nothing reads.
+
+**Each prod row's value has a different origin — three mechanisms, none of them price metadata** (prod `zxjjjsipafojhzkkumvh`, read-only, 2026-08-07; four sites exist, so this is exhaustive):
+
+| domain | plan | pv_limit | how it got there |
+|---|---|---|---|
+| www.techrupt.pk | growth | 150,000 | Stripe webhook **fallback branch** — site created 2026-06-24 with a live subscription; the webhook wrote `getPvLimit('growth')` while the table still read `150_000`, i.e. **pre-#428** |
+| khalidrasool.com | free | 5,000 | column `DEFAULT 5000` — no subscription, the webhook never ran |
+| bookmentions.net | free | 5,000 | column `DEFAULT 5000` — same |
+| localhost:5173 | trial | 10,000 | the one-time backfill in `20260522000001_free_tier_and_plan_realign.sql` step 5 |
+
+**The comment that hid it for three investigations.** `plan-features.js:17` and the DB column comment (`baseline_schema.sql:919`) both said the value is *"set by Stripe webhook from price metadata"*. **No Stripe price carries `pv_limit` metadata** — so the stated mechanism could not have produced the stored values, and every search stalled on that contradiction. The real path is `pvLimitFromPrice` (`api/routes/billing.js:77-81`): metadata **if present**, otherwise a fallback to `getPvLimit(plan)` — the plan default **frozen at write time**. **The fallback is the normal case; metadata is the exception nobody uses.** Both comments are corrected in the PR that files this entry.
+
+**`Billing.jsx` was a FOSSIL, not an outlier.** `dashboard/src/pages/Billing.jsx:9-18` held its own table reading `free 5000 / starter 50000 / growth 150000 / scale 500000` — **exactly the pre-#428 values.** It was a frozen copy that stopped being updated at #428, which is why it appeared to "agree" with prod: it described the stale database rather than the sold entitlement. That made it look authoritative to a reader comparing it against real rows. It is deleted, and `Billing.jsx` now reads the dashboard entitlement mirror; a parity test pins the two tables pairwise so a replacement copy cannot drift silently.
+
+**No realised harm.** www.techrupt.pk used **541 pageviews in August** against its stale 150,000 cap. No site is near any cap, nothing has been rejected, and all four sites are founder-owned. The defect is entitlement, not an incident — **but it becomes real the moment any site's traffic passes its stale cap**, at which point `api/routes/track.js:408` returns 402 and the event is destroyed permanently (§6, no replay). See **KI-108**: that entry is bot volume consuming quota; this one is the quota itself being wrong. They compound — a site can be pushed toward a cap by traffic it never had, and that cap can be 6.7× lower than the one it paid for.
+
+**Status: migration DRAFTED, NOT APPLIED** (`supabase/migrations/20260807000000_backfill_pv_limit_to_plan_defaults.sql`). Per §8, CC writes the file and the founder applies it. It re-derives `pv_limit` from the current plan under a `GREATEST()` ceiling so **no row is ever lowered** — lowering a live cap is the one way this fix could cause the data loss it exists to prevent.
+
+**A backfill corrects today's four rows; it does not prevent the next repricing drifting identically.** The column default guarantees an override always exists, and the override always wins, so any future change to `PLAN_DEFAULT_PV_LIMIT` will again reach nobody. The recurrence options are set out in the PR that files this entry; **none is implemented here.**

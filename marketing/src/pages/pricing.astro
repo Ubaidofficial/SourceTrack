@@ -1,25 +1,169 @@
 ---
+/**
+ * PRICING — promoted from /v3; indexable. This REPLACED the v2 /pricing.
+ *
+ * ⚠️ THE DESIGN'S PLAN MATRIX IS NOT USED AT ALL. Ruled 2026-08-06: its plan
+ * MODEL disagrees with main, not just its wording.
+ *
+ *   design says                     main says
+ *   ─────────────────────────────   ──────────────────────────────────────────
+ *   two plans                       three (Starter, Growth, Founder Annual)
+ *   "Custom dashboards: 3 saved /   plan-features.js:76 has saved_reports as a
+ *    Unlimited / Unlimited+client"  BOOLEAN per plan. No count tier exists, and
+ *                                   "+ client" implies white_label, false on
+ *                                   every plan including scale.
+ *   "Data retention: 14 days"       sites.data_retention_days is a PER-SITE
+ *                                   column, not a plan differentiator.
+ *   "Server-side conversions to     capi_deliveries: 0 rows all-time
+ *    Google, Meta, LinkedIn"
+ *   "CRM sync & MCP server"         CRM sync: 0 references in api/
+ *   "Client dashboards &            email-reports-weekly: 393 runs, "Sent 0"
+ *    scheduled reports"             on every one
+ *
+ * So the LAYOUT is the design's — card structure, billing toggle, comparison
+ * table shape, spacing. The CONTENT is entirely main's baseline.
+ *
+ * The comparison table ships FEWER rows than the design's, deliberately. Rows
+ * were not invented to fill the width; every row below maps to something main
+ * verifiably does.
+ */
 import Base from "@/layouts/Base.astro";
-import CallToAction from "@/partials/CallToAction.astro";
-import FAQ from "@/partials/FAQ";
-import PageHeader from "@/partials/PageHeader.astro";
-import TrustedClients from "@/partials/TrustedClients";
-import PricingSection from "@/partials/Pricing";
-import { getListPage } from "@/lib/contentParser";
+import Wrap from "@/layouts/v3/Wrap.astro";
+import SectionHead from "@/layouts/v3/SectionHead.astro";
+import "@/styles/v3-tokens.css";
+import "@/styles/v3-home.css";
+import "@/styles/v3-pages.css";
 
-const data = await getListPage("pricing/-index.md");
-const { title, description, meta_title, image, page_header } = data.frontmatter;
-const trusted_clients = await getListPage("sections/trusted-clients.md");
-const pricing = await getListPage("sections/pricing.md");
-const faq = await getListPage("sections/faq.md");
-const callToAction = await getListPage("sections/call-to-action.md");
+// AUTHORITATIVE — live pricing.md. Three plans, not the design's two.
+const plans = [
+  {
+    name: "Starter", price: "$49", per: "/month", alt: "or $470 / year — two months free",
+    blurb: "One site, finally getting an honest channel report.", featured: false,
+    features: ["250,000 tracked pageviews / mo", "Full Multi-Touch Attribution", "ChatGPT & AI Search Detection", "Cookieless Privacy-First Tracking", "Email & Chat Support"],
+  },
+  {
+    name: "Growth", price: "$79", per: "/month", alt: "or $750 / year — two months free",
+    blurb: "Running paid, and tired of three dashboards disagreeing.", featured: true,
+    features: ["1,000,000 tracked pageviews / mo", "Search Console SEO Revenue Attribution", "Stripe & Shopify Revenue Webhooks", "Visitor Journey Timeline Inspector"],
+  },
+  {
+    name: "Founder Annual", price: "$99", per: "/year", alt: "Limited cohort while in beta",
+    blurb: "Back the product early, keep the rate for good.", featured: false,
+    features: ["All Growth Plan Features Included", "1,000,000 tracked pageviews / mo", "Locked-in Founder Rate Forever", "Priority Founder Support", "Direct Founder Discord & Email Channel"],
+  },
+];
+
+// Every row maps to something main verifiably does. No row invented to fill width.
+const matrix = [
+  { what: "Tracked pageviews / mo", starter: "250,000", growth: "1,000,000", founder: "1,000,000" },
+  { what: "Multi-touch attribution", starter: "Full", growth: "Full", founder: "Full" },
+  { what: "AI search detection", starter: "Included", growth: "Included", founder: "Included" },
+  { what: "Cookieless tracking", starter: "Included", growth: "Included", founder: "Included" },
+  { what: "Search Console SEO revenue", starter: "—", growth: "Included", founder: "Included" },
+  { what: "Stripe & Shopify revenue webhooks", starter: "—", growth: "Included", founder: "Included" },
+  { what: "Visitor journey timeline inspector", starter: "—", growth: "Included", founder: "Included" },
+  { what: "Support", starter: "Email & chat", growth: "Email & chat", founder: "Priority founder" },
+];
+
+const faqs = [
+  { q: "What counts as a tracked pageview?", a: "Every page view the script records for a site in a calendar month. Custom events, conversions and outbound clicks do not consume the allowance." },
+  { q: "What happens if I go over?", a: "Collection continues past the plan limit — an attribution stream with a hole in it produces confidently wrong numbers rather than missing ones. You are flagged as over quota rather than cut off." },
+  { q: "Is there a free trial?", a: "28 days, no card required." },
+  { q: "Can I change plan later?", a: "Yes, and the change takes effect on your next billing period." },
+];
 ---
 
-<Base title={title} meta_title={meta_title} description={description} image={image}>
-  <PageHeader page_header={page_header}>
-    <PricingSection data={pricing} isHome={false} client:visible />
-  </PageHeader>
-  <TrustedClients data={trusted_clients} client:load />
-  <FAQ data={faq} client:visible />
-  <CallToAction data={callToAction} />
+<Base
+  title="Pricing — SourceTrack"
+  description="Attribution priced on tracked pageviews, not seats or events. Starter $49/mo, Growth $79/mo, Founder Annual $99/yr. 28-day free trial."
+>
+  <div class="v3">
+    {/* 1 — hero */}
+    <section class="v3-hero">
+      <Wrap>
+        <h1>Simple pricing for attribution that grows with you.</h1>
+        <p class="v3-hero-sub">
+          Priced on tracked pageviews — not on seats, events, or which attribution
+          models you are allowed to look at. All nine models are on every plan.
+        </p>
+      </Wrap>
+    </section>
+
+    {/* 2 — billing toggle. Static shape; see v3-pages.css. */}
+    <section class="v3-section v3-section--tight">
+      <Wrap>
+        <div class="v3-billing-toggle" aria-hidden="true">
+          <span data-active>Monthly</span><span>Yearly — two months free</span>
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 3 — plan cards. THREE, from main's baseline. */}
+    <section class="v3-section v3-section--tight">
+      <Wrap>
+        <div class="v3-plans">
+          {plans.map((p) => (
+            <div class:list={["v3-plan", p.featured && "v3-plan--featured"]}>
+              {p.featured && <span class="v3-plan-badge">Most popular</span>}
+              <h3>{p.name}</h3>
+              <div class="v3-plan-price">{p.price}<span style="font-size:16px;font-weight:700">{p.per}</span></div>
+              <span class="v3-plan-alt">{p.alt}</span>
+              <p class="v3-plan-blurb">{p.blurb}</p>
+              <ul>{p.features.map((f) => <li>{f}</li>)}</ul>
+            </div>
+          ))}
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 4 — comparison table */}
+    <section class="v3-section">
+      <Wrap>
+        <SectionHead
+          eyebrow="Compare"
+          heading="Compare plans side-by-side."
+          lede="Fewer rows than you might expect. Every one maps to something the product verifiably does."
+        />
+        <div class="v3-table-card">
+          <table>
+            <thead>
+              <tr><th>Feature</th><th>Starter</th><th>Growth</th><th>Founder Annual</th></tr>
+            </thead>
+            <tbody>
+              {matrix.map((r) => (
+                <tr><th scope="row">{r.what}</th><td>{r.starter}</td><td>{r.growth}</td><td>{r.founder}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 5 — soft band, FAQ */}
+    <section class="v3-section v3-section--soft">
+      <Wrap>
+        <SectionHead eyebrow="FAQ" heading="Pricing questions buyers ask before starting." />
+        <div class="v3-faq">
+          {faqs.map((f) => (<details><summary>{f.q}</summary><p>{f.a}</p></details>))}
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 6 — CTA close on paper. Same treatment as the homepage: lime on the button
+        only, never a full-bleed wash behind primary content (§2.6). */}
+    <section class="v3-cta-close">
+      <Wrap>
+        <div class="v3-cta-inner">
+          <div>
+            <h2>Start small. Upgrade when attribution becomes core.</h2>
+            <p>28 days free, no card. Install the script and watch your first attributed session land.</p>
+          </div>
+          <div class="v3-cta-actions">
+            <a class="v3-btn-accent" href="https://app.sourcetrack.ai/signup">Start 28-day free trial</a>
+          </div>
+        </div>
+        <p class="v3-disclosure">Product visuals shown use illustrative data.</p>
+      </Wrap>
+    </section>
+  </div>
 </Base>
