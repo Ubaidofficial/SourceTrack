@@ -141,23 +141,27 @@
 .v3 .v3-step h3 { margin: 6px 0 8px; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
 .v3 .v3-step p { margin: 0; max-width: 60ch; color: var(--v3-gray-600); font-size: 15px; line-height: 1.55; }
 
-/* ── attribution model families (attribution §2) ─────────────────────────────
-   All NINE models, grouped by the families the registry actually defines, not a
-   subset. Settled from source: api/lib/report-config-validation.js:33
-   (ALLOWED_MODELS, 9) and :72 (MULTI_TOUCH_MODELS, 4), with the same nine keys
-   in dashboard/src/hooks/useDashboardData.js:23 and
-   dashboard/src/pages/ReportBuilder.jsx:40.
+/* ── grouped list (attribution §2, report-builder §2) ────────────────────────
+   A titled group with a list inside it, deliberately NOT .v3-cards — peer cards
+   flatten a set into a menu, and the whole point of both uses is that the
+   members belong to families.
 
-   A grouped list, deliberately NOT .v3-cards — four peer cards would flatten the
-   families into a menu, which is the thing the homepage's one-liner already does. */
-.v3 .v3-models { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--v3-gutter); }
-.v3 .v3-model-family {
+   Named generically on purpose. It started as `.v3-model-family` for
+   attribution's nine models, and report-builder's eleven templates want the
+   identical shape; a class called "model-family" holding report templates is
+   the kind of name that makes the next person build a third copy instead of
+   reusing this one, which is the divergence this file's header warns about.
+
+   Attribution's nine are settled from api/lib/report-config-validation.js:33
+   and :72; report-builder's eleven from ReportBuilder.jsx:137. */
+.v3 .v3-grouped { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--v3-gutter); }
+.v3 .v3-group {
   background: var(--v3-paper-card);
   border: 1px solid var(--v3-border);
   border-radius: var(--v3-radius-md);
   padding: 24px;
 }
-.v3 .v3-model-family > h3 {
+.v3 .v3-group > h3 {
   margin: 0 0 4px;
   font-size: 13px;
   font-weight: 800;
@@ -165,12 +169,12 @@
   text-transform: uppercase;
   color: var(--v3-gray-700);
 }
-.v3 .v3-model-family > p { margin: 0 0 16px; color: var(--v3-gray-600); font-size: 15px; line-height: 1.55; }
-.v3 .v3-model-family ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
-.v3 .v3-model-family li { display: flex; gap: 10px; align-items: baseline; font-size: 15px; }
-.v3 .v3-model-family li b { font-weight: 800; color: var(--v3-ink); }
-.v3 .v3-model-family li span { color: var(--v3-gray-600); font-variant-numeric: tabular-nums; }
-@media (max-width: 900px) { .v3 .v3-models { grid-template-columns: 1fr; } }
+.v3 .v3-group > p { margin: 0 0 16px; color: var(--v3-gray-600); font-size: 15px; line-height: 1.55; }
+.v3 .v3-group ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.v3 .v3-group li { display: flex; gap: 10px; align-items: baseline; font-size: 15px; }
+.v3 .v3-group li b { font-weight: 800; color: var(--v3-ink); }
+.v3 .v3-group li span { color: var(--v3-gray-600); font-variant-numeric: tabular-nums; }
+@media (max-width: 900px) { .v3 .v3-grouped { grid-template-columns: 1fr; } }
 
 /* ── static journey (product §3, ai-referral §5) ─────────────────────────────
    ONE treatment shared by both pages. The design ships a drag-through timeline

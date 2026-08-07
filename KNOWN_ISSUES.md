@@ -7,21 +7,43 @@ Do not use this file as a backlog for every idea. Use it to prevent repeated mis
 ## Current verified/high-confidence issues (Verified @ 93da62d)
 
 ### 1. `pv_limit` Shadowing
-`sites.pv_limit` has a Postgres column DEFAULT of 5000 (`supabase/migrations/20260721000001_baseline_schema.sql:900`) and the Stripe webhook writes an override from price metadata (`api/routes/billing.js:78`). `getPvLimit` prefers any truthy/finite override, so `PLAN_DEFAULT_PV_LIMIT` changes have NO runtime effect until price metadata and DB defaults are reconciled.
+`sites.pv_limit` has a Postgres column DEFAULT of 5000 (`supabase/migrations/00000000000000_baseline_schema.sql:900`) and the Stripe webhook writes an override from price metadata (`api/routes/billing.js:78`). `getPvLimit` prefers any truthy/finite override, so `PLAN_DEFAULT_PV_LIMIT` changes have NO runtime effect until price metadata and DB defaults are reconciled.
 Relevant code:
-`supabase/migrations/20260721000001_baseline_schema.sql:900`
-  `pv_limit integer DEFAULT 5000`
+`supabase/migrations/00000000000000_baseline_schema.sql:900`
+  `"pv_limit" integer DEFAULT 5000,`
 `api/routes/billing.js:78`
   `const fromMeta = price?.metadata?.pv_limit`
-`api/lib/plan-features.js:92`
+`api/lib/plan-features.js:150` (function opens at `:149`)
   `if (perSiteOverride && (Number.isFinite(perSiteOverride) || perSiteOverride === Infinity)) return perSiteOverride`
-`api/lib/plan-features.js:93`
+`api/lib/plan-features.js:151`
   `return PLAN_DEFAULT_PV_LIMIT[normalizePlan(plan)] ?? 0`
+
+> ⚠️ **CITATIONS CORRECTED 2026-08-06 — both were wrong, in different ways.**
+> The migration was cited as `20260721000001_baseline_schema.sql`, **a filename that does not
+> exist on `main`**; the real file is `00000000000000_baseline_schema.sql` and the line number
+> `:900` was always correct. `plan-features.js:92/93` had simply drifted — `getPvLimit` now
+> opens at `:149`, and the two cited lines are `:150`/`:151`.
+>
+> **Worth recording how the migration citation nearly survived re-verification:** a grep for
+> `pv_limit integer DEFAULT` returns **nothing**, because the column is quoted in the DDL
+> (`"pv_limit" integer DEFAULT 5000,`). A zero-hit grep has two explanations and "absent" is
+> only one of them — see the method note in `docs/ai_agent_workflow_rules.md`.
+
+> ⚠️ **AMENDED 2026-08-06 — the Stripe WRITE path is CLOSED; only the customer-visible half remains.**
+> Growth price metadata has been deleted and all three prices verified, so nothing writes a
+> `pv_limit` override from price metadata any more. The remaining live half is
+> **`dashboard/src/pages/Billing.jsx:9-18`**, which hardcodes its own `PLAN_DEFAULT_LIMITS`
+> table (`growth: 150000`) for display — a second source of truth that can disagree with
+> `PLAN_DEFAULT_PV_LIMIT` and with the published pricing page.
+>
+> **Blast radius: zero paying customers.** The site carrying the largest published/enforced gap
+> is `www.techrupt.pk`, which is the **founder's test domain**, not a customer. This is a
+> condition to resolve, not a live customer-facing defect.
 
 ### 2. `NULL` `pv_limit` Ambiguity
 `getPvLimit` falls back to the plan default when `pv_limit` is `NULL`, whereas `usage-threshold-emails.js` treats `NULL` as unlimited and excludes those sites from metering alerts entirely.
 Relevant code:
-`api/lib/plan-features.js:93`
+`api/lib/plan-features.js:151` (was cited as `:93` — same drift corrected in issue 1 above)
   `return PLAN_DEFAULT_PV_LIMIT[normalizePlan(plan)] ?? 0`
 `api/jobs/usage-threshold-emails.js:95`
   `// (limit=0) and any site with NULL pv_limit (treated as unlimited).`
@@ -1122,6 +1144,17 @@ Discovered accidentally **2026-07-24** when a `tb --cloud deploy --check` ran ag
 ### 61. Five engine pre-agg readers were missed by #382's refund-count exclusion — latent until the first real refund (2026-07-24, §5.1, FIXED PR2d)
 
 #382 made the **route handlers** refund-aware (`dashboard.js` / `analytics.js` / `leads-server.js`) but missed the **engine readers** those same routes (`attribution.js` / `campaigns.js` / `export.js`) call for pre-agg/multi-touch shapes. Fresh grep found `attribution-engine.js` has **0** "refund" mentions across 71 count-patterns. Five readers of `attributed_conversions` counted every row/fraction with **no** refund exclusion: `getPreAggregatedAttribution` (`:2688` `conversions += 1`) and the four multi-touch pre-agg readers `getLinear/getUShaped/getTimeDecay/getWShapedAttribution` (`conversions += parseFloat(touch.fraction)`). **Latent, not active today:** they over-count only once `attributed_conversions` contains refund rows, which is **never** currently (KI-1341) — so the defect would have **activated at the exact moment** PR1's Supabase netting was first exercised (first real refund → nightly writes the refund row → every one of these over-counts). **NOT at risk (checked):** `getMultiTouchAttributionLive` / `getAiPlatformAttributionLive` read Tinybird pipes (`multitouch_conversions_by_site` / `aiplatform_conversions_by_site`), so their refund handling is at the pipe level (#383). **Fix (PR2d):** gate the count increment on `conversion_type !== 'refund'` (fraction readers skip the add entirely, not add-zero); `SUM(conversion_value)` left unconditional so signed sums still net. Guarded by `api/tests/preagg-refund-count.test.js`.
+
+> ⚠️ **BROKEN CROSS-REFERENCE — `(KI-1341)` above is UNRESOLVABLE, recorded rather than guessed (2026-08-06).**
+> There is no KI-1341. The highest real known-issue number in this file is **KI-77**, so 1341
+> is a typo. `KI-13` and `KI-41` are both plausible sources and **neither is confirmed** — the
+> surrounding sentence ("`attributed_conversions` contains refund rows, which is never
+> currently") does not disambiguate them.
+>
+> **Deliberately not "fixed".** Substituting a plausible number would convert an obviously
+> broken citation into a confidently wrong one that no future reader would think to check.
+> Whoever knows which entry was meant should replace this block; until then the ambiguity is
+> the honest record.
 
 ### 62. 🔴 REFUND WINDOW EDGE — a refund is windowed on the REFUND's timestamp, so late returns mis-net into Direct (2026-07-24, §5.1, NOT fixed — scope separately)
 
@@ -2265,6 +2298,332 @@ assumed.
 
 ---
 
+# Reconciliation pass — 2026-08-06
+
+Entries below are numbered `KI-78` … `KI-99`, continuing from the highest real number in this
+file (`KI-77`). The sequence has historical gaps; these are the next free numbers, not the next
+sequential ones.
+
+## Corrections to already-recorded claims
+
+### KI-A2 correction — `gh pr close && gh pr reopen` re-firing checks is UNVERIFIED, not false
+
+`SESSION_HANDOFF_2026-08-06.md:49` records, as an empirical confirmation, that
+`gh pr close && gh pr reopen` **re-fires checks on the same SHA without moving the head**.
+
+**Status: unverified under normal conditions. NOT refuted.**
+
+We observed it fail to fire on three PRs on 2026-08-06 — but that observation was made **during a
+confirmed GitHub Actions outage in which moved-head pushes also failed to enqueue.** The control
+was broken at the same moment as the test, so the run proves nothing either way: an outage
+explains the null result completely, without the close/reopen mechanism being wrong.
+
+**Write it as:** *observed not to fire during the 2026-08-06 Actions outage; unverified under
+normal conditions.* **Never as flatly false.** Re-testing it costs one PR on a green day and
+would settle it; until someone does that, neither claim is available.
+
+The frozen handoff cannot say this about itself — recorded here per the `#638` pointer mechanism.
+
+## A1 — new findings, all found 2026-08-06
+
+### KI-78 — `/api/analytics/collect` applied the REPORTING bot predicate at INGESTION (FIXED #666)
+
+`api/routes/analytics.js:226` runs `if (isBotUserAgent(ua)) return res.json({ ok: true })` on the
+live ingestion path. `isBotUserAgent` is the **reporting-side** predicate — it answers
+"crawler-or-human", not the ingestion question "does this client execute JS?". Those differ
+precisely where it matters: Googlebot/Bingbot/Applebot render JS and reach `/api/track`, and must
+be dropped; in-app WebViews are humans and must be kept.
+
+**This is the 2026-07-14 failure, still running.** It was never stopped, only fixed at one call
+site. Fixed in **#666**, which also registers `api/tests/analytics-collect-ingestion-filter.test.js`
+in `package.json` — required, or the registration guard (`api/tests/test-registration-guard.test.js`)
+fails the build.
+
+### KI-79 — `/sp/e` and `/sp/pixel.gif` meter quota with no bot filter at all (FIXED #667)
+
+Both proxy ingestion endpoints (`api/routes/proxy.js`, rate-limit registration at
+`api/middleware/rate-limit.js:125,128`) consume pageview quota unconditionally —
+`:183` documents `/sp/pixel.gif` as *"always a `$pageview`; always consumes quota"*.
+
+**This was a scope accident, not a decision.** The bot-filter work landed on the direct ingestion
+routes and never reached the proxy pair, so a customer on the managed proxy was metered for
+crawler traffic that a customer on direct ingestion was not. Nothing recorded the asymmetry
+because nobody had chosen it. Fixed in **#667**.
+
+### KI-80 — ⚠️ DO-NOT-FIX: `server-events.js` must NEVER be bot-filtered
+
+`api/routes/server-events.js` has no bot filter and **must not acquire one.** It ingests
+server-to-server events, where there is no browser and no meaningful user-agent: the "bot"
+signal is absent by construction, and any UA-based predicate applied there would drop **real
+customer conversions** sent from a backend.
+
+Recorded as an entry precisely because it looks like the same defect as KI-78/KI-79 to anyone
+sweeping for unfiltered ingestion endpoints. It is not. **Do not "complete the sweep."**
+
+### KI-81 — the proxy serving hostname is not the hostname the gate authorises
+
+Three facts that are individually fine and jointly a drift hazard:
+
+- **The serving host is `track.`** — that is what the customer's browser contacts. It matches
+  **no row** in `managed_proxy_domains`.
+- **The registered host is `track2.`** — the single row in that table — and it is **unverified**
+  as the traffic-carrying host.
+- **Tenant resolution comes from the `cdn-host` HEADER, not the browser's `Host`**
+  (`api/lib/managed-proxy.js:60-62`): when Bunny presents a valid `x-st-proxy-secret` and a
+  matching `cdn-pullzoneid`, the tenant is resolved from the hostname the **CDN** was configured
+  with. Both hostnames sit on one pull zone, so the lookup matches `track2` and succeeds.
+
+**This is not a gate bypass** — `managedProxyEarlyGate` hard-404s on a lookup miss, with no
+fallthrough. The consequence is narrower and worse: **the DB row and the customer-facing domain
+can drift indefinitely with nothing detecting it**, and the verification job resolves by the DB
+hostname — so it monitors `track2` while `track.` carries the traffic.
+
+**Do not "fix" this by editing the row.** Which hostname should be authoritative is an open
+decision. Full evidence, including the 401-vs-404 probe that proves the gate admitted `track.`,
+is in **#666**'s correction to `SESSION_HANDOFF_2026-08-06.md`.
+
+### KI-82 — `proxy-domain-recheck` has never run
+
+Every row shows `last_checked_at == verified_at == 2026-07-15` — the timestamps are equal because
+nothing has updated them since the initial verification wrote both. The job has not executed once.
+
+Corroborating code-level fact (verified on `main`): `api/jobs/proxy-domain-recheck.js` contains
+**zero** references to `job_runs`, so even had it run, nothing would record that it did. See KI-83.
+
+*Provenance: prod row inspection, 2026-08-06 (orchestrator, read-only). Not independently
+re-queried in this pass — CC has no prod DB access.*
+
+### KI-83 — ⚠️ `job_runs` IS NOT A RELIABLE NEGATIVE. Absence from it does not mean a job is dead
+
+**Correct every document that infers "job is dead" from "job has no `job_runs` rows".**
+
+Verified on `main` by inspecting every `job_runs` reference in `api/`:
+
+| Job | writes `job_runs`? |
+|---|---|
+| `nightly-attribution.js` | **yes** (3 write sites) |
+| `anomaly-watcher.js` | **yes** (1) |
+| `api/lib/job-runs.js` (helper) | yes (the write itself) |
+| `health-agent.js` | **no** — its 2 references are `.select()` READS |
+| `data-quality-check.js` | **no** — its 2 references are `.select()` READS |
+| `proxy-domain-recheck.js` | **no** — zero references |
+| `email-reports.js`, `ai-crawler-range-refresh.js`, `usage-threshold-emails.js` | no |
+
+**`data-quality-check` RUNS DAILY** — 305 reports across 79 distinct days — while writing nothing
+to `job_runs`. Any audit that read the table as a job registry has been scoring it as dead.
+
+**The sharp part:** `health-agent.js:218-223` and `data-quality-check.js:58-62` both **read**
+`job_runs` — filtered to `job_name = 'nightly-attribution'` — to judge freshness. So the table is
+a log about *one* job, being consumed as if it were a registry of *all* jobs, by two jobs that are
+themselves absent from it.
+
+*Provenance: the 305/79 counts are prod queries (orchestrator, 2026-08-06). The read/write table
+above is code-verified on `main` in this pass.*
+
+### KI-84 — `health-agent` has no persistent output at all; it is unmonitorable by construction (FIXED #669)
+
+The job evaluates checks and exits. Nothing durable is written, so "did health-agent run, and what
+did it conclude?" has no answer available after the process ends — and a crash is indistinguishable
+from a clean run that found nothing.
+
+Fixed in **#669**, whose three exception tests are the load-bearing part: a crash still produces a
+row; the row survives a `null`/`undefined` rejection; and the write happens **before**
+`process.exit(1)` — that third asserted by **source position**, because after `process.exit` the
+row never lands and the ordering cannot be observed at runtime. `run()` calls `process.exit()` on
+both normal paths, so reaching the crash handler means the job really did die mid-run.
+
+### KI-85 — `proxy-health` and `tracker.min.js` are both edge-cached and unbypassable from the client
+
+Neither response can be forced to miss cache from the client side, so a client-side probe cannot
+distinguish "origin is healthy" from "the edge is serving a cached success". A cached error page is
+a 200 with a body — which is why **#668**'s verification asserts content-type and leading bytes and
+explicitly does **not** assert on length.
+
+**#668 fixes the first.** The second — `tracker.min.js` — is an **accepted ~8-day window**, not an
+open defect. Recorded so the acceptance is visible rather than rediscovered as a bug.
+
+### KI-86 — `email-reports-weekly` stopped entirely on 2026-07-27
+
+No executions since 2026-07-27. **This is a distinct defect from the previously recorded
+"sends 0 emails" issue** and must not be folded into it: that one describes a job that runs and
+produces nothing; this one is a job that does not run. A fix for either leaves the other live.
+
+Note `api/jobs/email-reports.js` writes nothing to `job_runs` (KI-83), so the stoppage was invisible
+to any check reading that table.
+
+*Provenance: prod inspection, 2026-08-06 (orchestrator, read-only).*
+
+### KI-87 — a stacked PR (base ≠ `main`) gets NO CI under the current `ci.yml`
+
+`.github/workflows/ci.yml:16-17` triggers `pull_request` on `branches: [ main, feat/home-v14 ]`
+only. **A PR opened against any other base matches no trigger, reports "no checks reported", and
+the CI-green-on-the-exact-head-SHA merge gate (CLAUDE.md §9) is silently suspended.**
+
+This already bit **#646** — silently, which is the whole problem: the failure mode is an *absence*
+of checks, and an absent check does not announce itself the way a red one does.
+
+The file's own comment block (`:12-15`) records the second half: for `pull_request` events GitHub
+reads the workflow from the **base** branch, so adding a name to this list is **necessary but not
+sufficient** — the change must also be merged INTO that base branch before PRs against it get
+checks.
+
+**Consequence for the current queue:** any PR in a stack must have its base re-checked before its
+green status is trusted.
+
+### KI-88 — the v3 dead-token bug, and three harness blind spots
+
+Grouped because they share one root cause: **a check that cannot see the thing it certifies.**
+
+- **v3 dead tokens** — token aliases that resolved to nothing while the audit that was supposed to
+  catch them passed. Repointed in `#663`, which also made both audits able to fail; before that
+  they could only report success. An audit with no failure path is not an audit.
+- **Three harness blind spots** — the same shape at three points in the verification chain: the
+  harness asserts on a surface that does not include the defect class it exists to catch.
+
+**The generalisation worth keeping:** every one of these passed. None of them failed loudly and got
+ignored — they were all structurally incapable of failing. When adding a guard, the first question
+is *"what input makes this fail?"*; if there isn't one, the guard is decoration.
+
+## A3 — pre-existing and undocumented
+
+Checked against this file before adding: none of the below had an existing entry.
+
+### KI-89 — a fresh worktree can lack root `node_modules` entirely, and every consequence looks like a code defect
+
+`git worktree add` copies tracked files only; installs do not come with it. The failure mode is
+that mass import errors **reproduce on clean `main` too**, so baselining confirms "not mine" and
+the run reads as pre-existing breakage in the code.
+
+**Run `npm ci` at the root of the worktree before baselining anything.** An uninstalled tree cannot
+distinguish a real regression from a missing dependency.
+
+This is not hypothetical: 147 unit-test failures were recorded as hidden breakage surviving green
+CI. The cause was a worktree with no root `node_modules`. The method half of that lesson is in
+`docs/ai_agent_workflow_rules.md`.
+
+### KI-90 — `integrations.js` suppresses the Bunny warning exactly when Bunny is unconfigured, and ignores two return values
+
+Two defects in one flow:
+
+- **`api/routes/integrations.js:914`** — `if (!reg.ok && !reg.disabled)` gates the
+  `console.warn` about a failed hostname pre-registration. `disabled` is set when Bunny is **not
+  configured** — which is precisely the state a warning would be useful in. The condition
+  suppresses the message in the only case that needs it.
+- **`api/routes/integrations.js:981`** — `await addPullZoneHostname(domain)` and
+  `await loadFreeCertificate(domain)` are called with **both return values discarded**. Failures
+  here are silent, and the surrounding code proceeds as though registration succeeded.
+
+### KI-91 — raw `console.*` calls bypass `safe-logger`, which already redacts `site_key`
+
+`api/lib/safe-logger.js` exists and redacts `site_key`; direct `console.*` calls do not go through
+it, so any of them that interpolates a `site_key` leaks a customer-facing tracking key into logs
+(CLAUDE.md §6.5 forbids exposing raw `site_key` in logs).
+
+**Scope, stated exactly as measured (2026-08-06, on `main`):**
+- **450** `console.(log|warn|error|info)` calls in `api/`, excluding `api/tests/`.
+- **Exactly ONE** file both imports `safe-logger` and still calls `console.*` directly:
+  **`api/index.js`, 16 calls.**
+
+⚠️ **An earlier figure of "19" circulated for this finding. It is unsourced and superseded** — no
+filter has been found that reproduces it, and it is recorded here as retracted rather than quietly
+replaced. Neither number above is a defect count: most of the 450 are legitimate. **The remediation
+scope still needs defining** — the useful next step is to grep for `console.*` calls that
+interpolate a `site_key`, which is the actual leak class.
+
+### KI-92 — `Accordion.tsx` exposes no ARIA state (and the originally-recorded defect was WRONG)
+
+⚠️ **The original claim was: `aria-controls` absent on all 24, and `role="button"` wraps the ANSWER
+PANEL. The second half is refuted, and the first half is imprecise. Recorded rather than dropped,
+because a defect log that quietly deletes a refuted claim teaches nothing.**
+
+**What is actually in the file** (`marketing/src/layouts/shortcodes/Accordion.tsx`, **36 lines**):
+- There is **no `role="button"` anywhere** — zero hits. `:16` is a **native `<button>` element**.
+- That button wraps the **title and chevron** (`:16-30`). The answer panel is `:31`,
+  `<div className="accordion-content">{children}</div>` — a **sibling, outside the button.**
+- A native button on the header with the panel as a sibling **is the correct pattern.** There was
+  never a structural defect here and never a rewrite to do.
+- It is **one `<Accordion>` usage**, in `marketing/src/layouts/partials/FAQ.tsx`, mapped over 24
+  items — **not 24 components.**
+
+**The real, narrower defect:** the component has **zero ARIA attributes**. No `aria-expanded` on the
+button, no `aria-controls`, and no `id` on the content div — so the expanded/collapsed state is
+invisible to assistive technology across all FAQ items.
+
+### KI-93 — `homeFixtures.js:145` cites a guard test that does not exist (⚠️ comment fixed in this PR)
+
+The comment claimed: *"Guarded: `api/tests/ai-assistant-count-copy.test.js` asserts the shipped
+homepage copy matches the classifier's label count."*
+
+**That file does not exist**, and no test matches `ai.*count` or `assistant`. This is the
+fictional-guard pattern: a comment asserting a safety net that was never built, in a file whose
+next-door constant is wrong in exactly the way the claimed test would have caught (KI-94).
+
+**The comment is corrected in this PR** — the entry alone would have left the false claim in the
+source, where the next reader trusts it.
+
+### KI-94 — `homeFixtures.js:28` says "+19", implying 22 AI assistants; the classifier's 16 is correct
+
+`marketing/src/lib/homeFixtures.js:28` ships `sub: "ChatGPT, Gemini, Claude +19"` — three named
+plus 19 implies **22**. Eleven lines later the same file exports `AI_ASSISTANTS = 16` (`:147`).
+**The file contradicts itself.**
+
+**16 is the truth** — the classifier is the source. For reference, `tracker/tracker.js:248` carries
+a third number: its AI-source map holds **13** distinct labels (ChatGPT, Claude, Perplexity,
+Gemini, Grok, Copilot, DeepSeek, Meta AI, You.com, Phind, Mistral, Poe, Kagi). Three surfaces,
+three counts — 22 implied, 16 exported, 13 in the tracker. Not fixed here; recorded so the fix
+reconciles all three rather than one.
+
+### KI-95 — `#615`'s "Seats left — [VERIFY: wire to a real count]" is LIVE customer-facing text
+
+A `[VERIFY: …]` authoring placeholder shipped to production copy. It is customer-visible, and it
+also implies a scarcity count that is not wired to anything — which is a truthfulness problem
+(CLAUDE.md §6: no fabricated numbers), not only a cosmetic one.
+
+### KI-96 — `attribution-engine.js:697-713` carries a stale inline copy of the channel classifier
+
+The `multiIf` ladder at `:699-713` duplicates the channel-classification logic that CLAUDE.md §11
+designates as having a **single exported source of truth**
+(`ORGANIC_SEARCH_ENGINE_HOSTS` / `ORGANIC_SEARCH_SOURCES`, shared between the Tinybird pipe SQL and
+`channelFromEvent`). This copy is forked from it and can drift silently.
+
+It is also written in the **HogQL dialect** (`properties.ai_source`, `properties.utm_medium`) — the
+PostHog query language that CLAUDE.md §5 records as fully decommissioned — and is assembled by
+string interpolation into a query built at `:695`.
+
+### KI-97 — `seo-revenue.js` builds a HogQL string that `readTb` never executes, now disagreeing with its pipe
+
+`api/routes/seo-revenue.js:30` states plainly that **the HogQL fallback is DELETED and Tinybird is
+the sole read path**. But `readTb(pipeName, params, hogSql, hogName, mapRows)` (`:27`) still accepts
+the HogQL parameters, and `:173` still passes a fully-constructed `sql` string into it.
+
+So the string is built on every call and executed never. It has since drifted out of agreement with
+`tinybird/pipes/seo_revenue_landing_pages.pipe`, which means it is now **actively misleading**: a
+reader debugging SEO revenue will read query logic that does not run and no longer matches the
+logic that does.
+
+### KI-98 — base `h1` letter-spacing is `-0.048em`; the design spec says `−0.03em`
+
+`marketing/src/styles/home-design.css:320` ships `letter-spacing: -0.048em`.
+`docs/design/design.md:312` (§3.1 Core identity) specifies *"Geist, headings at −0.03em tracking."*
+
+⚠️ **Note for anyone re-verifying this:** the spec line uses a **Unicode minus (U+2212)**, not an
+ASCII hyphen, so a grep for `-0.03em` returns **zero hits in `design.md`** and the citation looks
+unresolvable when it is simply written with a different character.
+
+Not resolved here — which value is correct is a design ruling, not a doc fix.
+
+### KI-99 — three branches exist on `origin` with no PR ever opened
+
+- `claude/tinybird-phase1-events-schema`
+- `claude/wave3-pipe-authoring`
+- `resolve/xff-ip-security-cherrypick` — **126 changed files vs `main`** (definition: all changed
+  files, `git diff --name-only origin/main...`, not filtered to code). ⚠️ An earlier figure of
+  "75 code files" is unsourced; 126 with its definition stated replaces it.
+
+All three verified present on `origin` (2026-08-06). Work sitting outside the review gate entirely:
+never reviewed, never CI'd, and invisible to any process that enumerates PRs. The `resolve/xff-…`
+branch name suggests security-relevant content, which makes its status worth deciding rather than
+leaving.
 # KI-100 … KI-104 — appended 2026-08-07
 
 > **Numbering:** `KI-78` … `KI-99` are added by **#670** (`docs/reconcile-known-issues-2026-08-06`),
@@ -2499,3 +2858,168 @@ reason, and its positive control executes `origin/main`'s route to prove the ass
 
 **Status: VERIFIED** (source read at `:211-215` and `:228` on `main`; nested-form behaviour confirmed
 by execution during #676).
+
+### KI-105 — the managed-proxy gate IS executing on registered domains ✅ REFUTES A SUSPICION (one divergence left open)
+
+**The suspicion, now refuted for registered domains.** We suspected `managedProxyEarlyGate` never
+ran in production — that Bunny masked the customer hostname, the `Host` header matched
+`ST_PLATFORM_HOSTS`, and the gate returned `next()` at `api/middleware/managed-proxy.js:76-78`
+(*"Skip managed proxy checks for standard API/dashboard traffic"*), bypassing the lookup, the 404,
+the status check and the path allowlist. That would have made the whole managed proxy decorative.
+
+**THE DISCRIMINATOR.** `/robots.txt` is **not** in `ALLOWED_PATHS` (`managed-proxy.js:21-33`
+— verified: the set holds the two tracker bundles, `/api/track`, `/api/collect`, `/track`,
+`/api/conversion`, `/api/tracker/id`, `/api/identify` and the proxy-health path, and nothing else).
+If the gate runs, step 7 (`managed-proxy.js:124-126`, `if (!ALLOWED_PATHS.has(req.path))`) returns
+`res.status(404).send('Not Found')` — a **9-byte** body. If the gate does *not* run, the request
+falls through to Express's default 404, which is a **149-byte HTML page**. The two are trivially
+distinguishable, and nothing else in the stack produces a 9-byte `Not Found`.
+
+**VERIFIED live (2026-08-06, reproduced independently 2026-08-07).** Both responses were
+`cdn-cache: MISS` with **distinct** `x-railway-request-id` values, so the origin was genuinely
+reached in each case and the two are independent observations, not one cached answer served twice:
+
+| host | status | content-length | body | `x-powered-by` |
+|---|---|---|---|---|
+| `track2.bookmentions.net/robots.txt` | 404 | **9** | `Not Found` | `Express` |
+| `track.bookmentions.net/robots.txt` | 404 | **149** | Express default HTML (`Cannot GET /robots.txt`) | *absent in capture* |
+
+**CONCLUSION (verified): on the registered domain the gate executes and the path allowlist is
+enforced.** `track2.` — the hostname actually present in `managed_proxy_domains` — returns the
+gate's own step-7 rejection byte for byte. **The managed proxy is not decorative.**
+
+⚠️ **UNRESOLVED — DO NOT RESOLVE THIS BY REASONING.** Per `managed-proxy.js:107-109`, an
+unregistered non-platform host should hit `record === null` and return the **same 9-byte
+`Not Found`**. `track.bookmentions.net` returned Express's default instead, so it **never entered
+the custom-domain branch at all**. Either it resolved as a platform host, or it reached a different
+origin. **Cause UNKNOWN. Do not assert one.**
+
+**What would settle it:** capture `cdn-host`, `x-st-proxy-secret` and `cdn-pullzoneid` **as the
+origin sees them** for each hostname. Those three inputs decide which branch
+`managed-proxy.js:60-62` takes, and they are not observable from the client side — which is
+precisely why this is open rather than answered.
+
+⚠️ **A NOTE ON THE TEST'S OWN VALIDITY, recorded so it is not misread in either direction.** The
+control in the original run was **VOID** (`cdn-cache: HIT` — see KI-106: query-string cache-busting
+does not work on this pull zone, so the intended busting control never established freshness).
+**The result stands anyway**, because both targets independently returned `MISS` with distinct
+request IDs — which is the property the control existed to establish, arrived at by another route.
+A void control does not make a void test, and a valid test does not retroactively validate its
+control. Both halves are stated so neither is inherited.
+
+### KI-106 — query-string cache-busting does NOT work on Bunny pull zone 6119064 ⚠️ COMPOUNDS KI-101
+
+**VERIFIED live (2026-08-06, reproduced 2026-08-07).** A GET for
+`/tracker.min.js?cb=<unique-epoch-value-never-requested-before>` returned:
+
+    HTTP/2 200
+    etag: W/"57d3-19fd4221fd0"
+    cdn-cachedat: 08/05/2026 23:16:58
+    cdn-cache: HIT
+
+— the **same etag and the same `cdn-cachedat`** as the un-busted baseline captured hours earlier.
+**Bunny is ignoring the query string in the cache key for static assets on this pull zone.** A URL
+that has provably never been requested before returns a day-old cached object.
+
+**CONSEQUENCE — this is why it matters.** KI-101 records an up-to-8-day stale-tracker tail
+(`max-age=86400` + `stale-while-revalidate=604800` + `immutable`). This entry establishes that the
+tail has **no client-side escape hatch**:
+
+* a cache-busting query parameter does **not** force a fresh fetch (verified above);
+* a `Cache-Control: no-cache` **request** header does not bypass it either (verified, KI-101).
+
+**So a tracker defect cannot be rolled back from the caller's side at all.** Purging requires the
+**Bunny API** or a **filename change** — both of which are operator actions, not deploy actions.
+
+⚠️ **This raises KI-101's severity from "propagation is slow" to "propagation is slow AND cannot be
+bypassed."** The distinction matters for incident planning: a slow-but-bustable cache means a fix
+plus a query param; an unbustable one means the old bundle keeps executing until Bunny is purged
+out-of-band.
+
+**Directly affects A2 (the click-ID restorer), which is tracker-side.** Cost the purge path before
+A2 ships, not during the incident that needs it.
+
+**Not fixed. Recorded, not acted on** — the caching is correct for a static asset, and the fix is an
+operational runbook step (how to purge) rather than a code change. See KI-101 for the propagation
+window this compounds, and KI-105 for the void-control note that depends on this finding.
+
+---
+
+## Amendments to KI-100 and KI-102 — citations ported from #677 (closed as a duplicate)
+
+**Why these are here rather than inside the entries.** #677 recorded `KI-100`…`KI-104` from a parallel
+session against a different base, and was closed as a duplicate of the #678 line that merged. Its
+entries duplicated what merged — but its **citations were richer**, and closing the PR would have
+discarded them. They are ported as **amendments referencing the entries by number**; `KI-100` and
+`KI-102` are **not edited**.
+
+Every citation below was **re-verified from source at the cited `file:line`**, not copied forward
+from the closed PR.
+
+### Amends KI-100 — the full self-serve Bunny flow, not just the certificate call
+
+`KI-100` records *that* Bunny issues the certificates. `api/lib/bunny-edge.js:1-13` documents the
+**whole** managed-custom-domain flow, of which issuance is only the middle step:
+
+| Function | Line | Endpoint (`bunny-edge.js:8-10`) | Expected |
+|---|---|---|---|
+| `addPullZoneHostname()` | `:106` | `POST https://api.bunny.net/pullzone/{id}/addHostname` body `{"Hostname"}` | `204` |
+| `loadFreeCertificate()` | `:122` | `GET https://api.bunny.net/pullzone/loadFreeCertificate?hostname=<host>` | `200`/`201` |
+| `removePullZoneHostname()` | `:135` | `DELETE https://api.bunny.net/pullzone/{id}/removeHostname` body `{"Hostname"}` | `204` |
+
+Auth is an **`AccessKey: <BUNNY_API_KEY>` header on every request** (`:11`). That variable is
+account-scoped and **server-side only** — referenced here **by name only, never by value** (§0).
+
+> ⚠️ **THE ORDERING CONSTRAINT — operationally the sharpest part, and recorded nowhere until now.**
+> `bunny-edge.js:11-12`: **the hostname MUST already exist on the pull zone before
+> `loadFreeCertificate` is called — otherwise Bunny returns `404 (hostname_not_found)`.**
+>
+> `addPullZoneHostname` → *then* `loadFreeCertificate`. Reversing them does not fail in a way that
+> names its cause: you get a **404 from a certificate call**, which reads as *"certificate issuance is
+> broken"* rather than *"the hostname was never registered"*. **This is the same misdiagnosis shape as
+> `KI-102`'s 401** — a correct response from a step that ran in the wrong order. Two of the four
+> entries in this batch are instances of it.
+
+The module is **fail-CLOSED** when the key or zone id is unset (returns `{ disabled: true }` rather
+than crashing) and **fail-SAFE** (never throws to the caller). Note the interaction with the
+suppressed-warning defect recorded separately: `disabled` is exactly the state whose warning is gated
+out by `if (!reg.ok && !reg.disabled)` at `integrations.js:914`, so a wholly unconfigured Bunny is the
+one case that stays silent.
+
+### Amends KI-102 — the exact responses we nearly misdiagnosed
+
+`KI-102` explains *why* a `401` on a registered proxy domain is correct. These are the literal
+sources of that `401` — ordinary `site_key` validation in `api/middleware/auth.js`, **not** the
+managed-proxy layer:
+
+| Line | Response |
+|---|---|
+| `:32` | `401 { success: false, data: null, error: 'Missing site_key' }` |
+| `:79` | `401 … error: 'Invalid site_key'` |
+| `:91` | `401 … error: 'Invalid site_key'` |
+| `:188` | `401 … error: 'Invalid site_key'` |
+
+`:31-33` is the whole of the first one — `if (!siteKey) { return res.status(401)… }`. **This is
+`KI-102`'s payoff:** that response was investigated as a proxy failure across three separate rounds
+before the guard's actual behaviour — `bindManagedProxySiteKey` passes keyless requests through by
+design — made it clear the 401 is the ingestion layer doing its job (§6.5: never fall through to a
+default tenant).
+
+### Method and provenance — why the search kept failing
+
+Three facts about *how* `KI-100` was reached, recorded because the pattern is reusable:
+
+1. **The ACME scan returns exactly two files, and both are tests.** `grep -rlniE "acme"` across
+   `*.js`/`*.mjs` (excluding `node_modules`) matches **only**
+   `api/tests/tracker-booking-detection.test.js` and
+   `api/tests/ad-platforms-status-connected.test.js`.
+2. **Both matches are incidental fixture names, not certificate code** —
+   `tracker-booking-detection.test.js:223` contains `answer: 'ACME Corp'`, and
+   `ad-platforms-status-connected.test.js:25` contains `account_name: 'Acme Ads'`. Repeated sessions
+   read *"two hits, no cert code"* as *"the code must be somewhere else"* rather than the correct
+   conclusion, *"there is no such code because we do not do this."* **A near-zero-hit scan whose only
+   hits are fixture strings is evidence of ABSENCE, not of a failed search** — the same
+   two-explanations trap as a zero-hit grep, one step along.
+3. **The certificates were read from the TLS handshake** — `openssl s_client -servername <host>`
+   piped to `openssl x509` — **not from a provider console.** That is what makes the issuer and the
+   per-hostname CN properties of *what is actually served*, rather than of what a dashboard reports.
