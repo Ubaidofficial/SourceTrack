@@ -1,0 +1,23 @@
+---
+// Channel marquee — the handoff's `marquee` mount, recreated.
+//
+// STATIC BY RULING. The handoff scrolls this continuously (motion.css, pauses on
+// hover); motion is PR 3's scope, so this ships as a still row rather than
+// half-animated. Nothing here needs JS.
+//
+// Fixtures are hard-coded rather than read from a shared module (ruling 3): four
+// static components should not share mutable global state, and a fixture module
+// designed now would be designed before PR 3 and PR 4 say what they need.
+// The handoff reads these from window.DEMO; these are the same channel names.
+//
+// §35.4: text labels, never reconstructed brand marks.
+const channels = [
+  'Google Ads', 'Google', 'Direct', 'ChatGPT', 'LinkedIn',
+  'Referral', 'Meta', 'Bing', 'Perplexity', 'Email',
+];
+---
+<div class="v3-marquee">
+  <div class="v3-marquee-track">
+    {channels.map((name) => <span class="v3-marquee-item">{name}</span>)}
+  </div>
+</div>

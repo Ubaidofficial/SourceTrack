@@ -1,0 +1,15 @@
+---
+// Channel monogram tiles — the handoff's `channel-tiles` mount.
+//
+// §35.4 BANS RECONSTRUCTED THIRD-PARTY MARKS, and the handoff's own answer is a
+// single-letter monogram (`{n[0]}`) rather than a drawn logo. Followed exactly:
+// the first letter of each channel name, never an approximated brand mark.
+//
+// Class-first, not the handoff's inline styles (ruling 5).
+const channels = ['Google Ads', 'Google', 'Direct', 'ChatGPT', 'LinkedIn', 'Referral'];
+---
+<div class="v3-tiles">
+  {channels.map((name) => (
+    <span class="v3-tile" title={name} aria-label={name}>{name.charAt(0)}</span>
+  ))}
+</div>

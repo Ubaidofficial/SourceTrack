@@ -1,0 +1,12 @@
+---
+// Mark row — the handoff's `mark-row` mount.
+//
+// A compact inline list of integration names. §35.4 again: TEXT labels. The
+// handoff's MarkRow (lib/page-bits.jsx) title-cases a slug and renders it as
+// bold text — no marks are drawn, which is the pattern this follows.
+interface Props { items: string[] }
+const { items } = Astro.props;
+---
+<span class="v3-markrow">
+  {items.map((label) => <span class="v3-mark">{label}</span>)}
+</span>

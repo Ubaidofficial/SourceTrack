@@ -1,0 +1,23 @@
+---
+// Chip row — serves the handoff's `tool-row` AND `ai-chips` mounts.
+//
+// ONE COMPONENT, TWO MOUNTS, deliberately. The handoff ships them as separate
+// functions (ToolRow in page-bits.jsx, AiChips in attribution-models.jsx) but
+// they render the same thing: a wrapped row of pill labels. The only difference
+// is the item list and an optional overflow marker. Recreating two components
+// that differ by their props would be lifting the handoff's file layout rather
+// than its design.
+//
+// ai-chips is built CLASS-FIRST (ruling 5). The handoff uses inline
+// `style={{ background: 'rgba(255,255,255,…)' }}`; v3-page-pairs.mjs:552-553
+// fails on any paint property in a style attribute, and a colour there is also
+// invisible to the contrast audit — no selector to register a pair against.
+//
+// §35.4: labels are text. No drawn marks.
+interface Props { items: string[]; more?: string }
+const { items, more } = Astro.props;
+---
+<div class="v3-chiprow">
+  {items.map((label) => <span class="v3-chip">{label}</span>)}
+  {more && <span class="v3-chip v3-chip--more">{more}</span>}
+</div>
