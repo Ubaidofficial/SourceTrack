@@ -92,3 +92,49 @@ test('every feature key that can raise an upgrade prompt has a label', () => {
     )
   }
 })
+
+// ─── PAGEVIEW-CAP PARITY ──────────────────────────────────────────────────────────────
+// Added with KI-109. Billing.jsx carried its own frozen copy of this table, last correct
+// before #428 (2026-07-26) — free 5000 / starter 50000 / growth 150000 / scale 500000 —
+// and nothing compared it to anything, so it drifted silently for weeks while the API, the
+// pricing page and the marketing copy all moved on. The copy is deleted; this is what
+// stops a new one appearing, and what stops the surviving mirror drifting the same way.
+test('pageview caps are identical on both sides, for every tier', () => {
+  const drift = []
+  for (const tier of TIERS) {
+    const b = backend.PLAN_DEFAULT_PV_LIMIT[tier]
+    const f = frontend.PLAN_DEFAULT_PV_LIMIT[tier]
+    if (b !== f) drift.push(`${tier}: backend ${b} vs frontend ${f}`)
+  }
+  assert.deepEqual(drift, [], `pageview-cap drift — a customer would be SHOWN a different allowance than they are METERED at:\n  ${drift.join('\n  ')}`)
+})
+
+test('getPvLimit answers identically on both sides, including alias plans and overrides', () => {
+  // Pins the FUNCTION, not just the literal — the same reasoning as the hasFeature test
+  // above. Covers alias handling (pro->growth, agency/business->scale) and the
+  // override-wins rule, which a raw object diff misses entirely.
+  const cases = [
+    ['free', undefined], ['growth', undefined], ['scale', undefined],
+    ['pro', undefined], ['agency', undefined], ['business', undefined],
+    ['unknown-plan', undefined], [undefined, undefined],
+    ['free', 250_000],   // override wins over the plan default
+    ['growth', 1],       // ...even when it is absurdly low
+  ]
+  for (const [plan, override] of cases) {
+    assert.equal(
+      frontend.getPvLimit(plan, override), backend.getPvLimit(plan, override),
+      `getPvLimit(${JSON.stringify(plan)}, ${JSON.stringify(override)}) disagrees across the boundary`
+    )
+  }
+})
+
+test('🔴 CONTROL: the pageview-cap comparison CAN fail', () => {
+  // Without this, a typo that made both sides read the same wrong table — or a comparison
+  // that silently compared undefined to undefined — would pass and prove nothing.
+  assert.notEqual(backend.PLAN_DEFAULT_PV_LIMIT.free, backend.PLAN_DEFAULT_PV_LIMIT.growth,
+    'tiers must not all be equal, or the parity check is vacuous')
+  for (const tier of TIERS) {
+    assert.equal(typeof backend.PLAN_DEFAULT_PV_LIMIT[tier], 'number', `backend ${tier} cap is not a number`)
+    assert.equal(typeof frontend.PLAN_DEFAULT_PV_LIMIT[tier], 'number', `frontend ${tier} cap is not a number`)
+  }
+})

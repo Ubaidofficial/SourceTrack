@@ -3169,3 +3169,30 @@ The claim *"after all filtering/validation"* is **TRUE, and load-bearing in the 
 **Why it still matters despite zero realised harm.** On **2026-07-18** a single day produced **1,441 pageviews** on a **free 5,000/mo** site — **~29% of the monthly allowance in one day.** Four such days exhaust the soft limit. At the hard cap the route returns **402** and the event is **PERMANENTLY LOST** (`api/routes/track.js:404-412`, the `return res.status(402)` at `:408`) — **§6 data loss caused by bot volume rather than by real usage.** A free-tier customer with genuine crawler exposure would burn their allowance on traffic they never had, hit the cap, and **then lose real events**. The failure mode is not "a customer is over-billed"; it is "a customer's real analytics stop while their quota was spent on machines."
 
 **Status: NOT fixed, and deliberately so.** Any fix here is a change to what gets metered, which is billing-adjacent and must not be an agent-initiated behavioural change. Recording the mechanism is the deliverable.
+
+### KI-109 — ENTITLEMENT DEFECT: paid sites are metered at pre-#428 caps, so the customer does not receive what the pricing page sells (2026-08-07, no realised harm, migration drafted NOT applied)
+
+**This is an entitlement defect, not a billing one.** Nobody is over-charged. The customer is under-served: **www.techrupt.pk is sold 1,000,000 pageviews/mo (`marketing/src/content/sections/pricing.md:47`) and metered at 150,000** — **6.7× below** what was bought. Free sites are sold 10,000 and metered 5,000 (**2×**).
+
+**Root cause — a repricing that reached nobody.** #428 (`eda53505`, 2026-07-26, *"repackage tiers to differentiate on volume, not features"*) rewrote `PLAN_DEFAULT_PV_LIMIT` (`api/lib/plan-features.js:18-26`) from `free 5_000 / starter 50_000 / growth 150_000 / scale 500_000` to `free 10_000 / starter 250_000 / growth 1_000_000 / scale 5_000_000`. Its diff touched `plan-features.js` **plus four test files and nothing else — no migration, no backfill.**
+
+That would be harmless if the defaults governed. They do not: `getPvLimit(plan, perSiteOverride)` (`plan-features.js:149-152`) returns the **override** whenever one is present, and `sites.pv_limit` carries a column **`DEFAULT 5000`** (`supabase/migrations/00000000000000_baseline_schema.sql:900`) — **so an override always exists and `PLAN_DEFAULT_PV_LIMIT` is dead code for every live row.** The repricing changed a table nothing reads.
+
+**Each prod row's value has a different origin — three mechanisms, none of them price metadata** (prod `zxjjjsipafojhzkkumvh`, read-only, 2026-08-07; four sites exist, so this is exhaustive):
+
+| domain | plan | pv_limit | how it got there |
+|---|---|---|---|
+| www.techrupt.pk | growth | 150,000 | Stripe webhook **fallback branch** — site created 2026-06-24 with a live subscription; the webhook wrote `getPvLimit('growth')` while the table still read `150_000`, i.e. **pre-#428** |
+| khalidrasool.com | free | 5,000 | column `DEFAULT 5000` — no subscription, the webhook never ran |
+| bookmentions.net | free | 5,000 | column `DEFAULT 5000` — same |
+| localhost:5173 | trial | 10,000 | the one-time backfill in `20260522000001_free_tier_and_plan_realign.sql` step 5 |
+
+**The comment that hid it for three investigations.** `plan-features.js:17` and the DB column comment (`baseline_schema.sql:919`) both said the value is *"set by Stripe webhook from price metadata"*. **No Stripe price carries `pv_limit` metadata** — so the stated mechanism could not have produced the stored values, and every search stalled on that contradiction. The real path is `pvLimitFromPrice` (`api/routes/billing.js:77-81`): metadata **if present**, otherwise a fallback to `getPvLimit(plan)` — the plan default **frozen at write time**. **The fallback is the normal case; metadata is the exception nobody uses.** Both comments are corrected in the PR that files this entry.
+
+**`Billing.jsx` was a FOSSIL, not an outlier.** `dashboard/src/pages/Billing.jsx:9-18` held its own table reading `free 5000 / starter 50000 / growth 150000 / scale 500000` — **exactly the pre-#428 values.** It was a frozen copy that stopped being updated at #428, which is why it appeared to "agree" with prod: it described the stale database rather than the sold entitlement. That made it look authoritative to a reader comparing it against real rows. It is deleted, and `Billing.jsx` now reads the dashboard entitlement mirror; a parity test pins the two tables pairwise so a replacement copy cannot drift silently.
+
+**No realised harm.** www.techrupt.pk used **541 pageviews in August** against its stale 150,000 cap. No site is near any cap, nothing has been rejected, and all four sites are founder-owned. The defect is entitlement, not an incident — **but it becomes real the moment any site's traffic passes its stale cap**, at which point `api/routes/track.js:408` returns 402 and the event is destroyed permanently (§6, no replay). See **KI-108**: that entry is bot volume consuming quota; this one is the quota itself being wrong. They compound — a site can be pushed toward a cap by traffic it never had, and that cap can be 6.7× lower than the one it paid for.
+
+**Status: migration DRAFTED, NOT APPLIED** (`supabase/migrations/20260807000000_backfill_pv_limit_to_plan_defaults.sql`). Per §8, CC writes the file and the founder applies it. It re-derives `pv_limit` from the current plan under a `GREATEST()` ceiling so **no row is ever lowered** — lowering a live cap is the one way this fix could cause the data loss it exists to prevent.
+
+**A backfill corrects today's four rows; it does not prevent the next repricing drifting identically.** The column default guarantees an override always exists, and the override always wins, so any future change to `PLAN_DEFAULT_PV_LIMIT` will again reach nobody. The recurrence options are set out in the PR that files this entry; **none is implemented here.**

@@ -2,20 +2,10 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useActiveSite } from '../hooks/useActiveSite'
 import { CreditCard, ExternalLink, Zap, CheckCircle2 } from 'lucide-react'
-import { normalizePlan } from '../lib/planFeatures'
+import { normalizePlan, getPvLimit } from '../lib/planFeatures'
 import { getPlanLabel } from '../lib/billing'
 import { createCheckout, getBillingPortal, getBillingStatus, fetchApi } from '../lib/api'
 
-// Default pageview limits per plan. The site's own pv_limit column takes precedence.
-const PLAN_DEFAULT_LIMITS = {
-  free:     5000,
-  trial:    10000,
-  starter:  50000,
-  growth:   150000,
-  scale:    500000,
-  inactive: 0,
-  archived: 0,
-}
 
 const PLANS = [
   {
@@ -120,7 +110,7 @@ export default function Billing() {
     ? billingLimit
     : siteLimit !== null
       ? siteLimit
-      : (PLAN_DEFAULT_LIMITS[plan] || 0)
+      : getPvLimit(plan)
 
   const usagePct  = limit > 0 ? Math.min(100, Math.round((usage / limit) * 100)) : 100
   const usageColor = limit === 0 ? 'bg-red-500' : (usagePct >= 95 ? 'bg-red-500' : usagePct >= 80 ? 'bg-amber-500' : 'bg-st-lime')
