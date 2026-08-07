@@ -3023,3 +3023,35 @@ Three facts about *how* `KI-100` was reached, recorded because the pattern is re
 3. **The certificates were read from the TLS handshake** — `openssl s_client -servername <host>`
    piped to `openssl x509` — **not from a provider console.** That is what makes the issuer and the
    per-hostname CN properties of *what is actually served*, rather than of what a dashboard reports.
+
+### KI-108 — bot traffic that passes the UA filter is METERED against paid pageview quota (2026-08-07, no realised harm, NOT fixed)
+
+**Mechanism.** The ingestion bot filter runs at `api/routes/track.js:171` (`isIngestionBotUserAgent`). The pageview meter runs 229 lines later at `api/routes/track.js:400` (`claimPageviewUsage` → Supabase RPC `claim_site_pageview_usage`). Anything that survives the filter and is typed `$pageview` is metered **unconditionally** — there is no second gate between them. This traffic survives the filter **by construction**; see **KI-107** for why it arrives at all. KI-107 is why the traffic gets in; this entry is what it costs.
+
+**The comment that makes the meter look safe.** `api/routes/track.js:392-394` reads, verbatim (the load-bearing phrase is on `:393`):
+
+> `// Only true $pageview events consume monthly quota. Custom events, conversions,`
+> `// and outbound clicks are excluded. Claim happens here (after all filtering/validation)`
+> `// to avoid burning quota for events that would have been dropped.`
+
+The claim *"after all filtering/validation"* is **TRUE, and load-bearing in the wrong direction.** Passing the UA filter **is** passing validation — so the comment reads as a safety guarantee it does not provide. On a source read the meter looks protected; it is protected only against traffic the filter already catches, which is exactly the traffic that is not the problem. **That phrasing is why this was not noticed earlier.**
+
+**Measured, prod.** Hard caps are `3×` free / `10×` paid (`api/lib/pageview-limits.js:22-23`):
+
+| site | plan | pv_limit | soft / hard cap | month | metered | stored in TB |
+|---|---|---|---|---|---|---|
+| www.techrupt.pk | growth | 150,000 | 150,000 / 1,500,000 | 2026-08 | 541 | 538 |
+| bookmentions.net | free | 5,000 | 5,000 / 15,000 | 2026-08 | 62 | 61 |
+| bookmentions.net | free | 5,000 | 5,000 / 15,000 | 2026-07 | 1,730 | 1,693 |
+| www.techrupt.pk | growth | 150,000 | 150,000 / 1,500,000 | 2026-07 | 689 | 561 |
+| www.techrupt.pk | growth | 150,000 | 150,000 / 1,500,000 | 2026-06 | 27 | — |
+
+**Provenance.** The `metered` column is `site_usage_monthly` in **prod Supabase** (`zxjjjsipafojhzkkumvh`) — **CC-queried, and independently orchestrator-confirmed** against the same table. The `stored in TB` column is the Tinybird `events` count of `event_type='$pageview'` per site-month — **CC-queried directly via the Tinybird MCP**, which reads the **prod** workspace (established by both site_ids resolving in prod Supabase and returning zero rows in staging). The two columns were read minutes apart, which is why August shows 541 vs 538 rather than an exact tie — see the reconciliation note below before treating any gap as a defect.
+
+**No realised harm — stated plainly.** bookmentions.net peaked at **1,730 against a 5,000 soft / 15,000 hard cap**; www.techrupt.pk at **689 against 150,000 / 1,500,000**. **Neither site approached either cap.** Nothing was rejected, no overage was billed, and both sites are **founder-owned**, so **no customer is exposed today**. This entry records a live mechanism, not an incident.
+
+**The meter is NOT over-counting — do not re-derive the July gap as a defect.** August reconciles exactly: `61/61`, and `541/538` is events landing between the two reads. July shows larger gaps (`1,730` vs `1,693`; `689` vs `561`) and those are **explained, not unexplained**: the Tinybird `events` history **begins 2026-07-07**, a dual-write cutover. The meter had been running before Tinybird held any rows, so July's metered figure legitimately covers days the stored figure cannot. June shows `—` for the same reason. **This gap is not drift and not a billing defect.** It was chased once and resolved; it is written down here so it is not chased again.
+
+**Why it still matters despite zero realised harm.** On **2026-07-18** a single day produced **1,441 pageviews** on a **free 5,000/mo** site — **~29% of the monthly allowance in one day.** Four such days exhaust the soft limit. At the hard cap the route returns **402** and the event is **PERMANENTLY LOST** (`api/routes/track.js:404-412`, the `return res.status(402)` at `:408`) — **§6 data loss caused by bot volume rather than by real usage.** A free-tier customer with genuine crawler exposure would burn their allowance on traffic they never had, hit the cap, and **then lose real events**. The failure mode is not "a customer is over-billed"; it is "a customer's real analytics stop while their quota was spent on machines."
+
+**Status: NOT fixed, and deliberately so.** Any fix here is a change to what gets metered, which is billing-adjacent and must not be an agent-initiated behavioural change. Recording the mechanism is the deliverable.
