@@ -1,6 +1,17 @@
 ---
 /**
- * V3 HOMEPAGE — preview route. NOT the live homepage.
+ * HOMEPAGE — this IS the live homepage, serving at /. The "preview route" wording
+ * this line used to carry was left behind by the cutover and contradicted the line
+ * beneath it.
+ *
+ * ── WHERE THE HANDOFF ACTUALLY IS ──────────────────────────────────────────────
+ * `design_handoff_sourcetrack/` — 334 files, OUTSIDE VERSION CONTROL, which is why
+ * "the design handoff" below cannot be resolved from this repo alone. Its README is
+ * explicit: `source/lib/*.jsx` are Babel-in-browser PROTOTYPES and are NOT to be
+ * lifted; the target stack is Astro, recreated as real Astro components. That
+ * recreation covered the sections and copy and stopped at the visual layer — each
+ * `data-mount` placeholder became a <p> describing the visual it replaced. 18
+ * distinct mounts, 30 occurrences on the handoff's index.html.
  *
  * Built at /v3 so it can be measured and reviewed before any cutover decision.
  * Promoted from /v3 to / — indexable. This REPLACED the v2 homepage.
@@ -40,6 +51,8 @@ import Bento from "@/layouts/v3/Bento.astro";
 import "@/styles/v3-tokens.css";
 import "@/styles/v3-home.css";
 
+import JourneyMockup from "@/components/JourneyMockup.astro";
+import HeroStatCallout from "@/components/HeroStatCallout.astro";
 import HowItWorksShowcase from "@/partials/HowItWorksShowcase.astro";
 import UseCaseCards from "@/partials/UseCaseCards.astro";
 
@@ -114,6 +127,11 @@ const comparison = [
           Every conversion carries its full path, first touch to payment, including AI
           tools your analytics can't see. One script tag.
         </p>
+        {/* Orphaned by the cutover: Hero.astro was its only renderer and no longer ships.
+            Re-homed rather than deleted — fixture-only, carries the §29.8 not-a-customer
+            disclaimer, and four guards in homepage-fixture-sections.test.js were asserting
+            against it while it rendered nowhere. */}
+        <HeroStatCallout />
       </Wrap>
     </section>
 
@@ -126,9 +144,13 @@ const comparison = [
             <span class="v3-frame-url">app.sourcetrack.example / dashboard</span>
           </div>
           <div class="v3-frame-body">
-            <p class="v3-disclosure">
-              Switch attribution models, open a lead journey, build a report.
-            </p>
+            {/* §29.4 requires the hero visual to SHOW an attribution story, not describe
+                one. Until this line the frame held a caption — prose standing in for the
+                product shot — and the whole homepage carried zero <img>, <svg> and <canvas>.
+                JourneyMockup is in-repo, fixture-only (no fetch, no Supabase — §29.5), and
+                rendered in this exact role on the v2 homepage until the cutover orphaned it.
+                Restored rather than rebuilt. */}
+            <JourneyMockup />
           </div>
         </div>
       </Wrap>
