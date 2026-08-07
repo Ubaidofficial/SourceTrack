@@ -541,3 +541,102 @@
   text-transform: uppercase; color: var(--v3-gray-500);
 }
 .v3 .v3-chiprow--tight { margin-top: 12px; }
+
+/* ============================================================================
+   §11 — GA4 vs SourceTrack compare slider
+   ============================================================================
+   ⚠️ #B3480E NOT PORTED. The handoff paints its AI tile with it; v3-tokens.css:33
+   records it as a TWO-CHARACTER near-collision with v1.4's #B4420E, and
+   v3-lift-detection.test.js fingerprints it. Same family as KI-112 — the tile it
+   painted is gone anyway (ai_revenue is gated), so nothing needs that colour.
+
+   ALL PAINT IS HERE, NOT IN style="". Only `--cmp-pos` and the bar `width` stay
+   inline, both computed and both layout-only. Wiring the demo in #700 took the page
+   from 0 to 22 paint-bearing inline styles; a slider is the same risk shape, so the
+   gradients and fills live in classes from the start.
+
+   MOTION: the pane clip and handle transitions sit inside
+   prefers-reduced-motion: no-preference, so still is the default. The JS side
+   removes only the idle nudge — dragging always works, because reduced motion is
+   about involuntary movement, not about disabling a control.
+   ========================================================================== */
+.v3 .v3-cmp {
+  position: relative;
+  display: grid;
+  border-radius: var(--v3-radius-md);
+  border: 1px solid var(--v3-border);
+  background: var(--v3-paper-card);
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  cursor: ew-resize;
+}
+.v3 .v3-cmp-pane { grid-area: 1 / 1; padding: 18px; min-width: 0; }
+.v3 .v3-cmp-pane--after { background: var(--v3-ink); }
+/* The reveal: the AFTER pane is clipped to the handle position. */
+.v3 .v3-cmp-pane--after .v3-cmp-clip {
+  clip-path: inset(0 0 0 var(--cmp-pos));
+  height: 100%;
+}
+.v3 .v3-cmp-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.v3 .v3-cmp-bar h4 { font-size: 13px; font-weight: 900; color: var(--v3-gray-700); }
+.v3 .v3-cmp-pane--after .v3-cmp-bar h4 { color: var(--v3-paper); }
+.v3 .v3-cmp-tag {
+  font-size: 10px; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: 99px;
+  background: var(--v3-gray-50); color: var(--v3-gray-500); border: 1px solid var(--v3-border);
+}
+/* §3.4 + KI-113: lime is a FILL here, never text on light. */
+.v3 .v3-cmp-tag--on { background: var(--v3-accent); color: var(--v3-ink); border-color: transparent; }
+.v3 .v3-cmp-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.v3 .v3-cmp-tile {
+  display: grid; gap: 2px; padding: 11px 12px;
+  border-radius: var(--v3-radius-sm);
+  background: var(--v3-gray-50); border: 1px solid var(--v3-border);
+}
+.v3 .v3-cmp-pane--after .v3-cmp-tile { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.1); }
+.v3 .v3-cmp-tile .l { font-size: 10px; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; color: var(--v3-gray-500); }
+.v3 .v3-cmp-tile .v { font-size: 26px; font-weight: 800; color: var(--v3-ink); font-variant-numeric: tabular-nums; }
+.v3 .v3-cmp-tile .v--sm { font-size: 20px; }
+.v3 .v3-cmp-tile .v--muted { color: var(--v3-gray-400); }
+.v3 .v3-cmp-tile .s { font-size: 11px; font-weight: 700; color: var(--v3-gray-500); }
+.v3 .v3-cmp-pane--after .v3-cmp-tile .v { color: var(--v3-paper); }
+.v3 .v3-cmp-pane--after .v3-cmp-tile .l,
+.v3 .v3-cmp-pane--after .v3-cmp-tile .s { color: rgba(255, 255, 255, 0.6); }
+.v3 .v3-cmp-list { margin-top: 14px; display: grid; gap: 4px; }
+.v3 .v3-cmp-lh {
+  display: flex; justify-content: space-between;
+  font-size: 10px; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--v3-gray-500); padding-bottom: 6px; border-bottom: 1px solid var(--v3-border);
+}
+.v3 .v3-cmp-pane--after .v3-cmp-lh { color: rgba(255, 255, 255, 0.5); border-color: rgba(255, 255, 255, 0.12); }
+.v3 .v3-cmp-li { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; padding: 6px 0; font-size: 12px; }
+.v3 .v3-cmp-li code { font-family: var(--font-mono, monospace); font-size: 11px; color: var(--v3-gray-700); }
+.v3 .v3-cmp-li b { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--v3-ink); }
+.v3 .v3-cmp-li em { font-style: normal; font-size: 10.5px; font-weight: 700; color: var(--v3-gray-500); }
+.v3 .v3-cmp-li--rev { grid-template-columns: 104px 1fr auto; }
+.v3 .v3-cmp-ch { font-size: 12px; font-weight: 800; color: var(--v3-paper); }
+.v3 .v3-cmp-li--rev b { color: var(--v3-paper); }
+.v3 .v3-cmp-track { height: 6px; border-radius: 99px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.v3 .v3-cmp-track i { display: block; height: 100%; border-radius: 99px; background: var(--v3-accent); }
+.v3 .v3-cmp-handle {
+  position: absolute; top: 0; bottom: 0; left: var(--cmp-pos);
+  width: 2px; background: var(--v3-accent); transform: translateX(-1px);
+}
+.v3 .v3-cmp-handle i {
+  position: absolute; top: 50%; left: 50%; width: 30px; height: 30px;
+  transform: translate(-50%, -50%); border-radius: 99px;
+  background: var(--v3-accent); border: 2px solid var(--v3-ink);
+}
+/* Visually hidden native range — keyboard and screen-reader path for the same control. */
+.v3 .v3-cmp-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .v3 .v3-cmp-pane--after .v3-cmp-clip { transition: clip-path 0.12s linear; }
+  .v3 .v3-cmp-handle { transition: left 0.12s linear; }
+  .v3 .v3-cmp-handle--nudge i { animation: v3-cmp-nudge 3.2s var(--v3-ease-in-out) 2; }
+}
+@keyframes v3-cmp-nudge {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50%      { transform: translate(-50%, -50%) scale(1.12); }
+}
