@@ -18,7 +18,7 @@ import {
   trackGlobalIpLimit
 } from '../middleware/rate-limit.js'
 import { resolveClientIp } from '../lib/ip-resolver.js'
-import { isBotUserAgent } from '../lib/bot-filter.js'
+import { isIngestionBotUserAgent } from '../lib/bot-filter.js'
 
 const router = express.Router()
 
@@ -221,22 +221,31 @@ router.post('/collect',
       const { site_key, url, referrer, utm_source, utm_medium, utm_campaign, device, browser, session_id, duration_seconds, entry_page, exit_page, event_type, event_name, properties } = req.body
       if (!site_key || !url) return res.status(400).json({ error: 'site_key and url required' })
 
-      // Bot filter — silent drop, 200 so crawlers don't retry
+      // Bot filter — silent drop, 200 so crawlers don't retry.
       //
-      // 🔴 KNOWN DEFECT, NOT FIXED IN THIS PR — see the separate /analytics/collect PR.
-      // This calls isBotUserAgent, the REPORTING predicate, at INGESTION. That is the
-      // wrong function: bot-filter.js:47 states that applying BOT_UA_PATTERN at
-      // ingestion "deleted real humans", because its `whatsapp` / `telegrambot` tokens
-      // also appear in the UA of a real person browsing inside those apps' in-app
-      // WebViews. This route is browser-facing and mounted (api/index.js:550).
+      // ⚠️ WAS isBotUserAgent (the REPORTING filter) UNTIL 2026-08-06. That was a
+      // WRONG-FUNCTION BUG, not a threshold choice: this route contradicted the very
+      // module it imports from. bot-filter.js:47 states it plainly —
       //
-      // The fix is a one-word swap to isIngestionBotUserAgent — the function that
-      // already exists for this purpose. It is annotated here rather than left silent
-      // because that PR may sit behind CI, and an invisible live defect is how this one
-      // survived three weeks. If you are reading this and the swap has not landed, it
-      // still needs to.
+      //   "BOT_UA_PATTERN above is the REPORTING filter; applying it at INGESTION
+      //    deleted real humans. ... these tokens must NOT gate ingestion — keeping
+      //    them DELETES human events (200, gone forever, no PostHog fallback).
+      //    Systematic loss on a WhatsApp-dominant .pk site."
+      //
+      // BOT_UA_PATTERN contains `whatsapp` and `telegrambot`, which appear in the UA
+      // of a REAL HUMAN browsing inside the WhatsApp/Telegram in-app WebView. This
+      // route is browser-facing and mounted (api/index.js:550), so every such human
+      // pageview was answered 200 and discarded. An ingestion drop is irreversible
+      // (§6) and raw user_agent is never persisted, so the loss is UNKNOWN and
+      // UNRECOVERABLE — there is no row to count, before or after this fix.
+      //
+      // The correct axis at ingestion is "does the agent EXECUTE JAVASCRIPT?", which
+      // is what isIngestionBotUserAgent encodes. Swapping to it also begins dropping
+      // googlebot / bingbot / scrapy — that is the ingestion pattern working as
+      // designed on a route that should have had it since the 2026-07-14 incident,
+      // not a widening. BOT_UA_PATTERN itself is unchanged.
       const ua = req.headers['user-agent'] || ''
-      if (isBotUserAgent(ua)) return res.json({ ok: true })
+      if (isIngestionBotUserAgent(ua)) return res.json({ ok: true })
 
       const supabase = getSupabase()
       // LEGACY ROUTE: select pv_limit for quota enforcement (140G-4)

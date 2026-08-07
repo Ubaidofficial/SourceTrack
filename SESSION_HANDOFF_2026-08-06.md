@@ -72,11 +72,45 @@ GitHub, the live databases, or a local build at write time. Squash merges defeat
 Also merged earlier: #638 (`1b47068d`), #639 (`473c4687`), #640 (`11bd997b`), #641 (issue), #642, #643 (`15d40e53`), #644 (`236fcc28`), #645 (`d17831cd`), #647 (`76990577`).
 
 ### #648 — the proxy finding worth remembering
-**Three of four reported "defects" did not survive investigation.** The DB held the *working* hostname (`track2`, which serves real tracker JS over valid TLS and returns the exact health JSON); `proxy.sourcetrack.ai` was correctly CNAME'd to the pull zone and needs no certificate of its own; and verification was never DNS-only. The **one real gap** was the one nobody had named: `verifySslAndRouting` hits `/.well-known/sourcetrack/proxy-health`, which `managedProxyEarlyGate` answers **itself** before the status check, never reaching the origin's static files. It proved the gate was up, not that the tracker was served.
+**Three of four reported "defects" did not survive investigation.** The DB held **a** working hostname (`track2`, which serves real tracker JS over valid TLS and returns the exact health JSON); `proxy.sourcetrack.ai` was correctly CNAME'd to the pull zone and needs no certificate of its own; and verification was never DNS-only. The **one real gap** was the one nobody had named: `verifySslAndRouting` hits `/.well-known/sourcetrack/proxy-health`, which `managedProxyEarlyGate` answers **itself** before the status check, never reaching the origin's static files. It proved the gate was up, not that the tracker was served.
+
+> ⚠️ **CORRECTED 2026-08-06 — `track2` is not "the" working hostname; it is one of two.**
+> Verified live: **both** `track.bookmentions.net` and `track2.bookmentions.net` serve
+> `tracker.min.js` (HTTP 200, 22,483 B raw / 12,568 B gzipped) and both return
+> `{"ok":true,"service":"sourcetrack-proxy"}`. Both hold valid certificates on pull zone
+> `6119064` — a control request to an unregistered sibling fails TLS, which is what proves
+> both were registered deliberately rather than one being an accident.
+>
+> **`managed_proxy_domains` holds exactly ONE row: `track2`. The hostname the customer's
+> browser actually contacts is `track.`, which matches no row.**
+>
+> **Why that works, and it is not a gate bypass.** `managedProxyEarlyGate` hard-404s on a
+> lookup miss — there is no fallthrough (`managed-proxy.js`, `if (record === null) return
+> res.status(404)`). Proven by probing `POST /api/track` on `track.` with an invalid
+> `site_key`: it returns **401 "Invalid site_key"**, not 404, so the gate ADMITTED the
+> hostname. A GET would have proved nothing — every GET on that pull zone is edge-cached.
+>
+> The mechanism is `managed-proxy.js:60-62`: when Bunny presents a valid
+> `x-st-proxy-secret` **and** a matching `cdn-pullzoneid`, the tenant is resolved from the
+> **`cdn-host` header, not the browser's Host**. Both hostnames sit on one pull zone, so the
+> CDN supplies the origin hostname it is configured with (`track2`) and the lookup matches.
+>
+> **The consequence: the hostname the gate authorises is not the hostname the browser
+> contacted.** The DB row and the customer-facing domain can drift indefinitely with nothing
+> detecting it — and the verification job resolves by the DB hostname, so it monitors
+> `track2` while `track.` carries the traffic. Do not "fix" this by editing the row; which
+> hostname is intended as live is a founder decision, pending.
 
 Now asserts **both** health AND a `tracker.min.js` GET with content-type + leading-bytes checks (length is explicitly not an assertion — a cached error page is a 200 with a body). Two-strike demotion so one CDN blip cannot disable a customer; **the strike counter rides in `error_code` as a `_STRIKE_n` suffix because no DDL was permitted — replace it if a column is ever added.**
 
-**F1 remains undone and is founder-gated:** registering `track2` on the pull zone needs `BUNNY_API_KEY` (§0 forbids agent use). Cheapest route is the existing **Verify** button in Integrations, which calls `addPullZoneHostname` + `loadFreeCertificate`. **Check the env vars first** (see §5).
+~~**F1 remains undone and is founder-gated:** registering `track2` on the pull zone needs `BUNNY_API_KEY` (§0 forbids agent use). Cheapest route is the existing **Verify** button in Integrations, which calls `addPullZoneHostname` + `loadFreeCertificate`. **Check the env vars first** (see §5).~~
+
+> ⚠️ **F1 IS DONE — corrected 2026-08-06.** `track2` is already registered on the pull zone
+> **with a valid certificate**, and so is `track.`. Verified by fetching both over HTTPS and
+> by a TLS control against an unregistered sibling, which fails cert validation. Acting on
+> the struck-through text would re-register an existing domain and *still* leave the
+> hostname that carries live traffic unmonitored — which is precisely how a stale hostname
+> in a handoff gets re-registered later. Nothing to do here.
 
 ---
 

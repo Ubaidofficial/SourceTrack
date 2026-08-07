@@ -53,7 +53,43 @@ export async function resolveCname(domain) {
  * Verifies that the custom domain terminates SSL and routes requests successfully to the API gateway.
  * Performs a GET request to the pending-safe path: /.well-known/sourcetrack/proxy-health
  * 
- * @param {string} domain 
+ * ⚠️ TWO KNOWN REASONS A 200 HERE MEANS LESS THAN IT LOOKS. Both must be fixed together;
+ * fixing either alone leaves a check that still cannot fail. Recorded 2026-08-06, not yet
+ * fixed — the fix is a founder ruling, and this note exists so the next reader does not
+ * mistake a green verification for a working customer install.
+ *
+ *   1. THE GATE ANSWERS THIS PATH ITSELF. managedProxyEarlyGate handles
+ *      /.well-known/sourcetrack/proxy-health before the status check and returns
+ *      {ok:true} without ever reaching the origin's static files. A 200 proves the gate
+ *      is up, not that the tracker is served. (Known since #648.)
+ *
+ *   2. THE RESPONSE IS EDGE-CACHED FOR 30 DAYS. Measured on a live customer domain:
+ *      `cache-control: public, max-age=2592000`, `cdn-cache: HIT`, with the cached copy
+ *      a day old at the time of measurement. A cache-buster query string does NOT force
+ *      a pull (the zone ignores query strings) and a `Cache-Control: no-cache` REQUEST
+ *      header does not bypass it either — both still returned HIT. So this check can
+ *      return 200 for a month after the origin stops answering.
+ *
+ *      ⚠️ verifyTrackerDelivery — #648's stronger half — is cached the SAME way:
+ *      `max-age=86400, stale-while-revalidate=604800, immutable`, also observed as
+ *      `cdn-cache: HIT`. That is up to 8 days of serving a stale success. The stronger
+ *      check is not exempt from the weaker check's problem.
+ *
+ * ⚠️ AND A DESIGN GAP, BROADER THAN EITHER. This function resolves the domain it is GIVEN,
+ * which comes from `managed_proxy_domains.domain` — the hostname registered as the CDN's
+ * origin. That is not necessarily the hostname a customer's browser contacts. Tenant
+ * resolution at the gate uses the `cdn-host` header supplied by the CDN
+ * (managed-proxy.js:60-62), so a site can serve live traffic on a hostname that appears in
+ * no row, while this job verifies a different hostname and reports healthy.
+ *
+ * Observed live 2026-08-06: `managed_proxy_domains` held one row (`track2.<domain>`) while
+ * the browser-facing hostname was `track.<domain>`. Both served; only one was monitored.
+ * So this job checks OUR plumbing rather than the CUSTOMER'S edge, and the table can drift
+ * from reality indefinitely with nothing detecting it. Whether the row should record the
+ * customer-facing hostname, or whether a second column is needed, is a schema decision and
+ * is deliberately NOT made here.
+ *
+ * @param {string} domain
  * @returns {Promise<boolean>} True if the routing and SSL are fully provisioned and functional
  */
 export async function verifySslAndRouting(domain) {
