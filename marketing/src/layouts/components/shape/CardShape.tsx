@@ -52,8 +52,8 @@ const CardShape = ({ children }: { children: React.ReactNode }) => {
             y2="153"
             gradientUnits="userSpaceOnUse"
           >
-            <stop stopColor="#BCD41C" />
-            <stop offset="1" stopColor="#D2EC2A" />
+            <stop stopColor="#D9FA64" />
+            <stop offset="1" stopColor="#CCF03F" />
           </linearGradient>
         </defs>
       </svg>
@@ -105,10 +105,10 @@ const CardShape = ({ children }: { children: React.ReactNode }) => {
             y2="366"
             gradientUnits="userSpaceOnUse"
           >
-            <stop stopColor={primaryColor ? primaryColor : "#BCD41C"} />
+            <stop stopColor={primaryColor ? primaryColor : "#D9FA64"} />
             <stop
               offset="1"
-              stopColor={secondaryColor ? secondaryColor : "#D2EC2A"}
+              stopColor={secondaryColor ? secondaryColor : "#CCF03F"}
             />
           </linearGradient>
         </defs>

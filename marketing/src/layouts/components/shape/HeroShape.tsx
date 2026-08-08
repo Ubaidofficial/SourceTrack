@@ -74,10 +74,10 @@ const HeroShape = () => {
           y2="518.5"
           gradientUnits="userSpaceOnUse"
         >
-          <stop stopColor={primaryColor ? primaryColor : "#BCD41C"} />
+          <stop stopColor={primaryColor ? primaryColor : "#D9FA64"} />
           <stop
             offset="1"
-            stopColor={secondaryColor ? secondaryColor : "#D2EC2A"}
+            stopColor={secondaryColor ? secondaryColor : "#CCF03F"}
           />
         </linearGradient>
         <linearGradient
@@ -88,10 +88,10 @@ const HeroShape = () => {
           y2="636"
           gradientUnits="userSpaceOnUse"
         >
-          <stop stopColor={primaryColor ? primaryColor : "#BCD41C"} />
+          <stop stopColor={primaryColor ? primaryColor : "#D9FA64"} />
           <stop
             offset="1"
-            stopColor={secondaryColor ? secondaryColor : "#D2EC2A"}
+            stopColor={secondaryColor ? secondaryColor : "#CCF03F"}
           />
         </linearGradient>
       </defs>

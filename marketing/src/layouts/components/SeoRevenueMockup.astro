@@ -48,19 +48,19 @@ const totalOrganicRevenueValue = pages.reduce(
 const totalOrganicRevenue = `$${totalOrganicRevenueValue.toLocaleString()}`;
 ---
 
-<div class="relative z-1 overflow-hidden rounded-[20px] border border-[#3D3830] bg-[#12100C]">
+<div class="relative z-1 overflow-hidden rounded-[20px] border border-[#3D3830] bg-[#1F2323]">
   <!-- Header -->
   <div
-    class="flex h-[44px] items-center justify-between gap-2 border-b border-white/10 bg-[#1B1811] px-4"
+    class="flex h-[44px] items-center justify-between gap-2 border-b border-white/10 bg-[#1B1F1F] px-4"
   >
-    <span class="truncate text-xs font-bold text-[#F6F3EB]">
+    <span class="truncate text-xs font-bold text-[#F2F4F3]">
       Search Console: organic revenue
     </span>
   </div>
 
   <!-- Hero summary header line -->
-  <div class="flex items-center justify-between border-b border-[#3D3830] bg-[#18150F] px-4 py-3">
-    <span class="text-xs font-bold uppercase tracking-wider text-[#A79E8C]">Est. Organic Revenue</span>
+  <div class="flex items-center justify-between border-b border-[#3D3830] bg-[#1B1F1F] px-4 py-3">
+    <span class="text-xs font-bold uppercase tracking-wider text-[#A8AFAF]">Est. Organic Revenue</span>
     <!-- The count-up is the point of this figure: it is a reduce() over the rows below, not a
          typed-in total, and #585's product-mechanic row asks the motion to show the mechanic
          rather than decorate it. The server renders the settled value, so a visitor with no JS,
@@ -90,12 +90,12 @@ const totalOrganicRevenue = `$${totalOrganicRevenueValue.toLocaleString()}`;
         {
           pages.map((p) => (
             <tr class="border-b border-[#3D3830] font-bold last:border-0">
-              <td class="max-w-[150px] truncate py-2.5 pr-2 font-mono text-[11px] text-[#F6F3EB]">
+              <td class="max-w-[150px] truncate py-2.5 pr-2 font-mono text-[11px] text-[#F2F4F3]">
                 {p.path}
               </td>
               <td class="py-2.5 px-2 text-right tabular-nums text-[#D5D0C3]">{p.conversions}</td>
               <td class="py-2.5 px-2 text-right tabular-nums text-primary">{p.revenue}</td>
-              <td class="py-2.5 pl-2 text-right tabular-nums text-[#A79E8C]">{p.clicks}</td>
+              <td class="py-2.5 pl-2 text-right tabular-nums text-[#A8AFAF]">{p.clicks}</td>
             </tr>
           ))
         }
@@ -104,11 +104,11 @@ const totalOrganicRevenue = `$${totalOrganicRevenueValue.toLocaleString()}`;
   </div>
 
   <!-- Truth label — §6, and the product's own disclosure -->
-  <div class="mx-4 mb-4 rounded-2xl border border-[#3D3830] bg-[#241F17] p-3.5">
-    <div class="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-[#A79E8C]">
+  <div class="mx-4 mb-4 rounded-2xl border border-[#3D3830] bg-[#282C2C] p-3.5">
+    <div class="mb-1 text-[10px] font-extrabold uppercase tracking-wider text-[#A8AFAF]">
       Estimated
     </div>
-    <p class="text-[10px] leading-normal text-[#A79E8C]">
+    <p class="text-[10px] leading-normal text-[#A8AFAF]">
       Matched by landing page and date range. Search Console reports aggregate query data, not
       user-level query&nbsp;&rarr;&nbsp;customer identity.
     </p>

@@ -35,17 +35,17 @@ const rows = [
   </div>
 
   <div
-    class="relative rounded-[32px] border border-white/10 bg-[#12100C] p-3 shadow-[0_30px_90px_rgba(31,35,35,.30)]"
+    class="relative rounded-[32px] border border-white/10 bg-[#1F2323] p-3 shadow-[0_30px_90px_rgba(31,35,35,.30)]"
     style="transform: rotate(-0.8deg)"
   >
-    <div class="overflow-hidden rounded-[22px] border border-[#3D3830] bg-[#1B1811]">
+    <div class="overflow-hidden rounded-[22px] border border-[#3D3830] bg-[#1B1F1F]">
       <!-- Window header -->
       <div
-        class="grid h-[48px] grid-cols-[80px_1fr_auto] items-center gap-2 border-b border-white/10 bg-[#1B1811] px-4 text-xs font-bold text-[#F6F3EB]"
+        class="grid h-[48px] grid-cols-[80px_1fr_auto] items-center gap-2 border-b border-white/10 bg-[#1B1F1F] px-4 text-xs font-bold text-[#F2F4F3]"
       >
         <div class="flex gap-[6px]">
-          <span class="h-2.5 w-2.5 rounded-full bg-[#C4381C]"></span>
-          <span class="h-2.5 w-2.5 rounded-full bg-[#FF7A33]"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-[#E54545]"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-[#F0602A]"></span>
           <span class="h-2.5 w-2.5 rounded-full bg-primary"></span>
         </div>
         <span class="truncate">SourceTrack — Attribution</span>
@@ -53,25 +53,25 @@ const rows = [
 
       <!-- KPI row: the four labels that matter for attribution -->
       <div class="grid grid-cols-2 gap-3 p-3 text-white">
-        <div class="rounded-2xl border border-[#3D3830] bg-[#241F17] p-3">
-          <div class="text-[10px] font-extrabold uppercase tracking-wider text-[#A79E8C]">Visitors</div>
+        <div class="rounded-2xl border border-[#3D3830] bg-[#282C2C] p-3">
+          <div class="text-[10px] font-extrabold uppercase tracking-wider text-[#A8AFAF]">Visitors</div>
           <div class="mt-1 text-2xl font-black tracking-tight text-white">12,480</div>
         </div>
-        <div class="rounded-2xl border border-[#3D3830] bg-[#241F17] p-3">
-          <div class="text-[10px] font-extrabold uppercase tracking-wider text-[#A79E8C]">Conversions</div>
+        <div class="rounded-2xl border border-[#3D3830] bg-[#282C2C] p-3">
+          <div class="text-[10px] font-extrabold uppercase tracking-wider text-[#A8AFAF]">Conversions</div>
           <div class="mt-1 text-2xl font-black tracking-tight text-white">318</div>
         </div>
 
         <!-- Revenue by source -->
-        <div class="col-span-2 rounded-2xl border border-[#3D3830] bg-[#241F17] p-3">
-          <div class="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-[#A79E8C]">
+        <div class="col-span-2 rounded-2xl border border-[#3D3830] bg-[#282C2C] p-3">
+          <div class="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-[#A8AFAF]">
             Revenue by source
           </div>
           <div class="grid gap-1.5">
             {
               rows.map((r) => (
                 <div class="flex items-center justify-between border-b border-[#3D3830] py-1 text-xs font-bold last:border-0">
-                  <span class="flex items-center gap-1.5 text-[#F6F3EB]">
+                  <span class="flex items-center gap-1.5 text-[#F2F4F3]">
                     <span class="flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center" aria-hidden="true">
                       {r.mark === "openai" && (
                         <svg viewBox="0 0 24 24" class="h-3.5 w-3.5">
@@ -84,7 +84,7 @@ const rows = [
                     </span>
                     {r.source}
                   </span>
-                  <span class="text-[#A79E8C]">{r.channel}</span>
+                  <span class="text-[#A8AFAF]">{r.channel}</span>
                   <span class="text-primary">{r.value}</span>
                 </div>
               ))
@@ -93,8 +93,8 @@ const rows = [
         </div>
 
         <!-- AI-referral share -->
-        <div class="col-span-2 rounded-2xl border border-[#3D3830] bg-[#241F17] p-3.5">
-          <div class="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-[#A79E8C]">
+        <div class="col-span-2 rounded-2xl border border-[#3D3830] bg-[#282C2C] p-3.5">
+          <div class="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-[#A8AFAF]">
             AI-referral share
           </div>
           <div class="flex items-center gap-3">
@@ -103,7 +103,7 @@ const rows = [
             </div>
             <span class="text-sm font-black text-primary">24%</span>
           </div>
-          <div class="mt-2 text-[10px] text-[#A79E8C]">
+          <div class="mt-2 text-[10px] text-[#A8AFAF]">
             ChatGPT, Claude and Perplexity, separated from direct traffic
           </div>
         </div>
