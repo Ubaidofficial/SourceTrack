@@ -817,3 +817,211 @@
   .v3 .v3-cov:has(#v3-cov-payments:checked) .v3-cov-panel[data-for="payments"],
   .v3 .v3-cov:has(#v3-cov-crm:checked)      .v3-cov-panel[data-for="crm"] { display: block; }
 }
+
+/* ── Hero orbit (home §1) ──────────────────────────────────────────────────
+   THE STATIC STATE IS THE COMPOSED FRAME. Everything below the motion block
+   renders the finished picture — rings, ten nodes, three acknowledged badges,
+   the lead card. The @media block only adds pulsing.
+
+   That ordering is the point. With reduced motion, or in a browser that ignores
+   the keyframes, a visitor sees exactly what the design shows, just still. The
+   SENT badges are in the MARKUP for the same reason: a badge that only appears
+   mid-animation does not exist for most visitors.
+
+   §2.6 accent density: this is lime on INK (12.17:1), and the lime here is a
+   ring, three small badges and one flag — a few hundred px² on a ~460px panel,
+   nowhere near the 15% ceiling. It is also NOT behind primary text: the headline
+   sits in the adjacent column, never on top of this. */
+
+.v3 .v3-orbit {
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 1 / 0.92;
+  min-block-size: 340px;
+  padding: 18px;
+  border-radius: 22px;
+  background: var(--v3-black-900);
+  box-shadow: var(--v3-shadow-deep);
+  overflow: hidden;
+}
+
+.v3 .v3-orbit-status {
+  position: absolute;
+  inset-block-start: 18px;
+  inset-inline-start: 18px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  font-weight: 700;
+  color: #f2f4f3;
+  font-variant-numeric: tabular-nums;
+}
+.v3 .v3-orbit-pip {
+  inline-size: 7px; block-size: 7px;
+  border-radius: 999px;
+  background: var(--v3-positive);
+}
+
+/* ── The field ───────────────────────────────────────────────────────────── */
+.v3 .v3-orbit-field {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  /* A SIZE container, so nodes can position themselves against the PANEL via cqmin.
+     Without this the orbit radius below has nothing container-relative to resolve
+     against — which is exactly how the first draft failed: `translate(0, 78% * -0.5)`
+     resolved the percentage against each node's own 30px box (≈ -12px) and piled all
+     ten destinations on top of the core. */
+  container-type: size;
+}
+
+.v3 .v3-orbit-ring {
+  position: absolute;
+  border-radius: 999px;
+  border: 1px solid rgba(204, 240, 63, 0.13);
+  aspect-ratio: 1;
+}
+.v3 .v3-orbit-ring--1 { inline-size: 34%; }
+.v3 .v3-orbit-ring--2 { inline-size: 58%; }
+.v3 .v3-orbit-ring--3 { inline-size: 84%; border-color: rgba(255, 255, 255, 0.06); }
+
+.v3 .v3-orbit-core {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  inline-size: 62px; block-size: 62px;
+  border-radius: 18px;
+  background: var(--v3-black-700);
+  border: 1px solid rgba(204, 240, 63, 0.28);
+  box-shadow: 0 0 0 6px rgba(204, 240, 63, 0.06);
+}
+
+/* Orbit placement. The double rotate keeps each tile upright while positioning it on
+   the ring — rotate out to the angle, translate along the radius, rotate back.
+
+   `--r` is UNITLESS and is multiplied by 0.5cqmin here, so it reads on the same scale
+   as the rings' `inline-size` above: --r:84 lands on ring 3 (84% wide, radius 42%).
+   Must not be a raw percentage — inside translate() that resolves against the node's
+   own box, not the field. */
+.v3 .v3-orbit-node {
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transform:
+    rotate(var(--a))
+    translate(0, calc(var(--r) * -0.5cqmin))
+    rotate(calc(var(--a) * -1));
+}
+
+.v3 .v3-orbit-sent {
+  position: absolute;
+  inset-block-start: calc(100% + 4px);
+  inset-inline-start: 50%;
+  translate: -50% 0;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--v3-accent);
+  color: var(--v3-ink);
+  font-size: 8.5px;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.v3 .v3-orbit-node.is-sent :global(.bm-tile) {
+  box-shadow: inset 0 0 0 1px var(--v3-accent), 0 0 0 3px rgba(204, 240, 63, 0.18);
+}
+
+/* ── Lead card ───────────────────────────────────────────────────────────── */
+.v3 .v3-orbit-lead {
+  position: absolute;
+  inset-block-end: 18px;
+  inset-inline-start: 18px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-inline-size: calc(100% - 36px);
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--v3-black-700);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+.v3 .v3-orbit-avatar {
+  flex: none;
+  display: grid; place-items: center;
+  inline-size: 34px; block-size: 34px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 17px;
+  line-height: 1;
+}
+.v3 .v3-orbit-lead-body { display: grid; min-width: 0; }
+.v3 .v3-orbit-lead-body strong { font-size: 13.5px; font-weight: 800; color: #f2f4f3; }
+.v3 .v3-orbit-lead-meta { font-size: 11.5px; font-weight: 600; color: #a8afaf; }
+.v3 .v3-orbit-flag {
+  flex: none;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--v3-accent);
+  color: var(--v3-ink);
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .v3 .v3-orbit { padding: 14px; min-block-size: 300px; }
+  .v3 .v3-orbit-lead { inset-inline-start: 14px; inset-block-end: 14px; padding: 8px 10px; }
+  .v3 .v3-orbit-flag { display: none; }   /* the card must not wrap at 320px */
+}
+
+/* ── MOTION — purely additive. Everything above already renders. ──────────── */
+@media (prefers-reduced-motion: no-preference) {
+  /* §3.1.1's cadence: one lead lands every 2.6s and the acknowledged destinations
+     answer. Staggered by --i so the ring answers in sequence rather than in unison. */
+  .v3 .v3-orbit-pip {
+    animation: v3-orbit-pip 2.6s ease-in-out infinite;
+  }
+  .v3 .v3-orbit-core {
+    animation: v3-orbit-core 2.6s var(--v3-ease-out) infinite;
+  }
+  .v3 .v3-orbit-node.is-sent {
+    animation: v3-orbit-ack 2.6s var(--v3-ease-out) infinite;
+    animation-delay: calc(var(--i) * 0.14s);
+  }
+  .v3 .v3-orbit-lead {
+    animation: v3-orbit-lead 2.6s var(--v3-ease-out) infinite;
+  }
+}
+
+@keyframes v3-orbit-pip {
+  0%, 70%, 100% { opacity: 1; }
+  85%           { opacity: 0.35; }
+}
+@keyframes v3-orbit-core {
+  0%, 55%, 100% { box-shadow: 0 0 0 6px rgba(204, 240, 63, 0.06); }
+  22%           { box-shadow: 0 0 0 13px rgba(204, 240, 63, 0.14); }
+}
+/* Scales the TILE, never opacity — a node that fades would be briefly unreadable,
+   and these carry the destination names for assistive tech. */
+@keyframes v3-orbit-ack {
+  0%, 46%, 100% { scale: 1; }
+  60%           { scale: 1.09; }
+}
+@keyframes v3-orbit-lead {
+  0%, 100% { transform: translateY(0); }
+  16%      { transform: translateY(-3px); }
+}

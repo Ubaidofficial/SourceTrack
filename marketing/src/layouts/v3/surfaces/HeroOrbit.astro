@@ -1,0 +1,107 @@
+---
+/**
+ * HeroOrbit — the hero's product metaphor. Home §1.
+ *
+ * A conversion lands, and it fans out to the destinations that need it. That is the
+ * whole product in one picture, and it is why §29.4 rejected a generic KPI dashboard
+ * here: the hero visual has to show an attribution story, not a screenshot of numbers.
+ *
+ * ── RESTORES WHAT #697 CUT ──────────────────────────────────────────────────
+ * The orbit was removed in #697 as "the WRONG visual" under §29.4 and replaced with a
+ * CSS path-beam. The v4 design bundle restores it, and the founder confirmed
+ * (2026-08-08). §29.4's objection was to a generic dashboard — which this is not — so
+ * the reversal is consistent with the rule rather than an exception to it.
+ *
+ * ── CSS-ONLY, AND THE STATIC STATE IS THE COMPOSED FRAME ────────────────────
+ * No island, no timer, no JS. The markup renders the finished picture: rings, ten
+ * destinations, three of them already acknowledged, and the lead card. Animation only
+ * ADDS pulsing on top of that, inside `prefers-reduced-motion: no-preference`.
+ *
+ * So the degraded path is not a degraded picture. With JS off, with reduced motion, or
+ * on a browser that ignores the keyframes entirely, a visitor sees exactly what the
+ * design shows — just still. That is the handoff's cardinal rule ("if the animation
+ * cannot run, the content must still be visible") applied to the largest visual on the
+ * page, and it is why the SENT badges are in the MARKUP rather than added by a
+ * keyframe: a badge that only exists mid-animation does not exist for most visitors.
+ *
+ * ── TRUTHFULNESS ────────────────────────────────────────────────────────────
+ * Every value here is fixture copy and none of it is presented as a customer's. It
+ * claims no live delivery, no real latency and no real revenue — it illustrates the
+ * mechanism. §29.8's one-line page disclosure covers the page it sits on. §6 forbids
+ * inventing a conversion, and nothing here counts, totals or aggregates anything.
+ *
+ * Destination marks route through BrandMark, so each is an officially-sourced asset or
+ * a text label (§35.4). Today that is 0/100 sourced, so they render as monogram tiles —
+ * legible and on-grid, never an approximated logo.
+ */
+import BrandMark from "@/components/BrandMark.astro"
+import StLogo from "@/components/StLogo.astro"
+
+interface Destination {
+  slug: string
+  /** Degrees clockwise from 12 o'clock. */
+  angle: number
+  /** Distance from centre, UNITLESS. Multiplied by 0.5cqmin in CSS, so 84 lands on
+   *  ring 3 (inline-size 84%, i.e. radius 42%). A raw % here would resolve against the
+   *  30px tile instead of the panel — which piled all ten nodes on the core. */
+  radius: number
+  /** Rendered with an acknowledged badge in the STATIC frame. Exactly three, per §3.1.1. */
+  sent?: boolean
+}
+
+// Ten destinations on three rings. Angles are hand-placed rather than evenly divided:
+// an even split reads as a clock face, and the design's arrangement is deliberately
+// irregular so the eye reads a network rather than a dial.
+const DESTINATIONS: Destination[] = [
+  { slug: "meta-capi",     angle: 355, radius: 78, sent: true },
+  { slug: "google-ads",    angle: 42,  radius: 82 },
+  { slug: "linkedin-capi", angle: 74,  radius: 88 },
+  { slug: "hubspot",       angle: 108, radius: 62 },
+  { slug: "tiktok-events", angle: 133, radius: 86 },
+  { slug: "slack",         angle: 168, radius: 74, sent: true },
+  { slug: "pinterest",     angle: 200, radius: 84 },
+  { slug: "microsoft-ads", angle: 250, radius: 66, sent: true },
+  { slug: "salesforce",    angle: 288, radius: 58 },
+  { slug: "snap-capi",     angle: 318, radius: 44 }
+]
+---
+
+<div class="v3-orbit" role="img"
+     aria-label="A conversion fanning out to ten advertising, CRM and alerting destinations">
+  <div class="v3-orbit-status">
+    <i class="v3-orbit-pip" aria-hidden="true"></i>
+    Live · {DESTINATIONS.length} destinations
+  </div>
+
+  <div class="v3-orbit-field" aria-hidden="true">
+    <span class="v3-orbit-ring v3-orbit-ring--1"></span>
+    <span class="v3-orbit-ring v3-orbit-ring--2"></span>
+    <span class="v3-orbit-ring v3-orbit-ring--3"></span>
+
+    <span class="v3-orbit-core">
+      <StLogo size={38} />
+    </span>
+
+    {DESTINATIONS.map((d, i) => (
+      <span
+        class:list={["v3-orbit-node", d.sent && "is-sent"]}
+        style={`--a:${d.angle}deg; --r:${d.radius}; --i:${i}`}
+      >
+        <BrandMark slug={d.slug} size={30} />
+        {d.sent && <em class="v3-orbit-sent">Sent</em>}
+      </span>
+    ))}
+  </div>
+
+  {/* The lead card. Fixture copy — a first name and an initial, no email, no amount
+      presented as revenue. §26 bars inventing a person; this is plainly illustrative
+      and the page carries §29.8's disclosure. */}
+  <div class="v3-orbit-lead">
+    <span class="v3-orbit-avatar" aria-hidden="true">🧑🏽‍💻</span>
+    <span class="v3-orbit-lead-body">
+      <strong>Noah F.</strong>
+      <span class="v3-orbit-lead-meta">35s · LinkedIn</span>
+    </span>
+    <em class="v3-orbit-flag">Qualified · form fill</em>
+  </div>
+</div>
