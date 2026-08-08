@@ -341,3 +341,23 @@
 
 /* ── §29.8 disclosure — ONE line, footer only. Not per-card badges. ──────── */
 .v3 .v3-disclosure { margin: 0; font-size: 13px; color: var(--v3-gray-600); }
+
+/* ── Hero: two columns (v4 design) ─────────────────────────────────────────
+   Copy left, orbit right. Collapses to one column at ≤1040 with the HEADLINE
+   FIRST and the orbit second — the README states that order explicitly, and
+   source order already delivers it, so no `order:` override is needed and the
+   DOM sequence matches the visual one (which is what a screen reader follows). */
+.v3 .v3-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 48px;
+  align-items: center;
+}
+.v3 .v3-hero-copy { min-width: 0; }
+.v3 .v3-hero-visual { min-width: 0; }
+
+@media (max-width: 1040px) {
+  .v3 .v3-hero-grid { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+  /* README: "orbit capped at 430px and centred" once stacked. */
+  .v3 .v3-hero-visual { max-inline-size: 430px; margin-inline: auto; inline-size: 100%; }
+}

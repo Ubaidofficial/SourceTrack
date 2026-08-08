@@ -88,6 +88,7 @@ import HeroTicker from "@/components/v3/HeroTicker.jsx";
 import CoverageTabs from "@/layouts/v3/surfaces/CoverageTabs.astro";
 import LiveVisitors from "@/components/v3/LiveVisitors.jsx";
 import PathBeam from "@/layouts/v3/surfaces/PathBeam.astro";
+import HeroOrbit from "@/layouts/v3/surfaces/HeroOrbit.astro";
 import CaptureIcon from "@/layouts/v3/surfaces/CaptureIcon.astro";
 import ChannelMarquee from "@/layouts/v3/surfaces/ChannelMarquee.astro";
 import ChipRow from "@/layouts/v3/surfaces/ChipRow.astro";
@@ -170,6 +171,12 @@ const comparison = [
     {/* 1 — HERO */}
     <section class="v3-hero">
       <Wrap>
+        {/* Two columns per the v4 design: copy left, orbit right. Collapses at ≤1040
+            with the HEADLINE FIRST and the orbit second — the README is explicit about
+            that order, and source order here already gives it without an `order:`
+            override, so the DOM and the visual sequence agree. */}
+        <div class="v3-hero-grid">
+        <div class="v3-hero-copy">
         <div class="v3-hero-meta">
           <span class="v3-pill">One script tag</span>
           <span class="v3-pill">From $49/mo</span>
@@ -188,10 +195,22 @@ const comparison = [
             viewports and there is no reason to hydrate it before it is seen. */}
         <HeroTicker client:visible />
         <HeroStatCallout />
-          {/* Mechanism illustration, CSS-only. Placed in its OWN row beneath the hero
-              copy — §2.6 forbids lime as a wash BEHIND primary content, so it sits
-              adjacent, never underneath. It labels nothing and implies no delivery. */}
-          <PathBeam />
+        </div>
+
+        {/* The orbit — restores what #697 cut, confirmed by the founder 2026-08-08.
+            §29.4's objection was to a generic KPI dashboard; this is the attribution
+            story that rule asks for. CSS-only, and its STATIC state is the composed
+            frame, so reduced motion and no-JS both see the finished picture. */}
+        <div class="v3-hero-visual">
+          <HeroOrbit />
+        </div>
+        </div>
+
+        {/* PathBeam stays, in its own full-width row below both columns. It is a
+            different claim from the orbit — the orbit shows fan-OUT to destinations,
+            the beam shows the path INTO the record — and §2.6 still forbids lime as a
+            wash behind primary content, so it sits adjacent, never underneath. */}
+        <PathBeam />
       </Wrap>
     </section>
 

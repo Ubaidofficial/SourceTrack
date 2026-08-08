@@ -132,6 +132,16 @@ export const V3_PAGE_PAIRS = {
     // a carried-forward ratio survives a surface flip without the text's own CSS
     // changing. Deleted rather than repointed at a surface that is not there.
     //
+    // Hero orbit — a dark panel (--v3-black-900) with a lighter card on it
+    // (--v3-black-700). Scored separately because they are two surfaces, and a pair
+    // carried across a surface flip is the TrustBar 10.54 -> 1.22 failure below.
+    { id: 'orbit status label', sel: '.v3-orbit-status', fg: '#F2F4F3', bg: '#141818', level: 'AA' },
+    { id: 'orbit lead name', sel: '.v3-orbit-lead-body strong', fg: '#F2F4F3', bg: '#303636', level: 'AA' },
+    { id: 'orbit lead meta', sel: '.v3-orbit-lead-meta', fg: '#A8AFAF', bg: '#303636', level: 'AA' },
+    // Ink on lime — §3.6: lime is a SURFACE you put dark text on, never a text colour.
+    { id: 'orbit qualified flag', sel: '.v3-orbit-flag', fg: '#1F2323', bg: '#CCF03F', level: 'AA' },
+    { id: 'orbit sent badge', sel: '.v3-orbit-sent', fg: '#1F2323', bg: '#CCF03F', level: 'AA' },
+
     // Coverage's own pairs, scored on --v3-paper-card (#FFFFFF):
     { id: 'coverage tab (resting)', sel: '.v3-cov-tab', fg: '#586161', bg: '#FFFFFF', level: 'AA' },
     { id: 'coverage tab (selected)', sel: '.v3-cov-tab', fg: '#FFFFFF', bg: '#1F2323', level: 'AA' },
