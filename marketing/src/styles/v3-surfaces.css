@@ -127,10 +127,16 @@
 /* ── Monogram tiles (channel-tiles) and mark row ─────────────────────────── */
 /* §35.4: no reconstructed third-party brand marks. The handoff's own answer is a
    single-letter monogram or a text label, never a drawn logo — followed here. */
+/* max-inline-size is LOAD-BEARING, not cosmetic. These are aspect-ratio:1 squares, so
+   their height follows their width — rendered at full Wrap width the grid made each tile
+   ~440px tall and the section showed six enormous empty squares. Bounding the grid means
+   the component cannot be broken again by whatever container it is dropped into. */
 .v3 .v3-tiles {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
+  max-inline-size: 168px;
+  margin-block-start: 12px;
 }
 .v3 .v3-tile {
   display: inline-flex;
