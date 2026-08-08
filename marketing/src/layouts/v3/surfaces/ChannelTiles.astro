@@ -1,15 +1,34 @@
 ---
-// Channel monogram tiles — the handoff's `channel-tiles` mount.
-//
-// §35.4 BANS RECONSTRUCTED THIRD-PARTY MARKS, and the handoff's own answer is a
-// single-letter monogram (`{n[0]}`) rather than a drawn logo. Followed exactly:
-// the first letter of each channel name, never an approximated brand mark.
-//
-// Class-first, not the handoff's inline styles (ruling 5).
-const channels = ['Google Ads', 'Google', 'Direct', 'ChatGPT', 'LinkedIn', 'Referral'];
+/**
+ * Channel tiles — the handoff's `channel-tiles` mount. Lives INSIDE the bento's
+ * "Channels" cell.
+ *
+ * ── TWO DEFECTS THIS FIXES, BOTH VISIBLE ON THE LIVE PAGE ───────────────────
+ * 1. UNCONSTRAINED SIZE. The tiles are `aspect-ratio: 1` in a 3-column grid. That is
+ *    correct inside a narrow bento cell and catastrophic anywhere else: rendered at
+ *    full `Wrap` width the grid made each tile ~440px WIDE and therefore ~440px TALL,
+ *    so the section showed six enormous empty squares each holding one tiny letter.
+ *    A `max-inline-size` now bounds it wherever it is placed, so the component cannot
+ *    be broken again by its container.
+ * 2. WRONG PLACE. It rendered full-width BETWEEN the section heading and the bento,
+ *    while the bento's own "Channels" cell — the one the design puts these in — was a
+ *    heading and a paragraph with nothing under it. Moved inside that cell.
+ *
+ * ── REAL MARKS NOW ──────────────────────────────────────────────────────────
+ * This shipped as single-letter monograms because §35.4 bars reconstructed marks and
+ * nothing was sourced yet. 83 marks are now sourced from each vendor's own domain, so
+ * BrandMark renders the real logo where one exists and falls back to a monogram on our
+ * own tile where it does not — never an approximated mark.
+ */
+import BrandMark from "@/components/BrandMark.astro"
+
+// Slugs, not display names: BrandMark resolves the label from the registry, so the
+// tile and its accessible name cannot disagree about which company this is.
+const CHANNELS = ["google-ads", "google-organic", "chatgpt", "linkedin", "meta-ads", "claude"]
 ---
+
 <div class="v3-tiles">
-  {channels.map((name) => (
-    <span class="v3-tile" title={name} aria-label={name}>{name.charAt(0)}</span>
+  {CHANNELS.map((slug) => (
+    <span class="v3-tile"><BrandMark slug={slug} size={22} /></span>
   ))}
 </div>

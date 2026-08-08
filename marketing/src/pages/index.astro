@@ -187,8 +187,9 @@ const comparison = [
         </div>
         <h1>Know which channels <em>actually make you money.</em></h1>
         <p class="v3-hero-sub">
-          Every conversion carries its full path, first touch to payment, including AI
-          tools your analytics can't see. One script tag.
+          Every conversion carries its full path, first touch to payment — including the
+          ChatGPT, Claude, Gemini and Perplexity referrals your analytics files as
+          &ldquo;Direct.&rdquo; One script tag, cookieless by default.
         </p>
         {/* Orphaned by the cutover: Hero.astro was its only renderer and no longer ships.
             Re-homed rather than deleted — fixture-only, carries the §29.8 not-a-customer
@@ -285,7 +286,7 @@ const comparison = [
         <SectionHead
           eyebrow="Product tour"
           heading="Multi-touch attribution, in action."
-          lede="Four surfaces that answer four different questions — who is on the site right now, where the revenue came from, which assistants are sending buyers, and what organic search is really worth."
+          lede="Four surfaces, four different questions — who is on the site right now, where the revenue actually came from, which AI assistants are sending buyers, and what organic search is really worth once you attach money to it."
         />
         <div class="v3-frame">
           <div class="v3-frame-chrome">
@@ -372,7 +373,7 @@ const comparison = [
         <SectionHead
           eyebrow="Measure"
           heading="Nine attribution models. One dataset underneath."
-          lede="Attribution arguments are usually model arguments in disguise. First touch, last touch, linear, time decay, W-shaped, full path and more — the same dataset, re-credited."
+          lede="Attribution arguments are usually model arguments in disguise. First touch, last touch, both non-direct variants, linear, U-shaped, W-shaped, time decay and AI platforms — the same $21,430, credited nine different ways. Nothing re-tagged, nothing re-collected."
         />
           {/* Replaces a static name-chip list. The section's argument is that credit
               MOVES while visits and conversions do not — chips cannot make it; the
@@ -392,7 +393,7 @@ const comparison = [
         <SectionHead
           eyebrow="The GA4 problem"
           heading="The GA4 alternative built for revenue, not pageviews."
-          lede="Compare a default GA4 report with the SourceTrack revenue view. Same week, same traffic — but one of them can tell you which channel paid for itself."
+          lede="Drag to compare a default GA4 report with the SourceTrack revenue view. Same week, same traffic, same visitors — but only one of them can tell you which channel paid for itself, and which one you are quietly funding."
         />
           {/* handoff `compare`. TWO of its four SourceTrack tiles were REPLACED, not
               ported: it headlines "AI Search revenue" and "Best conversion rate", and
@@ -409,10 +410,8 @@ const comparison = [
         <SectionHead
           eyebrow="Everything in one tracker"
           heading="Source. Journey. Conversion. Revenue."
-          lede="Every block is a real report you can pin, rebuild, or send to a client — running on the same dataset as the demo workspace above."
+          lede="Every block is a real report you can pin, rebuild, or send to a client — all of it running on the same dataset as the demo workspace above, so no two views can disagree."
         />
-          {/* handoff `channel-tiles` — monogram tiles, §35.4: never a drawn mark. */}
-          <ChannelTiles />
         <Bento>
           <div class="v3-bento-cell v3-bento-cell-dark" style="grid-column: span 7">
             <h3>Stitch first touch, last touch, assists, and revenue into one view.</h3>
@@ -472,7 +471,11 @@ const comparison = [
           </div>
           <div class="v3-bento-cell" style="grid-column: span 3">
             <h3>Channels</h3>
-            <p>Paid, organic, social, AI and referral sources classified on arrival.</p>
+            <p>Paid, organic, social, AI and referral sources classified on arrival — no manual tagging, no rules to maintain.</p>
+            {/* Moved here from a stray full-width render above the bento, where the grid
+                sized each tile to ~440px and the section showed six empty squares. This
+                cell is where the design puts them, and it was empty. */}
+            <ChannelTiles />
           </div>
         </Bento>
       </Wrap>
@@ -484,7 +487,7 @@ const comparison = [
         <SectionHead
           eyebrow="Act"
           heading="Attribution that leaves the dashboard."
-          lede="A report nobody acts on is an expensive screenshot."
+          lede="A report nobody acts on is an expensive screenshot. Qualified leads and closed revenue go back to the platforms that bid, the CRM your reps live in, and the channel where the decision actually gets made."
         />
           {/* handoff `sync-list`. The live state resolves to a lime-family token, not the
               handoff's #5E7A08 — §3.4:439 forbids a second success green. */}
@@ -554,7 +557,7 @@ const comparison = [
         <SectionHead
           eyebrow="Why not just…"
           heading="Your CRM records the deal. It can’t explain it."
-          lede="A CRM starts tracking at the form fill. Free analytics never sees revenue. Form trackers only catch the last click."
+          lede="A CRM starts tracking at the form fill. Free analytics never sees revenue. Form trackers only catch the last click, and enterprise attribution prices like a headcount. This is the fourth option — the layer underneath the tools you already pay for."
         />
           {/* handoff `mark-row` — text labels only (§35.4). */}
           {/* The handoff puts a mark-row under each comparison COLUMN, not one row for the
@@ -609,7 +612,7 @@ const comparison = [
         <SectionHead
           eyebrow="FAQ"
           heading="The questions that come up every time."
-          lede="Objections, answered. Still stuck on something specific? The comparison page goes deeper."
+          lede="The objections that come up on every call, answered plainly. Still stuck on something specific? The comparison page goes deeper on how this differs from what you are running today."
         />
         <div class="v3-faq">
           {faqs.map((f) => (
