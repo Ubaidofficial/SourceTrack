@@ -158,6 +158,11 @@ export const V3_PAGE_PAIRS = {
     { id: 'two-leads converting touch', sel: '.v3-two-touch--won', fg: '#1F2323', bg: '#CCF03F', level: 'AA' },
     { id: 'two-leads question chip', sel: '.v3-two-quote', fg: '#586161', bg: '#FFFFFF', level: 'AA' },
 
+    // §5 product tour: the two labeled chip-row groups, added when the section's
+    // two anonymous chip rows got names.
+    { id: 'frame split label', sel: '.v3-frame-split-label', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'mini-table channel name', sel: '.v3-minitbl-ch', fg: '#1F2323', bg: '#FFFFFF', level: 'AA' },
+
     // Hero orbit — a dark panel (--v3-black-900) with a lighter card on it
     // (--v3-black-700). Scored separately because they are two surfaces, and a pair
     // carried across a surface flip is the TrustBar 10.54 -> 1.22 failure below.

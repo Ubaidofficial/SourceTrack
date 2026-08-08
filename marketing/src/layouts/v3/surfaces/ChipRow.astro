@@ -8,16 +8,29 @@
 // that differ by their props would be lifting the handoff's file layout rather
 // than its design.
 //
+// UPGRADED from text-only to optionally carrying a BrandMark. §35.4's "labels are
+// text, no drawn marks" was written when nothing was sourced; now that 83 marks
+// are (marketing/src/lib/brand-marks.js), a plain grey pill next to a page full of
+// real logo tiles is what read as "not optimized". Pass `slugs` (same length/order
+// as `items`) to render a mark per chip; omit it to keep the original text-only
+// pill, which is still correct for names with no registry entry (attribution
+// MODEL names, for instance — "Linear", "W-shaped" are not companies).
+//
 // ai-chips is built CLASS-FIRST (ruling 5). The handoff uses inline
 // `style={{ background: 'rgba(255,255,255,…)' }}`; v3-page-pairs.mjs:552-553
 // fails on any paint property in a style attribute, and a colour there is also
 // invisible to the contrast audit — no selector to register a pair against.
-//
-// §35.4: labels are text. No drawn marks.
-interface Props { items: string[]; more?: string }
-const { items, more } = Astro.props;
+import BrandMark from "@/components/BrandMark.astro"
+
+interface Props { items: string[]; slugs?: string[]; more?: string }
+const { items, slugs, more } = Astro.props;
 ---
 <div class="v3-chiprow">
-  {items.map((label) => <span class="v3-chip">{label}</span>)}
+  {items.map((label, i) => (
+    <span class="v3-chip">
+      {slugs?.[i] && <span aria-hidden="true"><BrandMark slug={slugs[i]} size={16} /></span>}
+      {label}
+    </span>
+  ))}
   {more && <span class="v3-chip v3-chip--more">{more}</span>}
 </div>

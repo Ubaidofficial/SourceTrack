@@ -37,12 +37,12 @@ const CHANNELS = [
 <div class="v3-marquee">
   <div class="v3-marquee-track">
     {CHANNELS.map((slug) => (
-      <span class="v3-marquee-item"><BrandMark slug={slug} size={22} showName /></span>
+      <span class="v3-marquee-item"><BrandMark slug={slug} size={30} showName /></span>
     ))}
     {/* The seamless half. Same content, hidden from assistive tech. */}
     {CHANNELS.map((slug) => (
       <span class="v3-marquee-item" aria-hidden="true">
-        <BrandMark slug={slug} size={22} showName />
+        <BrandMark slug={slug} size={30} showName />
       </span>
     ))}
   </div>

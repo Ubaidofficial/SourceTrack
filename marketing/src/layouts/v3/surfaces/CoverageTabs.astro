@@ -109,7 +109,19 @@ const SURFACES: Surface[] = [
     id: "crm",
     tab: "CRM & ad platforms",
     heading: ["Closed revenue goes back out", "server-side", ", not just onto a dashboard"],
-    sub: "Qualified leads and closed-won amounts pushed to the platforms that bid, and written into the CRM your reps live in.",
+    // ⚠️ CORRECTED — this cell previously said "written into the CRM your reps live
+    // in", a NATIVE CRM WRITE claim. Checked against api/: zero references to
+    // HubSpot/Salesforce/Pipedrive/Attio as write targets — hubspot appears only as
+    // an INBOUND email-source classifier. §11's own header note in index.astro
+    // documents this exact gap ("CRM sync has 0 references in api/") as the reason
+    // the Act section's CRM block was cut; this cell was making the same unverified
+    // claim without being checked against it.
+    // What IS real and stays true: server-side conversions API delivery to ad
+    // platforms (api/lib/capi-deliveries.js, beta) and outbound webhooks
+    // (api/lib/webhook.js — HMAC-signed, SSRF-guarded, plan-gated per CLAUDE.md
+    // §6.5). A webhook pointed at Zapier reaches a CRM; that is what the mark row
+    // below shows, not a native connector.
+    sub: "Qualified leads and closed-won amounts pushed to the ad platforms that bid, server-side — plus HMAC-signed webhooks you can point at Zapier to land the same data in the CRM your reps live in.",
     more: 4,
     items: [
       "google-ads", "meta-capi", "linkedin-capi", "tiktok-events", "snap-capi", "pinterest",

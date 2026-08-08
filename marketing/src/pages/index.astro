@@ -88,7 +88,6 @@ import "@/styles/v3-surfaces.css";
 import HeroTicker from "@/components/v3/HeroTicker.jsx";
 import CoverageTabs from "@/layouts/v3/surfaces/CoverageTabs.astro";
 import LiveVisitors from "@/components/v3/LiveVisitors.jsx";
-import PathBeam from "@/layouts/v3/surfaces/PathBeam.astro";
 import HeroOrbit from "@/layouts/v3/surfaces/HeroOrbit.astro";
 import ModelSwitcher from "@/layouts/v3/surfaces/ModelSwitcher.astro";
 import TwoLeads from "@/layouts/v3/surfaces/TwoLeads.astro";
@@ -210,11 +209,17 @@ const comparison = [
         </div>
         </div>
 
-        {/* PathBeam stays, in its own full-width row below both columns. It is a
-            different claim from the orbit — the orbit shows fan-OUT to destinations,
-            the beam shows the path INTO the record — and §2.6 still forbids lime as a
-            wash behind primary content, so it sits adjacent, never underneath. */}
-        <PathBeam />
+        {/* PathBeam — a CSS-only "two capsules with a travelling signal" illustration —
+            used to render here, in its own row below both columns. Removed: it is the
+            SAME two-capsule motif as <st-logo> in the header (§3.1.1's geometry) and as
+            the orbit's own core mark, unlabeled, floating in blank space with nothing
+            around it to explain what it is. Three renderings of one signal-on-a-track
+            idea in one screenful reads as a stray logo, not three distinct ideas — which
+            is exactly what it looked like once the orbit (built after PathBeam) actually
+            shipped. The orbit now carries the "mechanism" claim explicitly, with named
+            destinations and SENT badges; PathBeam had nothing left to say that was not
+            already said, better, right above it. Component file removed with it —
+            zero other call sites. */}
       </Wrap>
     </section>
 
@@ -286,7 +291,7 @@ const comparison = [
         <SectionHead
           eyebrow="Product tour"
           heading="Multi-touch attribution, in action."
-          lede="Four surfaces, four different questions — who is on the site right now, where the revenue actually came from, which AI assistants are sending buyers, and what organic search is really worth once you attach money to it."
+          lede="Four surfaces, four different questions — who is on the site right now, where the revenue actually came from, which AI assistants are sending buyers, and which tools those conversions actually land in."
         />
         <div class="v3-frame">
           <div class="v3-frame-chrome">
@@ -321,9 +326,35 @@ const comparison = [
                   because it needs JS. Its tick moves a session between pages and
                   advances a timer; it NEVER invents a conversion (§6). */}
               <LiveVisitors client:visible />
+              {/* Two anonymous rows of pills with no context above them read as
+                  "some chips, then some other chips" — part of why this section felt
+                  broken. Each now carries a label naming what it is.
+
+                  Row 2 was HubSpot/Salesforce/Stripe/Shopify under a lede promising
+                  "what organic search is worth" — neither the items nor any SEO-revenue
+                  claim were ever built, and Salesforce specifically is a CRM SYNC
+                  target we do not have (see the Act section's correction above).
+                  Swapped Salesforce for Webflow — a real capture surface, per the
+                  Coverage grid's own Forms tab — so every chip here names something
+                  that is actually true, and the lede above now promises exactly this:
+                  which tools a conversion actually lands in. */}
               <div class="v3-frame-split">
-                <ChipRow items={["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot"]} more="+11 more" />
-                <ChipRow items={["HubSpot", "Salesforce", "Stripe", "Shopify"]} more="+8 more" />
+                <div>
+                  <p class="v3-frame-split-label">AI assistants detected</p>
+                  <ChipRow
+                    items={["ChatGPT", "Gemini", "Claude", "Perplexity", "Copilot"]}
+                    slugs={["chatgpt", "gemini", "claude", "perplexity", "copilot"]}
+                    more="+11 more"
+                  />
+                </div>
+                <div>
+                  <p class="v3-frame-split-label">Where conversions land</p>
+                  <ChipRow
+                    items={["Stripe", "Shopify", "HubSpot", "Webflow"]}
+                    slugs={["stripe", "shopify", "hubspot-forms", "webflow"]}
+                    more="+8 more"
+                  />
+                </div>
               </div>
           </div>
         </div>
@@ -487,14 +518,33 @@ const comparison = [
         <SectionHead
           eyebrow="Act"
           heading="Attribution that leaves the dashboard."
-          lede="A report nobody acts on is an expensive screenshot. Qualified leads and closed revenue go back to the platforms that bid, the CRM your reps live in, and the channel where the decision actually gets made."
+          lede="A report nobody acts on is an expensive screenshot. Qualified leads and closed revenue go back to the ad platforms that bid, server-side — and out via webhook to wherever your team actually works."
         />
           {/* handoff `sync-list`. The live state resolves to a lime-family token, not the
-              handoff's #5E7A08 — §3.4:439 forbids a second success green. */}
+              handoff's #5E7A08 — §3.4:439 forbids a second success green.
+
+              ⚠️ CORRECTED — the two rows this replaced (HubSpot "1,284 contacts · Live",
+              Salesforce "962 leads · Live") were a §6 violation worse than a vague claim:
+              a SPECIFIC fabricated metric presented as a LIVE state, for a capability
+              that does not exist. §11's own header note three lines below this file's
+              top documents "CRM sync has 0 references in api/" as the reason the Act
+              section's demo-app port was cut — and that ruling was applied to the OTHER
+              tool-row (line ~513) but missed this component entirely, because it renders
+              via a different UI (a sync-status list rather than a chip row). Same
+              capability, same absence, different widget — a §6 check has to follow the
+              CLAIM, not the component.
+
+              Replaced with what api/ actually has: server-side conversions API delivery
+              to ad platforms (api/lib/capi-deliveries.js — BETA, matching how the
+              Coverage tab and pricing card frame it elsewhere) and outbound webhooks
+              (api/lib/webhook.js — HMAC-signed, SSRF-guarded, plan-gated per CLAUDE.md
+              §6.5, genuinely live). "Beta" renders in the muted/off state here (SyncList
+              only lights up on the exact string "Live"), which is the correct visual
+              signal — not a full green light. */}
           <SyncList items={[
-            { label: "HubSpot", count: "1,284 contacts", state: "Live" },
-            { label: "Salesforce", count: "962 leads", state: "Live" },
-            { label: "Google Ads", count: "48 campaigns", state: "Live" },
+            { label: "Google Ads", count: "conversions synced", state: "Beta" },
+            { label: "Meta CAPI", count: "conversions synced", state: "Beta" },
+            { label: "Webhooks", count: "HMAC-signed", state: "Live" },
             { label: "Slack", count: "alerts", state: "Paused" },
           ]} />
         <div class="v3-cards">
