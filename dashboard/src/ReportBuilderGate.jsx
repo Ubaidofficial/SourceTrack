@@ -1,11 +1,18 @@
+import { lazy, Suspense } from 'react'
 import { Link } from 'react-router-dom'
 import { Lock } from 'lucide-react'
 import { useAuth } from './contexts/AuthContext'
 import { useActiveSite } from './hooks/useActiveSite'
 import { hasFeature, FEATURE_LABELS } from './lib/planFeatures'
-import ReportBuilderMarketing from './pages/ReportBuilderMarketing'
-import ReportBuilder from './pages/ReportBuilder'
 import Layout from './components/Layout'
+import RouteFallback from './components/RouteFallback'
+
+// Split the two branches apart, not just this gate. /report-builder is a public
+// marketing URL for logged-out visitors, and ReportBuilder is the largest page
+// in the app — bundling both into the gate's chunk would make every marketing
+// visitor download the full builder just to see the marketing page.
+const ReportBuilderMarketing = lazy(() => import('./pages/ReportBuilderMarketing'))
+const ReportBuilder = lazy(() => import('./pages/ReportBuilder'))
 
 function Spinner() {
   return (
@@ -61,7 +68,11 @@ export default function ReportBuilderGate() {
   if (loading) return <Spinner />
 
   if (!user) {
-    return <ReportBuilderMarketing />
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <ReportBuilderMarketing />
+      </Suspense>
+    )
   }
 
   // Do not judge entitlement until the site — and therefore its plan — has resolved.
@@ -82,5 +93,9 @@ export default function ReportBuilderGate() {
     return <Layout><UpgradeNotice /></Layout>
   }
 
-  return <Layout><ReportBuilder /></Layout>
+  return (
+    <Suspense fallback={<RouteFallback />}>
+      <Layout><ReportBuilder /></Layout>
+    </Suspense>
+  )
 }
