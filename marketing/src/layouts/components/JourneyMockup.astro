@@ -61,7 +61,19 @@ const sessions = [
 ];
 ---
 
-<div class="relative mx-auto w-full max-w-[940px]">
+{/* overflow-x-clip contains the decorative glow below. MEASURED at 375px: the glow is
+    520px wide, absolutely positioned at left-1/2 with -translate-x-1/2, so it extends
+    ~73px past the viewport on each side and made documentElement.scrollWidth 447 against
+    clientWidth 375 — a page that scrolls sideways on mobile.
+
+    Fixed at the CAUSE rather than by a global `html { overflow-x: clip }`, which the
+    handoff calls "belt-and-braces … not the fix" precisely because it hides the symptom
+    on every future offender too.
+
+    `clip` not `hidden`, and x-only: `overflow-x: clip` is the one value that can pair with
+    `overflow-y: visible` without forcing the other axis to a scroll container, so the
+    card's drop shadow still renders past the top and bottom edges. */}
+<div class="relative mx-auto w-full max-w-[940px] overflow-x-clip">
   <div
     class="absolute left-1/2 top-[40px] h-[360px] w-[520px] -translate-x-1/2 rounded-full bg-primary opacity-[0.18] blur-[64px]"
     aria-hidden="true"
@@ -69,16 +81,16 @@ const sessions = [
   </div>
 
   <div
-    class="relative rounded-[28px] border border-white/10 bg-[#12100C] p-3 shadow-[0_30px_90px_rgba(31,35,35,.30)]"
+    class="relative rounded-[28px] border border-white/10 bg-[#1F2323] p-3 shadow-[0_30px_90px_rgba(31,35,35,.30)]"
   >
-    <div class="overflow-hidden rounded-[20px] border border-[#3D3830] bg-[#1B1811]">
+    <div class="overflow-hidden rounded-[20px] border border-[#3D3830] bg-[#1B1F1F]">
       <!-- Window chrome -->
       <div
-        class="grid h-[48px] grid-cols-[80px_1fr_auto] items-center gap-2 border-b border-white/10 bg-[#1B1811] px-4 text-xs font-bold text-[#F6F3EB]"
+        class="grid h-[48px] grid-cols-[80px_1fr_auto] items-center gap-2 border-b border-white/10 bg-[#1B1F1F] px-4 text-xs font-bold text-[#F2F4F3]"
       >
         <div class="flex gap-[6px]">
-          <span class="h-2.5 w-2.5 rounded-full bg-[#C4381C]"></span>
-          <span class="h-2.5 w-2.5 rounded-full bg-[#FF7A33]"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-[#E54545]"></span>
+          <span class="h-2.5 w-2.5 rounded-full bg-[#F0602A]"></span>
           <span class="h-2.5 w-2.5 rounded-full bg-primary"></span>
         </div>
         <span class="truncate">SourceTrack · Visitor Journey</span>
@@ -86,9 +98,9 @@ const sessions = [
 
       <div class="grid gap-px bg-[#3D3830] md:grid-cols-5">
         <!-- ── Profile rail ── -->
-        <div class="space-y-4 bg-[#18150F] p-4 md:col-span-2">
+        <div class="space-y-4 bg-[#1B1F1F] p-4 md:col-span-2">
           <div>
-            <p class="text-[10px] uppercase tracking-wider text-[#A79E8C]">Profile</p>
+            <p class="text-[10px] uppercase tracking-wider text-[#A8AFAF]">Profile</p>
             <div class="mt-2 flex items-center gap-2.5">
               <div class="relative flex-shrink-0">
                 <div
@@ -98,7 +110,7 @@ const sessions = [
                 </div>
                 <!-- Qualified badge — an ABSENT badge means "not qualified", so it is never a default -->
                 <span
-                  class="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#D2EC2A] ring-2 ring-[#18150F]"
+                  class="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#CCF03F] ring-2 ring-[#1B1F1F]"
                   title="Qualification: QUALIFIED"
                 >
                   <svg viewBox="0 0 24 24" class="h-2.5 w-2.5" fill="none" stroke="white" stroke-width="4">
@@ -108,14 +120,14 @@ const sessions = [
               </div>
               <div class="min-w-0">
                 <h3 class="break-all font-mono text-base font-bold leading-tight text-white">a4f2c9e1</h3>
-                <p class="mt-0.5 text-[10px] text-[#A79E8C]">Anonymous visitor · no cookie set</p>
+                <p class="mt-0.5 text-[10px] text-[#A8AFAF]">Anonymous visitor · no cookie set</p>
               </div>
             </div>
           </div>
 
           <!-- Attribution trail — scroll-scrubbed connector -->
-          <div class="rounded-xl border border-[#3D3830] bg-[#241F17] p-3" data-journey-trail>
-            <p class="mb-2 text-[10px] uppercase tracking-wider text-[#A79E8C]">Attribution trail</p>
+          <div class="rounded-xl border border-[#3D3830] bg-[#282C2C] p-3" data-journey-trail>
+            <p class="mb-2 text-[10px] uppercase tracking-wider text-[#A8AFAF]">Attribution trail</p>
             <div class="relative flex flex-wrap items-center gap-1">
               <!-- Connector line behind the chips — fills left-to-right with scroll -->
               <div
@@ -131,7 +143,7 @@ const sessions = [
                         "inline-flex max-w-[110px] items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium transition-opacity duration-300",
                         chip.tone === "revenue"
                           ? "border-primary/40 bg-primary/15 text-primary"
-                          : "border-[#454038] bg-[#2B261E] text-[#F6F3EB]",
+                          : "border-[#454038] bg-[#2B261E] text-[#F2F4F3]",
                         chip.tone === "mono" ? "font-mono" : "",
                       ]}
                     >
@@ -157,7 +169,7 @@ const sessions = [
                     "rounded-xl border p-2.5 text-center transition-colors",
                     s.label === "Revenue"
                       ? "border-primary/40 bg-primary/10 shadow-[0_0_12px_rgba(212,246,46,0.08)]"
-                      : "border-[#3D3830] bg-[#241F17]",
+                      : "border-[#3D3830] bg-[#282C2C]",
                   ]}
                 >
                   <p
@@ -165,12 +177,12 @@ const sessions = [
                       "truncate font-bold tracking-tight",
                       s.label === "Revenue"
                         ? "text-xl font-black text-primary"
-                        : "text-base font-semibold text-[#A79E8C]",
+                        : "text-base font-semibold text-[#A8AFAF]",
                     ]}
                   >
                     {s.value}
                   </p>
-                  <p class="mt-0.5 text-[10px] uppercase tracking-wider text-[#A79E8C]">{s.label}</p>
+                  <p class="mt-0.5 text-[10px] uppercase tracking-wider text-[#A8AFAF]">{s.label}</p>
                 </div>
               ))
             }
@@ -178,11 +190,11 @@ const sessions = [
         </div>
 
         <!-- ── Session timeline ── -->
-        <div class="bg-[#1B1811] p-4 md:col-span-3">
+        <div class="bg-[#1B1F1F] p-4 md:col-span-3">
           <div class="mb-3 flex flex-wrap items-center gap-2">
-            <span class="rounded-full bg-white px-3 py-1 text-[11px] font-medium text-[#1B1811]">All (5)</span>
-            <span class="rounded-full bg-[#2B261E] px-3 py-1 text-[11px] font-medium text-[#A79E8C]">Conversions (1)</span>
-            <span class="rounded-full bg-[#2B261E] px-3 py-1 text-[11px] font-medium text-[#A79E8C]">AI Touches (1)</span>
+            <span class="rounded-full bg-white px-3 py-1 text-[11px] font-medium text-[#1B1F1F]">All (5)</span>
+            <span class="rounded-full bg-[#2B261E] px-3 py-1 text-[11px] font-medium text-[#A8AFAF]">Conversions (1)</span>
+            <span class="rounded-full bg-[#2B261E] px-3 py-1 text-[11px] font-medium text-[#A8AFAF]">AI Touches (1)</span>
           </div>
 
           <div class="space-y-2">
@@ -191,14 +203,14 @@ const sessions = [
                 <div
                   class:list={[
                     "rounded-xl border p-3",
-                    s.converted ? "border-primary/40 bg-primary/8" : "border-[#3D3830] bg-[#241F17]",
+                    s.converted ? "border-primary/40 bg-primary/8" : "border-[#3D3830] bg-[#282C2C]",
                   ]}
                 >
                   <div class="flex items-start gap-3">
                     <div
                       class:list={[
                         "mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
-                        s.converted ? "bg-primary text-[#1B1811]" : "bg-[#3D3830] text-[#F6F3EB]",
+                        s.converted ? "bg-primary text-[#1B1F1F]" : "bg-[#3D3830] text-[#F2F4F3]",
                       ]}
                     >
                       #{s.index}
@@ -206,8 +218,8 @@ const sessions = [
 
                     <div class="min-w-0 flex-1">
                       <div class="flex flex-wrap items-center gap-2">
-                        <span class="text-xs font-semibold text-[#F6F3EB]">Session {s.index}</span>
-                        <span class="truncate rounded bg-[#3D3830] px-1.5 py-0.5 text-[10px] font-medium text-[#A79E8C]">
+                        <span class="text-xs font-semibold text-[#F2F4F3]">Session {s.index}</span>
+                        <span class="truncate rounded bg-[#3D3830] px-1.5 py-0.5 text-[10px] font-medium text-[#A8AFAF]">
                           {s.source}
                         </span>
                         {s.converted && (
@@ -227,7 +239,7 @@ const sessions = [
 
                       <div class="mt-2 space-y-1">
                         {s.events.map((e) => (
-                          <div class="flex items-center gap-2 text-[11px] text-[#F6F3EB]">
+                          <div class="flex items-center gap-2 text-[11px] text-[#F2F4F3]">
                             <span class="h-1 w-1 flex-shrink-0 rounded-full bg-[#696258]" />
                             <span class="truncate font-mono">{e}</span>
                           </div>

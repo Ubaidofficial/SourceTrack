@@ -38,7 +38,7 @@ const SNIPPET = `<script async src="https://api.srctk.com/tracker.min.js" data-s
   <section class="py-16 bg-[#0E1111] text-white">
     <div class="max-w-[800px] mx-auto px-4 space-y-8">
       <div class="space-y-4">
-        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#D2EC2A]">&larr; Back to Docs</a>
+        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#CCF03F]">&larr; Back to Docs</a>
         <h1 class="text-4xl font-black text-white tracking-tight">Install Script</h1>
         <p class="text-gray-400 text-lg leading-relaxed">
           Learn how to deploy the tracking pixel on your website and verify data flow.
@@ -75,12 +75,12 @@ const SNIPPET = `<script async src="https://api.srctk.com/tracker.min.js" data-s
       <section class="space-y-4">
         <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Steps: Copy-Paste Installation</h2>
         <p class="text-sm text-gray-300 leading-relaxed">
-          Paste the tracking script inside the <code class="text-[#D2EC2A]">&lt;head&gt;</code> element of
+          Paste the tracking script inside the <code class="text-[#CCF03F]">&lt;head&gt;</code> element of
           your website layout so it executes before other scripts:
         </p>
         <pre class="bg-[#0F1012] p-4 rounded-xl text-xs text-gray-300 overflow-x-auto border border-[#2A2C30]"><code>{SNIPPET}</code></pre>
         <p class="text-sm text-gray-300 leading-relaxed">
-          <strong>Using a custom tracking domain?</strong> Your snippet is different from the example above &mdash; it loads the tracker from your own subdomain, not from <code class="text-[#D2EC2A]">api.srctk.com</code>. Copy the exact snippet from Setup in the app rather than this page; it is generated for your site and already points at the right host.
+          <strong>Using a custom tracking domain?</strong> Your snippet is different from the example above &mdash; it loads the tracker from your own subdomain, not from <code class="text-[#CCF03F]">api.srctk.com</code>. Copy the exact snippet from Setup in the app rather than this page; it is generated for your site and already points at the right host.
         </p>
       </section>
 
@@ -88,8 +88,8 @@ const SNIPPET = `<script async src="https://api.srctk.com/tracker.min.js" data-s
         <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">What the Script Captures</h2>
         <ul class="list-disc pl-5 space-y-1.5 text-sm text-gray-300 leading-relaxed">
           <li><strong>Pageviews:</strong> Recorded on initial load and during subsequent Single Page App (SPA) route changes automatically.</li>
-          <li><strong>Acquisition parameters:</strong> UTM parameters (<code class="text-[#D2EC2A]">utm_source</code>, <code class="text-[#D2EC2A]">utm_medium</code>, <code class="text-[#D2EC2A]">utm_campaign</code>, etc.).</li>
-          <li><strong>Ad Click IDs:</strong> Google Click ID (<code class="text-[#D2EC2A]">gclid</code>, <code class="text-[#D2EC2A]">gbraid</code>, <code class="text-[#D2EC2A]">wbraid</code>), Facebook Click ID (<code class="text-[#D2EC2A]">fbclid</code>), Microsoft Click ID (<code class="text-[#D2EC2A]">msclkid</code>), TikTok Click ID (<code class="text-[#D2EC2A]">ttclid</code>), LinkedIn Click ID (<code class="text-[#D2EC2A]">li_fat_id</code>).</li>
+          <li><strong>Acquisition parameters:</strong> UTM parameters (<code class="text-[#CCF03F]">utm_source</code>, <code class="text-[#CCF03F]">utm_medium</code>, <code class="text-[#CCF03F]">utm_campaign</code>, etc.).</li>
+          <li><strong>Ad Click IDs:</strong> Google Click ID (<code class="text-[#CCF03F]">gclid</code>, <code class="text-[#CCF03F]">gbraid</code>, <code class="text-[#CCF03F]">wbraid</code>), Facebook Click ID (<code class="text-[#CCF03F]">fbclid</code>), Microsoft Click ID (<code class="text-[#CCF03F]">msclkid</code>), TikTok Click ID (<code class="text-[#CCF03F]">ttclid</code>), LinkedIn Click ID (<code class="text-[#CCF03F]">li_fat_id</code>).</li>
           <li><strong>Referrer information:</strong> Captures the organic search engine, direct entry, or referring site domain.</li>
           <li><strong>Device metadata:</strong> Browser name, operating system, and country (derived safely on the server from the IP address).</li>
         </ul>
@@ -111,7 +111,7 @@ const SNIPPET = `<script async src="https://api.srctk.com/tracker.min.js" data-s
           <li><strong>Event Freshness:</strong> Whether SourceTrack received tracking events from your site recently.</li>
           <li><strong>Domain Match:</strong> Whether the domain sending events matches your registered production domain (or flags "test traffic" / "wrong domain" if misconfigured).</li>
           <li><strong>Browser Connection Check:</strong> Whether your browser can reach the SourceTrack API successfully without being blocked by network firewalls.</li>
-          <li><strong>Live Pageview Verification:</strong> Generate a temporary test link with a unique <code class="text-[#D2EC2A]">st_verify</code> token, then open it in a new tab to check whether a live pageview from your production domain is received.</li>
+          <li><strong>Live Pageview Verification:</strong> Generate a temporary test link with a unique <code class="text-[#CCF03F]">st_verify</code> token, then open it in a new tab to check whether a live pageview from your production domain is received.</li>
           <li><strong>Paid Parameters &amp; Conversions:</strong> Checks if UTM parameters or conversion events have been recorded in the last 30 days.</li>
         </ul>
 
@@ -129,8 +129,8 @@ const SNIPPET = `<script async src="https://api.srctk.com/tracker.min.js" data-s
         <ol class="list-decimal pl-5 space-y-3 text-sm text-gray-300 leading-relaxed">
           <li>Open your live website in a browser.</li>
           <li>Right-click and select <strong>Inspect</strong> to open Developer Tools, then go to the <strong>Network</strong> tab.</li>
-          <li>Filter requests by typing <code class="text-[#D2EC2A]">track</code> in the filter box.</li>
-          <li>Refresh your page. You should see a network request named <code class="text-[#D2EC2A]">track</code> go to <code class="text-[#D2EC2A]">POST /api/track</code> (returning a <code class="text-[#D2EC2A]">{"{ success: true }"}</code> response).</li>
+          <li>Filter requests by typing <code class="text-[#CCF03F]">track</code> in the filter box.</li>
+          <li>Refresh your page. You should see a network request named <code class="text-[#CCF03F]">track</code> go to <code class="text-[#CCF03F]">POST /api/track</code> (returning a <code class="text-[#CCF03F]">{"{ success: true }"}</code> response).</li>
           <li>Go to the <strong>Event Debugger</strong> in your SourceTrack dashboard to see your visit log update in real-time.</li>
         </ol>
       </section>
@@ -144,7 +144,7 @@ const SNIPPET = `<script async src="https://api.srctk.com/tracker.min.js" data-s
           </li>
           <li>
             <strong>Failing to Replace the Placeholder:</strong> Make sure you have replaced
-            <code class="text-[#D2EC2A]">YOUR_SITE_KEY</code> with your real key in the script.
+            <code class="text-[#CCF03F]">YOUR_SITE_KEY</code> with your real key in the script.
           </li>
           <li>
             <strong>Ad Blockers / Privacy Shields:</strong> Strict ad blockers or privacy shields during
@@ -160,7 +160,7 @@ const SNIPPET = `<script async src="https://api.srctk.com/tracker.min.js" data-s
         <p class="text-sm text-gray-300 leading-relaxed">
           Now that the basic pageview tracker is installed, you are ready to configure conversion goals.
           Move on to the
-          <a href="/developers/conversions" class="text-[#D2EC2A] font-bold hover:underline">Browser Conversions guide</a>
+          <a href="/developers/conversions" class="text-[#CCF03F] font-bold hover:underline">Browser Conversions guide</a>
           to track signups, purchases, and leads.
         </p>
       </section>

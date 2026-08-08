@@ -56,7 +56,7 @@ const GTM_TAG = `<!-- Paste this inside a Custom HTML Tag in GTM -->
   <section class="py-16 bg-[#0E1111] text-white">
     <div class="max-w-[800px] mx-auto px-4 space-y-8">
       <div class="space-y-4">
-        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#D2EC2A]">&larr; Back to Docs</a>
+        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#CCF03F]">&larr; Back to Docs</a>
         <h1 class="text-4xl font-black text-white tracking-tight">Google Tag Manager</h1>
         <p class="text-gray-400 text-lg leading-relaxed">
           Deploy the SourceTrack tracking pixel site-wide using a Google Tag Manager container.
@@ -103,7 +103,7 @@ const GTM_TAG = `<!-- Paste this inside a Custom HTML Tag in GTM -->
           <li><strong>Configure Tag Type:</strong> Click <em>Tag Configuration</em> and choose <strong>Custom HTML</strong>.</li>
           <li>
             <strong>Paste Script:</strong> Paste the code below. Remember to change
-            <code class="text-[#D2EC2A]">YOUR_SITE_KEY</code> to your actual public key.
+            <code class="text-[#CCF03F]">YOUR_SITE_KEY</code> to your actual public key.
             <pre class="mt-2 bg-[#0F1012] p-4 rounded-xl text-xs text-gray-300 overflow-x-auto border border-[#2A2C30]"><code>{GTM_TAG}</code></pre>
           </li>
           <li>
@@ -112,7 +112,7 @@ const GTM_TAG = `<!-- Paste this inside a Custom HTML Tag in GTM -->
             Initialization is not available).
           </li>
           <li>
-            <strong>Save:</strong> Name your tag (e.g. <code class="text-[#D2EC2A]">SourceTrack - Base Pixel</code>)
+            <strong>Save:</strong> Name your tag (e.g. <code class="text-[#CCF03F]">SourceTrack - Base Pixel</code>)
             and click <strong>Save</strong>.
           </li>
         </ol>
@@ -122,8 +122,8 @@ const GTM_TAG = `<!-- Paste this inside a Custom HTML Tag in GTM -->
         <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">How to Verify It Worked</h2>
         <ol class="list-decimal pl-5 space-y-3 text-sm text-gray-300 leading-relaxed">
           <li>Click <strong>Preview</strong> in the GTM interface. Enter your live website URL and connect GTM Tag Assistant.</li>
-          <li>In the Tag Assistant panel, verify that your new <code class="text-[#D2EC2A]">SourceTrack - Base Pixel</code> tag has successfully fired.</li>
-          <li>Open the browser Developer Tools (Network tab) on your site. Filter for <code class="text-[#D2EC2A]">track</code>, reload the page, and confirm a call to <code class="text-[#D2EC2A]">POST /api/track</code> completes successfully.</li>
+          <li>In the Tag Assistant panel, verify that your new <code class="text-[#CCF03F]">SourceTrack - Base Pixel</code> tag has successfully fired.</li>
+          <li>Open the browser Developer Tools (Network tab) on your site. Filter for <code class="text-[#CCF03F]">track</code>, reload the page, and confirm a call to <code class="text-[#CCF03F]">POST /api/track</code> completes successfully.</li>
           <li>Verify your pageviews start logging in the SourceTrack dashboard <strong>Event Debugger</strong>.</li>
         </ol>
       </section>
@@ -138,8 +138,8 @@ const GTM_TAG = `<!-- Paste this inside a Custom HTML Tag in GTM -->
           <li>
             <strong>Content Security Policy (CSP) Restrictions:</strong> If your server enforces a CSP, it
             may block GTM from injecting external scripts. Ensure
-            <code class="text-[#D2EC2A]">https://api.srctk.com</code> is allowlisted in your CSP headers
-            under <code class="text-[#D2EC2A]">script-src</code> and <code class="text-[#D2EC2A]">connect-src</code>.
+            <code class="text-[#CCF03F]">https://api.srctk.com</code> is allowlisted in your CSP headers
+            under <code class="text-[#CCF03F]">script-src</code> and <code class="text-[#CCF03F]">connect-src</code>.
           </li>
         </ul>
       </section>
@@ -149,7 +149,7 @@ const GTM_TAG = `<!-- Paste this inside a Custom HTML Tag in GTM -->
         <p class="text-sm text-gray-300 leading-relaxed">
           You're ready to configure conversions. If you want to track conversion events (like form
           submissions or button clicks) using GTM triggers, see our
-          <a href="/developers/conversions" class="text-[#D2EC2A] font-bold hover:underline">Browser Conversions guide</a>.
+          <a href="/developers/conversions" class="text-[#CCF03F] font-bold hover:underline">Browser Conversions guide</a>.
         </p>
       </section>
     </div>

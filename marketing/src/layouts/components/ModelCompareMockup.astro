@@ -85,12 +85,12 @@ const toneFill: Record<string, string> = {
 };
 ---
 
-<div class="relative z-1 overflow-hidden rounded-[20px] border border-[#3D3830] bg-[#12100C]">
+<div class="relative z-1 overflow-hidden rounded-[20px] border border-[#3D3830] bg-[#1F2323]">
   <!-- Header -->
   <div
-    class="flex h-[44px] items-center justify-between gap-2 border-b border-white/10 bg-[#1B1811] px-4"
+    class="flex h-[44px] items-center justify-between gap-2 border-b border-white/10 bg-[#1B1F1F] px-4"
   >
-    <span class="truncate text-xs font-bold text-[#F6F3EB]">
+    <span class="truncate text-xs font-bold text-[#F2F4F3]">
       Report Builder — attribution model comparison
     </span>
   </div>
@@ -108,7 +108,7 @@ const toneFill: Record<string, string> = {
               "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold",
               m === "Linear"
                 ? "border-primary/40 bg-primary/15 text-primary"
-                : "border-[#454038] bg-[#241F17] text-[#A79E8C]",
+                : "border-[#454038] bg-[#282C2C] text-[#A8AFAF]",
             ]}
           >
             {m}
@@ -124,7 +124,7 @@ const toneFill: Record<string, string> = {
       <span class="text-[10px] font-black uppercase tracking-wider text-[#7C7568]">
         One conversion, three models
       </span>
-      <span class="text-[10px] font-bold tabular-nums text-[#A79E8C]">
+      <span class="text-[10px] font-bold tabular-nums text-[#A8AFAF]">
         $240 · 3 touchpoints
       </span>
     </div>
@@ -133,9 +133,9 @@ const toneFill: Record<string, string> = {
       {
         comparisons.map((c) => (
           <div>
-            <div class="mb-1.5 text-[11px] font-black text-[#F6F3EB]">{c.model}</div>
+            <div class="mb-1.5 text-[11px] font-black text-[#F2F4F3]">{c.model}</div>
 
-            <div class="flex h-2.5 overflow-hidden rounded-full bg-[#241F17]" aria-hidden="true">
+            <div class="flex h-2.5 overflow-hidden rounded-full bg-[#282C2C]" aria-hidden="true">
               {c.segments.map((s) => (
                 <span
                   class="h-full"
@@ -153,7 +153,7 @@ const toneFill: Record<string, string> = {
                     aria-hidden="true"
                   />
                   {s.label}
-                  <span class="tabular-nums text-[#A79E8C]">{s.value}</span>
+                  <span class="tabular-nums text-[#A8AFAF]">{s.value}</span>
                 </span>
               ))}
             </div>

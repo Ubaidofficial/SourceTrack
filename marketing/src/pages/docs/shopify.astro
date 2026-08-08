@@ -71,7 +71,7 @@ if (visitorId) {
   <section class="py-16 bg-[#0E1111] text-white">
     <div class="max-w-[800px] mx-auto px-4 space-y-8">
       <div class="space-y-4">
-        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#D2EC2A]">&larr; Back to Docs</a>
+        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#CCF03F]">&larr; Back to Docs</a>
         <h1 class="text-4xl font-black text-white tracking-tight">Shopify Manual Revenue Attribution Recipe</h1>
         <p class="text-gray-400 text-lg leading-relaxed">
           Connect your Shopify storefront and order revenue to SourceTrack using manual snippet placement
@@ -92,8 +92,8 @@ if (visitorId) {
         <h4 class="font-extrabold text-[#7CC4FF] mb-2 text-sm">Key Terms Defined:</h4>
         <ul class="list-disc pl-5 space-y-1 text-xs text-[#A8CFF0] leading-relaxed">
           <li><strong>Theme Liquid (theme.liquid)</strong> &mdash; the layout file in your Shopify theme that wraps all pages.</li>
-          <li><strong>Cart attributes</strong> &mdash; custom metadata fields stored on a Shopify cart. We use this to save the anonymous visitor ID (<code class="text-[#D2EC2A]">st_aid</code>) so it flows into the final order.</li>
-          <li><strong>Webhook</strong> &mdash; an automatic server message sent by Shopify when an action occurs (like <code class="text-[#D2EC2A]">orders/paid</code>).</li>
+          <li><strong>Cart attributes</strong> &mdash; custom metadata fields stored on a Shopify cart. We use this to save the anonymous visitor ID (<code class="text-[#CCF03F]">st_aid</code>) so it flows into the final order.</li>
+          <li><strong>Webhook</strong> &mdash; an automatic server message sent by Shopify when an action occurs (like <code class="text-[#CCF03F]">orders/paid</code>).</li>
           <li><strong>HMAC validation</strong> &mdash; a cryptographic handshake that confirms the webhook message was really sent by Shopify.</li>
         </ul>
       </div>
@@ -129,11 +129,11 @@ if (visitorId) {
           <ol class="list-decimal pl-5 space-y-1 text-sm text-gray-300 leading-relaxed">
             <li>In your Shopify Admin, go to <strong>Online Store &rarr; Themes</strong>.</li>
             <li>On your current theme, click the action dropdown (the three dots) and select <strong>Edit Code</strong>.</li>
-            <li>Open the <code class="text-[#D2EC2A]">layout/theme.liquid</code> file.</li>
-            <li>Paste the tracking script directly before the closing <code class="text-[#D2EC2A]">&lt;/head&gt;</code> tag.</li>
-            <li>Save <code class="text-[#D2EC2A]">theme.liquid</code>. Shopify publishes the change to your live theme straight away.</li>
-            <li>Still in your theme, add the cart-attribute snippet so the anonymous visitor ID (<code class="text-[#D2EC2A]">st_aid</code>) is saved onto the Shopify cart and travels with the order.</li>
-            <li>In Shopify Admin &rarr; Settings &rarr; Notifications, create an <code class="text-[#D2EC2A]">orders/paid</code> webhook pointing at <code class="text-[#D2EC2A]">/api/webhooks/shopify/YOUR_SITE_KEY</code>. The webhook delivers the order revenue; step 6 is what makes that revenue attributable, so a store with the webhook alone records purchases against no visitor.</li>
+            <li>Open the <code class="text-[#CCF03F]">layout/theme.liquid</code> file.</li>
+            <li>Paste the tracking script directly before the closing <code class="text-[#CCF03F]">&lt;/head&gt;</code> tag.</li>
+            <li>Save <code class="text-[#CCF03F]">theme.liquid</code>. Shopify publishes the change to your live theme straight away.</li>
+            <li>Still in your theme, add the cart-attribute snippet so the anonymous visitor ID (<code class="text-[#CCF03F]">st_aid</code>) is saved onto the Shopify cart and travels with the order.</li>
+            <li>In Shopify Admin &rarr; Settings &rarr; Notifications, create an <code class="text-[#CCF03F]">orders/paid</code> webhook pointing at <code class="text-[#CCF03F]">/api/webhooks/shopify/YOUR_SITE_KEY</code>. The webhook delivers the order revenue; step 6 is what makes that revenue attributable, so a store with the webhook alone records purchases against no visitor.</li>
           </ol>
         </div>
 
@@ -145,8 +145,8 @@ if (visitorId) {
           <ol class="list-decimal pl-5 space-y-1 text-sm text-gray-300 leading-relaxed">
             <li>In your Shopify Admin, go to <strong>Online Store &rarr; Themes</strong>.</li>
             <li>Click the action dropdown (the three dots) and select <strong>Edit Code</strong>.</li>
-            <li>Open the <code class="text-[#D2EC2A]">layout/theme.liquid</code> file.</li>
-            <li>Paste the tracking script directly before the closing <code class="text-[#D2EC2A]">&lt;/head&gt;</code> tag. Replace <code class="text-[#D2EC2A]">YOUR_SITE_KEY</code>:</li>
+            <li>Open the <code class="text-[#CCF03F]">layout/theme.liquid</code> file.</li>
+            <li>Paste the tracking script directly before the closing <code class="text-[#CCF03F]">&lt;/head&gt;</code> tag. Replace <code class="text-[#CCF03F]">YOUR_SITE_KEY</code>:</li>
           </ol>
           <pre class="mt-2 bg-[#0F1012] p-4 rounded-xl text-xs text-gray-300 overflow-x-auto border border-[#2A2C30]"><code>{THEME_SNIPPET}</code></pre>
         </div>
@@ -155,7 +155,7 @@ if (visitorId) {
           <h3 class="text-sm font-extrabold text-white">Step 2: Capture Visitor ID in Shopify Cart</h3>
           <p class="text-sm text-gray-300 leading-relaxed">
             To link checkout purchases with marketing sessions, you must store the anonymous visitor ID
-            (<code class="text-[#D2EC2A]">st_aid</code>) as a cart attribute. Add this Javascript snippet
+            (<code class="text-[#CCF03F]">st_aid</code>) as a cart attribute. Add this Javascript snippet
             to your checkout or cart templates:
           </p>
           <pre class="mt-2 bg-[#0F1012] p-4 rounded-xl text-xs text-gray-300 overflow-x-auto border border-[#2A2C30]"><code>{CART_ATTRIBUTE_SNIPPET}</code></pre>
@@ -173,31 +173,31 @@ if (visitorId) {
             <li>
               Configure the webhook details:
               <ul class="list-disc pl-5 mt-1 space-y-1">
-                <li><strong>Event:</strong> <code class="text-[#D2EC2A]">orders/paid</code> (recommended) or <code class="text-[#D2EC2A]">orders/create</code>. With <code class="text-[#D2EC2A]">orders/create</code>, SourceTrack only processes orders where <code class="text-[#D2EC2A]">financial_status === 'paid'</code> &mdash; unpaid carts and pending orders are ignored.</li>
+                <li><strong>Event:</strong> <code class="text-[#CCF03F]">orders/paid</code> (recommended) or <code class="text-[#CCF03F]">orders/create</code>. With <code class="text-[#CCF03F]">orders/create</code>, SourceTrack only processes orders where <code class="text-[#CCF03F]">financial_status === 'paid'</code> &mdash; unpaid carts and pending orders are ignored.</li>
                 <li><strong>Format:</strong> JSON</li>
-                <li><strong>URL:</strong> <code class="text-[#D2EC2A]">https://api.srctk.com/api/webhooks/shopify/YOUR_SITE_KEY</code></li>
+                <li><strong>URL:</strong> <code class="text-[#CCF03F]">https://api.srctk.com/api/webhooks/shopify/YOUR_SITE_KEY</code></li>
                 <li><strong>API Version:</strong> Latest / stable</li>
               </ul>
             </li>
             <li>
               Save the webhook, then copy the <strong>Shopify signing secret</strong> (shared with all
               webhooks for the shop) and paste it into
-              <a href="https://app.sourcetrack.ai/app/integrations" class="text-[#D2EC2A] font-bold hover:underline">Integrations &rarr; Shopify webhook recipe</a>.
+              <a href="https://app.sourcetrack.ai/app/integrations" class="text-[#CCF03F] font-bold hover:underline">Integrations &rarr; Shopify webhook recipe</a>.
               SourceTrack rejects any webhook whose HMAC-SHA256 signature does not match.
             </li>
           </ol>
           <p class="text-xs text-gray-400 leading-relaxed">
             <strong>Attribution stitching:</strong> the order webhook reads the visitor id from
-            <code class="text-[#D2EC2A]">note_attributes</code> using the first key it finds among
-            <code class="text-[#D2EC2A]">_st_aid</code>, <code class="text-[#D2EC2A]">st_aid</code>,
-            <code class="text-[#D2EC2A]">anonymous_id</code>, <code class="text-[#D2EC2A]">visitor_id</code>,
-            <code class="text-[#D2EC2A]">sourcetrack_user_id</code>, or
-            <code class="text-[#D2EC2A]">site_user_id</code>. Step 2 sets
-            <code class="text-[#D2EC2A]">st_aid</code>; using one of those other keys also works.
+            <code class="text-[#CCF03F]">note_attributes</code> using the first key it finds among
+            <code class="text-[#CCF03F]">_st_aid</code>, <code class="text-[#CCF03F]">st_aid</code>,
+            <code class="text-[#CCF03F]">anonymous_id</code>, <code class="text-[#CCF03F]">visitor_id</code>,
+            <code class="text-[#CCF03F]">sourcetrack_user_id</code>, or
+            <code class="text-[#CCF03F]">site_user_id</code>. Step 2 sets
+            <code class="text-[#CCF03F]">st_aid</code>; using one of those other keys also works.
           </p>
           <p class="text-xs text-gray-400 leading-relaxed">
             <strong>Dedupe:</strong> Shopify webhooks are idempotent by Shopify webhook id and order id, so
-            a redelivered webhook will record as <code class="text-[#D2EC2A]">duplicate</code>, not a second
+            a redelivered webhook will record as <code class="text-[#CCF03F]">duplicate</code>, not a second
             conversion.
           </p>
         </div>
@@ -232,7 +232,7 @@ if (visitorId) {
         <p class="text-sm text-gray-300 leading-relaxed">
           Your Shopify integration is complete! You can explore additional API options or customize
           dashboard views in our
-          <a href="/developers" class="text-[#D2EC2A] font-bold hover:underline">Developer Portal</a>.
+          <a href="/developers" class="text-[#CCF03F] font-bold hover:underline">Developer Portal</a>.
         </p>
       </section>
     </div>

@@ -80,8 +80,8 @@
 @utility bg-radial-accent-dark {
   background: radial-gradient(
     163.24% 100% at 50% 100%,
-    rgba(210, 236, 42, 0.3) 0%,
-    rgba(18, 16, 12, 0.3) 42.49%
+    rgba(204, 240, 63, 0.3) 0%,
+    rgba(31, 35, 35, 0.3) 42.49%
   );
 }
 
@@ -109,10 +109,10 @@
    NOTE: the visitors bar's original ternary read `isHovered ? '#6E6656' :
    '#6E6656'` — identical in both branches, so hover never changed it. Preserved
    as a single colour rather than inventing a hover state the design never had. */
-.mid-bar-visitors { background-color: #6E6656; }
+.mid-bar-visitors { background-color: #7D8090; }
 .mid-bar-revenue {
-  background: linear-gradient(180deg, rgba(210, 236, 42, 0.85) 0%, rgba(210, 236, 42, 0.06) 100%);
+  background: linear-gradient(180deg, rgba(204, 240, 63, 0.85) 0%, rgba(204, 240, 63, 0.06) 100%);
 }
 .mid-bar-revenue.is-hovered {
-  background: linear-gradient(180deg, #D2EC2A 0%, rgba(210, 236, 42, 0.3) 100%);
+  background: linear-gradient(180deg, #CCF03F 0%, rgba(204, 240, 63, 0.3) 100%);
 }

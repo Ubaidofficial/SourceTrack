@@ -62,14 +62,32 @@ const V2_PAGES = [
 // Every retired value, with the form it actually appears in. `rgba` entries are the SAME colour
 // expressed as decimal RGB — the form a hex-only grep misses.
 const RETIRED = [
-  { pattern: 'C8F000', why: 'pre-v1.3 lime, §3.8:494 lists it as superseded' },
+  // ── pre-v1.3, retired long before v1.5. Kept: these must never come back either.
+  { pattern: 'C8F000', why: 'pre-v1.3 lime, §3.8 lists it as superseded' },
   { pattern: '200,240,0', why: '#C8F000 as decimal rgba() — the form a hex grep misses' },
-  { pattern: 'b5d800', why: 'a third lime; the accent hover is --color-accent-hover #BCD41C' },
-  { pattern: '18C76E', why: 'success green; design.md:439 — "Success is lime, not green"' },
-  { pattern: 'FF8800', why: 'a third orange; the counterweight is --color-spend #FF7A33' },
-  { pattern: 'E5E7EB', why: 'cool grey banned BY NAME at §3.8:496' },
-  { pattern: '1C1D20', why: 'cool surface; the dark surface is --color-surface #1B1811' },
-  { pattern: '31,35,35', why: 'cool #1F2323 shadow as decimal rgba()' }
+  { pattern: 'b5d800', why: 'a third lime; the accent hover is --color-accent-hover #D9FA64' },
+  { pattern: '18C76E', why: 'success green predating §3.4; v1.5 admits ONE green, #00AA57, and only for delta/health' },
+  { pattern: 'E5E7EB', why: 'a specific cool grey §3.8 banned by name; v1.5 neutrals are cool but this is not one of them' },
+
+  // ── v1.4, retired BY v1.5 (design.md §0.4). The direction of this list inverted:
+  //    these were the canonical values until 2026-08-08 and are now the stale ones.
+  { pattern: 'D2EC2A', why: 'v1.4 accent; v1.5 lime is #CCF03F (§3.1)' },
+  { pattern: 'BCD41C', why: 'v1.4 accent-hover; v1.5 is #D9FA64' },
+  { pattern: '210,236,42', why: '#D2EC2A as decimal rgba() — the form a hex grep misses' },
+  { pattern: 'FF7A33', why: 'v1.4 counterweight; v1.5 orange is #F0602A' },
+  { pattern: 'F7F4ED', why: 'v1.4 bone; v1.5 paper is #FAFAF7' },
+  { pattern: 'FFFDF8', why: 'v1.4 card; v1.5 card is #FFFFFF' },
+  { pattern: '12100C', why: 'v1.4 ink; v1.5 ink is #1F2323' },
+  { pattern: '1B1811', why: 'v1.4 dark surface; v1.5 is #1B1F1F' },
+  { pattern: 'E7E0D2', why: 'v1.4 border; v1.5 is #DDE4E4' },
+  { pattern: '161310', why: 'v1.4 text; v1.5 is #1F2323' },
+  { pattern: 'A79E8C', why: 'v1.4 muted-on-dark; v1.5 is #A8AFAF' },
+  { pattern: 'F6F3EB', why: 'v1.4 text-on-dark; v1.5 is #F2F4F3' },
+  { pattern: 'F0563A', why: 'v1.4 dark danger; v1.5 --red is #E54545' }
+
+  // ⚠️ '31,35,35' and 'FF8800' were HERE through v1.4 and are DELETED, not moved.
+  //    rgba(31,35,35) is now the ink shadow tint (§3.2) and #FF8800 is --f-orange
+  //    (§3.3.1). Banning either would ban what v1.5 ships.
 ]
 
 // Strip line comments so a value NAMED in an explanatory comment (this file documents why
@@ -139,17 +157,17 @@ test('the CTA button hover remains distinct from its resting fill', () => {
   const m = src.match(/bg-\[(#[0-9A-Fa-f]{6})\][^"]*hover:bg-\[(#[0-9A-Fa-f]{6})\]/)
   assert.ok(m, 'the CTA must still declare a resting fill and a hover fill')
   assert.notStrictEqual(m[1].toUpperCase(), m[2].toUpperCase(), 'CTA hover collapsed into its resting fill')
-  assert.strictEqual(m[2].toUpperCase(), '#BCD41C', 'the hover must be --color-accent-hover')
+  assert.strictEqual(m[2].toUpperCase(), '#D9FA64', 'the hover must be --color-accent-hover')
 })
 
 test('the active mode button stays distinct from the inactive one', () => {
   const src = readFileSync(DEMO, 'utf8')
-  assert.match(src, /activeMode === key\s*\n\s*\?\s*'bg-\[#D2EC2A\] text-\[#12100C\]/, 'active pill must be an accent fill')
-  assert.match(src, /:\s*'text-\[#A79E8C\] hover:text-white'/, 'inactive must stay a muted text treatment, not an accent fill')
+  assert.match(src, /activeMode === key\s*\n\s*\?\s*'bg-\[#CCF03F\] text-\[#1F2323\]/, 'active pill must be an accent fill')
+  assert.match(src, /:\s*'text-\[#A8AFAF\] hover:text-white'/, 'inactive must stay a muted text treatment, not an accent fill')
 })
 
 test('CONTROL — the state check fails when a pair IS collapsed', () => {
-  const collapsed = `text-[#6E6656] hover:text-[#6E6656]`
+  const collapsed = `text-[#7D8090] hover:text-[#7D8090]`
   const pairs = [...collapsed.matchAll(/text-\[(#[0-9A-Fa-f]{6})\]\s+hover:text-\[(#[0-9A-Fa-f]{6})\]/g)]
   assert.strictEqual(pairs.length, 1, 'the matcher must find the pair at all')
   assert.throws(
@@ -162,9 +180,16 @@ test('CONTROL — the state check fails when a pair IS collapsed', () => {
 
 // The §3.2 / §3.3 token values, plus `white`/`transparent` which Tailwind supplies by name.
 const TOKENS = new Set([
-  '#12100C', '#1B1811', '#241F17', '#302B22', '#6E6656', '#A79E8C', '#F6F3EB',
-  '#D2EC2A', '#BCD41C', '#FF7A33', '#F0563A',
-  '#F7F4ED', '#FFFDF8', '#E7E0D2', '#161310', '#6E675C'
+  // v1.5 (design.md §3.2/§3.3). Rewritten in the SAME change that repainted these two
+  // components, exactly as this file's banner required — a TOKENS list updated separately
+  // from the repaint would go green against the wrong half.
+  '#1F2323', '#1B1F1F', '#282C2C', '#303636', '#141818',
+  '#F2F4F3', '#A8AFAF', '#7D8090',
+  '#CCF03F', '#D9FA64', '#E8FF9A',
+  '#F0602A', '#FF8552', '#B83D10', '#D44A18',
+  '#00AA57', '#E54545',
+  '#FAFAF7', '#FFFFFF', '#DDE4E4', '#EEF3F3', '#F7FAFA',
+  '#647070', '#586161', '#9DA7A7'
 ])
 
 test('every hex remaining in the two components is a design-system token value', () => {
@@ -177,6 +202,9 @@ test('every hex remaining in the two components is a design-system token value',
 })
 
 test('CONTROL — the token check rejects a plausible non-token value', () => {
-  const strays = ['#1C1D20', '#7D8090'].filter(h => !TOKENS.has(h))
-  assert.strictEqual(strays.length, 2, 'both retired neutrals must be recognised as non-tokens')
+  // #7D8090 was one of these two through v1.4 and is now a LIVE token (§3.3 dark faint),
+  // so it can no longer prove anything here. Replaced with two values that are genuinely
+  // outside §3.2/§3.3 — a cool surface and the retired v1.4 ink.
+  const strays = ['#1C1D20', '#12100C'].filter(h => !TOKENS.has(h))
+  assert.strictEqual(strays.length, 2, 'both non-tokens must be recognised as such')
 })

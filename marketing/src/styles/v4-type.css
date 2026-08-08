@@ -1,0 +1,139 @@
+/* ============================================================================
+   V4 TYPE LAYER — design.md §3.2.1
+   ============================================================================
+
+   SCOPED TO `.v3`, same seam as v3-tokens.css and for the same reason: the 24
+   legacy pages keep `.st-home`'s type rules in home-design.css until they migrate.
+   Do not lift this scope — home-design.css carries the same warning, and the
+   failure mode (restyling bare h1–h4 across all 36 pages) is identical.
+
+   IMPORT ORDER MATTERS. This file must be imported AFTER v3-home.css on every v4
+   page. Several rules here override selectors of equal specificity declared there
+   (`.v3 .v3-hero h1`), so cascade order — not specificity — is what makes them
+   win. A page that imports this first silently keeps the old scale.
+
+   ── WHY THIS FILE EXISTS: THE SHIPPED SCALE WAS NOT THE SPEC'D ONE ──────────
+   Measured 2026-08-08, before this file:
+
+     .v3 .v3-hero h1   clamp(40px, 4.6vw, 70px)  lh 1.12  ls -0.045em
+     §3.2.1 h1         clamp(52px, 7.1vw, 104px) lh  .88  ls -0.078em
+
+   Not a rounding difference — the hero was ~34% smaller at the top end and its
+   line-height was 27% looser, which is the difference between a display headline
+   and a large paragraph. §3.2.1's tight leading and heavy negative tracking are
+   what the 800 weight is FOR; shipping the weight without the metrics gets the
+   density penalty and none of the effect.
+
+   ── THE SERIF WAS DECLARATIVE ONLY ──────────────────────────────────────────
+   `--font-serif` (Instrument Serif) has existed since v1.5's token layer, and
+   NOTHING CONSUMED IT. index.astro writes `<h1>Know which channels <em>actually
+   make you money.</em></h1>` and no rule bound that `<em>` to the serif, so the
+   browser synthesised an oblique of the sans — visually a slanted grotesque, not
+   the emphasis device §3.1 specifies. Bound below.
+
+   §3.1's scope limits on the serif are a HUMAN rule and cannot be expressed in
+   CSS: display-only, at most one phrase per headline, never a whole headline,
+   never body or chrome. This file makes the device available; it cannot stop it
+   being overused. Review for that.
+   ============================================================================ */
+
+/* ── Headline scale ──────────────────────────────────────────────────────── */
+.v3 h1,
+.v3 .v3-hero h1 {
+  font-family: var(--font-primary), system-ui, sans-serif;
+  font-size: clamp(52px, 7.1vw, 104px);
+  line-height: 0.88;
+  letter-spacing: -0.078em;
+  font-weight: 800;
+  color: var(--v3-ink);
+  text-wrap: balance;
+}
+
+.v3 h2,
+.v3 .v3-section-title {
+  font-family: var(--font-primary), system-ui, sans-serif;
+  font-size: clamp(38px, 5vw, 76px);
+  line-height: 0.94;
+  letter-spacing: -0.07em;
+  font-weight: 800;
+  color: var(--v3-ink);
+  text-wrap: balance;
+}
+
+/* ── The emphasis device. §3.1: ONE phrase per headline, display only. ────── */
+.v3 h1 em,
+.v3 h2 em,
+.v3 .v3-serif {
+  font-family: var(--font-serif), Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.04em;
+  line-height: 0.9;
+  letter-spacing: -0.045em;
+  /* §3.6: --orange-700 #B83D10 is 5.41:1 on paper — the ONE legal orange text colour
+     on a light canvas. Not --orange (3.13:1) and never lime (1.25:1, fills only).
+     Matches the design bundle, where every headline's italic phrase is rust. */
+  color: var(--v3-spend-text);
+}
+
+/* ── Prose ───────────────────────────────────────────────────────────────── */
+.v3 .v3-section-lede,
+.v3 .v3-hero-sub,
+.v3 .section-copy {
+  font-size: 18px;
+  line-height: 1.55;
+  letter-spacing: -0.02em;
+  color: var(--v3-gray-600);
+  max-width: 580px;
+  text-wrap: pretty;
+}
+
+.v3 p { text-wrap: pretty; }
+
+.v3 .v3-eyebrow {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--v3-gray-700);
+}
+
+/* ── Numerals. §3.2.1: every figure in a table or KPI. ──────────────────────
+   Proportional numerals change width as they update, so a live figure jitters
+   its own column. Tabular is what makes a revenue number read as stable. */
+.v3 table,
+.v3 .v3-stat-num,
+.v3 .v3-kpi-value,
+.v3 [data-numeral] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Mobile overrides. §3.2.1's `@media (max-width: 740px)` column. ───────── */
+@media (max-width: 740px) {
+  .v3 h1,
+  .v3 .v3-hero h1 {
+    font-size: clamp(34px, 9.6vw, 46px);
+    line-height: 0.94;
+    letter-spacing: -0.05em;
+  }
+
+  .v3 h1 em,
+  .v3 h2 em,
+  .v3 .v3-serif {
+    font-size: 1.02em;
+    line-height: 0.96;
+  }
+
+  .v3 h2,
+  .v3 .v3-section-title {
+    font-size: clamp(29px, 8.4vw, 40px);
+    line-height: 0.98;
+    letter-spacing: -0.045em;
+  }
+
+  .v3 .v3-section-lede,
+  .v3 .v3-hero-sub,
+  .v3 .section-copy {
+    font-size: 16px;
+  }
+}
