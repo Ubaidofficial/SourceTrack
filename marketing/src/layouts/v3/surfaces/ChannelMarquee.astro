@@ -1,23 +1,49 @@
 ---
-// Channel marquee — the handoff's `marquee` mount, recreated.
-//
-// STATIC BY RULING. The handoff scrolls this continuously (motion.css, pauses on
-// hover); motion is PR 3's scope, so this ships as a still row rather than
-// half-animated. Nothing here needs JS.
-//
-// Fixtures are hard-coded rather than read from a shared module (ruling 3): four
-// static components should not share mutable global state, and a fixture module
-// designed now would be designed before PR 3 and PR 4 say what they need.
-// The handoff reads these from window.DEMO; these are the same channel names.
-//
-// §35.4: text labels, never reconstructed brand marks.
-const channels = [
-  'Google Ads', 'Google', 'Direct', 'ChatGPT', 'LinkedIn',
-  'Referral', 'Meta', 'Bing', 'Perplexity', 'Email',
-];
+/**
+ * Channel marquee — the handoff's `marquee` mount.
+ *
+ * Now scrolling and carrying real marks. It shipped as a still row of text labels
+ * because motion was deferred and no logos were sourced; both landed, so both are here.
+ *
+ * ── THE TRACK IS DUPLICATED, AND THAT IS THE WHOLE MECHANISM ────────────────
+ * A seamless loop needs the content to repeat, so that translating the track by
+ * exactly -50% lands the second copy precisely where the first began. Animate a single
+ * copy and it visibly snaps back at the end of every cycle.
+ *
+ * The second copy is `aria-hidden`: it is the same list of names, and a screen reader
+ * announcing all ten channels twice is worse than not announcing the decoration at all.
+ *
+ * ── MOTION IS OPT-IN ────────────────────────────────────────────────────────
+ * The animation lives in v4-motion.css inside `prefers-reduced-motion: no-preference`.
+ * With reduced motion the track simply does not move — and because nothing here is
+ * hidden at rest, the row is fully readable either way. It also pauses on hover, so a
+ * reader can stop it to look at a mark.
+ *
+ * Marks route through BrandMark (§35.4): an officially-sourced asset where one exists,
+ * a text label where it does not. Both render at the same size, so a mixed row still
+ * reads as one rhythm.
+ */
+import BrandMark from "@/components/BrandMark.astro"
+
+// Slugs, not display names — BrandMark resolves the name from the registry, so the
+// label and the asset can never disagree about which company this is.
+const CHANNELS = [
+  "google-ads", "google-organic", "chatgpt", "linkedin", "meta-ads",
+  "perplexity", "claude", "gemini", "shopify", "stripe",
+  "hubspot", "slack"
+]
 ---
+
 <div class="v3-marquee">
   <div class="v3-marquee-track">
-    {channels.map((name) => <span class="v3-marquee-item">{name}</span>)}
+    {CHANNELS.map((slug) => (
+      <span class="v3-marquee-item"><BrandMark slug={slug} size={22} showName /></span>
+    ))}
+    {/* The seamless half. Same content, hidden from assistive tech. */}
+    {CHANNELS.map((slug) => (
+      <span class="v3-marquee-item" aria-hidden="true">
+        <BrandMark slug={slug} size={22} showName />
+      </span>
+    ))}
   </div>
 </div>
