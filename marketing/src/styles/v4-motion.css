@@ -1,0 +1,151 @@
+/* ============================================================================
+   V4 MOTION LAYER — scroll reveals. design.md §37, handoff motion.css.
+   ============================================================================
+
+   ⚠️ READ THIS BEFORE ADDING A RULE. THE ONE INVARIANT:
+   IF THE ANIMATION CANNOT RUN, THE CONTENT MUST STILL BE VISIBLE.
+
+   Nothing in this file sets a resting `opacity: 0` or a resting transform. Every
+   hidden state exists ONLY inside a keyframe, and every keyframe is reachable only
+   inside BOTH guards below. So a browser without scroll-driven animations, a visitor
+   who prefers reduced motion, and a page whose CSS partly failed all render the
+   finished layout — because the finished layout IS the default.
+
+   That is not a nicety. The handoff states it three separate times, and this repo has
+   already shipped the opposite twice: #530 stripped `style="opacity:0"` from 13
+   components and LEFT the runtime hide, so all 13 still rendered blank whenever the
+   observer never fired. scripts/qa-marketing-reveal-safety.mjs exists because of it.
+
+   ── WHY CSS AND NOT AN OBSERVER ─────────────────────────────────────────────
+   `animation-timeline: view()` has no trigger that can fail to arrive. There is no
+   observer, no timer, no hydration step, and therefore no state where an element is
+   hidden waiting for JavaScript that never ran. The reveal-safety guard bans the JS
+   pattern outright; this sidesteps it by construction rather than by permission.
+
+   ── STAGGER USES animation-range, NOT animation-delay ───────────────────────
+   `animation-delay` has NO EFFECT on a scroll-driven timeline — the animation is
+   bound to scroll position, not to elapsed time, so a delay simply does nothing.
+   Siblings are staggered by shifting their RANGE instead. Getting this wrong is
+   silent: the animation still plays, all children just move in lockstep.
+
+   Ranges are the handoff's, measured:
+     child 1  entry 2%  cover 20%
+     child 2  entry 6%  cover 26%
+     child 3  entry 10% cover 30%
+     child 4  entry 14% cover 34%
+     child 5+ entry 18% cover 38%
+   ============================================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+
+    /* ── The six motions. §37.1's directional set, so a page reads as a sequence
+          rather than as one repeated fade. ─────────────────────────────────── */
+    @keyframes v4-revealLeft  { from { opacity: 0; transform: translateX(-26px); } }
+    @keyframes v4-revealRight { from { opacity: 0; transform: translateX(26px); } }
+    @keyframes v4-revealPop   { from { opacity: 0; transform: translateY(22px) scale(0.975); } }
+    @keyframes v4-revealRise  { from { opacity: 0; transform: translateY(44px) scale(0.985); } }
+    @keyframes v4-revealUp    { from { opacity: 0; transform: translateY(30px); } }
+    @keyframes v4-numIn       { from { opacity: 0; transform: translateY(14px) scale(0.92); } }
+
+    /* Every reveal shares these. `both` matters: it holds the END state after the
+       range completes, so a fast scroll cannot leave an element mid-animation. */
+    .v3 .v3-section-title,
+    .v3 .v3-section-lede,
+    .v3 .v3-eyebrow,
+    .v3 .v3-card,
+    .v3 .v3-plan,
+    .v3 .v3-bento-cell,
+    .v3 .v3-cov,
+    .v3 .v3-ms,
+    .v3 .v3-two-card,
+    .v3 .v3-cta-box,
+    .v3 .v3-frame,
+    .v3 .v3-table-card,
+    .v3 .v3-orbit,
+    .v3 .v3-stat,
+    .v3 .v3-two-quote,
+    .v3 .v3-faq details,
+    .v3 .v3-badge,
+    .v3 .v3-stat-num {
+      animation-timing-function: cubic-bezier(0.16, 0.8, 0.25, 1);
+      animation-fill-mode: both;
+      animation-timeline: view();
+      animation-range: entry 2% cover 24%;
+    }
+
+    /* ── Left: the section's own voice — headings, questions, list items. ──── */
+    .v3 .v3-eyebrow,
+    .v3 .v3-section-title,
+    .v3 .v3-faq details { animation-name: v4-revealLeft; }
+
+    /* ── Right: the answering column. ─────────────────────────────────────── */
+    .v3 .v3-section-lede { animation-name: v4-revealRight; }
+
+    /* ── Pop: things that read as objects on the page. ────────────────────── */
+    .v3 .v3-card,
+    .v3 .v3-plan,
+    .v3 .v3-bento-cell,
+    .v3 .v3-cov,
+    .v3 .v3-ms,
+    .v3 .v3-two-card,
+    .v3 .v3-cta-box { animation-name: v4-revealPop; }
+
+    /* ── Rise: the large product surfaces. Further travel because they are
+          bigger — the same 22px on a 600px frame reads as a twitch. ───────── */
+    .v3 .v3-frame,
+    .v3 .v3-table-card,
+    .v3 .v3-orbit { animation-name: v4-revealRise; animation-range: entry 5% cover 34%; }
+
+    /* ── Up: small repeated items. ────────────────────────────────────────── */
+    .v3 .v3-stat,
+    .v3 .v3-badge,
+    .v3 .v3-two-quote { animation-name: v4-revealUp; }
+
+    /* ── Numerals get their own scale-in, so a stat reads as landing. ─────── */
+    .v3 .v3-stat-num { animation-name: v4-numIn; animation-range: entry 6% cover 28%; }
+
+    /* ── STAGGER. animation-delay does nothing on a scroll timeline — the range
+          is what shifts. Applied to the repeated groups only. ─────────────── */
+    .v3 .v3-cards > *:nth-child(1),
+    .v3 .v3-plans > *:nth-child(1),
+    .v3 .v3-stat-row > *:nth-child(1),
+    .v3 .v3-badges > *:nth-child(1),
+    .v3 .v3-two-quotes > *:nth-child(1) { animation-range: entry 2% cover 20%; }
+
+    .v3 .v3-cards > *:nth-child(2),
+    .v3 .v3-plans > *:nth-child(2),
+    .v3 .v3-stat-row > *:nth-child(2),
+    .v3 .v3-badges > *:nth-child(2),
+    .v3 .v3-two-quotes > *:nth-child(2) { animation-range: entry 6% cover 26%; }
+
+    .v3 .v3-cards > *:nth-child(3),
+    .v3 .v3-plans > *:nth-child(3),
+    .v3 .v3-stat-row > *:nth-child(3),
+    .v3 .v3-badges > *:nth-child(3),
+    .v3 .v3-two-quotes > *:nth-child(3) { animation-range: entry 10% cover 30%; }
+
+    .v3 .v3-cards > *:nth-child(4),
+    .v3 .v3-plans > *:nth-child(4),
+    .v3 .v3-stat-row > *:nth-child(4),
+    .v3 .v3-badges > *:nth-child(4),
+    .v3 .v3-two-quotes > *:nth-child(4) { animation-range: entry 14% cover 34%; }
+
+    .v3 .v3-cards > *:nth-child(n + 5),
+    .v3 .v3-plans > *:nth-child(n + 5),
+    .v3 .v3-stat-row > *:nth-child(n + 5),
+    .v3 .v3-badges > *:nth-child(n + 5),
+    .v3 .v3-two-quotes > *:nth-child(n + 5) { animation-range: entry 18% cover 38%; }
+
+    /* ── The marquee. §29's continuous scroll, motion-gated like everything else.
+          Duplicated track + 50% translate is what makes the loop seamless; the
+          track is aria-hidden on its second copy so it is not read twice. ──── */
+    .v3 .v3-marquee-track {
+      animation: v4-marquee 38s linear infinite;
+      width: max-content;
+      flex-wrap: nowrap;
+    }
+    .v3 .v3-marquee:hover .v3-marquee-track { animation-play-state: paused; }
+    @keyframes v4-marquee { to { transform: translateX(-50%); } }
+  }
+}

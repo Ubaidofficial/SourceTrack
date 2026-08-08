@@ -132,6 +132,17 @@ export const V3_PAGE_PAIRS = {
     // a carried-forward ratio survives a surface flip without the text's own CSS
     // changing. Deleted rather than repointed at a surface that is not there.
     //
+    // Model switcher (§8). Card on --v3-paper-card, rows on --v3-gray-50.
+    { id: 'model tab resting', sel: '.v3-ms-tab', fg: '#586161', bg: '#FFFFFF', level: 'AA' },
+    { id: 'model tab selected', sel: '.v3-ms-tab', fg: '#1F2323', bg: '#CCF03F', level: 'AA' },
+    { id: 'model meta line', sel: '.v3-ms-meta', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'model note', sel: '.v3-ms-note', fg: '#586161', bg: '#FFFFFF', level: 'AA' },
+    { id: 'model total', sel: '.v3-ms-total strong', fg: '#1F2323', bg: '#FFFFFF', level: 'AA' },
+    { id: 'model channel name', sel: '.v3-ms-chname strong', fg: '#1F2323', bg: '#F7FAFA', level: 'AA' },
+    { id: 'model channel sub', sel: '.v3-ms-chname span', fg: '#647070', bg: '#F7FAFA', level: 'AA' },
+    { id: 'model percentage', sel: '.v3-ms-pct', fg: '#586161', bg: '#F7FAFA', level: 'AA' },
+    { id: 'model amount', sel: '.v3-ms-amt', fg: '#1F2323', bg: '#F7FAFA', level: 'AA' },
+    { id: 'model footer', sel: '.v3-ms-foot', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
     // "The same lead, twice" (§12). Two surfaces: the untagged card sits on
     // --v3-gray-50, the attributed one on --v3-paper-card, so they score separately.
     { id: 'two-leads name', sel: '.v3-two-id strong', fg: '#1F2323', bg: '#F7FAFA', level: 'AA' },

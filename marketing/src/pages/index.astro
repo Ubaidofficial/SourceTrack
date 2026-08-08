@@ -82,6 +82,7 @@ import Bento from "@/layouts/v3/Bento.astro";
 import "@/styles/v3-tokens.css";
 import "@/styles/v3-home.css";
 import "@/styles/v4-type.css";
+import "@/styles/v4-motion.css";
 import "@/styles/v3-surfaces.css";
 
 import HeroTicker from "@/components/v3/HeroTicker.jsx";
@@ -89,6 +90,7 @@ import CoverageTabs from "@/layouts/v3/surfaces/CoverageTabs.astro";
 import LiveVisitors from "@/components/v3/LiveVisitors.jsx";
 import PathBeam from "@/layouts/v3/surfaces/PathBeam.astro";
 import HeroOrbit from "@/layouts/v3/surfaces/HeroOrbit.astro";
+import ModelSwitcher from "@/layouts/v3/surfaces/ModelSwitcher.astro";
 import TwoLeads from "@/layouts/v3/surfaces/TwoLeads.astro";
 import CaptureIcon from "@/layouts/v3/surfaces/CaptureIcon.astro";
 import ChannelMarquee from "@/layouts/v3/surfaces/ChannelMarquee.astro";
@@ -372,29 +374,16 @@ const comparison = [
           heading="Nine attribution models. One dataset underneath."
           lede="Attribution arguments are usually model arguments in disguise. First touch, last touch, linear, time decay, W-shaped, full path and more — the same dataset, re-credited."
         />
-          {/* NINE models, named. The heading "Nine attribution models. One dataset
-              underneath." is TRUE — ALLOWED_MODELS holds exactly 9
-              (api/lib/report-config-validation.js:33) — so the heading stands and the
-              visual supports it literally.
-              NO revenue and NO percentages: ModelCompareMockup was NOT wired here even
-              though it exists, because it shows THREE models under a nine-model heading
-              (a contradiction a reader can count) and carries $240/$80 figures — the same
-              derivation that got bento-attr cut. Names and families derive nothing. */}
-          <div class="v3-models">
-            {[
-              { fam: "Touch-based", items: ["First touch", "Last touch", "First touch (non-direct)", "Last touch (non-direct)"] },
-              { fam: "Multi-touch", items: ["Linear", "U-shaped", "W-shaped", "Time decay"] },
-              { fam: "AI-aware",    items: ["AI platforms"] },
-            ].map(({ fam, items }) => (
-              <div class="v3-models-fam">
-                <span class="v3-models-label">{fam}</span>
-                <div class="v3-models-list">
-                  {items.map((m) => <span class="v3-models-chip">{m}</span>)}
-                </div>
-              </div>
-            ))}
-          </div>
-      </Wrap>
+          {/* Replaces a static name-chip list. The section's argument is that credit
+              MOVES while visits and conversions do not — chips cannot make it; the
+              reader has to see the same $21,430 land differently.
+
+              MODELS ARE THE PRODUCT'S, NOT THE DESIGN'S (founder ruling 2026-08-08,
+              "design's mechanics, product's truth"). The v4 bundle's switcher offers
+              "Full path" and "Custom weights", neither of which exists, and omits
+              "AI platforms", which does. These nine are ALLOWED_MODELS exactly. */}
+          <ModelSwitcher />
+        </Wrap>
     </section>
 
     {/* 9 — plain */}
