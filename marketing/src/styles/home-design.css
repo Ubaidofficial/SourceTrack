@@ -107,7 +107,11 @@
   --font-display: var(--font-primary, "Geist"), ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-primary, "Geist"), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-primary, "Geist"), ui-sans-serif, system-ui, sans-serif;
-  --st-mono: var(--font-mono, "Geist Mono"), ui-monospace, "SF Mono", Consolas, monospace;
+  /* v1.5: fallback was "Geist Mono", which is no longer shipped — theme.json's mono is
+     JetBrains Mono and the woff2 was removed with it. The fallback never fires while
+     --font-mono resolves, but naming a font we do not ship is a trap for whoever reads
+     it next. */
+  --st-mono: var(--font-mono, "JetBrains Mono"), ui-monospace, "SF Mono", Consolas, monospace;
 
   --ease-out: cubic-bezier(0.16, 0.8, 0.25, 1);
   --ease-in-out: cubic-bezier(0.6, 0, 0.2, 1);

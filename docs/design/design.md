@@ -1,6 +1,6 @@
 # SourceTrack - Complete Design & Product Spec
 
-**Version:** 1.4 Agentic setup actions, accent-density ceiling, container variety, illustrative-data disclosure, brand-asset authenticity
+**Version:** 1.5 — v4 visual identity: new palette, new type system, new mark. §3 replaced wholesale.
 **Base spec:** V1 Final, June 2026 + V1.1 design expansion
 **Status:** Source of truth for product design, Stitch generation, implementation planning, public website direction, internal Ops Console design, and support-preview safety rules.
 
@@ -100,6 +100,102 @@ This version expands the prior V1.1 design system with the missing product surfa
   V1-wide.** It is now listed in §26 (which is what makes it binding on shipped UI) and explained in
   §26.2; §25.1 is unchanged and still binds generation. Raised when a "liquid glass" card technique
   was considered and retracted without a clear answer either way.
+
+---
+
+## 0.4 V1.5 Change Log
+
+**v1.5 (2026-08-08) replaces §3 wholesale.** Every prior version of this doc refined one visual
+system; this one swaps it. Founder ruling, 2026-08-08: adopt the v4 design handoff **verbatim** —
+its palette, its type system and its mark — rather than mapping it onto v1.4's tokens.
+
+This is a rebrand, not a marketing refresh. It repaints the product as well as the site, and it
+**reverses four standing rulings**. Each is listed here rather than folded into §3, because a reader
+who remembers the old rule needs to find out here that it changed and why.
+
+| Was | Now | Where |
+|---|---|---|
+| Accent `#D2EC2A` | `#CCF03F` | §3.1 |
+| Bone `#F7F4ED`, warm neutrals | Paper `#FAFAF7`, **cool** neutrals | §3.1, §3.2 |
+| Geist, single family | Schibsted Grotesk + **Instrument Serif italic** + JetBrains Mono | §3.1, §3.1.2 |
+| Mark: three agent dots + one lime source disc | Two tilted capsule tracks with travelling signals | §3.1 |
+
+### The four reversals, stated plainly
+
+1. **§3.4's "no separate success green" is REVERSED.** v1.4 read: *"There must be no separate success
+   green, no terminal green, no info blue, no purple, and no slate in the shipped app."* The handoff
+   ships `--green #00AA57` for positive deltas and healthy status. Green is now admitted, **bounded**
+   (§3.4) and **measured** (§3.6 — it fails AA as text on light and is fills-only there). No info
+   blue, no purple and no slate — those three stay banned.
+
+2. **§3.1's single-family mandate is REVERSED, narrowly.** v1.4 read *"Single family across app,
+   marketing and docs."* Instrument Serif italic is admitted as a **display-only exception**, scoped
+   in §3.1 to one emphasis phrase per headline. It is the handoff's signature device and Geist italic
+   cannot carry it. The exception is scoped so it cannot spread: it is never body copy, never UI
+   chrome, never a whole headline.
+
+3. **§3.1's warm-neutral argument no longer describes the shipped palette.** v1.4 argued *"Cool black
+   plus acid green is the most-copied AI-startup theme in circulation … warming the neutrals is what
+   makes the same lime read as expensive."* The v4 neutrals are cool (`#FAFAF7`, `#EEF3F3`,
+   `#C9D1D1`). **The argument is preserved in §3.1 as a recorded dissent rather than deleted** — it
+   was the reasoning behind a deliberate choice, and a reader comparing v4 against a competitor needs
+   to know the risk was named in advance and accepted, not overlooked.
+
+4. **§3.7's dot system is INVALIDATED and rewritten.** It extended the geometry of the old mark
+   ("The mark is a first touch and a last touch"). The new mark is two capsule tracks, so that
+   sentence no longer describes anything. §3.7 is rewritten around the new geometry; the attribution
+   trail, source chip, loader and empty state all survive as patterns, re-derived.
+
+### What did NOT change
+
+- **§0's Scope Gate**, and its authority over scope conflicts.
+- **§2.6's accent-density ceiling (~15%).** The hex changed; the ceiling did not.
+  ⚠️ **It could NOT be re-measured, and that is a defect, not a deferral** — see below.
+- **§2.7's container-shape variety.**
+- **§26's prohibited elements**, including the V1-wide glassmorphism ban — with one amendment
+  recorded in §3.5, where the handoff's hero treatment meets §3.8's "no decorative blobs".
+- **§29.8's one-disclosure-line rule.**
+- The **`--violet-*` rejection stands.** The handoff still ships those aliases pointing at orange
+  values. They were rejected in v1.4 because the names are a trap, and that reasoning is unaffected
+  by the palette change. Use `--orange-*`. `api/tests/v3-lift-detection.test.js` still bars them.
+
+### ⚠️ §2.6 IS CURRENTLY UNMEASURABLE — found during v1.5, pre-dates it
+
+`marketing/scripts/accent-density.mjs` — which §2.6 names as *"THE single answer"* and which is
+supposed to be the one place that answers the 15% ceiling — **exits 2 without producing a figure**:
+
+```
+token --paper not found in built css
+```
+
+**Verified pre-existing, not caused by v1.5.** The same command fails identically on unmodified
+`origin/main` (ef4f7627). Cause: `--paper` is declared only in `home-design.css:69`, and the v3
+homepage does not import that stylesheet — the same non-import that `v3-surfaces.css` documents as
+"conflict 1". So the harness has been unable to read the homepage **since the #690 cutover**, roughly
+fourteen PRs.
+
+**What follows, and it is uncomfortable:** every §2.6 claim made about the v3 homepage since #690 —
+including v1.4's "open hero violation at ~70–80%" — rests on a harness that has not run against that
+page. The violation may still be real; the point is that **nothing has measured it either way**, and
+§2.6 reads as though something had.
+
+This is not fixed in v1.5, because fixing it means repointing the harness at the v3 token layer and
+re-deriving its geometry, which is a change of its own. It is recorded here so the ceiling is not
+read as verified. **Do not cite `accent-density.mjs` output as evidence until it runs.** It is also
+why §3.5's hero atmosphere ships with its accent budget unconfirmed — stated there too, rather than
+only here.
+
+### Open defects recorded, not fixed
+
+Three v4 token pairings fail WCAG AA as measured (§3.6). They are recorded here as **open**, with
+proposed corrections, rather than silently shipped or silently altered — "verbatim" was a ruling
+about which system to adopt, not a licence to ship an unmeasured contrast failure:
+
+- `--f-ink-3` light `#8D949C` — 3.07:1 on card, 2.76:1 on app background, used as text on 43 rules.
+- `--f-ink-3` dark `#7D8090` — 3.95:1 on card.
+- `--red #E54545` — 3.81:1 on paper; AA-large only, not body text.
+
+See §3.6 for the measurements and the minimum corrections that clear AA.
 
 ---
 
@@ -274,17 +370,29 @@ follow-up task; it is recorded here as an open defect, not as a shipped example.
 >
 > **The heading and the rule disagree about scope.** This section is titled *"Accent-density
 > **ceiling**"* — which reads as a cap on accents generally — but every sentence of the rule itself
-> names **lime only**. §3.1:309 lists a second accent, `#FF7A33`, explicitly labelled *"Accent —
-> counterweight"*, and §3.1's token block adds `#F2A93B` as a gradient-only bridge.
+> names **lime only**. §3.1 lists a second accent explicitly labelled *"Accent — counterweight"*.
 >
 > **The gap that follows: no rule caps TOTAL accent density.** A screen could hold 15% lime plus an
-> unbounded amount of `#FF7A33` and violate nothing written here, while plainly breaking the intent
-> stated in the opening line — *"a signal stops signalling once it covers the screen."* Whether the
-> ceiling should be per-accent or aggregate is an open design decision.
+> unbounded amount of the counterweight and violate nothing written here, while plainly breaking the
+> intent stated in the opening line — *"a signal stops signalling once it covers the screen."* Whether
+> the ceiling should be per-accent or aggregate is an open design decision.
 >
 > **Do not silently reconcile this** by widening the rule text to "accents" or by narrowing the
 > heading to "Lime-density ceiling". Either edit would look like a typo fix and would quietly decide
 > the open question. It needs a ruling, not a wording pass.
+>
+> **v1.5 note — the contradiction is UNCHANGED and still unresolved; only dead hexes were removed.**
+> This block used to cite `#FF7A33` (counterweight) and `#F2A93B` (gradient bridge). v1.5 retired both
+> — the counterweight is now `#F0602A` and the bridge no longer exists (§3.5) — so the block was
+> naming values that had ceased to exist, which would have made it unreadable rather than resolved.
+> The wording is now hex-free and points at §3.1 instead, so a future palette change cannot rot it
+> again. **The open question is untouched.**
+>
+> **v1.5 raises the stakes on it.** §3.5's hero atmosphere puts lime *and* orange on the same field —
+> two orbs, a lime sweep, and seven tracers in both hues — which is precisely the "15% lime plus
+> unbounded counterweight" case this block describes, now shipped rather than hypothetical.
+> `accent-density.mjs` measures lime only. Until the ceiling is ruled per-accent or aggregate, that
+> harness cannot answer whether the v4 hero passes, and **it should not be read as if it can.**
 
 ### 2.7 Container-shape variety
 
@@ -317,187 +425,524 @@ There must be one SourceTrack design system. Do not create alternate palettes, a
 | Token | Value |
 |---|---|
 | Product name | SourceTrack |
-| Mark | Three small agent dots in a left-hand column, one large lime source disc to their right, on a rounded square. **Meaning: three AI assistants, one earned the revenue.** Square `#12100C` light / `#1B1811` dark (§3.3 `--color-surface`); agent dots `#4A4634` both modes; source disc `#D2EC2A` (the §3.1 accent) both modes. **Never a fourth dot and never a glow** — the count is the meaning, and a glow is the background wash §2.6 exists to prevent. |
-| Ink (structure / dark canvas) | `#12100C` |
-| Bone (light canvas) | `#F7F4ED` |
-| Paper (card surface, light) | `#FFFDF8` |
-| Accent — signal | `#D2EC2A` |
-| Accent — counterweight | `#FF7A33` |
-| Bridge (gradient only) | `#F2A93B` |
-| Primary text, light | `#161310` |
-| Primary text, dark | `#F6F3EB` |
-| Border, light | `#E7E0D2` |
-| Border, dark | `#302B22` |
-| Body font | Geist, self-hosted (SIL OFL 1.1). Single family across app, marketing and docs. |
-| Display font | Geist, headings at −0.03em tracking. |
-| Mono font | Geist Mono |
-| Sidebar | Fixed 210px in V1 |
+| Mark | Two tilted (28°) capsule tracks — a short peach one, a long lime one. A solid signal rides each track; the track **behind** the signal is lit and fades into a comet tail, the track **ahead** stays dim, and the signal cuts a clean gap as it passes. **Meaning: a first touch and a last touch, both still travelling.** Geometry and timings in §3.1.1. |
+| Ink (structure / dark canvas) | `#1F2323` |
+| Paper (light canvas) | `#FAFAF7` |
+| Card surface, light | `#FFFFFF` |
+| Accent — signal | `#CCF03F` |
+| Accent — counterweight | `#F0602A` |
+| Positive | `#00AA57` |
+| Primary text, light | `#1F2323` |
+| Primary text, dark | `#F2F4F3` |
+| Border, light | `#DDE4E4` |
+| Border, dark | `#303636` |
+| Body font | Schibsted Grotesk (SIL OFL), weights 400–900. **Substituted for the handoff's Switzer — see §3.1.2.** |
+| Display font | Schibsted Grotesk 800, headline tracking −0.078em at `h1`, −0.07em at `h2`. |
+| Emphasis font | Instrument Serif *italic*, 400. **Display-only exception — see below.** |
+| Mono font | JetBrains Mono. Code, IDs, amounts, latency. |
+| Sidebar | 210px in the V1 app shell; **250px in the demo workspace** (§3.1.3) |
 
-**The warmth lives in the neutrals, not the accent.** Cool black plus acid green is the most-copied AI-startup theme in circulation. Warming the body, card, border and muted-text values is what makes the same lime read as expensive rather than cheap. Do not "warm up" the accents to compensate — warm the surround.
+**The serif is one phrase, never a headline.** Instrument Serif italic exists to carry a single
+emphasised phrase inside an `h1` or `h2` — *"Stop guessing. Start **attributing**."* — at `1.04em`
+relative to the headline, line-height `.9`, tracking `−0.045em`. It is the one deliberate exception to
+what was a single-family mandate through v1.4, and the scope is the whole point:
+
+- **Never** body copy, UI chrome, buttons, labels, table cells, or app surfaces.
+- **Never** a complete headline — if the serif is not contrasting against Schibsted Grotesk in the same line,
+  it is doing nothing and should be removed.
+- At most **one phrase per headline**, and not on every headline on a page.
+
+> **Recorded dissent, carried forward from v1.4 — read before "warming up" anything.**
+>
+> v1.4's §3.1 argued: *"Cool black plus acid green is the most-copied AI-startup theme in circulation.
+> Warming the body, card, border and muted-text values is what makes the same lime read as expensive
+> rather than cheap."* The v4 neutrals are **cool** (`#FAFAF7`, `#EEF3F3`, `#C9D1D1`, ink `#1F2323`),
+> which is the thing that paragraph warned against.
+>
+> This is preserved rather than deleted because it was a reasoned position, and the risk it names was
+> **accepted deliberately in the 2026-08-08 ruling, not overlooked**. What follows from that: v4 buys
+> its distinctiveness from *type, motion and the mark* rather than from palette temperature, so those
+> three carry more weight here than they did in v1.4. Weakening them to "simplify" removes the only
+> differentiation the cool palette leaves.
+>
+> Do **not** resolve this by half-warming the neutrals. A palette that is neither cool nor warm is the
+> one outcome worse than either. If the cool direction is ever reversed, reverse it wholesale and
+> amend this section — do not drift.
+
+### 3.1.1 Mark geometry
+
+The mark is a web component (`<st-logo>`) rather than a static SVG, because the mask ids must stay
+unique per instance. Shadow DOM.
+
+```
+viewBox 0 0 48 48,  transform: translate(2.9 2.7) rotate(28 24 24)
+
+bar A   x 6.2   y 4.5   w 10.4  h 25    rx 5.2   dot r 4.7   travel 14.6   ink #FF8552   phase -1.35s
+bar B   x 22.8  y 3.2   w 11.4  h 38.5  rx 5.7   dot r 5.2   travel 27.1   ink #CCF03F   phase 0
+```
+
+- Traverse `2.9s cubic-bezier(.62,0,.38,1)`, alternating. Hover accelerates to `1.25s`.
+- The signal stretches along its axis while travelling (`scale(.93, 1.14)`) and rounds out at each end.
+- On arrival a ring pulses out of it, once per cycle, offset between the two bars.
+- Attributes: `size` (px), `on-dark` (raises track opacity to `.5`, lit to `.92`), `still` (freeze).
+- **`prefers-reduced-motion` freezes to a composed end frame — never a blank one.** A mark that
+  disappears for a reduced-motion user is a broken mark, not a respectful one.
+
+Sizes: 44px in the header lockup, 48px in the footer.
+
+### 3.1.2 Why the body font is not Switzer
+
+The handoff specifies **Switzer** and says "self-host in production". We do not ship Switzer. This
+is the one place v1.5 knowingly departs from the verbatim ruling, and the reason is legal, not
+aesthetic — so it is recorded rather than quietly substituted.
+
+**Switzer is Fontshare-only.** No npm package and no Astro font provider carries it (verified
+2026-08-08: `@fontsource/switzer`, `@fontsource-variable/switzer`, `switzer` and `@fontshare/switzer`
+all 404). Shipping it meant committing the `.woff2` into this repo.
+
+**That breaches the ITF Free Font Licence here.** §02: *"The Fonts may not … be distributed,
+duplicated, loaned, resold or licensed in any way … This includes … uploading them in a public
+server."* `Ubaidofficial/SourceTrack` is **public** (verified `private=false`), so the file in the
+source tree is redistribution. §01 does grant Web *use* — serving the font from our own site is
+licensed — so the repo is the problem, not the serving. The same reasoning `.gitignore` already
+applies to `research/`.
+
+Three alternatives were considered and rejected by founder ruling, 2026-08-08:
+
+| Option | Why not |
+|---|---|
+| Keep the file out of git, inject at build | Workable, but adds private-asset plumbing to every build for one font |
+| Load from the Fontshare CDN (§09's sanctioned route) | Breaks the no-third-party-font-host stance — and §3.4's implementation note calls a privacy product making third-party requests "a contradiction a competitor will point at" |
+| Block on written consent from ITF | §02 names consent as the route, but it stalls the type layer indefinitely |
+
+**Schibsted Grotesk** was chosen because it is OFL (redistributable, no exposure), is on Google Fonts
+so it routes through the same build-time provider as Instrument Serif and JetBrains Mono — no binary
+in the repo, still self-hosted at runtime — and carries a full **400–900** variable range. That range
+is a hard requirement, not a nicety: §3.1 sets display at 800 and the wordmark at 900, which is what
+ruled out Instrument Sans (400–700) despite it being Instrument Serif's designed companion. It is a
+neutral grotesque with strong heavy weights, which is what §3.2.1's headline setting (800 at
+−0.078em) actually leans on. Manrope is banned by §3.8. Inter was rejected as too ubiquitous for a
+system whose distinctiveness now rests on type and motion rather than palette temperature (§3.1's
+recorded dissent).
+
+**Instrument Serif and JetBrains Mono are unaffected** — both OFL, both shipped as the handoff
+specifies. Only the body/display family changed.
+
+### 3.1.3 Two sidebar widths, deliberately
+
+§4.1's V1 app shell is **210px**. The demo workspace (§3.3's `.st-demo` tokens) is **250px**. These
+are different surfaces and the difference is intentional — the demo carries three nav groups plus a
+pinned "Back to site" link, and 210px truncates the group labels.
+
+Do not "fix" one to match the other. If they are ever unified, it is a layout decision for both
+surfaces, not a token cleanup.
 
 ### 3.2 Light mode tokens
 
+Two layers, and the distinction is load-bearing. The **ramp** is raw palette. The **semantic layer**
+is what components reference. Components use semantics; only the semantic layer names a ramp step.
+That is what lets a palette change flow through one file instead of 351 call sites — which is exactly
+what the v1.4 → v1.5 repaint cost, because v1.4's lime was hardcoded rather than referenced.
+
 ```css
 :root{
-  --color-bg:#F7F4ED;
-  --color-bg-2:#F1EDE3;
-  --color-surface:#FFFDF8;
-  --color-border:#E7E0D2;
-  --color-divider:#F0EADC;
+  /* ── RAMP. Raw palette. Referenced by the semantic layer, rarely by components. ── */
+  --black:#1F2323;   --black-900:#141818; --black-850:#1B1F1F;
+  --black-800:#242929; --black-700:#303636; --black-600:#4B5353;
 
-  --color-text:#161310;
-  --color-text-muted:#6E675C;
-  --color-text-faint:#A39B8C;
+  --gray-700:#586161; --gray-600:#647070; --gray-500:#7D8090; --gray-400:#9DA7A7;
+  --gray-300:#C9D1D1; --gray-200:#DDE4E4; --gray-100:#EEF3F3; --gray-50:#F7FAFA;
 
-  --color-accent:#D2EC2A;
-  --color-accent-hover:#BCD41C;
-  --color-accent-text:#12100C;      /* only legal text colour on a lime fill */
-  --color-accent-subtle:rgba(210,236,42,.13);
+  --paper:#FAFAF7;   --white:#FFFFFF;
 
-  --color-spend:#FF7A33;            /* cost, paid media, caution */
-  --color-spend-text:#B4420E;       /* orange as TEXT, light backgrounds only */
-  --color-spend-subtle:rgba(255,122,51,.10);
-  --color-bridge:#F2A93B;           /* gradient midpoint only — never a solid */
+  --lime:#CCF03F; --lime-400:#D9FA64; --lime-200:#E8FF9A;
+  --lime-100:#F1FFC8; --lime-50:#F8FFE0;
 
-  --color-danger:#C4381C;
-  --color-danger-subtle:rgba(196,56,28,.08);
+  --orange:#F0602A; --orange-700:#B83D10; --orange-600:#D44A18; --orange-400:#FF8552;
+  --orange-200:#FFC7A8; --orange-100:#FFE1D2; --orange-50:#FFF3EC;
 
-  --shadow-sm:0 1px 2px rgba(30,24,12,.04);
-  --shadow-md:0 8px 20px -10px rgba(30,24,12,.18);
-  --shadow-lg:0 22px 48px -28px rgba(30,24,12,.26);
+  --green:#00AA57; --green-100:#DDF6EA;
+  --red:#E54545;
 
-  --radius-sm:5px; --radius-md:9px; --radius-lg:13px; --radius-full:999px;
+  /* ── SEMANTIC. What components reference. ─────────────────────────────────── */
+  --color-bg:var(--paper);
+  --color-bg-2:var(--gray-50);
+  --color-surface:var(--white);
+  --color-border:var(--gray-200);
+  --color-divider:var(--gray-100);
 
-  --font-body:'Geist','Inter',system-ui,sans-serif;
-  --font-display:'Geist','Inter',system-ui,sans-serif;
-  --font-mono:'Geist Mono','JetBrains Mono',monospace;
+  --color-text:var(--black);
+  --color-text-muted:var(--gray-600);
+  --color-text-faint:var(--gray-400);
 
-  --text-xs: 0.6875rem;
-  --text-sm: 0.75rem;
-  --text-base: 0.8125rem;
-  --text-md: 0.875rem;
-  --text-lg: 1rem;
-  --text-xl: 1.125rem;
-  --text-2xl: 1.375rem;
-  --text-3xl: 1.75rem;
-  --text-hero: 2rem;
+  --color-accent:var(--lime);
+  --color-accent-hover:var(--lime-400);
+  --color-accent-text:var(--black);   /* only legal text colour on a lime fill */
+  --color-accent-subtle:var(--lime-100);
 
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.25rem;
-  --space-6: 1.5rem;
-  --space-8: 2rem;
-  --space-10: 2.5rem;
-  --space-12: 3rem;
+  --color-spend:var(--orange);        /* cost, paid media, caution */
+  --color-spend-text:var(--orange-700); /* orange as TEXT, light backgrounds only */
+  --color-spend-subtle:var(--orange-50);
+
+  --color-positive:var(--green);      /* NEW in v1.5 — see §3.4 */
+  --color-positive-subtle:var(--green-100);
+
+  --color-danger:var(--red);
+
+  /* ── STRUCTURE ────────────────────────────────────────────────────────────── */
+  --max:1320px;      /* page container */
+  --gutter:24px;     /* 12-col grid gap */
+
+  --radius-sm:12px;  /* chips, inputs, small controls */
+  --radius-md:18px;  /* standard cards */
+  --radius-lg:28px;  /* large cards */
+  --radius-xl:36px;  /* hero panels, CTA box */
+  --radius-full:999px;
+
+  --shadow-card:0 12px 38px rgba(31,35,35,.055);
+  --shadow-soft:0 24px 80px rgba(31,35,35,.12);
+  --shadow-deep:0 32px 110px rgba(31,35,35,.32);
+  --shadow-lime:0 18px 52px rgba(204,240,63,.32);
+  --shadow-orange:0 18px 52px rgba(240,96,42,.35);
+
+  --ease-out:cubic-bezier(.16,.8,.25,1);
+  --ease-in-out:cubic-bezier(.6,0,.2,1);
+
+  /* ── TYPE ─────────────────────────────────────────────────────────────────── */
+  --font-body:'Schibsted Grotesk',system-ui,sans-serif;
+  --font-display:'Schibsted Grotesk',system-ui,sans-serif;
+  --font-serif:'Instrument Serif',Georgia,serif;   /* display-only — §3.1 */
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+
+  /* App UI step scale. Fixed steps, because product chrome does not fluidly scale. */
+  --text-xs:0.6875rem; --text-sm:0.75rem;  --text-base:0.8125rem;
+  --text-md:0.875rem;  --text-lg:1rem;     --text-xl:1.125rem;
+  --text-2xl:1.375rem; --text-3xl:1.75rem; --text-hero:2rem;
+
+  --space-1:0.25rem;  --space-2:0.5rem;   --space-3:0.75rem;  --space-4:1rem;
+  --space-5:1.25rem;  --space-6:1.5rem;   --space-8:2rem;
+  --space-10:2.5rem;  --space-12:3rem;
 }
 ```
 
-Type scale and spacing scale from v1.2 §3.2 are unchanged and carry over.
+**`--shadow-orange` was `--shadow-violet` in the handoff.** Renamed on the way in. The value is
+orange; only the name said violet. See §0.4 — the `--violet-*` rejection carries forward unchanged and
+is CI-enforced.
+
+### 3.2.1 Marketing type scale
+
+Marketing headlines are **fluid**; app chrome uses the fixed steps above. Two scales, because a
+dashboard label that grows with the viewport is a bug and a hero headline that does not is a missed
+opportunity.
+
+| Element | Desktop | ≤740px |
+|---|---|---|
+| `h1` | `clamp(52px,7.1vw,104px)` / lh `.88` / ls `−0.078em` / 800 | `clamp(34px,9.6vw,46px)` / lh `.94` / ls `−0.05em` |
+| `h1 .serif` | `1.04em` / lh `.9` / ls `−0.045em` / 400 italic | `1.02em` / lh `.96` |
+| `h2` | `clamp(38px,5vw,76px)` / lh `.94` / ls `−0.07em` / 800 | `clamp(29px,8.4vw,40px)` / lh `.98` / ls `−0.045em` |
+| `.section-copy` | 18px / lh 1.55 / ls `−0.02em` / `--color-text-muted` / max 580px | 16px |
+| `.eyebrow` | 12px / 800 / ls `.14em` / uppercase / `--gray-700` | same |
+| Body | 16px / lh 1.35 | same |
+| Wordmark | 23px / 900 / ls `−0.05em` | 21px |
+
+`text-wrap: pretty` on prose. `font-variant-numeric: tabular-nums` on every numeral in a table or KPI —
+figures that shift width while updating read as unstable, which is the opposite of what a revenue
+number should read as.
+
+**Section rhythm:** `section { padding:96px 0 }`, `.tight { 64px }` → 68px ≤900 → 54px ≤740 → 46px ≤440.
+`.wrap` padding `0 32px` → `0 20px` ≤740 → `0 18px` ≤440.
 
 ### 3.3 Dark mode tokens
 
+**Dark mode is the app only.** The marketing site is light-only with no toggle — ruled in v1.4 (PR
+#643, which deleted `ThemeToggle.astro`) and unchanged by v1.5. §23's Dark mode row remains
+authoritative.
+
 ```css
 [data-theme="dark"]{
-  --color-bg:#12100C;
-  --color-bg-2:#1B1811;
-  --color-surface:#1B1811;
-  --color-border:#302B22;
-  --color-divider:#241F17;
+  --color-bg:#171A1A;
+  --color-bg-2:#1B1F1F;
+  --color-surface:#212525;
+  --color-border:#2E3333;
+  --color-divider:#282C2C;
 
-  --color-text:#F6F3EB;             /* never #FFFFFF over warm ink */
-  --color-text-muted:#A79E8C;
-  --color-text-faint:#6E6656;
+  --color-text:#F2F4F3;             /* never #FFFFFF over ink */
+  --color-text-muted:#A8AFAF;
+  --color-text-faint:#7D8090;       /* ⚠️ 3.95:1 — see §3.6, open defect */
 
-  --color-accent:#D2EC2A;
-  --color-accent-hover:#BCD41C;
-  --color-accent-text:#12100C;
-  --color-accent-subtle:rgba(210,236,42,.12);
+  --color-accent:#CCF03F;
+  --color-accent-hover:#D9FA64;
+  --color-accent-text:#1F2323;
+  --color-accent-subtle:#22280F;
 
-  --color-spend:#FF7A33;
-  --color-spend-text:#FF7A33;       /* orange IS legal as text on ink */
-  --color-danger:#F0563A;
+  --color-spend:#F0602A;
+  --color-spend-text:#FF8552;       /* orange IS legal as text on ink — 6.60:1 */
 
-  --shadow-sm:0 1px 3px rgba(0,0,0,.45);
-  --shadow-md:0 10px 26px -12px rgba(0,0,0,.6);
-  --shadow-lg:0 28px 64px -32px rgba(0,0,0,.7);
+  --color-positive:#00AA57;
+  --color-danger:#E54545;
+
+  --shadow-card:0 1px 3px rgba(0,0,0,.45);
+  --shadow-soft:0 10px 26px -12px rgba(0,0,0,.6);
+  --shadow-deep:0 28px 64px -32px rgba(0,0,0,.7);
 }
 ```
 
-### 3.4 Four hues, and only four
+### 3.3.1 The workspace token set (`.st-demo`)
 
-This supersedes the source/channel colour block in v1.2 §3.4.
+The demo workspace themes off **one class on one element**, not a component-level branch. Light and
+dark are the same token names carrying different values, so no component anywhere reads the theme.
+
+**These `--f-*` names ARE the workspace's semantic layer** — they map one-to-one onto §3.2's
+semantics. They exist as a separate set because the workspace is a self-contained surface that must
+theme independently of the page hosting it (it renders embedded inside a light marketing page and can
+still be dark). **Do not build a third naming system**; if a workspace component needs a colour not
+below, add it here and state its §3.2 equivalent.
+
+| `--f-*` | §3.2 equivalent | Light | Dark |
+|---|---|---|---|
+| `--f-bg` | `--color-bg` | `#F1F3F5` | `#171A1A` |
+| `--f-card` | `--color-surface` | `#FFFFFF` | `#212525` |
+| `--f-line` | `--color-border` | `#E7EAEC` | `#2E3333` |
+| `--f-line-2` | `--color-divider` | `#EEF0F2` | `#282C2C` |
+| `--f-ink` | `--color-text` | `#1F2323` | `#F2F4F3` |
+| `--f-ink-2` | `--color-text-muted` | `#5A6169` | `#A8AFAF` |
+| `--f-ink-3` | `--color-text-faint` | `#8D949C` ⚠️ | `#7D8090` ⚠️ |
+| `--f-head` | — (table header fill) | `#F7F8F9` | `#1B1F1F` |
+| `--f-soft` | — (inset fill) | `#F3F5F6` | `#1B1F1F` |
+| `--f-lime-w` | `--color-accent-subtle` | `#F4FBDF` | `#22280F` |
+| `--f-lime` | `--color-accent` | `#CCF03F` | same |
+| `--f-lime-2` | — (accent fill, muted) | `#E4F79C` | same |
+| `--f-green` | `--color-positive` | `#00AA57` | same |
+| `--f-red` | `--color-danger` | `#E54545` | same |
+| `--f-orange` | — (workspace warning) | `#FF8800` | same |
+
+⚠️ **`--f-ink-3` fails AA as text in both themes.** It is used as a text colour on 43 rules. See
+§3.6 — open defect, correction proposed, not yet ruled.
+
+**`--f-bg` light is `#F1F3F5`, not `--paper #FAFAF7`.** The workspace canvas is deliberately a
+half-step cooler and darker than the marketing page, so an embedded workspace reads as a distinct
+object rather than bleeding into the page around it. This is intentional, not drift.
+
+### 3.4 Five hues, and only five
+
+This supersedes v1.4's "four hues" and v1.2 §3.4's source/channel colour block.
 
 | Meaning | Token | Applies to |
 |---|---|---|
-| Revenue, earned, organic, positive, brand | `--color-accent` | KPI emphasis, revenue series, primary buttons, active-nav rule |
-| Spend, cost, paid media, caution, negative delta | `--color-spend` | Spend series, paid chips, cost-metric labels, warning states |
-| Destructive only | `--color-danger` | Delete, erase, danger zone. Nothing else. |
-| Everything else | warm neutrals | All structure, text, borders, and volume metrics |
+| Identity, revenue, earned, organic | `--color-accent` (lime) | Brand mark, primary buttons, active nav, revenue series, KPI emphasis, the winning data point |
+| Spend, cost, paid media, caution | `--color-spend` (orange) | Spend series, paid chips, cost-metric labels, warning states |
+| Positive **direction** or healthy **state** | `--color-positive` (green) | Delta-up arrows, "healthy" status pips, completed steps. **Nothing else.** |
+| Destructive, and negative direction | `--color-danger` (red) | Delete, erase, danger zone, delta-down, alert dot |
+| Everything else | cool neutrals | All structure, text, borders, and volume metrics |
 
-**Success is lime, not green.** You already own a colour that means "good"; a second one is pure noise. There must be no separate success green, no terminal green, no info blue, no purple, and no slate in the shipped app.
+**Lime and green are not the same "good", and the split is the whole reason green is admitted.**
+Lime names *the subject* — this is revenue, this is the brand, this is the winner. Green names *a
+direction or a state* — this went up, this is working. A revenue figure is lime. The `▲ 12%` beside
+it is green. Colour them the same and the eye can no longer separate "how much" from "which way".
+
+If you cannot state which of those two a new element is, it gets **no colour**.
+
+Still banned, unchanged from v1.4: **no info blue, no purple, no slate.** Green is admitted by name
+and by the bounded role above — that is not a precedent for admitting a fifth or sixth.
+
+> **Read the handoff's own colour line carefully before applying it to the product.** Its README says
+> *"Lime = identity. Orange = revenue, AI surfaces and outbound pushes."* That describes the
+> **marketing site**, where it is a *typographic* rule, not a metric semantic: lime is 1.25:1 on paper
+> (§3.6) and therefore cannot be a text colour, so every emphasised figure on a light page — prices,
+> stat numerals, links, the serif phrase — falls to `--orange-700`. Verified in the handoff's own
+> `style.css`: `--orange-700` styles `a`, `.pill`, `.stat-num`, `.price`, `summary` and `.serif`.
+>
+> **Do not carry that into the product as "orange means revenue."** In the app, lime is used as a
+> *fill* (bars, chips, series) where its contrast is irrelevant, so lime keeps revenue and orange
+> keeps spend. Inverting them would recolour every spend chart as revenue — the one colour error in
+> this system that changes what a number appears to say.
+
+**`--f-orange #FF8800` is declared by the handoff and never used.** Zero references across its
+workspace CSS. It is carried in §3.3.1 for completeness but is **not** adopted as a live token: either
+a workspace element earns it and this line records the use, or it is deleted. v1.4 already made this
+call once — it dropped 10 of the handoff's 25 ramp steps as dead — and the reasoning holds. Do not
+give it a meaning just because it exists; there is no gap in the five above for it to fill.
 
 Third-party **brand** colours are the one exception and are not part of this palette: source rows and integration cards use the real logo of the service (Google, ChatGPT, Stripe, Shopify, LinkedIn, and so on). Those are identity, not styling.
 
 > **Implementation note.** Bundle third-party logos as local SVG or PNG assets. Do not hot-link a favicon service. A privacy-conscious product making a third-party request per table row is a contradiction a competitor will point at.
 
-### 3.5 Gradient
+### 3.5 Hero atmosphere
 
-The gradient is ambient light, not a colour ramp. It is the highest-risk element in the system.
+**v1.4's three-radial ambient gradient is retired.** It was built on the warm palette and its
+midpoint, `--color-bridge #F2A93B`, does not exist in v4 — there is no amber between v4's lime and
+orange. It was never implemented in code (doc-only through v1.4), so nothing is being removed from the
+product. `--color-accent-warm` in `theme.json` is repointed to `--orange-400 #FF8552`, its one
+consumer being `ModelCompareMockup.astro`.
 
-**Correct:** three overlapping radial gradients, lime → amber → orange, peak opacity ≈ 22%, long falloff, bleeding off the top edge of a warm-ink band.
+v4 replaces it with a **layered hero atmosphere** — motion, not a colour ramp. Composition:
 
-**Wrong:** a two-stop `linear-gradient(lime, orange)`. It crosses the muddy zone between the two hues, has a visible direction, and reads as a sports drink.
+| Layer | Behaviour |
+|---|---|
+| Grid | Slow continuous drift |
+| Two blur orbs | Lime top-right, orange bottom-left, "breathing" scale/opacity |
+| Scan sweep | A lime sweep across the field every **9s** |
+| Tracers | Five vertical lime, two horizontal orange, running the grid lines |
+| Headline | Word-by-word entrance; a lime rule draws under the final phrase |
+| Primary button | A 7s sheen sweep |
 
-```css
---gradient-ambient:
-  radial-gradient(44% 42% at 17% 0%, rgba(210,236,42,.22) 0%, rgba(210,236,42,0) 65%),
-  radial-gradient(42% 40% at 48% -6%, rgba(242,169,59,.15) 0%, rgba(242,169,59,0) 69%),
-  radial-gradient(40% 40% at 79% 3%, rgba(255,122,51,.13) 0%, rgba(255,122,51,0) 71%);
-```
+> **§3.8's "no decorative blobs" is AMENDED, narrowly, to admit the two orbs.**
+>
+> That ban was written against untethered decorative shapes scattered as filler. These two are neither
+> untethered nor filler: they are the hero's only light source, they sit at fixed opposite corners,
+> and their colours are the product's two semantic accents rather than arbitrary. The ban stands
+> everywhere else — **orbs are hero-only, exactly two, and never appear in a card, a section, or the
+> app.**
+>
+> This is the one §3.8 line v1.5 relaxes. It is not a general softening of §3.8.
 
-Rules:
+Hard limits, all inherited unchanged:
 
-- **Warm ink only.** On bone it reads as a stain.
-- **One instance per viewport.** Two visible at once is clutter.
-- Permitted: marketing hero, one product band, the final CTA, the in-app AI attribution card, OG images.
-- Forbidden: behind body text, inside cards, on buttons, on charts, or as a text fill.
-- Never a hard edge, never a visible angle.
+- **§2.6's ~15% accent-density ceiling applies to the orbs and the sweep.** An orb pair that reads
+  as page background is a violation however soft it is — that was v1.4's open hero defect, and
+  re-shipping it under a new palette does not make it new.
+  ⚠️ **The harness that would measure this does not currently run** — `accent-density.mjs` exits 2
+  on the v3 homepage and has since #690 (see §0.4). So this hero's accent budget is **asserted, not
+  verified**. Treat that as a live risk on the section with the most accent area in the system, and
+  fix the harness before claiming the hero passes.
+- **Never behind body text.** The headline sits above the field; paragraphs do not.
+- **One hero per page.** Not a section treatment.
+- **`prefers-reduced-motion` stops all six layers** and leaves a composed static field — never a blank
+  one, and never a hidden headline. Same guarantee as §3.1.1's mark.
+- Glassmorphism remains banned V1-wide (§26). A blurred orb *behind* a solid surface is not
+  glassmorphism; a translucent frosted panel *is*, and is still prohibited.
 
 ### 3.6 Contrast rules
 
-Lime and orange are surfaces you place dark text on, or inks you use on warm ink. **They are never text colours on a light canvas.**
+Lime, orange and green are surfaces you place dark text on, or inks you use on ink. **None of them is
+a text colour on a light canvas.**
+
+All figures below are **WCAG 2.1 relative-luminance calculations**, computed 2026-08-08 against the
+v4 hexes in §3.2/§3.3. They are not an audit tool's output. Re-run them before they inform an
+accessibility statement, and re-run them if any hex moves.
+
+**Site — light**
 
 | Pair | Ratio | Verdict | Use |
 |---|---|---|---|
-| ink on lime | ~14.4:1 | AAA | Primary button, KPI emphasis |
-| lime on ink | ~14.4:1 | AAA | Eyebrows, accents on dark |
-| lime on paper | ~1.3:1 | **Fail** | Never — fills only |
-| orange on paper | ~2.6:1 | **Fail as text** | Bars, dots, marks only |
-| orange on ink | ~6.7:1 | AA | Orange text is legal here |
-| `#B4420E` on paper | ~5.2:1 | AA | Orange text on light |
+| ink `#1F2323` on paper | 15.18:1 | AAA | Body, headlines |
+| ink on lime | 12.17:1 | AAA | Primary button, KPI emphasis |
+| lime on ink | 12.17:1 | AAA | Eyebrows, accents on dark |
+| ink on lime-200 `#E8FF9A` | 14.51:1 | AAA | Chip |
+| **lime on paper** | **1.25:1** | **Fail** | Never — fills only |
+| gray-700 `#586161` on paper | 6.09:1 | AA | Eyebrow, secondary ink |
+| gray-600 `#647070` on paper | 4.91:1 | AA | Body copy — **the floor; do not lighten** |
+| gray-500 `#7D8090` on paper | 3.74:1 | AA-large | ≥24px or ≥19px bold only |
+| gray-400 `#9DA7A7` on paper | 2.36:1 | Fail | Disabled, arrows — never live text |
+| orange-700 `#B83D10` on paper | 5.41:1 | AA | **The orange text colour on light** |
+| orange-600 `#D44A18` on paper | 4.19:1 | AA-large | Link hover at ≥24px; not body |
+| orange `#F0602A` on paper | 3.13:1 | Fail as text | Bars, dots, marks only |
+| **green `#00AA57` on paper** | **2.92:1** | **Fail as text** | Pips, arrows, fills only |
+| **green on green-100 `#DDF6EA`** | **2.68:1** | **Fail as text** | Ink on the wash, never green |
+| ink on green-100 | 13.94:1 | AAA | The legal pairing for a positive chip |
+| **red `#E54545` on paper** | **3.81:1** | **AA-large only** | ⚠️ open defect — see below |
 
-Ratios are WCAG 2.1 relative-luminance calculations, not output from an audit tool. Re-run them before they inform an accessibility statement.
+**Site — on ink `#1F2323`**
 
-### 3.7 The dot system
+| Pair | Ratio | Verdict | Use |
+|---|---|---|---|
+| white on ink | 15.87:1 | AAA | Footer, dark panels |
+| gray-400 on ink | 6.44:1 | AA | Muted text on dark |
+| orange-400 `#FF8552` on ink | 6.60:1 | AA | Orange text is legal here |
+| orange `#F0602A` on ink | 4.85:1 | AA | Legal, but prefer orange-400 |
+| black-600 `#4B5353` on ink | 2.01:1 | Fail | Borders and dividers only |
 
-The mark is a first touch and a last touch. Extend that geometry rather than decorating around it.
+**Workspace (§3.3.1)**
 
-- **Attribution trail** — touchpoints render as dots on a hairline. First touch small, last touch large. Only the converting touchpoint takes lime; earlier touchpoints keep their channel identity.
-- **Source chip** — a dot prefix where no brand logo exists. Paid sources take orange, matching the chart rule.
-- **Loader** — two dots, the small one settling toward the large. Suppressed under `prefers-reduced-motion`.
-- **Empty state** — one dot on a hairline: one touchpoint, no path yet.
+| Pair | Light | Dark |
+|---|---|---|
+| `--f-ink` on `--f-card` | 15.87:1 AAA | 14.02:1 AAA |
+| `--f-ink` on `--f-bg` | 14.27:1 AAA | 15.85:1 AAA |
+| `--f-ink-2` on `--f-card` | 6.27:1 AA | 6.94:1 AA |
+| **`--f-ink-3` on `--f-card`** | **3.07:1 Fail** | **3.95:1 Fail** |
+| **`--f-ink-3` on `--f-bg`** | **2.76:1 Fail** | 4.47:1 AA-large |
+| `--f-green` on `--f-card` | 3.05:1 AA-large | 5.08:1 AA |
+| `--f-red` on `--f-card` | 3.99:1 AA-large | 3.89:1 AA-large |
+| `--f-orange` on `--f-card` | 2.39:1 Fail | 6.47:1 AA |
+| `--f-ink` on `--f-lime-w` | 14.90:1 AAA | 13.79:1 AAA |
+
+#### Open defects — measured, recorded, not yet ruled
+
+Adopting the handoff verbatim was a ruling about **which system**, not a licence to ship an unmeasured
+contrast failure. These three are real and are logged here rather than quietly patched or quietly
+shipped. **A fix changes a v4 hex and therefore needs a founder call.**
+
+1. **`--f-ink-3` fails AA as text in both themes** — and it *is* a text colour, on **43 rules** in the
+   handoff's workspace CSS (nav group labels, search placeholder, row metadata, latency figures),
+   most at 10.5–12.5px where AA requires 4.5:1. This is the most consequential of the three because
+   it is small text a user has to read.
+   **Minimum corrections that clear 4.5:1 on both surfaces**, walking the same hue darker/lighter:
+   light `#8D949C` → **`#686E73`** (5.16 card / 4.64 bg); dark `#7D8090` → **`#878A9C`** (4.53 card /
+   5.13 bg). Alternative, if the greys must not move: restrict `--f-ink-3` to non-text use and
+   promote those 43 rules to `--f-ink-2`.
+
+2. **`--red #E54545` is 3.81:1 on paper** — AA-large only. Legal for an alert dot or a delta arrow,
+   **not** for the error-message body text a danger colour usually carries. v1.4's `#C4381C` cleared
+   AA; v4's does not. Either accept red as fills-only on light (and say so wherever error copy is
+   specified), or darken it.
+
+3. **`--f-orange` is 2.39:1 on light card** — but it has **zero usages** (§3.4), so nothing renders
+   wrong today. It becomes a real defect the moment something adopts it. Resolve it by deleting the
+   token rather than by fixing its value.
+
+Until these are ruled: **do not use `--f-ink-3` for any new text**, and do not introduce red or
+`--f-orange` body copy on a light surface.
+
+### 3.7 The signal-on-track system
+
+**Rewritten for the v4 mark.** v1.4's version opened *"The mark is a first touch and a last touch"* and
+derived four patterns from the old three-dots-and-a-disc geometry. That mark no longer exists, so the
+sentence described nothing. **The four patterns survive** — they were good patterns — re-derived from
+the new geometry.
+
+The v4 mark is **a signal travelling a track**: the track behind it is lit, the track ahead is dim
+(§3.1.1). That is the product's own claim in miniature — a path is only bright where you have
+evidence. Extend *that* rather than decorating around it.
+
+- **Attribution trail** — touchpoints on a hairline track. The segment **behind** the converting touch
+  is lit; the segment ahead stays dim. First touch small, converting touch large. Only the converting
+  touch takes lime; earlier touches keep their channel identity.
+- **Source chip** — a dot prefix where no brand logo exists. Paid sources take orange, matching §3.4's
+  chart rule.
+- **Loader** — a signal traversing a short track, not a spinner. Under `prefers-reduced-motion` it
+  freezes on a composed frame (§3.1.1), never blank.
+- **Empty state** — one dim track, no signal: a path exists, no evidence on it yet. Never an empty
+  circle.
+
+The lit/dim distinction is **semantic, not decorative**. Do not light a segment the data does not
+support — that is the visual form of the §6 data-truth rules.
 
 ### 3.8 Do not use
 
-- `#C8F000` (superseded by `#D2EC2A`), `#C5E838` (stale), `#8F2FFE`, `#DF53FE`, `#0E0912`
-- Pure `#FFFFFF` text or pure `#000000` surfaces
-- Cool greys (`#E5E7EB`, `#B9B7BA` and similar) anywhere
-- White-alpha borders (`rgba(255,255,255,.06)`) over warm ink — they read blue
-- Purple gradients, glassmorphism, decorative blobs, multiple palettes
+- **Retired accents:** `#C8F000`, `#C5E838`, and — new in v1.5 — **`#D2EC2A`** (superseded by
+  `#CCF03F`) and **`#F2A93B`** (the retired gradient bridge, §3.5). Also `#8F2FFE`, `#DF53FE`,
+  `#0E0912`.
+- **Retired neutrals:** the v1.4 warm ramp — `#F7F4ED`, `#FFFDF8`, `#12100C`, `#E7E0D2`, `#161310` and
+  the `#6E675C` / `#A39B8C` muted pair. See §3.2 for replacements.
+- **Near-collision hexes.** `#B4420E` (was `--color-spend-text`) and `#C4381C` (was `--color-danger`)
+  are retired; v4 uses `#B83D10` and `#E54545`. These differ by ~two characters and mean the same
+  thing, so the wrong one is invisible in review and silently changes a ratio §3.6 then certifies.
+  **The direction of the ban is now reversed from v1.4** — the v1.4 values are the stale ones.
+  `api/tests/v3-lift-detection.test.js` enforces the current direction; check it before assuming.
+- Pure `#FFFFFF` text over ink (use `--f-ink #F2F4F3`) or pure `#000000` surfaces
+- `--violet-*` / `--shadow-violet` as token **names** — they carry orange values. Use `--orange-*`.
+- Purple gradients, glassmorphism, multiple palettes
+- **Decorative blobs — except the two hero orbs**, which §3.5 admits by name, bounded to the hero and
+  to §2.6's ceiling. Anywhere else, still banned.
 - Manrope as the product font, 260px sidebar, "Attribution Cockpit" or any other product name
 - Gradient applied to text
+- Instrument Serif outside a headline emphasis phrase (§3.1) — never body, chrome, or app UI
+
+> **v1.4's "no cool greys anywhere" is DELETED, not narrowed.** It banned `#E5E7EB`, `#B9B7BA` *and
+> similar* because v1.4's neutrals were warm. **v4's entire neutral ramp is cool** — `#C9D1D1`,
+> `#DDE4E4`, `#EEF3F3`, `#F7FAFA`. Keeping the line in any form would ban the shipped palette.
+> The related v1.4 line about white-alpha borders "reading blue over warm ink" goes with it for the
+> same reason. §3.1's recorded dissent is where the cool-palette risk is now argued.
 - Case sensitivity: any mechanical colour or token replacement must be
   case-insensitive. `#1a1d1d` and `#1A1D1D` are the same colour and a
   case-sensitive pass silently misses the lowercase sites.
@@ -2618,7 +3063,14 @@ For every future component, design these states where relevant:
 
 Use this prompt for new design generation:
 
-> Design SourceTrack as a premium 2026 attribution and lightweight analytics product for founders and marketers. It should feel calmer than GA4, lighter than Cometly/Usermaven, as simple as DataFast/PiQo, and more distinctive through AI attribution, SEO revenue signals, source chips, analytics charts, top pages, and conversion story panels. Use warm off-white surfaces (#F7F4ED), white cards, subtle borders, lime (#D2EC2A) as signal only, compact data density, premium Geist typography, and custom-feeling charts. Avoid generic admin dashboards, purple gradients, decorative blobs, glassmorphism, enterprise BI clutter, and fake data.
+> Design SourceTrack as a premium 2026 attribution and lightweight analytics product for founders and marketers. It should feel calmer than GA4, lighter than Cometly/Usermaven, as simple as DataFast/PiQo, and more distinctive through AI attribution, SEO revenue signals, source chips, analytics charts, top pages, and conversion story panels. Use cool off-white surfaces (#FAFAF7), white cards, subtle borders (#DDE4E4), ink (#1F2323), lime (#CCF03F) as signal only — never as text — with orange (#F0602A) as the counterweight and green (#00AA57) reserved for positive deltas and healthy status. Compact data density, premium Schibsted Grotesk typography, and custom-feeling charts. Avoid generic admin dashboards, purple gradients, decorative blobs, glassmorphism, enterprise BI clutter, and fake data.
+
+> **Keep this prompt in step with §3.1/§3.2 — it is the one place a retired token silently comes back.**
+> v1.4 had to correct this prompt for exactly this reason: it was still quoting `#C8F000`, `#F5F4F0`
+> and "Inter-style typography" long after §3.1 replaced them, and *a generation prompt that names
+> retired tokens reintroduces them on every run.* v1.5 updates it again for the v4 palette. The prompt
+> deliberately omits Instrument Serif: it is a display-only exception (§3.1) applied by hand to one
+> headline phrase, and naming it here would scatter it through generated screens.
 
 ### 25.2 Consolidation prompt
 
@@ -2903,7 +3355,7 @@ Website positioning, hero copy, and voice are owned by `docs/SourceTrack_GTM.md`
 
 ### 29.2 Website visual direction
 
-> The marketing site is **light-only**. There is no dark theme, no toggle, and no OS-preference switching — the page renders the same for every visitor. The product band and the final CTA render on **warm ink**; that contrast against the light canvas is what gives the page its structure and keeps the product frame reading as a **lit object rather than a flat screenshot**. Those ink bands are structural, not a dark-theme artefact — dropping them would flatten the page, so they stay. Reference implementation — PR #643, merged 2026-08-05, which deleted `marketing/src/layouts/components/ThemeToggle.astro`, removed it from `Header.astro`, and collapsed the marketing theme to a single light palette.
+> The marketing site is **light-only**. There is no dark theme, no toggle, and no OS-preference switching — the page renders the same for every visitor. The product band and the final CTA render on **ink** (`#1F2323` — cool as of v1.5, §3.1); that contrast against the light canvas is what gives the page its structure and keeps the product frame reading as a **lit object rather than a flat screenshot**. Those ink bands are structural, not a dark-theme artefact — dropping them would flatten the page, so they stay. Reference implementation — PR #643, merged 2026-08-05, which deleted `marketing/src/layouts/components/ThemeToggle.astro`, removed it from `Header.astro`, and collapsed the marketing theme to a single light palette.
 
 Borrow the premium lightweight SaaS feel from modern lime-glow landing pages:
 

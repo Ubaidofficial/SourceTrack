@@ -1,32 +1,52 @@
-/* Self-hosted font faces (design.md §3.1: Geist + Geist Mono, self-hosted — no
-   CDN @import, no third-party font host).
+/* Font faces (design.md §3.1 — v1.5 type system).
+   No CDN @import, no third-party font host at runtime.
 
-   Split by loading mechanism, deliberately:
+   ── THIS FILE IS DELIBERATELY EMPTY OF @font-face. DO NOT ADD ONE CASUALLY. ──
+   All three v1.5 families — Schibsted Grotesk, Instrument Serif, JetBrains Mono —
+   are SIL OFL and available from Google Fonts, so all three go through Astro's
+   font pipeline: declared in theme.json's font_family, fetched at BUILD time by
+   astro.config.mjs's provider, and emitted as local @font-face rules pointing at
+   hashed assets under /_astro/fonts/. That is self-hosted at runtime — the browser
+   issues no request to any external font host — with no binary in this repo.
 
-   · Geist (sans) is NOT declared here. It goes through Astro's font pipeline —
-     declared in theme.json's font_family, fetched at BUILD time by
-     astro.config.mjs's provider, and emitted as a local @font-face pointing at a
-     hashed asset under /_astro/. That is already self-hosted at runtime: the
-     browser issues no request to any external font host. Declaring a second face
-     for the same family here would give the browser two competing sources.
+   Declaring a face here for any of those families would give the browser two
+   competing sources for one family. theme.json's `self_hosted` array is therefore
+   EMPTY, and astro.config.mjs + Base.astro both read that array to decide what to
+   route through the provider. Keep the three in step.
 
-   · Geist Mono IS declared here, from a real file in public/fonts, because the
-     design bundle pins that exact path (`/fonts/GeistMono-Variable.woff2`) and
-     because it is listed in theme.json's `self_hosted` array — which is what
-     tells astro.config.mjs and Base.astro to skip the provider for it.
+   ── WHY THERE IS NO SELF-HOSTED FILE, AND WHY THAT WAS NOT A PREFERENCE ─────
+   The v4 design handoff specifies **Switzer** and says "self-host in production".
+   Switzer is distributed only by Fontshare (Indian Type Foundry) — verified
+   2026-08-08: @fontsource/switzer, @fontsource-variable/switzer, switzer and
+   @fontshare/switzer all 404 on npm — so shipping it meant vendoring the woff2
+   into this repo.
 
-   File: public/fonts/GeistMono-Variable.woff2
-   Source: npm `geist@1.7.2`, dist/fonts/geist-mono/GeistMono-Variable.woff2
-   sha256: fba8f577f38a2bbcbe818efa6348dd58f36303a10b8737c42fefad275be563ab
-   Licence: SIL Open Font License 1.1 — see public/fonts/GeistMono-LICENSE.txt
+   THAT IS A LICENCE BREACH HERE. The ITF Free Font Licence §02 reads: "The Fonts
+   may not ... be distributed, duplicated, loaned, resold or licensed in any way ...
+   This includes ... uploading them in a public server." Ubaidofficial/SourceTrack
+   is PUBLIC (verified: private=false), so committing the file would redistribute
+   ITF's font software from a public source tree. §01 does grant Web *use*, so
+   serving it from our own site is fine — the repo is the problem, not the serving.
+   The same reasoning .gitignore already applies to research/.
 
-   `font-display: swap` matches the pipeline's setting for Geist, so mono and
-   sans behave the same during load. */
+   Founder ruling 2026-08-08: swap to an OFL family, rather than take that risk,
+   route it through the Fontshare CDN (which would break the no-third-party-host
+   stance above), or block on written consent from ITF.
 
-@font-face {
-  font-family: "Geist Mono";
-  src: url("/fonts/GeistMono-Variable.woff2") format("woff2");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
+   Schibsted Grotesk was chosen because it is OFL, is on Google Fonts, carries a
+   full 400–900 variable range — §3.1 needs 800 for display and 900 for the wordmark,
+   which is what ruled out Instrument Sans (400–700) — and is a neutral grotesque
+   with strong heavy weights, which is what §3.2.1's headline setting (800 at
+   −0.078em) actually depends on. Manrope is banned by §3.8; Inter was rejected as
+   too ubiquitous for a system whose distinctiveness now rests on type and motion
+   (§3.1's recorded dissent).
+
+   ── IF YOU EVER DO ADD A SELF-HOSTED FACE ───────────────────────────────────
+   An @font-face whose src file is missing does NOT fail the build and does NOT
+   log an error — the browser silently falls back to system-ui while every CI check
+   stays green. `scripts/check-fonts.mjs` guards that: it asserts every
+   `src: url(/fonts/…)` here resolves to a real WOFF2 in public/fonts, and that every
+   family in theme.json's `self_hosted` array has a face here. It is wired to accept
+   the current all-provider state, so it will not nag — but it will fail the moment a
+   face is added without its file. Verify the licence permits redistribution from a
+   PUBLIC repo before vendoring anything. */

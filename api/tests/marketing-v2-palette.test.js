@@ -1,5 +1,27 @@
 // v2 marketing palette guard — the two pre-v1.3 components and the v2 pages they sit beside.
 //
+// ╔════════════════════════════════════════════════════════════════════════════════════════╗
+// ║ ⚠️  THIS FILE ASSERTS THE v1.4 PALETTE, WHICH design.md v1.5 RETIRED (2026-08-08).      ║
+// ║     THAT IS CORRECT FOR NOW. DO NOT "FIX" THE HEXES BELOW IN ISOLATION.                 ║
+// ╚════════════════════════════════════════════════════════════════════════════════════════╝
+// v1.5 replaced §3 wholesale — lime #D2EC2A -> #CCF03F, warm neutrals -> cool, and #E54545 /
+// #FF8800 changed sides. Every value in TOKENS below, and several in RETIRED, is now stale
+// against §3.2.
+//
+// It still passes, and it SHOULD: the two components and the V2_PAGES it scans have not been
+// migrated yet. They are still painted in v1.4, so checking them for v1.4-internal consistency
+// is exactly right. What this guard must NOT be read as is a statement of the canonical
+// palette — design.md §3.2 is that, and it disagrees with TOKENS on every line.
+//
+// TWO TRAPS, both live right now:
+//   · TOKENS is a v1.4 allowlist. Repainting these components to v1.5 will make this guard
+//     fail on the CORRECT colours. Rewrite TOKENS in the SAME change that repaints them —
+//     never separately, or one half lands green against the wrong half.
+//   · RETIRED bans `31,35,35` (as "cool #1F2323 shadow") and `FF8800`. Both are now LIVE
+//     values in v1.5: #1F2323 is the ink (§3.2) and #FF8800 is --f-orange (§3.3.1). The ban
+//     is still correct HERE, because these components are v1.4 — but copying either pattern
+//     into a guard with wider scope would ban what we ship.
+//
 // ── WHY THIS EXISTS ─────────────────────────────────────────────────────────────────────────
 // MarketingBeforeAfter.jsx and MarketingInteractiveDemo.jsx were built on a pre-v1.3 cool
 // palette: 8 of 9 and 23 of 25 distinct hexes were cool, including #E5E7EB which

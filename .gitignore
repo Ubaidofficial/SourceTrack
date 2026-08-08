@@ -85,3 +85,21 @@ skills-lock.json
 # files too). If these captures need to survive indefinitely, move them OUTSIDE the repo
 # working tree — a path under the repo is always one -x away from gone.
 research/
+
+# Design handoff bundle — INTENTIONALLY LOCAL, never committed.
+#
+# design_handoff_trackiq/ is the v4 design reference: a README spec plus 11 prototype
+# HTML pages and their JSX/CSS. It is ignored, not committed, for two reasons:
+#
+#   1. Its own CLAUDE.md says these are "prototypes that show intended look and
+#      behaviour … not production code". Committing them puts a second, competing
+#      copy of every page in the tree — the exact confusion the handoff asks us to
+#      avoid by recreating rather than porting.
+#   2. Eleven of its pages carry the Babel-in-browser CDN tag, which is fingerprint
+#      #1 in api/tests/v3-lift-detection.test.js. That guard scans our source tree;
+#      committing the handoff would either trip it or force widening its exclusions,
+#      and a guard with a hole in it is the false-pass class this repo has hit before.
+#
+# ⚠️ Same caveat as research/ above: ignoring survives `git clean -fd`, NOT `-xfd`.
+# The canonical copy is the zip the founder supplied, outside the working tree.
+design_handoff_trackiq/

@@ -207,6 +207,11 @@ const PAIRS = [
 // measured 10.54:1 over the old dark band and never changed its own declaration, but
 // the surface under it flipped to a light tint.
 const COMPOSITE_PAIRS = [
+  // v1.5: LEFT ON v1.4 VALUES DELIBERATELY. TrustBar is a pre-v3 component that the #690
+  // cutover removed from the homepage — it is already one of the 14 pre-existing ORPHAN rows
+  // below, so it scores nothing. Repointing its hexes to the v1.5 palette would assert a
+  // colour pairing that exists on no page, which is worse than a stale row that the orphan
+  // guard already flags. It goes when the registry is pruned, not before.
   { id: 'TrustBar badge text', fg: '#12100c', over: '#d2ec2a', alpha: 0.10, base: '#faf8f1', level: 'AA' }
 ]
 
@@ -360,10 +365,10 @@ const banControl = /color\s*:\s*var\(\s*--orange-600\s*\)/.test('color:var(--ora
 console.log(`  ban-scanner positive control: ${banControl ? 'detects the pattern ✓' : 'BROKEN ✗'}`)
 
 // ── positive control: a pair that MUST fail, proving the checker can fail ─────
-const ctlFg = [0xd2, 0xec, 0x2a]   // lime
+const ctlFg = [0xcc, 0xf0, 0x3f]   // lime (v1.5 --lime; was #D2EC2A through v1.4)
 const ctlBg = [0xff, 0xff, 0xff]   // white
 const ctl = ratio(ctlFg, ctlBg)
-console.log(`\npositive control (lime #d2ec2a on white #ffffff): ${ctl.toFixed(2)} — expect FAIL vs 4.5 -> ${ctl < 4.5 ? 'FAILS correctly ✓' : 'DID NOT FAIL ✗ checker is broken'}`)
+console.log(`\npositive control (lime #ccf03f on white #ffffff): ${ctl.toFixed(2)} — expect FAIL vs 4.5 -> ${ctl < 4.5 ? 'FAILS correctly ✓' : 'DID NOT FAIL ✗ checker is broken'}`)
 const ctl2 = ratio([0, 0, 0], [255, 255, 255])
 console.log(`positive control (black on white): ${ctl2.toFixed(2)} — expect 21.00 -> ${Math.abs(ctl2 - 21) < 0.01 ? 'correct ✓' : 'WRONG ✗'}`)
 
@@ -489,7 +494,7 @@ console.log(`positive control (black on white): ${ctl2.toFixed(2)} — expect 21
 
       // (b) a genuinely failing ratio on a non-index route
       const failing = scorePair(
-        { id: 'ctl', sel: '.v3-cta-close', fg: '#D2EC2A', bg: '#FFFFFF', level: 'AA' }, vars, tokens)
+        { id: 'ctl', sel: '.v3-cta-close', fg: "#CCF03F", bg: "#FFFFFF", level: "AA" }, vars, tokens)
       console.log(`  positive control on ${probe} — lime on white pair -> ${failing?.includes('<') ? `DETECTED ✓ (${failing})` : 'MISSED ✗'}`)
       if (!failing?.includes('<')) fails++
 

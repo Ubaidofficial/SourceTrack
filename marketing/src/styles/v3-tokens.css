@@ -13,7 +13,37 @@
    the failure mode is the same. If a v3 rule "needs" to be global, that is a
    design decision for the founder, not a scoping workaround.
 
-   ── WHAT THE DESIGN HANDOFF PROPOSED, AND WHAT WAS RULED ────────────────────
+   ╔══════════════════════════════════════════════════════════════════════════╗
+   ║ ⚠️  SUPERSEDED BY design.md v1.5 (2026-08-08). READ THIS FIRST.          ║
+   ╚══════════════════════════════════════════════════════════════════════════╝
+   The 2026-08-06 rulings recorded below were made against v1.4's palette, and the
+   founder has since ruled the OPPOSITE on the central question: adopt the v4 design
+   handoff VERBATIM — its palette, its type system and its mark. design.md §0.4 is
+   the authority; this block is kept as the record of what was decided and why, so
+   the reversal is legible rather than looking like drift.
+
+   WHAT REVERSED:
+     · The palette. Lime #D2EC2A -> #CCF03F, warm neutrals -> COOL (§3.1, §3.2).
+       Every value in this file moved. The old ones are now lift fingerprints.
+     · --green. Rejected below on §3.4 grounds ("no separate success green");
+       v1.5 §3.4 ADMITS it, bounded to positive deltas and healthy status.
+     · The font stack. Rejected below as contradicting §3.1's single-family
+       mandate; v1.5 adopts Schibsted Grotesk + Instrument Serif italic + JetBrains Mono,
+       and narrows the single-family rule to a documented display-only exception.
+     · The Tier-2 near-collisions. #E54545 is now OUR --red; #B4420E and #C4381C
+       are the stale ones. THE DIRECTION OF THAT BAN IS INVERTED — check
+       api/tests/v3-lift-detection.test.js before assuming either way.
+
+   WHAT STANDS, unchanged:
+     · The --violet-* rejection. The names carry orange values and §3.8 still
+       bans them. Nothing about the palette change touches that reasoning.
+     · The .v3 scoping seam, and the warning against lifting it.
+     · Every methodological lesson below: alias-vs-literal, dead tokens, and why
+       a green harness proved nothing. v1.5 hit the alias/literal split again, in
+       the opposite direction — see the neutral ramp note.
+
+   ── WHAT THE DESIGN HANDOFF PROPOSED, AND WHAT WAS RULED (v1.4, 2026-08-06) ──
+   Historical. Superseded by the banner above; kept, not rewritten.
    The handoff declared 69 custom properties against v1.4 §3.2's ~40. They are two
    systems, not a superset. Rulings, 2026-08-06:
 
@@ -73,10 +103,12 @@
   --v3-radius-xl: 36px;
 
   /* ── Shadows. ADOPTED for v3 only. Materially deeper than v1.4's set. ──── */
-  --v3-shadow-card: 0 12px 38px rgba(18, 16, 12, 0.055);
-  --v3-shadow-soft: 0 24px 80px rgba(18, 16, 12, 0.12);
-  --v3-shadow-deep: 0 32px 110px rgba(18, 16, 12, 0.32);
-  --v3-shadow-lime: 0 18px 52px rgba(210, 236, 42, 0.32);
+  /* v1.5: shadow tints follow the ink. rgba(18,16,12) was the WARM ink; §3.2's ink is
+     #1F2323, so a warm-tinted shadow under a cool palette reads as a brown smudge. */
+  --v3-shadow-card: 0 12px 38px rgba(31, 35, 35, 0.055);
+  --v3-shadow-soft: 0 24px 80px rgba(31, 35, 35, 0.12);
+  --v3-shadow-deep: 0 32px 110px rgba(31, 35, 35, 0.32);
+  --v3-shadow-lime: 0 18px 52px rgba(204, 240, 63, 0.32);
 
   /* ── Tier 2 ALIASES. One value, two names. The v1.4 hex is authoritative. ─
      ⚠️ SEVEN OF THESE NINE POINTED AT TOKENS THAT DO NOT EXIST. Shipped in
@@ -117,58 +149,57 @@
   --v3-paper: var(--color-body);            /* handoff --paper      #F7F4ED */
   --v3-paper-card: var(--color-card);       /* handoff --paper-card #FFFDF8 */
 
-  /* ⚠️ THESE THREE STILL DO NOT RESOLVE, deliberately. --color-spend,
-     --color-spend-text and --color-danger exist nowhere in main, and unlike the
-     four above there is no token to repoint them at. All three have ZERO v3
-     usages, so nothing renders wrong today, and inventing a value would fork
-     the palette to satisfy a checker.
-
-     They must NOT be filled with the handoff's hexes: #B3480E and #E54545 are
-     its --orange-700 and --red, both LIFT FINGERPRINTS
-     (api/tests/v3-lift-detection.test.js), and v1.4's values are #B4420E and
-     #C4381C — two characters different, same colour, invisible in review. The
-     lift test caught exactly that attempt while this defect was being fixed.
-
-     v3-page-pairs.mjs reports them by name as unresolved-but-unused rather than
-     failing, so they stay visible instead of quietly passing. Whoever first
-     needs one adds the real token to config/theme.json. */
-  --v3-spend-text: var(--color-spend-text); /* UNRESOLVED · 0 uses · v1.4 #B4420E */
-  --v3-danger: var(--color-danger);         /* UNRESOLVED · 0 uses · v1.4 #C4381C */
+  /* ✅ v1.5: ALL THREE NOW RESOLVE. They were dead aliases through v1.4 because
+     --color-spend, --color-spend-text and --color-danger existed nowhere. The
+     documented fix was "whoever first needs one adds the real token to
+     config/theme.json" — that is exactly what v1.5 did, so these are now real
+     aliases rather than KI-112 waiting to happen. Still aliases, never literals:
+     theme.json stays the single source of truth. */
+  --v3-spend-text: var(--color-spend-text); /* §3.2 #B83D10 — orange TEXT on light */
+  --v3-danger: var(--color-danger);         /* §3.2 #E54545 — see §3.6 open defect */
+  --v3-positive: var(--color-positive);     /* §3.4 #00AA57 — delta/health ONLY    */
 
   /* ── Core identity, straight from §3.1. Referenced, never redefined. ───── */
-  --v3-ink: var(--color-dark);              /* handoff --ink        #12100C */
-  --v3-text: var(--color-text);             /* resolved already — untouched */
-  --v3-accent: var(--color-primary);        /* handoff --lime       #D2EC2A */
-  --v3-spend: var(--color-spend);           /* UNRESOLVED · 0 uses          */
-  --v3-border: var(--color-border);         /* resolved already — untouched */
+  --v3-ink: var(--color-dark);              /* §3.2 --black   #1F2323 */
+  --v3-text: var(--color-text);             /* §3.2           #1F2323 */
+  --v3-accent: var(--color-primary);        /* §3.2 --lime    #CCF03F */
+  --v3-spend: var(--color-spend);           /* §3.2 --orange  #F0602A */
+  --v3-border: var(--color-border);         /* §3.2 --gray-200 #DDE4E4 */
 
-  /* ── Warm-neutral ramp. 8 steps, all referenced by the handoff's own CSS.
-     Counts are its usage, measured: 50(6) 100(7) 200(6) 400(29) 500(23)
-     600(32) 700(34). gray-300 is declared there and never used — omitted. ── */
-  --v3-gray-50: #FAF8F1;
-  --v3-gray-100: #EFEADC;
-  --v3-gray-200: #E2DBC9;
-  --v3-gray-400: #9C9484;
-  --v3-gray-500: #7A7364;
-  --v3-gray-600: #665F50;
-  --v3-gray-700: #5B5548;
+  /* ── Neutral ramp. v1.5: COOL, replacing v1.4's warm ramp (§3.1, §3.2).
+     Every value below moved. The old ramp was #FAF8F1/#EFEADC/#E2DBC9/#9C9484/
+     #7A7364/#665F50/#5B5548 — retired, and banned by v3-lift-detection so a
+     stale one cannot creep back in.
 
-  /* Dark surfaces. black-700(1) black-900(5); 600/800/850 unused, omitted. */
-  --v3-black-700: #2A251E;
-  --v3-black-900: #0B0A07;
+     ⚠️ THIS IS WHY THE RAMP HAD TO MOVE IN THE SAME CHANGE AS theme.json.
+     These are LITERALS, not aliases — repointing theme.json alone would have
+     left new lime and ink sitting on old warm greys, a half-repainted page that
+     no single check would flag. The alias/literal split that saved the lime ramp
+     in #663 is the same split that endangers it here, in the other direction. */
+  --v3-gray-50: #F7FAFA;
+  --v3-gray-100: #EEF3F3;
+  --v3-gray-200: #DDE4E4;
+  --v3-gray-400: #9DA7A7;
+  --v3-gray-500: #7D8090;
+  --v3-gray-600: #647070;   /* body copy floor — 4.91:1 on paper (§3.6) */
+  --v3-gray-700: #586161;
 
-  /* Accent ramp. lime-200(1) lime-400(2). 50/100 unused, omitted.
+  /* Dark surfaces. */
+  --v3-black-700: #303636;
+  --v3-black-900: #141818;
+
+  /* Accent ramp.
      ⚠️ --v3-lime-400 is a HOVER/fill value. Never a text colour on a light
-     canvas — §3.6: lime on paper is ~1.3:1, "Fail. Never — fills only." */
-  --v3-lime-200: #E9F58A;
-  --v3-lime-400: #DEF356;
+     canvas — §3.6: lime on paper is 1.25:1, "Fail. Never — fills only." */
+  --v3-lime-200: #E8FF9A;
+  --v3-lime-400: #D9FA64;
 
-  /* Counterweight ramp. orange-50(2) orange-400(3) orange-600(3).
-     ⚠️ --v3-orange-600 is FILL / BORDER / ICON ONLY. It is 3.24:1 on paper and
-     3.21:1 on --orange-50 — both below AA. contrast-audit.mjs bans
-     `color: var(--orange-600)` outright and will fire if v3 uses it as text.
-     For orange TEXT on a light surface use --v3-spend-text. */
-  --v3-orange-50: #FFF1E7;
-  --v3-orange-400: #FF9459;
-  --v3-orange-600: #E85A1A;
+  /* Counterweight ramp.
+     ⚠️ --v3-orange-600 is FILL / BORDER / ICON ONLY. §3.6 measures it at 4.19:1
+     on paper — AA-large, so it is legal at ≥24px and NOT for body text.
+     contrast-audit.mjs bans `color: var(--orange-600)` outright.
+     For orange TEXT on a light surface use --v3-spend-text (#B83D10, 5.41:1). */
+  --v3-orange-50: #FFF3EC;
+  --v3-orange-400: #FF8552;
+  --v3-orange-600: #D44A18;
 }

@@ -654,7 +654,7 @@
    aliases it and resolves to nothing, and #FF7A33 appears in no v3 stylesheet.
    Using either would render `unset`: KI-112's mechanism, fourth instance. Uses
    --v3-orange-400 (#FF9459, concrete) and --v3-accent (-> --color-primary ->
-   #D2EC2A, concrete). Both verified in built output.
+   #CCF03F as of v1.5, concrete). Both verified in built output.
 
    §3.4 ACCENT DENSITY: the lime here is a ~22px-wide capsule inside a 200px box —
    well under the ~15% ceiling — and it sits in its OWN row with nothing behind it.

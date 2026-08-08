@@ -6,24 +6,29 @@
 
 @theme {
   /* === Colors === */
-  --color-primary: #D2EC2A;
-  --color-secondary: #BCD41C;
-  --color-accent-warm: #F2A93B;
-  --color-primary-dark: #1B1811;
-  --color-body: #F7F4ED;
-  --color-border: #E7E0D2;
-  --color-light: #FFFDF8;
-  --color-gray: #6E675C;
-  --color-dark: #12100C;
-  --color-dark-gray: #302B22;
-  --color-card: #FFFDF8;
-  --color-text: #161310;
-  --color-text-dark: #161310;
-  --color-text-light: #6E675C;
+  --color-primary: #CCF03F;
+  --color-secondary: #D9FA64;
+  --color-accent-warm: #FF8552;
+  --color-primary-dark: #1B1F1F;
+  --color-body: #FAFAF7;
+  --color-border: #DDE4E4;
+  --color-light: #FFFFFF;
+  --color-gray: #647070;
+  --color-dark: #1F2323;
+  --color-dark-gray: #303636;
+  --color-card: #FFFFFF;
+  --color-spend: #F0602A;
+  --color-spend-text: #B83D10;
+  --color-positive: #00AA57;
+  --color-danger: #E54545;
+  --color-text: #1F2323;
+  --color-text-dark: #1F2323;
+  --color-text-light: #647070;
 
   /* === Font Families === */
-  --font-primary: Geist, sans-serif;
-  --font-mono: Geist Mono, monospace;
+  --font-primary: Schibsted Grotesk, sans-serif;
+  --font-serif: Instrument Serif, serif;
+  --font-mono: JetBrains Mono, monospace;
 
   /* === Font Sizes === */
   --text-base: 16px;
