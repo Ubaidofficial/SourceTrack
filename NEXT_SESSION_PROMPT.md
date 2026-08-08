@@ -1,6 +1,26 @@
-# Next Session — Status as of 2026-07-27, head `735a3ae65806b34661a04f4909bc6110591fe0ae`
+# Next Session — Status as of 2026-08-08, head `0290b51677ef3494b5e23fa596615898543ae535`
 
-## What shipped this session (10 PRs, all merged)
+## §0.5 Session Handoff — Shipped this session
+
+### What Shipped
+1. **Real 8-screen Interactive Demo Workspace**:
+   * Consolidated prototype files into a single SSR-safe React module: [`RealDemoApp.jsx`](file:///Users/ubaid/Desktop/trackiq/marketing/src/components/v3/demo/RealDemoApp.jsx).
+   * Resolved redeclaration collisions for global symbols (`PATHS`, `NAV`, `TITLES`, `D`, `money`, `num`, `pct`).
+   * Bundled and imported scoped stylesheets (`demo-avatars.css`, `demo-workspace.css`, `demo-figma.css`, `demo-dashboard.css`) directly into the React tree, resolving broken layouts.
+   * Mounted `<RealDemoApp client:visible start="dashboard" full={false} />` on the landing page in [`index.astro`](file:///Users/ubaid/Desktop/trackiq/marketing/src/pages/index.astro).
+   * Rebuilt [`demo.astro`](file:///Users/ubaid/Desktop/trackiq/marketing/src/pages/demo.astro) as a clean, full-bleed standalone layout rendering `<RealDemoApp client:load start="dashboard" full={true} />`.
+2. **Spend Calculator ("Smarter allocation")**:
+   * Previously merged layout CSS verified live on production.
+
+### Verification Results
+* **Production Build**: Clean pass, compiling all 55 static pages: `ASTRO_TELEMETRY_DISABLED=1 npm run build` (Completed in 22.89s).
+* **Test Suite**: `pass 36 / fail 0` — 100% of marketing and copywriting checks passed.
+* **Local Visual Audit**: Visual flow tested via browser automation, verifying routing tabs, active models, lead timelines, integration toggles, and journey slide-overs work cleanly.
+* **Committed and Pushed**: Pushed directly to `main` at `0290b516`.
+
+---
+
+## What shipped prior (10 PRs, all merged)
 
 | PR | What | CI |
 |---|---|---|
