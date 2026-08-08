@@ -315,41 +315,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Surface tabs ────────────────────────────────────────────────────────── */
-.v3 .v3-surf { display: grid; gap: 16px; }
-.v3 .v3-surf-tabs { display: flex; flex-wrap: wrap; gap: 7px; }
-.v3 .v3-surf-tab {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 7px 14px; border-radius: 99px;
-  background: transparent;
-  border: 1px solid var(--v3-border);
-  color: var(--v3-gray-600);
-  font-size: 12.5px; font-weight: 800; cursor: pointer;
-}
-.v3 .v3-surf-tab i {
-  font-style: normal; font-size: 10.5px; font-weight: 900;
-  color: var(--v3-gray-400);
-}
-.v3 .v3-surf-tab.is-on {
-  background: var(--v3-ink);          /* was var(--black) */
-  border-color: transparent;
-  color: var(--v3-paper);             /* was var(--white) */
-}
-.v3 .v3-surf-tab.is-on i { color: var(--v3-accent); }
-.v3 .v3-surf-head h3 { font-size: 19px; font-weight: 800; color: var(--v3-ink); }
-.v3 .v3-surf-head p { font-size: 14px; color: var(--v3-gray-600); margin-top: 4px; }
-.v3 .v3-surf-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 8px;
-}
-.v3 .v3-surf-cell {
-  display: inline-flex; align-items: center; justify-content: center;
-  padding: 13px 10px; border-radius: var(--v3-radius-sm);
-  background: var(--v3-paper-card);
-  border: 1px solid var(--v3-border);
-  color: var(--v3-gray-700);
-  font-size: 12.5px; font-weight: 800; text-align: center;
-}
-.v3 .v3-surf-cell--more { background: transparent; border-style: dashed; color: var(--v3-gray-500); }
 
 /* ── Live visitor feed — dark surface ────────────────────────────────────── */
 .v3 .v3-lv {
@@ -403,19 +368,12 @@
 /* ── MOTION — opt-in only ────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: no-preference) {
   .v3 .v3-ticker-slot { animation: v3-ticker-in 0.34s var(--v3-ease-out) both; }
-  .v3 .v3-surf-cell { animation: v3-cell-in 0.28s var(--v3-ease-out) both; }
   .v3 .v3-lv-row { transition: background 0.5s var(--v3-ease-out); }
-  .v3 .v3-surf-tab { transition: border-color 0.2s var(--v3-ease-out), background 0.2s var(--v3-ease-out); }
 }
 @keyframes v3-ticker-in {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: none; }
 }
-@keyframes v3-cell-in {
-  from { opacity: 0; transform: translateY(3px); }
-  to   { opacity: 1; transform: none; }
-}
-
 /* ============================================================================
    PR 4 — SHELL FILLS: §6 tool-rows · bento model split · report-builder rows ·
    embed snippet · §18 mark
@@ -699,4 +657,163 @@
 @keyframes v3-beam-travel {
   0%   { transform: translateY(0); }
   100% { transform: translateY(-84px); }
+}
+
+/* ── Coverage tabs (home §4) ───────────────────────────────────────────────
+   CSS-only tabs: radio inputs + :has(). No JavaScript, so all five panels are
+   reachable without it — unlike the React island this replaced, where only the
+   server-rendered first panel survived and the other four were behind a click
+   handler that never loaded.
+
+   ⚠️ THE @supports GUARD IS THE LOAD-BEARING PART, not a nicety.
+   The DEFAULT state below shows EVERY panel. Panels are hidden only INSIDE
+   `@supports selector(:has(*))`. So a browser without :has() renders all five
+   stacked — more content than intended, but all of it readable — instead of a
+   tab bar above five hidden panels, which is what a naive `display:none` default
+   would ship.
+
+   That is the same guarantee motion.css makes with
+   `@supports (animation-timeline: view())`, and the handoff states it three
+   separate times: if the enhancement cannot run, the content must still be
+   visible. Never hide content and rely on something else to reveal it. */
+
+.v3 .v3-cov {
+  border: 1px solid var(--v3-border);
+  border-radius: var(--v3-radius-lg);
+  background: var(--v3-paper-card);
+  box-shadow: var(--v3-shadow-card);
+  overflow: hidden;
+}
+
+.v3 .v3-cov-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 14px;
+  border-bottom: 1px solid var(--v3-border);
+}
+
+/* Visually hidden, NOT display:none — the radios must stay focusable so the
+   native arrow-key behaviour of a radio group keeps working. */
+.v3 .v3-cov-input {
+  position: absolute;
+  inline-size: 1px; block-size: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%);
+  white-space: nowrap; border: 0;
+}
+
+.v3 .v3-cov-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 15px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--v3-gray-700);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s var(--v3-ease-out), color 0.18s var(--v3-ease-out);
+  /* §? touch targets: the handoff floors interactive controls at 44px on mobile. */
+  min-block-size: 38px;
+}
+.v3 .v3-cov-tab i {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--v3-gray-100);
+  color: var(--v3-gray-600);
+  font-variant-numeric: tabular-nums;
+}
+.v3 .v3-cov-tab:hover { background: var(--v3-gray-50); color: var(--v3-ink); }
+
+/* Focus must be visible on the LABEL, since the input itself is off-screen. */
+.v3 .v3-cov-input:focus-visible + .v3-cov-tab {
+  outline: 2px solid var(--v3-ink);
+  outline-offset: 2px;
+}
+
+.v3 .v3-cov-input:checked + .v3-cov-tab {
+  background: var(--v3-ink);
+  color: #fff;
+}
+.v3 .v3-cov-input:checked + .v3-cov-tab i {
+  background: var(--v3-accent);
+  color: var(--v3-ink);
+}
+
+.v3 .v3-cov-panel { padding: 22px; }
+.v3 .v3-cov-panel + .v3-cov-panel { border-top: 1px solid var(--v3-border); }
+
+.v3 .v3-cov-panel h3 {
+  margin: 0;
+  font-size: clamp(19px, 2.1vw, 25px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  /* gray-600, not gray-500: at 19px/800 gray-500 clears AA-large by 0.07 (3.07 vs 3.0),
+     which is too thin a margin to certify. gray-600 is 5.13:1 and clears AA outright. */
+  color: var(--v3-gray-600);
+  text-wrap: balance;
+}
+/* The design sets part of each heading in ink and the rest in muted grey — the
+   emphasis is the SURFACE being described, not the whole sentence. */
+.v3 .v3-cov-panel h3 strong { color: var(--v3-ink); font-weight: 800; }
+
+.v3 .v3-cov-panel p {
+  margin: 10px 0 0;
+  max-width: 62ch;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--v3-gray-600);
+}
+
+.v3 .v3-cov-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 18px;
+}
+.v3 .v3-cov-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--v3-border);
+  border-radius: var(--v3-radius-sm);
+  background: var(--v3-paper-card);
+}
+.v3 .v3-cov-cell--more {
+  justify-content: center;
+  border-style: dashed;
+  background: transparent;
+  /* gray-600 (5.13:1 on white), NOT gray-500 (3.07:1). This is 12.5px at weight 800 —
+     below the 18.66px-bold threshold for AA-large, so it needs the full 4.5:1. */
+  color: var(--v3-gray-600);
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+@media (max-width: 1080px) { .v3 .v3-cov-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 820px)  { .v3 .v3-cov-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px)  {
+  .v3 .v3-cov-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .v3 .v3-cov-tab  { min-block-size: 44px; }
+  .v3 .v3-cov-panel { padding: 16px; }
+}
+
+/* ── The enhancement. Everything above renders all five panels; this hides the
+      unselected ones. Scoped so a browser without :has() keeps them all. ──── */
+@supports selector(:has(*)) {
+  .v3 .v3-cov-panel { display: none; }
+  .v3 .v3-cov-panel + .v3-cov-panel { border-top: 0; }
+  .v3 .v3-cov:has(#v3-cov-forms:checked)    .v3-cov-panel[data-for="forms"],
+  .v3 .v3-cov:has(#v3-cov-chat:checked)     .v3-cov-panel[data-for="chat"],
+  .v3 .v3-cov:has(#v3-cov-meetings:checked) .v3-cov-panel[data-for="meetings"],
+  .v3 .v3-cov:has(#v3-cov-payments:checked) .v3-cov-panel[data-for="payments"],
+  .v3 .v3-cov:has(#v3-cov-crm:checked)      .v3-cov-panel[data-for="crm"] { display: block; }
 }
