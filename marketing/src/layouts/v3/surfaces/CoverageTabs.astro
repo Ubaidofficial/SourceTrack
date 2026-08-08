@@ -9,10 +9,16 @@
  * click handler that never loaded. Four fifths of the section's content was behind
  * a script.
  *
- * Radio inputs plus `:checked ~` sibling selectors need no JavaScript at all. Every
- * panel is in the DOM, every tab switches, and the keyboard behaviour is a native
- * radio group — arrow keys included — rather than a roving-tabindex implementation
- * that has to be written and then kept correct.
+ * Radio inputs plus `:has()` need no JavaScript at all. Every panel is in the DOM,
+ * every tab switches, and the keyboard behaviour is a native radio group — arrow keys
+ * included — rather than a roving-tabindex implementation that has to be written and
+ * then kept correct.
+ *
+ * `:has()` rather than a `:checked ~` sibling selector because the inputs live inside
+ * .v3-cov-tabs and the panels inside .v3-cov-panels, so the two are not siblings.
+ * Flattening them into one sibling chain would put five radios and five panels in a
+ * single row container and force the layout to be rebuilt around the selector. The
+ * `@supports` guard in v3-surfaces.css covers browsers without `:has()` — see there.
  *
  * A radio group is also the honest semantic: the lede literally says "pick a surface
  * to see the platforms". That is a single choice from five, which is what radios are.
@@ -35,7 +41,22 @@
  */
 import BrandMark from "@/components/BrandMark.astro"
 
-const SURFACES = [
+/** Explicit, not inferred — `astro check` runs with implicit-any as an ERROR, so an
+ *  untyped `(s) => …` below fails the build even though it is obviously correct. */
+interface Surface {
+  id: string
+  tab: string
+  /** Alternating plain / emphasised runs. Odd indices render <strong> (ink); even
+   *  indices render muted. Keeps the two-tone heading in data rather than in markup. */
+  heading: string[]
+  sub: string
+  /** How many further integrations exist beyond `items`. Feeds the computed count. */
+  more: number
+  /** Slugs into src/lib/brand-marks.js. Unknown slugs throw at build time. */
+  items: string[]
+}
+
+const SURFACES: Surface[] = [
   {
     id: "forms",
     tab: "Forms",
@@ -98,7 +119,7 @@ const SURFACES = [
   }
 ]
 
-const count = (s) => s.items.length + s.more
+const count = (s: Surface) => s.items.length + s.more
 ---
 
 <div class="v3-cov">
