@@ -46,14 +46,22 @@ const TOTAL = 21430
 const CONVERSIONS = 126
 const RANGE = "Jul 4 – Aug 2, 2026"
 
-interface Channel { slug: string; name: string; sub: string }
+// `slug: null` means "no company to identify" — §3.7's answer for exactly this case
+// ("a dot prefix where no brand logo exists") — rather than borrowing an unrelated
+// vendor's mark to fill the tile. CORRECTED: this previously used Stripe's logo for
+// "Direct" and Webhooks' icon for "Referral" — neither channel IS that company, and a
+// reader who notices reads it as "why does Stripe mean direct traffic?", which is a
+// real, spot-able mismatch, not a stylistic nit. "AI Search" keeps chatgpt as one
+// representative of the group named in its own `sub` line ("+19"), which is what the
+// sub-text is there to disambiguate.
+interface Channel { slug: string | null; name: string; sub: string }
 const CHANNELS: Channel[] = [
   { slug: "google-ads",     name: "Paid Search",    sub: "Google Ads" },
   { slug: "google-organic", name: "Organic Search", sub: "Google" },
-  { slug: "stripe",         name: "Direct",         sub: "Direct / none" },
+  { slug: null,             name: "Direct",         sub: "Direct / none" },
   { slug: "chatgpt",        name: "AI Search",      sub: "ChatGPT, Gemini, Claude +19" },
   { slug: "linkedin",       name: "Paid Social",    sub: "LinkedIn + Meta" },
-  { slug: "webhooks",       name: "Referral",       sub: "Partner websites" }
+  { slug: null,             name: "Referral",       sub: "Partner websites" }
 ]
 
 // The two MEASURED splits, from the design bundle. Everything else derives from these.
@@ -167,7 +175,9 @@ const maxOf = (split: number[]) => Math.max(...split)
                   hidden name would make a screen reader say "Paid Search Paid Search".
                   Done here so this component has no dependency on the `decorative` prop
                   added on the §12 branch — the two PRs stay independently mergeable. */}
-              <span aria-hidden="true"><BrandMark slug={c.slug} size={26} /></span>
+              {c.slug
+                ? <span aria-hidden="true"><BrandMark slug={c.slug} size={26} /></span>
+                : <span class="v3-ms-dot" aria-hidden="true"></span>}
               <span class="v3-ms-chname">
                 <strong>{c.name}</strong>
                 <span>{c.sub}</span>

@@ -32,8 +32,16 @@
 // it is the same construction DirectRescueMockup uses, pinned by direct-rescue-mockup-fixture
 // .test.js, which asserts the badge is absent AND that sentence is present. A specific figure in
 // a hero is exactly what a visitor would otherwise read as a live measurement (§6).
+// UPGRADED from a plain colour dot per chip to a real BrandMark tile. Claude and
+// Gemini are officially sourced (marketing/src/lib/brand-marks.js); ChatGPT and
+// Perplexity render as monogram tiles until sourcing lands for them (both 403 a
+// bot fetch — recorded in the registry, not a gap in this component). Slugs, not
+// display names: BrandMark resolves the label from the registry, so the chip
+// text and the asset can never disagree about which company this is.
+import BrandMark from "@/components/BrandMark.astro"
+
 const LEAD_COUNT = 42;
-const AI_SOURCES = ["ChatGPT", "Perplexity", "Claude", "Gemini"];
+const AI_SOURCES = ["chatgpt", "perplexity", "claude", "gemini"];
 ---
 
 <div class="mx-auto mt-8 w-full max-w-[560px]">
@@ -54,10 +62,9 @@ const AI_SOURCES = ["ChatGPT", "Perplexity", "Claude", "Gemini"];
 
     <ul class="mt-3 flex flex-wrap items-center gap-2">
       {
-        AI_SOURCES.map((source) => (
-          <li class="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-2.5 py-1 text-[11px] font-bold text-[#C7CFCF]">
-            <span class="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true"></span>
-            {source}
+        AI_SOURCES.map((slug) => (
+          <li class="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-2 py-1 text-[11px] font-bold text-[#C7CFCF]">
+            <BrandMark slug={slug} size={16} showName class="bm--on-dark" />
           </li>
         ))
       }

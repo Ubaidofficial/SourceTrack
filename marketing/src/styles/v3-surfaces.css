@@ -61,27 +61,39 @@
    ========================================================================== */
 
 /* ── Channel marquee ─────────────────────────────────────────────────────── */
-/* Static by ruling: no animation, no motion.css port. The handoff scrolls this
-   continuously; that is PR 3's scope, and shipping a still row now is honest
-   about what is built rather than half-animating it. */
+/* Now scrolling (v4-motion.css) and carrying real marks (ChannelMarquee.astro).
+   This rule set is a LEFTOVER from when the row was plain static text, and it
+   was still dimming a BrandMark tile as if it were a bare word:
+   `opacity: 0.72` washed out an already-small logo on top of shrinking it.
+
+   ⚠️ THE TILE SIZE ITSELF CANNOT BE FIXED FROM HERE. BrandMark sets
+   `style="--bm-size:${size}px"` INLINE on its own root span — an element's own
+   inline declaration of a custom property beats an ancestor's cascaded value, so
+   `.v3-marquee-item { --bm-size: 30px }` would be silently overridden by
+   BrandMark's inline style every time and change nothing. Fixed at the actual
+   source: ChannelMarquee.astro now passes `size={30}` to BrandMark directly. */
 .v3 .v3-marquee {
   overflow: hidden;
   border-block: 1px solid var(--v3-border);
-  padding: 14px 0;
+  padding: 18px 0;
 }
 .v3 .v3-marquee-track {
   display: flex;
   align-items: center;
-  gap: 40px;
-  flex-wrap: wrap;
-  justify-content: center;
+  gap: 44px;
 }
 .v3 .v3-marquee-item {
+  display: inline-flex;
+  align-items: center;
   color: var(--v3-ink);          /* was var(--black) — conflict 1 */
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
   white-space: nowrap;
-  opacity: 0.72;
+}
+.v3 .v3-marquee-item :global(.bm-name) {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--v3-ink);
 }
 
 /* ── Chip rows: tool-row, ai-chips, journey-chips ────────────────────────── */
@@ -203,6 +215,13 @@
   font-weight: 800;
   color: var(--v3-ink);               /* was var(--black) — conflict 1 */
   white-space: nowrap;
+}
+/* Sized to the 18px BrandMark tiles THIS table uses — deliberately its OWN size,
+   not ModelSwitcher's .v3-ms-dot (26px), so a "Direct"/"Referral" row's placeholder
+   lines up with the logo column in the SAME table rather than a different one. */
+.v3 .v3-minitbl-ch .v3-ms-dot {
+  inline-size: 18px;
+  block-size: 18px;
 }
 
 /* ── Sync list ───────────────────────────────────────────────────────────── */
@@ -495,6 +514,30 @@
 }
 .v3 .v3-tourfoot .v3-link-quiet { display: inline-flex; align-items: center; gap: 7px; }
 
+/* §5 product tour: the two labeled chip-row groups. Previously UNSTYLED — this
+   selector had no rules at all, so the two groups stacked as plain blocks with no
+   layout relationship, which is part of why the section read as an unlabeled pile
+   of chips rather than two distinct, named surfaces. */
+.v3 .v3-frame-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid var(--v3-border);
+}
+.v3 .v3-frame-split-label {
+  margin: 0 0 10px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--v3-gray-600);
+}
+@media (max-width: 620px) {
+  .v3 .v3-frame-split { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* ── §14: comparison mark columns ────────────────────────────────────────── */
 .v3 .v3-markcols {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -605,65 +648,6 @@
   50%      { transform: translate(-50%, -50%) scale(1.12); }
 }
 
-/* ============================================================================
-   PATH BEAM — mechanism illustration, CSS-only
-   ============================================================================
-   🔴 NO JS ANYWHERE. The motion is pure @keyframes, which is why a single
-   prefers-reduced-motion media query is SUFFICIENT here. #697's two-layer problem
-   (a media query cannot stop a setInterval that mutates state, only stop styling
-   it) does not arise, because there is no timer to stop.
-
-   ⚠️ TOKEN SUBSTITUTION, and why. The brief specified --color-spend (#FF7A33) for
-   the orange. That property is declared NOWHERE in marketing/src — --v3-spend
-   aliases it and resolves to nothing, and #FF7A33 appears in no v3 stylesheet.
-   Using either would render `unset`: KI-112's mechanism, fourth instance. Uses
-   --v3-orange-400 (#FF9459, concrete) and --v3-accent (-> --color-primary ->
-   #CCF03F as of v1.5, concrete). Both verified in built output.
-
-   §3.4 ACCENT DENSITY: the lime here is a ~22px-wide capsule inside a 200px box —
-   well under the ~15% ceiling — and it sits in its OWN row with nothing behind it.
-   §2.6 forbids lime as a wash behind primary content; this is adjacent to copy,
-   never underneath it.
-
-   STILL IS THE DEFAULT. The pulses are declared with no animation and are
-   invisible until the no-preference query turns them on, so a reduced-motion user
-   gets solid capsules and a visible gap — not a slower or subtler version.
-   ========================================================================== */
-.v3 .v3-beam {
-  width: 200px;
-  height: 200px;
-  margin: 28px auto 0;
-  flex: none;
-}
-.v3 .v3-beam-rail { opacity: 0.28; }
-.v3 .v3-beam-rail--o { fill: var(--v3-orange-400); }
-.v3 .v3-beam-rail--l { fill: var(--v3-accent); }
-
-/* Pulses are HIDDEN by default and revealed only under no-preference. A reduced-motion
-   reader sees two solid capsules with the break visible — the mechanism still reads
-   statically, which is the point of showing a gap rather than animating one. */
-.v3 .v3-beam-pulse { opacity: 0; }
-.v3 .v3-beam-pulse--o { fill: var(--v3-orange-400); }
-.v3 .v3-beam-pulse--l { fill: var(--v3-accent); }
-
-@media (prefers-reduced-motion: no-preference) {
-  .v3 .v3-beam-pulse {
-    opacity: 1;
-    animation: v3-beam-travel 3.2s var(--v3-ease-in-out) infinite;
-  }
-  /* Offset so the two paths do not read as one synchronised object — the contrast
-     between them is the whole message. */
-  .v3 .v3-beam-pulse--l { animation-delay: 0.45s; }
-}
-
-/* Travels the capsule's long axis, bottom to top. The orange group carries the break
-   mask, so its pulse vanishes at the gap; the lime group is unmasked, so its pulse
-   completes and leaves the top. Same keyframes for both — the difference is the mask,
-   not the motion. */
-@keyframes v3-beam-travel {
-  0%   { transform: translateY(0); }
-  100% { transform: translateY(-84px); }
-}
 
 /* ── Coverage tabs (home §4) ───────────────────────────────────────────────
    CSS-only tabs: radio inputs + :has(). No JavaScript, so all five panels are
@@ -1108,6 +1092,26 @@
 }
 .v3 .v3-ms-row + .v3-ms-row { margin-block-start: 7px; }
 .v3 .v3-ms-ch { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
+/* Stands in for BrandMark on channels with no company to identify (Direct, Referral).
+   Sized to sit inside the same 26px column the logo tiles occupy, so the row's
+   alignment holds whether a channel has a mark or not. §3.7: "a dot prefix where no
+   brand logo exists." */
+.v3 .v3-ms-dot {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  inline-size: 26px; block-size: 26px;
+}
+.v3 .v3-ms-dot::before {
+  content: "";
+  inline-size: 9px; block-size: 9px;
+  border-radius: 999px;
+  /* NOT --v3-border (#DDE4E4) — that is barely distinguishable from the row's own
+     --v3-gray-50 (#F7FAFA) background and the dot would read as a rendering gap
+     rather than a deliberate mark. gray-400 is the same weight §3.7's channel-identity
+     dots use elsewhere on this page (the orbit lead card, the journey chips). */
+  background: var(--v3-gray-400);
+}
 .v3 .v3-ms-chname { display: grid; min-width: 0; }
 .v3 .v3-ms-chname strong { font-size: 13px; font-weight: 800; color: var(--v3-ink); }
 .v3 .v3-ms-chname span {

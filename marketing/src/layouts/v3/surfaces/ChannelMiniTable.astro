@@ -1,21 +1,37 @@
 ---
-// Mini channel table — the handoff's `channel-mini` mount.
-//
-// Channel / Visitors / Conversions / Revenue. The handoff reads window.DEMO and
-// returns null without it; fixtures are local here (ruling 3) so the component
-// cannot render empty because a global was absent.
-//
-// ⚠️ REVENUE IS SHOWN, so this is a §6 surface, not just layout. Every figure is
-// an illustrative fixture and the page-level §29.8 disclosure in Footer.astro
-// states that once for the page. No per-card badge — §29.8 permits exactly one
-// disclosure line, which is why this carries none of its own.
-const rows = [
-  { name: 'Google Ads', visitors: '12,480', conv: '318', rev: '$48,200' },
-  { name: 'Google',     visitors: '9,140',  conv: '221', rev: '$31,050' },
-  { name: 'ChatGPT',    visitors: '3,620',  conv: '128', rev: '$19,400' },
-  { name: 'LinkedIn',   visitors: '2,910',  conv: '86',  rev: '$12,760' },
-  { name: 'Direct',     visitors: '2,240',  conv: '61',  rev: '$8,930'  },
-];
+/**
+ * Mini channel table — the handoff's `channel-mini` mount, home §5 (Product tour).
+ *
+ * ── A FOURTH DISAGREEING DATASET, RECONCILED ────────────────────────────────
+ * This table showed Google Ads $48,200 / Google $31,050 / ChatGPT $19,400 /
+ * LinkedIn $12,760 / Direct $8,930 — summing to $120,340, on a page where §5's own
+ * journey card, §8's model switcher and §12's card all reconcile to a single
+ * $21,430 dataset. This was the fourth number set on one page pretending to be part
+ * of the same story while actually describing nothing anyone else on the page could
+ * check against. The handoff's rule for its fixture is that no two screens disagree,
+ * "because prospects check the arithmetic."
+ *
+ * Now uses the SAME six channels and the SAME revenue split as §8's "First touch"
+ * model (ModelSwitcher.astro's `FIRST` array) — visitors and conversions are the
+ * design bundle's own figures for that exact split, not invented: 7,303 visitors,
+ * 126 conversions, $21,430, matching §8's own CONVERSIONS/TOTAL constants exactly.
+ *
+ * ── LOGOS, NOT LETTERS ───────────────────────────────────────────────────────
+ * §3.7: a dot prefix where no brand logo exists. "Direct" and "Referral" are not
+ * companies, so they get the same neutral dot ModelSwitcher uses for them — not a
+ * borrowed vendor mark. Real marks route through BrandMark (§35.4).
+ */
+import BrandMark from "@/components/BrandMark.astro"
+
+interface Row { slug: string | null; name: string; visitors: string; conv: string; rev: string }
+const rows: Row[] = [
+  { slug: "google-ads",     name: "Paid Search",    visitors: "1,568", conv: "34", rev: "$7,080" },
+  { slug: "google-organic", name: "Organic Search", visitors: "1,432", conv: "28", rev: "$5,410" },
+  { slug: null,             name: "Direct",         visitors: "2,541", conv: "29", rev: "$4,940" },
+  { slug: "chatgpt",        name: "AI Search",      visitors: "642",   conv: "19", rev: "$2,480" },
+  { slug: "linkedin",       name: "Paid Social",    visitors: "596",   conv: "10", rev: "$1,040" },
+  { slug: null,             name: "Referral",       visitors: "524",   conv: "6",  rev: "$480"   },
+]
 ---
 <table class="v3-minitbl">
   <thead>
@@ -24,7 +40,14 @@ const rows = [
   <tbody>
     {rows.map((r) => (
       <tr>
-        <td><span class="v3-minitbl-ch">{r.name}</span></td>
+        <td>
+          <span class="v3-minitbl-ch">
+            {r.slug
+              ? <span aria-hidden="true"><BrandMark slug={r.slug} size={18} /></span>
+              : <span class="v3-ms-dot" aria-hidden="true"></span>}
+            {r.name}
+          </span>
+        </td>
         <td>{r.visitors}</td>
         <td>{r.conv}</td>
         <td>{r.rev}</td>

@@ -94,6 +94,11 @@ const monogram = mark.name.split(/[\s.]+/).filter(Boolean).slice(0, 2).map(w => 
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  /* `bm--on-dark`: for a caller placing the chip on a dark card. `.bm-name`'s
+     colour otherwise defaults to ink, which is illegible on a dark background —
+     the tile itself stays light either way (`.bm-tile` is always
+     --v3-paper-card), only the name text needs to flip. */
+  .bm.bm--on-dark .bm-name { color: #f2f4f3; }
 
   .sr-only {
     position: absolute;
