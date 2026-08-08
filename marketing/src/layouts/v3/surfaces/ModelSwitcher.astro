@@ -1,0 +1,191 @@
+---
+/**
+ * ModelSwitcher — "Nine attribution models. One dataset underneath." Home §8.
+ *
+ * The section's entire argument is that credit MOVES while visits and conversions do
+ * not. Static chips cannot make that argument — the reader has to see the same
+ * $21,430 land differently. This replaces the name-chip list with the design's live
+ * switcher.
+ *
+ * ── THE NINE MODELS ARE THE PRODUCT'S, NOT THE DESIGN'S ─────────────────────
+ * Founder ruling 2026-08-08: "design's mechanics, product's truth." The v4 design
+ * bundle's switcher shows "Full path" and "Custom weights", NEITHER of which exists,
+ * and OMITS "AI platforms", which does and is the positioning differentiator. The
+ * nine below are api/lib/report-config-validation.js's ALLOWED_MODELS exactly:
+ *
+ *   first_touch, last_touch, first_touch_non_direct, last_touch_non_direct,
+ *   linear, u_shaped, w_shaped, time_decay, ai_platforms
+ *
+ * v1.6 §0.5's override covers VISUAL rules and explicitly excludes §6 data truth, so
+ * shipping a switcher offering two models the API would 400 on is out of scope for
+ * that override. The interaction is the design's; the vocabulary is ours.
+ *
+ * ── THE SPLITS ARE DERIVED, NOT TYPED ───────────────────────────────────────
+ * Nine models x six channels is 54 figures. Hand-typed, they drift, and the one
+ * property this section cannot lose is that every model sums to the SAME total —
+ * that is literally the claim. So only the two REAL splits are data (first and last
+ * touch, both measured from the design bundle), and the other seven are computed
+ * from them at build time by a stated rule, with largest-remainder rounding forcing
+ * an exact total.
+ *
+ * A reader who adds up any column gets $21,430. That is the handoff's own rule for
+ * its fixture, and it matters here more than anywhere: prospects check this one.
+ *
+ * Percentages are computed from the amounts at render time, so a figure and its
+ * share can never disagree.
+ *
+ * ── TRUTHFULNESS ────────────────────────────────────────────────────────────
+ * Fixture data illustrating a mechanism, covered by §29.8's page disclosure. It is
+ * not presented as ours or as any customer's, and the footer states plainly that
+ * visits and conversions do not change — which is the real, verifiable product
+ * behaviour this section exists to demonstrate.
+ */
+import BrandMark from "@/components/BrandMark.astro"
+
+const TOTAL = 21430
+const CONVERSIONS = 126
+const RANGE = "Jul 4 – Aug 2, 2026"
+
+interface Channel { slug: string; name: string; sub: string }
+const CHANNELS: Channel[] = [
+  { slug: "google-ads",     name: "Paid Search",    sub: "Google Ads" },
+  { slug: "google-organic", name: "Organic Search", sub: "Google" },
+  { slug: "stripe",         name: "Direct",         sub: "Direct / none" },
+  { slug: "chatgpt",        name: "AI Search",      sub: "ChatGPT, Gemini, Claude +19" },
+  { slug: "linkedin",       name: "Paid Social",    sub: "LinkedIn + Meta" },
+  { slug: "webhooks",       name: "Referral",       sub: "Partner websites" }
+]
+
+// The two MEASURED splits, from the design bundle. Everything else derives from these.
+const FIRST = [7080, 5410, 4940, 2480, 1040, 480]
+const LAST  = [5180, 4060, 7940, 1780, 1880, 590]
+// Relative ASSIST propensity — how often a channel appears mid-path rather than at an
+// end. Direct is low (it is where people land back, rarely an assist); AI Search and
+// Paid Social are high (discovery and retargeting surfaces).
+const ASSIST = [1.0, 1.0, 0.35, 1.6, 1.4, 1.2]
+const DIRECT_IDX = 2
+const AI_IDX = 3
+
+/** Largest-remainder rounding. Guarantees the split sums to TOTAL exactly. */
+function norm (weights: number[]): number[] {
+  const s = weights.reduce((a, b) => a + b, 0)
+  const raw = weights.map((x) => (x / s) * TOTAL)
+  const floors = raw.map(Math.floor)
+  const remainder = TOTAL - floors.reduce((a, b) => a + b, 0)
+  const order = raw.map((v, i) => [v - floors[i], i] as [number, number])
+                   .sort((a, b) => b[0] - a[0])
+  for (let k = 0; k < remainder; k++) floors[order[k % floors.length][1]]++
+  return floors
+}
+const mix = (wf: number, wl: number, wm: number) =>
+  norm(FIRST.map((v, i) => wf * v + wl * LAST[i] + wm * ASSIST[i] * 3000))
+/** Non-direct: strip Direct's credit, redistribute proportionally across the rest. */
+function nonDirect (base: number[]): number[] {
+  const w = base.slice()
+  const moved = w[DIRECT_IDX]
+  w[DIRECT_IDX] = 0
+  const rest = w.reduce((a, b) => a + b, 0)
+  return norm(w.map((v) => v + (v / rest) * moved))
+}
+
+interface Model { id: string; label: string; note: string; split: number[] }
+const MODELS: Model[] = [
+  { id: "first-touch", label: "First touch",
+    note: "Credit goes to the first recorded touch. Discovery channels look strongest.",
+    split: FIRST },
+  { id: "last-touch", label: "Last touch",
+    note: "Credit goes to the final touch before the conversion, which inflates Direct.",
+    split: LAST },
+  { id: "first-non-direct", label: "First touch (non-direct)",
+    note: "Same as first touch, but Direct never takes credit — it is redistributed to the channels that earned the visit.",
+    split: nonDirect(FIRST) },
+  { id: "last-non-direct", label: "Last touch (non-direct)",
+    note: "The last identifiable channel before the conversion. Direct drops out entirely.",
+    split: nonDirect(LAST) },
+  { id: "linear", label: "Linear",
+    note: "Every touch on the path shares the credit equally, so assist channels surface.",
+    split: mix(0.34, 0.33, 0.33) },
+  { id: "u-shaped", label: "U-shaped",
+    note: "40% to the first touch, 40% to the last, the rest spread across the middle.",
+    split: mix(0.40, 0.40, 0.20) },
+  { id: "w-shaped", label: "W-shaped",
+    note: "First touch, the qualifying milestone and the last touch each take a share.",
+    split: mix(0.30, 0.30, 0.40) },
+  { id: "time-decay", label: "Time decay",
+    note: "Touches closer to the conversion take more credit than early ones.",
+    split: mix(0.22, 0.78, 0.00) },
+  { id: "ai-platforms", label: "AI platforms",
+    note: "Credit follows the assistant referrals other tools file as Direct.",
+    split: (() => { const w = mix(0.5, 0.5, 0).slice(); w[AI_IDX] = Math.round(w[AI_IDX] * 2.35); return norm(w) })() }
+]
+
+// Build-time assertion. If a derivation ever stops reconciling, the BUILD fails rather
+// than the page quietly showing a column that does not add up.
+for (const m of MODELS) {
+  const sum = m.split.reduce((a, b) => a + b, 0)
+  if (sum !== TOTAL) throw new Error(`ModelSwitcher: "${m.label}" sums to ${sum}, expected ${TOTAL}`)
+}
+
+const money = (n: number) => "$" + n.toLocaleString("en-US")
+const pct = (n: number) => ((n / TOTAL) * 100).toFixed(1) + "%"
+const maxOf = (split: number[]) => Math.max(...split)
+---
+
+<div class="v3-ms">
+  <div class="v3-ms-head">
+    <div>
+      <p class="v3-ms-meta">
+        {CONVERSIONS} conversions · {CHANNELS.length} channels · {RANGE}
+      </p>
+      {MODELS.map((m) => (
+        <p class="v3-ms-note" data-for={m.id}>{m.note}</p>
+      ))}
+    </div>
+    <div class="v3-ms-total">
+      <strong>{money(TOTAL)}</strong>
+      <span>Recorded revenue in play</span>
+    </div>
+  </div>
+
+  <div class="v3-ms-tabs" role="radiogroup" aria-label="Attribution model">
+    {MODELS.map((m, i) => (
+      <>
+        <input type="radio" name="v3-ms" id={`v3-ms-${m.id}`} class="v3-ms-input" checked={i === 0} />
+        <label class="v3-ms-tab" for={`v3-ms-${m.id}`}>{m.label}</label>
+      </>
+    ))}
+  </div>
+
+  <div class="v3-ms-panels">
+    {MODELS.map((m) => (
+      <div class="v3-ms-panel" data-for={m.id} aria-label={m.label}>
+        {CHANNELS.map((c, i) => (
+          <div class="v3-ms-row">
+            <span class="v3-ms-ch">
+              {/* aria-hidden at the CALL SITE rather than a BrandMark prop: the channel
+                  name is rendered visibly right beside it, so BrandMark's own visually
+                  hidden name would make a screen reader say "Paid Search Paid Search".
+                  Done here so this component has no dependency on the `decorative` prop
+                  added on the §12 branch — the two PRs stay independently mergeable. */}
+              <span aria-hidden="true"><BrandMark slug={c.slug} size={26} /></span>
+              <span class="v3-ms-chname">
+                <strong>{c.name}</strong>
+                <span>{c.sub}</span>
+              </span>
+            </span>
+            <span class="v3-ms-bar">
+              <i style={`--w:${(m.split[i] / maxOf(m.split)) * 100}%`}></i>
+            </span>
+            <span class="v3-ms-pct">{pct(m.split[i])}</span>
+            <span class="v3-ms-amt">{money(m.split[i])}</span>
+          </div>
+        ))}
+      </div>
+    ))}
+  </div>
+
+  <p class="v3-ms-foot">
+    Visits and conversions never change — only the credit does. Switch models on any
+    report without re-tagging a single link.
+  </p>
+</div>
