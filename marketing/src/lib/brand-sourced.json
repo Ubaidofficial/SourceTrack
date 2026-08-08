@@ -1,0 +1,432 @@
+{
+  "activecampaign": {
+    "file": "activecampaign.webp",
+    "brandPage": "https://activecampaign.com/dist/favicon-180x180.png",
+    "domain": "activecampaign.com"
+  },
+  "acuity": {
+    "file": "acuity.png",
+    "brandPage": "https://media-www.sqspcdn.com/logos/apple-touch-icon-1024.png",
+    "domain": "squarespace.com"
+  },
+  "attio": {
+    "file": "attio.ico",
+    "brandPage": "https://attio.com/favicon.ico?favicon.17i4ytxwoisgb.ico?dpl=dpl_3Jjo1HQgWwcGZReM15FfFeFxHjyn",
+    "domain": "attio.com"
+  },
+  "attributer": {
+    "file": "attributer.png",
+    "brandPage": "https://attributer.io/wp-content/uploads/2022/09/cropped-Favicon-300x300.png",
+    "domain": "attributer.io"
+  },
+  "bigcommerce": {
+    "file": "bigcommerce.svg",
+    "brandPage": "https://storage.googleapis.com/s.mkswft.com/RmlsZTozYTVlNmQwZi00OWUzLTRlY2YtOTVhZC0zZTVmNTAwMDJkNmY=/BigCommerce-logomark-whitebg.svg",
+    "domain": "bigcommerce.com"
+  },
+  "cal-com": {
+    "file": "cal-com.png",
+    "brandPage": "https://framerusercontent.com/images/63tSo3fa0ylcjt88Er8WTEPS6Dw.png",
+    "domain": "cal.com"
+  },
+  "calendly": {
+    "file": "calendly.ico",
+    "brandPage": "https://calendly.com/media/favicon/favicon.ico",
+    "domain": "calendly.com"
+  },
+  "carrd": {
+    "file": "carrd.png",
+    "brandPage": "https://carrd.co/apple-touch-icon.png",
+    "domain": "carrd.co"
+  },
+  "chargebee": {
+    "file": "chargebee.png",
+    "brandPage": "https://chargebee.com/static/resources/brand/apple-touch-icon.png?v=1",
+    "domain": "chargebee.com"
+  },
+  "chatwoot": {
+    "file": "chatwoot.png",
+    "brandPage": "https://chatwoot.com/favicon/apple-touch-icon.png",
+    "domain": "chatwoot.com"
+  },
+  "chili-piper": {
+    "file": "chili-piper.png",
+    "brandPage": "https://cdn.prod.website-files.com/61c9fe00acd90d7271f7014e/63d786892fb10995dd9b5fc6_webclip.png",
+    "domain": "chilipiper.com"
+  },
+  "claude": {
+    "file": "claude.png",
+    "brandPage": "https://cdn.prod.website-files.com/67ce28cfec624e2b733f8a52/67d31dd7aa394792257596c5_webclip.png",
+    "domain": "anthropic.com"
+  },
+  "clickfunnels": {
+    "file": "clickfunnels.png",
+    "brandPage": "https://clickfunnels.com/apple-touch-icon.png",
+    "domain": "clickfunnels.com"
+  },
+  "cognito-forms": {
+    "file": "cognito-forms.png",
+    "brandPage": "https://static.cognitoforms.com/website/assets/favicons/apple-touch-icon-1024x1024.png",
+    "domain": "cognitoforms.com"
+  },
+  "cometly": {
+    "file": "cometly.svg",
+    "brandPage": "https://cometly.com/icon.svg?icon.00fp.k1k5fd7e.svg?dpl=dpl_77PSvCNyfc3FFTQc3qsDzPgpBZsa",
+    "domain": "cometly.com"
+  },
+  "copilot": {
+    "file": "copilot.jpg",
+    "brandPage": "https://microsoft.com/apple-touch-icon.png",
+    "domain": "microsoft.com"
+  },
+  "crisp": {
+    "file": "crisp.png",
+    "brandPage": "https://crisp.chat/favicons/apple-touch-icon-144x144.png",
+    "domain": "crisp.chat"
+  },
+  "ecwid": {
+    "file": "ecwid.ico",
+    "brandPage": "https://ecwid.com/favicon.ico",
+    "domain": "ecwid.com"
+  },
+  "fluent-forms": {
+    "file": "fluent-forms.png",
+    "brandPage": "https://fluentforms.com/wp-content/uploads/2025/06/cropped-favicon-180x180.png",
+    "domain": "fluentforms.com"
+  },
+  "formidable": {
+    "file": "formidable.png",
+    "brandPage": "https://formidableforms.com/wp-content/uploads/2020/10/cropped-Favicon-2-180x180.png",
+    "domain": "formidableforms.com"
+  },
+  "forminator": {
+    "file": "forminator.png",
+    "brandPage": "https://wpmudev.com/wp-content/themes/wpmudev-2015-1/assets/img/favicon/apple-touch-icon-152x152.png?v=1",
+    "domain": "wpmudev.com"
+  },
+  "formstack": {
+    "file": "formstack.png",
+    "brandPage": "https://cdn.prod.website-files.com/5ebb0930dd82631397ddca92/5f490035d3afaf299acf7d59_FS_256x256.png",
+    "domain": "formstack.com"
+  },
+  "front": {
+    "file": "front.png",
+    "brandPage": "https://front.com/apple-icon.png",
+    "domain": "front.com"
+  },
+  "ga4": {
+    "file": "ga4.ico",
+    "brandPage": "https://google.com/favicon.ico",
+    "domain": "google.com"
+  },
+  "gemini": {
+    "file": "gemini.ico",
+    "brandPage": "https://google.com/favicon.ico",
+    "domain": "google.com"
+  },
+  "google-ads": {
+    "file": "google-ads.ico",
+    "brandPage": "https://google.com/favicon.ico",
+    "domain": "google.com"
+  },
+  "google-calendar": {
+    "file": "google-calendar.ico",
+    "brandPage": "https://google.com/favicon.ico",
+    "domain": "google.com"
+  },
+  "google-forms": {
+    "file": "google-forms.ico",
+    "brandPage": "https://google.com/favicon.ico",
+    "domain": "google.com"
+  },
+  "google-organic": {
+    "file": "google-organic.ico",
+    "brandPage": "https://google.com/favicon.ico",
+    "domain": "google.com"
+  },
+  "gorgias": {
+    "file": "gorgias.png",
+    "brandPage": "https://cdn.prod.website-files.com/5e4ff204e7b6f80e402d407a/655f0a311c75248c5ff9756b_Social%20Avatar.png",
+    "domain": "gorgias.com"
+  },
+  "gravity-forms": {
+    "file": "gravity-forms.png",
+    "brandPage": "https://gravityforms.com/apple-touch-icon-precomposed.png",
+    "domain": "gravityforms.com"
+  },
+  "help-scout": {
+    "file": "help-scout.svg",
+    "brandPage": "https://helpscout.com/images/favicon/favicon.svg",
+    "domain": "helpscout.com"
+  },
+  "hubspot": {
+    "file": "hubspot.png",
+    "brandPage": "https://www.hubspot.com/hubfs/HubSpot_Logos/HubSpot-Inversed-Favicon.png",
+    "domain": "hubspot.com"
+  },
+  "hubspot-chat": {
+    "file": "hubspot-chat.png",
+    "brandPage": "https://www.hubspot.com/hubfs/HubSpot_Logos/HubSpot-Inversed-Favicon.png",
+    "domain": "hubspot.com"
+  },
+  "hubspot-forms": {
+    "file": "hubspot-forms.png",
+    "brandPage": "https://www.hubspot.com/hubfs/HubSpot_Logos/HubSpot-Inversed-Favicon.png",
+    "domain": "hubspot.com"
+  },
+  "hubspot-meetings": {
+    "file": "hubspot-meetings.png",
+    "brandPage": "https://www.hubspot.com/hubfs/HubSpot_Logos/HubSpot-Inversed-Favicon.png",
+    "domain": "hubspot.com"
+  },
+  "intercom": {
+    "file": "intercom.png",
+    "brandPage": "https://intercom.com/intercom-marketing-site/favicons/favicon-32x32.png",
+    "domain": "intercom.com"
+  },
+  "jotform": {
+    "file": "jotform.png",
+    "brandPage": "https://cdn.jotfor.ms/assets/img/favicons/apple-touch-icon-180x180.png",
+    "domain": "jotform.com"
+  },
+  "klaviyo": {
+    "file": "klaviyo.png",
+    "brandPage": "https://www.klaviyo.com/icons/icon-512x512.png",
+    "domain": "klaviyo.com"
+  },
+  "leadpages": {
+    "file": "leadpages.png",
+    "brandPage": "https://leadpages.com/apple-icon.png?apple-icon.0f2xvoyua9t7k.png?dpl=5d2dc0e",
+    "domain": "leadpages.com"
+  },
+  "lemon-squeezy": {
+    "file": "lemon-squeezy.jpg",
+    "brandPage": "https://cdn.prod.website-files.com/6347244ba8d63489ba51c08e/6358e75cbf1bca262b2b2edc_webclip.jpg",
+    "domain": "lemonsqueezy.com"
+  },
+  "magento": {
+    "file": "magento.png",
+    "brandPage": "https://adobe.com/apple-touch-icon-precomposed.png",
+    "domain": "adobe.com"
+  },
+  "mailchimp": {
+    "file": "mailchimp.svg",
+    "brandPage": "https://mailchimp.com/release/plums/a9c5b58dea3269f6.svg",
+    "domain": "mailchimp.com"
+  },
+  "marketo": {
+    "file": "marketo.png",
+    "brandPage": "https://adobe.com/apple-touch-icon-precomposed.png",
+    "domain": "adobe.com"
+  },
+  "meta-ads": {
+    "file": "meta-ads.svg",
+    "brandPage": "https://static.xx.fbcdn.net/rsrc.php/yf/r/-7pQO6hUGK_.svg",
+    "domain": "meta.com"
+  },
+  "meta-capi": {
+    "file": "meta-capi.svg",
+    "brandPage": "https://static.xx.fbcdn.net/rsrc.php/yf/r/-7pQO6hUGK_.svg",
+    "domain": "meta.com"
+  },
+  "microsoft-ads": {
+    "file": "microsoft-ads.jpg",
+    "brandPage": "https://microsoft.com/apple-touch-icon.png",
+    "domain": "microsoft.com"
+  },
+  "microsoft-bookings": {
+    "file": "microsoft-bookings.jpg",
+    "brandPage": "https://microsoft.com/apple-touch-icon.png",
+    "domain": "microsoft.com"
+  },
+  "ninja-forms": {
+    "file": "ninja-forms.png",
+    "brandPage": "https://ninjaforms.com/wp-content/uploads/2020/02/cropped-nf-social-vertical-img-180x180.png",
+    "domain": "ninjaforms.com"
+  },
+  "northbeam": {
+    "file": "northbeam.png",
+    "brandPage": "https://cdn.prod.website-files.com/63ce823acf939e1e64f927c4/63ce8880c8b33a63342faa54_Group%202072747819%20(1).png",
+    "domain": "northbeam.io"
+  },
+  "olark": {
+    "file": "olark.png",
+    "brandPage": "https://www.olark.com/favicon-180.png",
+    "domain": "olark.com"
+  },
+  "paddle": {
+    "file": "paddle.png",
+    "brandPage": "https://paddle.com/icon4.png?icon4.2505fc7ib2tqc.png?dpl=211494ef525db95b9fab6e9726544eb460322dae2e365fae2d06c0f00de3a866366137356664633136303938363930303038353164623231",
+    "domain": "paddle.com"
+  },
+  "paperform": {
+    "file": "paperform.png",
+    "brandPage": "https://paperform.co/apple-touch-icon.png",
+    "domain": "paperform.co"
+  },
+  "pardot": {
+    "file": "pardot.ico",
+    "brandPage": "https://salesforce.com/c2/public/app/favicon.ico",
+    "domain": "salesforce.com"
+  },
+  "pinterest": {
+    "file": "pinterest.svg",
+    "brandPage": "https://s.pinimg.com/webapp/pinterest_favicon-70db4fa7.svg",
+    "domain": "pinterest.com"
+  },
+  "pipedrive": {
+    "file": "pipedrive.png",
+    "brandPage": "https://cdn.dub-1.pipedriveassets.com/www-main-renderer/_next/static/media/apple-touch-icon-152x152.8af4bcfd.png",
+    "domain": "pipedrive.com"
+  },
+  "plausible": {
+    "file": "plausible.png",
+    "brandPage": "https://plausible.io/assets/images/icon/apple-touch-icon.png",
+    "domain": "plausible.io"
+  },
+  "prestashop": {
+    "file": "prestashop.ico",
+    "brandPage": "https://prestashop.com/favicon.ico",
+    "domain": "prestashop.com"
+  },
+  "reddit-ads": {
+    "file": "reddit-ads.png",
+    "brandPage": "https://reddit.com/apple-touch-icon.png",
+    "domain": "reddit.com"
+  },
+  "ruler": {
+    "file": "ruler.png",
+    "brandPage": "https://www.ruleranalytics.com/wp-content/uploads/rulerfavicon-ruleranalytics.com_-300x300.png",
+    "domain": "ruleranalytics.com"
+  },
+  "salesforce": {
+    "file": "salesforce.ico",
+    "brandPage": "https://salesforce.com/c2/public/app/favicon.ico",
+    "domain": "salesforce.com"
+  },
+  "savvycal": {
+    "file": "savvycal.png",
+    "brandPage": "https://savvycal.com/apple-touch-icon.png",
+    "domain": "savvycal.com"
+  },
+  "search-console": {
+    "file": "search-console.ico",
+    "brandPage": "https://google.com/favicon.ico",
+    "domain": "google.com"
+  },
+  "shopify": {
+    "file": "shopify.png",
+    "brandPage": "https://cdn.shopify.com/b/shopify-brochure2-assets/c97c60ca19c64a8b5378d9f9e971f7bd.png",
+    "domain": "shopify.com"
+  },
+  "slack": {
+    "file": "slack.png",
+    "brandPage": "https://slack.com/apple-touch-icon-precomposed.png",
+    "domain": "slack.com"
+  },
+  "smartsupp": {
+    "file": "smartsupp.ico",
+    "brandPage": "https://smartsupp.com/favicon.ico",
+    "domain": "smartsupp.com"
+  },
+  "snap-capi": {
+    "file": "snap-capi.png",
+    "brandPage": "https://images.ctfassets.net/dwtpq5hdcqjg/5S0EwGbv1lNk3uVF25ocBe/bfddb3bbc878432eabc4a2a8b6282e8e/Snap_Inc_Favicon.png?fm=png",
+    "domain": "snap.com"
+  },
+  "squarespace": {
+    "file": "squarespace.png",
+    "brandPage": "https://media-www.sqspcdn.com/logos/apple-touch-icon-1024.png",
+    "domain": "squarespace.com"
+  },
+  "stripe": {
+    "file": "stripe.svg",
+    "brandPage": "https://images.stripeassets.com/fzn2n1nzq965/1hgcBNd12BfT9VLgbId7By/01d91920114b124fb4cf6d448f9f06eb/favicon.svg",
+    "domain": "stripe.com"
+  },
+  "tally": {
+    "file": "tally.svg",
+    "brandPage": "https://tally.so/favicon.svg",
+    "domain": "tally.so"
+  },
+  "tidio": {
+    "file": "tidio.svg",
+    "brandPage": "https://tidio.com/images/favicon/icon.svg",
+    "domain": "tidio.com"
+  },
+  "tidycal": {
+    "file": "tidycal.svg",
+    "brandPage": "https://tidycal.com/safari-pinned-tab.svg",
+    "domain": "tidycal.com"
+  },
+  "tiktok-events": {
+    "file": "tiktok-events.png",
+    "brandPage": "https://tiktok.com/apple-touch-icon.png",
+    "domain": "tiktok.com"
+  },
+  "typeform": {
+    "file": "typeform.png",
+    "brandPage": "https://cdn.prod.website-files.com/66ffe2174aa8e8d5661c2708/68b6f00951eb33cd19b77288_Frame%201867174.png",
+    "domain": "typeform.com"
+  },
+  "unbounce": {
+    "file": "unbounce.png",
+    "brandPage": "https://unbounce.com/photos/cropped-unbounce-favicon-2-180x180.png",
+    "domain": "unbounce.com"
+  },
+  "webflow": {
+    "file": "webflow.png",
+    "brandPage": "https://cdn.prod.website-files.com/686294e263eb7e215bd232f7/686d53d0446d4237b2f38c5f_webclip.png",
+    "domain": "webflow.com"
+  },
+  "wix-forms": {
+    "file": "wix-forms.png",
+    "brandPage": "https://www.wix.com/favicon.ico",
+    "domain": "wix.com"
+  },
+  "wix-stores": {
+    "file": "wix-stores.png",
+    "brandPage": "https://www.wix.com/favicon.ico",
+    "domain": "wix.com"
+  },
+  "woocommerce": {
+    "file": "woocommerce.png",
+    "brandPage": "https://woocommerce.com/wp-content/uploads/2024/12/cropped-logo-w-favicon.png?w=180",
+    "domain": "woocommerce.com"
+  },
+  "wordpress": {
+    "file": "wordpress.png",
+    "brandPage": "https://s.w.org/images/wmark.png",
+    "domain": "wordpress.org"
+  },
+  "wpforms": {
+    "file": "wpforms.png",
+    "brandPage": "https://wpforms.com/wp-content/uploads/2016/02/cropped-sullie-favicon-180x180.png",
+    "domain": "wpforms.com"
+  },
+  "wufoo": {
+    "file": "wufoo.svg",
+    "brandPage": "https://www.wufoo.com/wp-content/themes/wufoo-site/img/favicons/safari-pinned-tab.svg",
+    "domain": "wufoo.com"
+  },
+  "x-ads": {
+    "file": "x-ads.png",
+    "brandPage": "https://abs.twimg.com/favicons/twitter.3.ico",
+    "domain": "x.com"
+  },
+  "youcanbookme": {
+    "file": "youcanbookme.png",
+    "brandPage": "https://youcanbook.me/hubfs/ycbm-social-avatar.png",
+    "domain": "youcanbook.me"
+  },
+  "zapier": {
+    "file": "zapier.ico",
+    "brandPage": "https://zapier.com/favicon.ico",
+    "domain": "zapier.com"
+  },
+  "zendesk": {
+    "file": "zendesk.svg",
+    "brandPage": "https://d1eipm3vz40hy0.cloudfront.net/images/logos/favicons/zendesk-icon.svg",
+    "domain": "zendesk.com"
+  }
+}

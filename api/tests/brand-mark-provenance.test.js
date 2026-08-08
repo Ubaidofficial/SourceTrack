@@ -42,8 +42,13 @@ test('🔴 a sourced mark carries full provenance — file, brand page, terms', 
   const bad = []
   for (const [slug, m] of Object.entries(MARKS)) {
     if (m.status !== 'sourced') continue
-    if (!existsSync(join(BRAND_DIR, `${slug}.svg`))) {
-      bad.push(`${slug}: status 'sourced' but marketing/public/brand/${slug}.svg does not exist`)
+    // The FILE the registry records — extensions vary (svg/png/ico/jpg/webp) because
+    // each vendor serves what it serves. Assuming .svg here was wrong and made the guard
+    // fail on 86 correctly-sourced marks.
+    if (!m.file) {
+      bad.push(`${slug}: status 'sourced' with no file recorded`)
+    } else if (!existsSync(join(BRAND_DIR, m.file))) {
+      bad.push(`${slug}: status 'sourced' but marketing/public/brand/${m.file} does not exist`)
     }
     if (!m.brandPage) {
       bad.push(`${slug}: status 'sourced' with no brandPage — §35.4 requires the vendor's own URL be recorded`)
@@ -72,10 +77,10 @@ test('🔴 no sourced mark comes from an aggregator or icon library', () => {
 
 test('no orphan SVGs — every file in public/brand is a registered sourced mark', () => {
   if (!existsSync(BRAND_DIR)) return
+  const registered = new Set(Object.values(MARKS).filter(m => m.status === 'sourced').map(m => m.file))
   const orphans = readdirSync(BRAND_DIR)
-    .filter(f => f.endsWith('.svg'))
-    .map(f => f.replace(/\.svg$/, ''))
-    .filter(slug => MARKS[slug]?.status !== 'sourced')
+    .filter(f => !f.startsWith('.'))
+    .filter(f => !registered.has(f))
   assert.deepEqual(orphans, [],
     'SVGs present with no matching sourced entry — an asset with no recorded provenance ' +
     'is exactly what §35.4 bars:\n  ' + orphans.join('\n  '))

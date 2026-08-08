@@ -49,7 +49,7 @@ const monogram = mark.name.split(/[\s.]+/).filter(Boolean).slice(0, 2).map(w => 
 <span class:list={["bm", cls]} style={`--bm-size:${size}px`}>
   <span class="bm-tile" aria-hidden="true">
     {sourced
-      ? <img src={`/brand/${slug}.svg`} alt="" width={size} height={size} loading="lazy" decoding="async" />
+      ? <img src={`/brand/${mark.file}`} alt="" width={size} height={size} loading="lazy" decoding="async" />
       : <span class="bm-mono">{monogram}</span>}
   </span>
   {showName && <span class="bm-name">{mark.name}</span>}
