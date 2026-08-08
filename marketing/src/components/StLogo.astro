@@ -1,0 +1,65 @@
+---
+/**
+ * StLogo — wrapper around the <st-logo> custom element (design.md §3.1.1).
+ *
+ * ── THE NO-JS FALLBACK IS THE POINT OF THIS FILE ────────────────────────────
+ * A custom element with a shadow root renders NOTHING until its script defines it.
+ * Ship <st-logo> bare and the brand mark is simply absent for any visitor whose JS
+ * has not run yet, failed, or is blocked — on a privacy-first product, a
+ * non-trivial share of them.
+ *
+ * The children below are LIGHT DOM. Once `attachShadow` runs they stop rendering
+ * automatically, because unslotted light-DOM children are not displayed — so there
+ * is no flash, no cleanup, and no duplicate mark. Before that, they ARE the mark.
+ *
+ * The fallback is the same composed end frame `still` and `prefers-reduced-motion`
+ * land on (signals at end of travel, trails lit behind them), so every degraded
+ * path shows one consistent picture rather than three different ones. §3.1.1: never
+ * a blank frame.
+ *
+ * CI enforces the general form of this — scripts/qa-marketing-no-js-content.mjs.
+ */
+interface Props {
+  size?: number
+  /** Accessible name. Omit inside the header lockup, where the wordmark names it. */
+  title?: string
+  onDark?: boolean
+  still?: boolean
+  class?: string
+}
+const { size = 44, title, onDark = false, still = false, class: cls } = Astro.props
+
+// End-frame geometry: start + travel. Bar A 9.2 + 14.6, bar B 8.4 + 27.1.
+const A_END = 23.8
+const B_END = 35.5
+---
+
+<st-logo
+  size={size}
+  title={title}
+  on-dark={onDark ? "" : undefined}
+  still={still ? "" : undefined}
+  class={cls}
+  style={`--st-size:${size}px`}
+>
+  <svg
+    viewBox="0 0 48 48"
+    width={size}
+    height={size}
+    role={title ? "img" : undefined}
+    aria-hidden={title ? undefined : "true"}
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    {title && <title>{title}</title>}
+    <g transform="translate(2.9 2.7) rotate(28 24 24)">
+      <rect x="6.2" y="4.5" width="10.4" height="25" rx="5.2" fill="#FF8552" opacity={onDark ? 0.5 : 0.42} />
+      <rect x="22.8" y="3.2" width="11.4" height="38.5" rx="5.7" fill="#CCF03F" opacity={onDark ? 0.5 : 0.42} />
+      <circle cx="11.4" cy={A_END} r="4.7" fill="#FF8552" />
+      <circle cx="28.5" cy={B_END} r="5.2" fill="#CCF03F" />
+    </g>
+  </svg>
+</st-logo>
+
+<script>
+  import "@/components/st-logo.js"
+</script>
