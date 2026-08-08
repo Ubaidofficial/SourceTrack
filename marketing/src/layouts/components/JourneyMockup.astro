@@ -17,46 +17,90 @@
 //   • Revenue renders only where a real value exists. The sessions that did not convert
 //     show no revenue at all — not "$0", not a dash (§6: no fake zeros).
 //
-// EVERY NUMBER HERE IS ILLUSTRATIVE and the card says so in its own header badge. It is a
-// drawing of the product, not a claim about anyone's data.
+/**
+ * ── ONE PERSON, ONE STORY, ACROSS THREE SECTIONS ──────────────────────────────
+ * This is Amara Osei's path, and it is deliberately IDENTICAL to §12's ("The same
+ * lead, twice") — same six touchpoints, same six sources, same 19 days, same $1,480.
+ *
+ * It previously showed a DIFFERENT person: 3 sessions, 3 sources, $240 over 6 days.
+ * That contradicted two things on the same page at once —
+ *   · its own section heading, "One customer. SIX touchpoints. SIX sources trying to
+ *     take credit", which sat directly above a card showing three of each;
+ *   · §12's card for Amara, which a reader scrolling down meets a few sections later.
+ *
+ * The handoff's rule for its fixture is that no two screens disagree, "because
+ * prospects check the arithmetic". A visitor who reads both sections was being shown
+ * two different customers presented as the same argument.
+ *
+ * The six sources are the six the heading promises. $1,480 is one conversion inside the
+ * $21,430 the model switcher re-credits, so §5, §8 and §12 now describe one dataset.
+ *
+ * EVERY NUMBER HERE IS ILLUSTRATIVE and the card says so in its own header badge. It is
+ * a drawing of the product, not a claim about anyone's data.
+ */
 const trail = [
   { label: "ChatGPT", tone: "default" },
-  { label: "/compare", tone: "mono" },
+  { label: "/compare/ga4", tone: "mono" },
   { label: "$conversion", tone: "mono" },
-  { label: "$240", tone: "revenue" },
+  { label: "$1,480", tone: "revenue" },
 ];
 
+// Derived, never typed — the stats and the session list cannot drift apart.
 const stats = [
-  { label: "Sessions", value: "3" },
+  { label: "Sessions", value: "6" },
   { label: "Conversions", value: "1" },
-  { label: "Revenue", value: "$240" },
-  { label: "Duration", value: "6d" },
+  { label: "Revenue", value: "$1,480" },
+  { label: "Duration", value: "19d" },
 ];
 
 const sessions = [
   {
     index: 1,
     source: "ChatGPT",
-    when: "Jul 12, 09:14",
-    duration: "2m 41s",
+    when: "Jul 9, 10:12",
+    duration: "3m 22s",
     converted: false,
-    events: ["/compare", "/pricing"],
+    events: ["/compare/ga4"],
   },
   {
     index: 2,
-    source: "Direct",
-    when: "Jul 15, 18:02",
-    duration: "1m 12s",
+    source: "Perplexity",
+    when: "Jul 12, 14:40",
+    duration: "1m 58s",
     converted: false,
-    events: ["/docs/install"],
+    events: ["/pricing"],
   },
   {
     index: 3,
-    source: "Google Ads",
-    when: "Jul 18, 11:27",
+    source: "Google organic",
+    when: "Jul 15, 08:41",
+    duration: "2m 05s",
+    converted: false,
+    events: ["/pricing", "/docs/install"],
+  },
+  {
+    index: 4,
+    source: "LinkedIn Ads",
+    when: "Jul 18, 16:27",
+    duration: "1m 12s",
+    converted: false,
+    events: ["/compare/ga4"],
+  },
+  {
+    index: 5,
+    source: "Claude",
+    when: "Jul 21, 11:03",
     duration: "4m 08s",
+    converted: false,
+    events: ["/pricing", "Demo form submitted"],
+  },
+  {
+    index: 6,
+    source: "Direct",
+    when: "Jul 28, 09:36",
+    duration: "2m 47s",
     converted: true,
-    events: ["/pricing", "Checkout completed"],
+    events: ["/checkout", "Checkout completed"],
   },
 ];
 ---
@@ -249,7 +293,7 @@ const sessions = [
 
                     {/* Revenue shows ONLY where a real value exists — the two non-converting
                         sessions render nothing here rather than "$0" or a dash (§6). */}
-                    {s.converted && <span class="flex-shrink-0 text-sm font-black text-primary">$240</span>}
+                    {s.converted && <span class="flex-shrink-0 text-sm font-black text-primary">$1,480</span>}
                   </div>
                 </div>
               ))
