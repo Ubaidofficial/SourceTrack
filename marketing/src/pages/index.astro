@@ -85,7 +85,7 @@ import "@/styles/v4-type.css";
 import "@/styles/v3-surfaces.css";
 
 import HeroTicker from "@/components/v3/HeroTicker.jsx";
-import SurfaceTabs from "@/components/v3/SurfaceTabs.jsx";
+import CoverageTabs from "@/layouts/v3/surfaces/CoverageTabs.astro";
 import LiveVisitors from "@/components/v3/LiveVisitors.jsx";
 import PathBeam from "@/layouts/v3/surfaces/PathBeam.astro";
 import CaptureIcon from "@/layouts/v3/surfaces/CaptureIcon.astro";
@@ -235,17 +235,25 @@ const comparison = [
       </Wrap>
     </section>
 
-    {/* 4 — FULL-BLEED DARK (ruled) */}
-    <section class="v3-section v3-section--dark">
+    {/* 4 — COVERAGE. Card-on-paper, per the v4 design bundle.
+        WAS `v3-section--dark`; the bundle renders this section on paper with a
+        single bordered card. §2.7 (no two consecutive sections sharing a container
+        treatment) still holds: §3 above is a window-frame mockup and §5 below is a
+        window-frame mockup, and this sits between them as a tabbed card. */}
+    <section class="v3-section">
       <Wrap>
         <SectionHead
           eyebrow="Coverage"
           heading="Attribution that works with the stack you already have."
-          lede="Lead source tracking only matters if it reads the tools your conversions actually happen in. One script tag covers all of them."
+          lede="Lead source tracking only matters if it reads the tools your conversions actually happen in. One script tag covers all of them — pick a surface to see the platforms."
         />
-          {/* handoff `surface-logos`. Text labels only — §35.4 bans reconstructed
-              marks, and the handoff draws none either (0 <svg> in its source). */}
-          <SurfaceTabs client:visible />
+        {/* Replaces SurfaceTabs.jsx (React island, `client:visible`). Astro
+            server-rendered its FIRST panel, so that much survived without JS — but
+            the other four were reachable only through a click handler that never
+            loaded. CoverageTabs is CSS-only: no island, all five panels reachable,
+            native radio-group keyboard behaviour. Marks route through BrandMark, so
+            each is an officially-sourced asset or a text label (§35.4). */}
+        <CoverageTabs />
       </Wrap>
     </section>
 

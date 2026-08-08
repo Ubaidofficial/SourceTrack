@@ -124,10 +124,28 @@ export const V3_PAGE_PAIRS = {
   // in 2b because the surface beneath it changed. Every pair on a dark surface
   // below is computed against that surface, not inherited from a light one.
   '/': [
-    // dark band — section 4, the new surface
-    { id: 'dark band title', sel: '.v3-section--dark .v3-section-title', fg: '#F2F4F3', bg: '#141818', level: 'AA-large' },
-    { id: 'dark band lede', sel: '.v3-section--dark .v3-section-lede', fg: '#A8AFAF', bg: '#141818', level: 'AA' },
-    { id: 'dark band eyebrow', sel: '.v3-section--dark .v3-eyebrow', fg: '#A8AFAF', bg: '#141818', level: 'AA' },
+    // ⚠️ THE THREE `.v3-section--dark` PAIRS ARE GONE, NOT MOVED. Section 4 was the
+    // homepage's only dark band; the v4 design renders Coverage as a card on paper, so
+    // that surface no longer exists on `/` and any ratio measured against it is VOID.
+    // The zero-match guard caught this the moment the section flipped — which is the
+    // whole point of it, and the same class as the TrustBar 10.54 -> 1.22 failure below:
+    // a carried-forward ratio survives a surface flip without the text's own CSS
+    // changing. Deleted rather than repointed at a surface that is not there.
+    //
+    // Coverage's own pairs, scored on --v3-paper-card (#FFFFFF):
+    { id: 'coverage tab (resting)', sel: '.v3-cov-tab', fg: '#586161', bg: '#FFFFFF', level: 'AA' },
+    { id: 'coverage tab (selected)', sel: '.v3-cov-tab', fg: '#FFFFFF', bg: '#1F2323', level: 'AA' },
+    // The muted half of each panel heading. gray-600, NOT gray-500 — at 19px/800
+    // gray-500 clears AA-large by 0.07 (3.07 vs 3.00), too thin a margin to certify.
+    { id: 'coverage panel heading (muted)', sel: '.v3-cov-panel h3', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'coverage panel heading (ink)', sel: '.v3-cov-panel h3 strong', fg: '#1F2323', bg: '#FFFFFF', level: 'AA' },
+    { id: 'coverage panel sub', sel: '.v3-cov-panel p', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'coverage mark name', sel: '.bm-name', fg: '#1F2323', bg: '#FFFFFF', level: 'AA' },
+    // "+N more" is 12.5px at weight 800 — BELOW the 18.66px-bold threshold for
+    // AA-large, so it needs the full 4.5:1. It shipped at gray-500 (3.07:1) in the
+    // first draft of this section; registering it here is what surfaced that.
+    { id: 'coverage +N more', sel: '.v3-cov-cell--more', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'coverage mark monogram', sel: '.bm-mono', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
     // bento cells — a second, lighter dark surface (--v3-black-700), scored separately
     { id: 'bento dark h3', sel: '.v3-bento-cell-dark', fg: '#F2F4F3', bg: '#303636', level: 'AA' },
     { id: 'bento dark body', sel: '.v3-bento-cell-dark', fg: '#A8AFAF', bg: '#303636', level: 'AA' },

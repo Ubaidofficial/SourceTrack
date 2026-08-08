@@ -1,0 +1,161 @@
+---
+/**
+ * Coverage — the five capture surfaces. Home §4.
+ *
+ * ── CSS-ONLY TABS, AND WHY THAT IS NOT A PURITY ARGUMENT ────────────────────
+ * This replaces SurfaceTabs.jsx, a React island mounted `client:visible`. Astro
+ * server-renders an island's initial HTML, so the FIRST panel survived without JS —
+ * but the other four were unreachable, because the only way to reach them was a
+ * click handler that never loaded. Four fifths of the section's content was behind
+ * a script.
+ *
+ * Radio inputs plus `:has()` need no JavaScript at all. Every panel is in the DOM,
+ * every tab switches, and the keyboard behaviour is a native radio group — arrow keys
+ * included — rather than a roving-tabindex implementation that has to be written and
+ * then kept correct.
+ *
+ * `:has()` rather than a `:checked ~` sibling selector because the inputs live inside
+ * .v3-cov-tabs and the panels inside .v3-cov-panels, so the two are not siblings.
+ * Flattening them into one sibling chain would put five radios and five panels in a
+ * single row container and force the layout to be rebuilt around the selector. The
+ * `@supports` guard in v3-surfaces.css covers browsers without `:has()` — see there.
+ *
+ * A radio group is also the honest semantic: the lede literally says "pick a surface
+ * to see the platforms". That is a single choice from five, which is what radios are.
+ *
+ * ── COUNTS ARE COMPUTED, NEVER TYPED ────────────────────────────────────────
+ * `count = items.length + more`. The design bundle's own numbers disagree with each
+ * other — the Meetings tab shows a badge of 18 above 11 tiles and a "+6 more", which
+ * totals 17. Hardcoding a badge lets that drift silently and puts a wrong number on a
+ * marketing page. Computing it makes the tab badge and the "+N more" reconcile by
+ * construction, which is the handoff's own rule for its fixture: every rollup sums
+ * exactly to its parts, because prospects check the arithmetic.
+ *
+ * ⚠️ THE COUNTS THEMSELVES ARE A PRODUCT CLAIM AND ARE NOT VERIFIED HERE. "70 form
+ * builders" asserts something about what the tracker actually detects. §6 data truth
+ * is explicitly NOT overruled by v1.6, so these need checking against the real
+ * capture logic before this ships to production — flagged, not assumed.
+ *
+ * Marks render through BrandMark, so each is either an officially-sourced asset or a
+ * text label (§35.4). No mark is ever approximated to fill the grid.
+ */
+import BrandMark from "@/components/BrandMark.astro"
+
+/** Explicit, not inferred — `astro check` runs with implicit-any as an ERROR, so an
+ *  untyped `(s) => …` below fails the build even though it is obviously correct. */
+interface Surface {
+  id: string
+  tab: string
+  /** Alternating plain / emphasised runs. Odd indices render <strong> (ink); even
+   *  indices render muted. Keeps the two-tone heading in data rather than in markup. */
+  heading: string[]
+  sub: string
+  /** How many further integrations exist beyond `items`. Feeds the computed count. */
+  more: number
+  /** Slugs into src/lib/brand-marks.js. Unknown slugs throw at build time. */
+  items: string[]
+}
+
+const SURFACES: Surface[] = [
+  {
+    id: "forms",
+    tab: "Forms",
+    heading: ["Track form submissions across", "HubSpot, WordPress, Webflow", "and 25+ more"],
+    sub: "Same script tag, every form builder. No hidden fields, no lost UTMs on multi-step forms.",
+    more: 40,
+    items: [
+      "hubspot-forms", "webflow", "typeform", "jotform", "tally", "paperform",
+      "gravity-forms", "wpforms", "ninja-forms", "contact-form-7", "formidable", "fluent-forms",
+      "forminator", "formstack", "wufoo", "google-forms", "cognito-forms", "unbounce",
+      "leadpages", "clickfunnels", "mailchimp", "kit", "klaviyo", "activecampaign",
+      "marketo", "pardot", "squarespace", "wix-forms", "wordpress", "carrd"
+    ]
+  },
+  {
+    id: "chat",
+    tab: "Chat",
+    heading: ["Every conversation carries the", "source", "that drove it"],
+    sub: "A chat that starts at 11pm stops being anonymous. The lead inherits the session that led to it.",
+    more: 9,
+    items: [
+      "intercom", "drift", "crisp", "tidio", "hubspot-chat", "zendesk",
+      "livechat", "tawk-to", "freshchat", "chatwoot", "olark", "front",
+      "help-scout", "gorgias", "smartsupp"
+    ]
+  },
+  {
+    id: "meetings",
+    tab: "Meetings",
+    heading: ["Know where a", "booked demo", "came from before you walk into it"],
+    sub: "Source and campaign land on the calendar invite.",
+    more: 7,
+    items: [
+      "calendly", "cal-com", "hubspot-meetings", "savvycal", "chili-piper", "tidycal",
+      "zcal", "acuity", "youcanbookme", "google-calendar", "microsoft-bookings"
+    ]
+  },
+  {
+    id: "payments",
+    tab: "Payments & stores",
+    heading: ["Revenue, not just conversions — every charge and order carries its", "first touch"],
+    sub: "Charges, upgrades, renewals and order-level attribution with LTV and repeat rate by acquisition source.",
+    more: 2,
+    items: [
+      "stripe", "paddle", "chargebee", "lemon-squeezy", "shopify", "woocommerce",
+      "bigcommerce", "magento", "ecwid", "prestashop", "squarespace", "wix-stores"
+    ]
+  },
+  {
+    id: "crm",
+    tab: "CRM & ad platforms",
+    heading: ["Closed revenue goes back out", "server-side", ", not just onto a dashboard"],
+    sub: "Qualified leads and closed-won amounts pushed to the platforms that bid, and written into the CRM your reps live in.",
+    more: 4,
+    items: [
+      "google-ads", "meta-capi", "linkedin-capi", "tiktok-events", "snap-capi", "pinterest",
+      "microsoft-ads", "reddit-ads", "x-ads", "hubspot", "salesforce", "pipedrive",
+      "attio", "zapier", "slack", "webhooks"
+    ]
+  }
+]
+
+const count = (s: Surface) => s.items.length + s.more
+---
+
+<div class="v3-cov">
+  <div class="v3-cov-tabs" role="radiogroup" aria-label="Capture surface">
+    {SURFACES.map((s, i) => (
+      <>
+        <input
+          type="radio"
+          name="v3-cov"
+          id={`v3-cov-${s.id}`}
+          class="v3-cov-input"
+          checked={i === 0}
+        />
+        <label class="v3-cov-tab" for={`v3-cov-${s.id}`}>
+          {s.tab}<i>{count(s)}</i>
+        </label>
+      </>
+    ))}
+  </div>
+
+  <div class="v3-cov-panels">
+    {SURFACES.map((s) => (
+      <section class="v3-cov-panel" data-for={s.id} aria-label={s.tab}>
+        <h3>
+          {s.heading.map((part, i) => (
+            i % 2 === 1 ? <strong>{part}</strong> : <span>{part}</span>
+          ))}
+        </h3>
+        <p>{s.sub}</p>
+        <div class="v3-cov-grid">
+          {s.items.map((slug) => (
+            <div class="v3-cov-cell"><BrandMark slug={slug} size={22} showName /></div>
+          ))}
+          {s.more > 0 && <div class="v3-cov-cell v3-cov-cell--more">+{s.more} more</div>}
+        </div>
+      </section>
+    ))}
+  </div>
+</div>
