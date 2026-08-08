@@ -105,6 +105,8 @@ import JourneyMockup from "@/components/JourneyMockup.astro";
 import HeroStatCallout from "@/components/HeroStatCallout.astro";
 import HowItWorksShowcase from "@/partials/HowItWorksShowcase.astro";
 import UseCaseCards from "@/partials/UseCaseCards.astro";
+import BrandMark from "@/components/BrandMark.astro";
+import SpendCalc from "@/components/v3/SpendCalc.jsx";
 
 // `icon` is a MONOGRAM, not a logo. §35.4 bans reconstructed third-party marks, and the
 // handoff's own pattern is a letter or text label. These are OUR surface categories, so a
@@ -563,6 +565,53 @@ const comparison = [
               <div class="v3-chiprow v3-chiprow--tight">
                 {["Claude", "ChatGPT", "Cursor"].map((t) => <span class="v3-chip">{t}</span>)}
               </div>
+          </div>
+        </div>
+      </Wrap>
+    </section>
+
+    {/* 12 — Spend Calculator (Same budget. Smarter allocation.) */}
+    <section class="v3-section v3-section--soft">
+      <Wrap>
+        <div class="v3-calc-grid">
+          <div class="v3-calc-side">
+            <span class="v3-pill">Optimize spend</span>
+            <h2>Same budget. <span class="serif">Smarter</span> allocation.</h2>
+            <p class="v3-section-copy">
+              Your ad platforms optimise toward whatever data they receive. If they only see form fills, they buy form fills. By mapping real revenue from Stripe and Shopify back to the original touchpoints, you can shift your ad budget to the campaigns that actually pay.
+            </p>
+            <div class="v3-calc-step">
+              <b>1</b>
+              <span><strong>We record the whole path</strong> first-party, cookieless, so nothing is lost to blockers or stripped UTMs.</span>
+            </div>
+            <div class="v3-calc-step">
+              <b>2</b>
+              <span><strong>Revenue lands from Stripe and Shopify</strong> and gets credited to the touchpoints that actually drove the sale.</span>
+            </div>
+            <div class="v3-calc-step">
+              <b>3</b>
+              <span><strong>You see the actual ROAS</strong> for every campaign, ad set, and search query in a single dashboard.</span>
+            </div>
+            <div class="v3-calc-step">
+              <b>4</b>
+              <span><strong>Reallocate on margin.</strong> Shift spend from campaigns that look good on pixel data but produce zero revenue to the ones that pay.</span>
+            </div>
+            <div class="v3-chiprow v3-chiprow--tight" style="margin-top: 14px;">
+              <BrandMark slug="google-ads" size={20} showName={true} />
+              <BrandMark slug="meta-ads" size={20} showName={true} />
+              <BrandMark slug="linkedin" size={20} showName={true} />
+              <BrandMark slug="tiktok-events" size={20} showName={true} />
+              <BrandMark slug="stripe" size={20} showName={true} />
+              <BrandMark slug="shopify" size={20} showName={true} />
+            </div>
+            <p class="v3-calc-beta">Calculations are illustrative. Budget optimization is managed within your ad accounts using attribution data from your SourceTrack dashboard.</p>
+          </div>
+          <div class="v3-calc-card">
+            <div class="v3-calc-h">
+              <span class="v3-pill">Your numbers</span>
+              <h3>What is your blind spend actually costing you?</h3>
+            </div>
+            <SpendCalc client:visible />
           </div>
         </div>
       </Wrap>
