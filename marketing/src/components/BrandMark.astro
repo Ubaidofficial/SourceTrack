@@ -1,0 +1,96 @@
+---
+/**
+ * BrandMark — one third-party mark, rendered per design.md §3.4 + §35.4.
+ *
+ * Two states, and there is deliberately no third:
+ *   status 'sourced' -> the vendor's OWN SVG from public/brand/<slug>.svg
+ *   status 'label'   -> a plain text label
+ *
+ * There is no "approximate it for now" state. §35.4 exists because an agent once hit a
+ * 403 on a press kit and fabricated a mark from unrelated art, and because issue #577
+ * shipped a generic hexagon in place of Perplexity's logo. A text label is always a
+ * correct, shippable answer; a drawn-from-memory mark never is.
+ *
+ * Provenance lives in src/lib/brand-marks.js and is CI-enforced. This component cannot
+ * promote a mark on its own — it only reads what the registry records.
+ *
+ * The tile styling (rounded square, hairline, size) is OURS and applies to both states,
+ * so a grid of mixed sourced/label marks still reads as one system rather than as a
+ * half-finished import.
+ */
+import { getMark } from "@/lib/brand-marks.js"
+
+interface Props {
+  slug: string
+  /** Tile edge in px. 18–38 in the design; below ~16 detail disappears and the label reads better. */
+  size?: number
+  /** Show the name beside the tile (Coverage grid, marquee) vs tile alone (orbit, chips). */
+  showName?: boolean
+  class?: string
+}
+const { slug, size = 22, showName = false, class: cls } = Astro.props
+const mark = getMark(slug)
+const sourced = mark.status === "sourced"
+// Monogram for the label state: first letter of each of the first two words, so
+// "Chili Piper" -> CP and "Stripe" -> S. Never a drawn glyph (§35.4).
+const monogram = mark.name.split(/[\s.]+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase()
+---
+
+<span class:list={["bm", cls]} style={`--bm-size:${size}px`}>
+  <span class="bm-tile" aria-hidden="true">
+    {sourced
+      ? <img src={`/brand/${slug}.svg`} alt="" width={size} height={size} loading="lazy" decoding="async" />
+      : <span class="bm-mono">{monogram}</span>}
+  </span>
+  {showName
+    ? <span class="bm-name">{mark.name}</span>
+    : <span class="sr-only">{mark.name}</span>}
+</span>
+
+<style>
+  .bm {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .bm-tile {
+    flex: none;
+    display: grid;
+    place-items: center;
+    inline-size: var(--bm-size);
+    block-size: var(--bm-size);
+    border-radius: calc(var(--bm-size) * 0.28);
+    background: var(--v3-paper-card, #fff);
+    box-shadow: inset 0 0 0 1px var(--v3-border, #dde4e4);
+    overflow: hidden;
+  }
+  .bm-tile img { inline-size: 72%; block-size: 72%; object-fit: contain; }
+
+  /* Label state. A monogram on our own tile is not a reconstruction of anyone's mark —
+     it is a neutral placeholder that keeps the grid rhythm until sourcing lands. */
+  .bm-mono {
+    font-family: var(--font-primary), system-ui, sans-serif;
+    font-size: calc(var(--bm-size) * 0.4);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    color: var(--v3-gray-600, #647070);
+  }
+
+  .bm-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--v3-ink, #1f2323);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sr-only {
+    position: absolute;
+    inline-size: 1px; block-size: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip-path: inset(50%);
+    white-space: nowrap; border: 0;
+  }
+</style>
