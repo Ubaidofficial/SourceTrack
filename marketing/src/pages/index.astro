@@ -89,6 +89,7 @@ import CoverageTabs from "@/layouts/v3/surfaces/CoverageTabs.astro";
 import LiveVisitors from "@/components/v3/LiveVisitors.jsx";
 import PathBeam from "@/layouts/v3/surfaces/PathBeam.astro";
 import HeroOrbit from "@/layouts/v3/surfaces/HeroOrbit.astro";
+import TwoLeads from "@/layouts/v3/surfaces/TwoLeads.astro";
 import CaptureIcon from "@/layouts/v3/surfaces/CaptureIcon.astro";
 import ChannelMarquee from "@/layouts/v3/surfaces/ChannelMarquee.astro";
 import ChipRow from "@/layouts/v3/surfaces/ChipRow.astro";
@@ -626,6 +627,24 @@ const comparison = [
             <details><summary>{f.q}</summary><p>{f.a}</p></details>
           ))}
         </div>
+      </Wrap>
+    </section>
+
+    {/* THE DIFFERENCE — the same lead, twice. Placed between FAQ and the CTA because
+        that is where the v4 design bundle puts it, NOT where the handoff README's
+        section list does (§12, before the calculator). The bundle is the authority for
+        visual and section order under v1.6 §0.5; the README predates it.
+
+        §2.7: the FAQ above is a stack of disclosure rows and §17 below is a soft band,
+        so a two-card comparison between them does not repeat either. */}
+    <section class="v3-section">
+      <Wrap>
+        <SectionHead
+          eyebrow="The difference"
+          heading="The same lead, twice."
+          lede="One version is what your CRM records today. The other is the same person after SourceTrack has been running for a month — no extra forms, no extra fields for your reps to fill in."
+        />
+        <TwoLeads />
       </Wrap>
     </section>
 

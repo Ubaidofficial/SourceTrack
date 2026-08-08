@@ -1,0 +1,153 @@
+---
+/**
+ * TwoLeads — "The same lead, twice." Home §12 (between FAQ and the CTA).
+ *
+ * The same person, rendered as your CRM has them today and as SourceTrack has them
+ * after a month. It is the single clearest statement of what the product does, which
+ * is why it earns a section rather than a bullet: the left card is the reader's
+ * current reality and the right one is the difference, side by side, no narration.
+ *
+ * ── TRUTHFULNESS ────────────────────────────────────────────────────────────
+ * Amara Osei is fixture, and deliberately the SAME fixture person the journey
+ * scrubber (§9) and the demo workspace use. That consistency is the handoff's own
+ * rule for its dataset — every rollup sums to its parts, no two screens disagree —
+ * and it matters here because a prospect who reads both sections will compare them.
+ * The email is on `.example`, a reserved TLD that cannot be registered, so it is
+ * unmistakably not a real address.
+ *
+ * §29.8's one-line page disclosure covers this. Nothing here aggregates or totals:
+ * the "$1,480" is one illustrative conversion attributed to one channel, not a
+ * revenue figure the reader is invited to read as ours or theirs.
+ *
+ * ── THE EMPTY STATE IS THE ARGUMENT ─────────────────────────────────────────
+ * The left card's "No touchpoints captured" is not a placeholder to be filled in
+ * later — it is the point of the section, and §3.7's empty state pattern ("one dim
+ * track, no signal: a path exists, no evidence on it yet") applied literally. Do not
+ * "improve" it by inventing partial data for the untagged side.
+ *
+ * Marks route through BrandMark (§35.4) — monogram tiles until sourcing lands.
+ */
+import BrandMark from "@/components/BrandMark.astro"
+
+interface Row { label: string; value: string; tone?: "unknown" | "credit" }
+interface Touch { slug: string; label: string; won?: boolean }
+
+const UNTAGGED: Row[] = [
+  { label: "Source", value: "Unknown", tone: "unknown" },
+  { label: "Campaign", value: "Unknown", tone: "unknown" },
+  { label: "Landing page", value: "Unknown", tone: "unknown" },
+  { label: "Revenue credit", value: "Unassigned", tone: "unknown" }
+]
+
+const ATTRIBUTED: Row[] = [
+  { label: "First touch", value: "AI Search · ChatGPT" },
+  { label: "Last touch", value: "Direct · /checkout" },
+  { label: "Landing page", value: "/compare/ga4" },
+  { label: "Revenue credit", value: "$1,480 → AI Search", tone: "credit" }
+]
+
+/**
+ * Amara's path: six touchpoints over nineteen days (Jul 9 → Jul 28).
+ *
+ * ⚠️ SIX, NOT FIVE — and the design bundle says both. Its §12 label reads "5
+ * touchpoints over 19 days" while drawing SIX chips beneath it, and its §9 journey
+ * scrubber says "6 touchpoints" for the same person on the same dates. Six is the
+ * number the drawn path and §9 both support, so six it is.
+ *
+ * The count in the label is DERIVED from this array, never typed, so the label and
+ * the chips cannot drift apart the way the bundle's did. Same rule the Coverage tabs
+ * use, and the handoff's own rule for its fixture: no two screens disagree.
+ *
+ * These are the bundle's §9 touchpoints exactly, so that when the §9 scrubber is
+ * built the two sections describe one person identically rather than approximately.
+ * §9 currently renders a DIFFERENT, older fixture (ChatGPT / Direct / Google Ads,
+ * $240) — reconciling it is that section's job, and this is the shape to match.
+ */
+const JOURNEY: Touch[] = [
+  { slug: "chatgpt", label: "ChatGPT" },
+  { slug: "perplexity", label: "Perplexity" },
+  { slug: "google-organic", label: "Google organic" },
+  { slug: "linkedin", label: "LinkedIn Ads" },
+  { slug: "claude", label: "Claude" },
+  // The converting touch. §3.7: only this one takes lime; the rest keep their own
+  // channel identity.
+  { slug: "stripe", label: "Direct · payment", won: true }
+]
+
+// The questions this section answers. Attributed to roles, not to named customers —
+// §35.3 and §26 both bar presenting invented quotes as testimonial.
+const QUESTIONS = [
+  "Where did the Northwind deal come from?",
+  "Need spend ROI by end of day.",
+  "This lead has no source… again.",
+  "Is paid social actually working?"
+]
+---
+
+<div class="v3-two">
+  <div class="v3-two-grid">
+    {/* ── Today ── */}
+    <article class="v3-two-card v3-two-card--off">
+      <header class="v3-two-head">
+        <span class="v3-two-avatar" aria-hidden="true">👩🏾‍💼</span>
+        <span class="v3-two-id">
+          <strong>Amara Osei</strong>
+          <span class="v3-two-mail">amara@northwind.example</span>
+        </span>
+        <em class="v3-two-flag">Untagged</em>
+      </header>
+      <dl class="v3-two-rows">
+        {UNTAGGED.map((r) => (
+          <div class="v3-two-row">
+            <dt>{r.label}</dt>
+            <dd class:list={[r.tone === "unknown" && "is-unknown"]}>{r.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <p class="v3-two-jlabel">Journey</p>
+      {/* §3.7's empty state, literally: a path exists, no evidence on it yet. */}
+      <div class="v3-two-empty">No touchpoints captured</div>
+    </article>
+
+    {/* ── After ── */}
+    <article class="v3-two-card v3-two-card--on">
+      <header class="v3-two-head">
+        <span class="v3-two-avatar" aria-hidden="true">👩🏾‍💼</span>
+        <span class="v3-two-id">
+          <strong>Amara Osei</strong>
+          <span class="v3-two-mail">amara@northwind.example · Northwind</span>
+        </span>
+        <em class="v3-two-flag v3-two-flag--on">Attributed</em>
+      </header>
+      <dl class="v3-two-rows">
+        {ATTRIBUTED.map((r) => (
+          <div class="v3-two-row">
+            <dt>{r.label}</dt>
+            <dd class:list={[r.tone === "credit" && "is-credit"]}>{r.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <p class="v3-two-jlabel">
+        Journey · {JOURNEY.length} touchpoints over 19 days
+      </p>
+      <ol class="v3-two-journey">
+        {JOURNEY.map((t) => (
+          <li class:list={["v3-two-touch", t.won && "v3-two-touch--won"]}>
+            <BrandMark slug={t.slug} size={18} decorative />
+            <span>{t.label}</span>
+          </li>
+        ))}
+      </ol>
+    </article>
+  </div>
+
+  <div class="v3-two-quotes">
+    {QUESTIONS.map((q) => (
+      <span class="v3-two-quote">
+        <span class="v3-two-qav" aria-hidden="true">💬</span>
+        “{q}”
+      </span>
+    ))}
+  </div>
+  <p class="v3-two-close">Questions that stop being guesswork.</p>
+</div>
