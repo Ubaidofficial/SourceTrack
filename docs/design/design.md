@@ -199,6 +199,49 @@ See §3.6 for the measurements and the minimum corrections that clear AA.
 
 ---
 
+## 0.5 V1.6 Change Log — the design bundle outranks this document
+
+**Founder ruling, 2026-08-08.** For **visual design**, the v4 design bundle is now the authority and
+this document follows it. Where they disagree, the design wins and §3/§35 get amended to match —
+which is the reverse of how every prior version worked.
+
+> *"overrule our design md to make sure everything looks much better than what is in the screenshots;
+> we don't need to follow current design md, instead we need to update our rules based on the new
+> design."*
+
+### What this covers, and what it does NOT
+
+**COVERED — the design bundle wins:** palette, typography, the mark, container treatments, section
+composition, accent density, motion, and third-party mark usage in a comparison (§35.3, amended).
+
+**NOT COVERED — unchanged and still binding.** These are not visual-design decisions, and nothing in
+the ruling touches them. Do not read "the design wins" as reaching any of them:
+
+| Area | Why it is out of scope |
+|---|---|
+| **§0 Scope Gate** | V1 / V1.1 / V2 gating is a shipping decision, not a look |
+| **§6 data truth** | No fake zeros, no fake revenue, cost-gated metrics stay gated. A design that *shows* a number we cannot source is a data defect, not a style choice |
+| **§26 prohibited elements** | The truthfulness prohibitions — no LLM-narrated freeform numbers, no fake predictions |
+| **§29.8** | One illustrative-data disclosure line per page |
+| **Privacy** | Cookieless, no fingerprinting, DNT/GPC, no cookies |
+| **CLAUDE.md §0 / §6.5** | Production safety, secrets, RLS, tenant isolation |
+| **Licensing** | The ITF ruling stands — a design specifying an asset we cannot legally ship is still blocked (§3.1.2) |
+
+If the design bundle ever requires something in the right-hand column, that is a genuine conflict and
+needs its own ruling — it is not settled by this one.
+
+### Applied in v1.6
+
+- **§35.3 item 3 narrowed** — competitor marks may identify competitors in a truthful comparison
+  table. The "presented as our own", screenshot and redraw prohibitions survive. A factual-accuracy
+  condition is attached, because nominative use only protects an accurate comparison.
+- **Hero emphasis colour settled** — the hero's second-line word renders `--orange-700`, consistent
+  with the other eight headlines, rather than the olive-green in the screenshots. That green is in
+  neither palette; lime cannot be a text colour on paper (1.25:1, §3.6), so shipping it would have
+  meant inventing an untokenised value.
+
+---
+
 ## 0. Read First - Scope Gate
 
 Every feature, screen, component, metric, and interaction in this document must be interpreted through the scope gate below.
@@ -4023,9 +4066,32 @@ rebuild** — the footer link added in #505 is that promotion, not a new page.
 Stated explicitly because §35's existing "do not borrow: fake logos" reads as a style rule and this is
 not one:
 
-- Competitor **logos**, **icon sets**, and product **screenshots** may never be reused, embedded, or
-  presented as SourceTrack's own. This is a trademark / misrepresentation exposure, not a design
-  preference, and no visual-polish argument overrides it.
+> ⚠️ **AMENDED BY FOUNDER RULING, 2026-08-08 (v1.6). Read this before applying the bullets below.**
+>
+> The blanket ban is **narrowed**, not deleted. The v4 comparison table renders competitor marks in
+> its column headers, and the ruling is that it ships that way.
+>
+> **NOW PERMITTED — identification in a truthful comparison.** A competitor's name and mark may appear
+> in a comparison table, where the whole purpose is to say *which product is which*. This is nominative
+> use: the mark identifies the competitor, not us.
+>
+> **STILL PROHIBITED, and these are the ones that carried the actual exposure:**
+> - Presenting a competitor's logo, icon set or UI **as SourceTrack's own** — the "presented as our
+>   own" clause was always the core of this rule and is untouched.
+> - Competitor product **screenshots**, shipped anywhere. §35.1 still governs those as look-only
+>   references.
+> - Restyling, recolouring or redrawing a competitor mark. §35.4 applies to competitors exactly as it
+>   applies to partners: use the official asset or a plain text label, never an approximation.
+>
+> **THE CONDITION THAT MAKES THIS DEFENSIBLE, and it is a real constraint, not a formality:**
+> nominative use protects an *accurate* comparison. Every claim in a row carrying a competitor's mark
+> must be true and current, must not imply endorsement or partnership, and must use no more of the
+> mark than identification requires (the mark, not their trade dress or their page design). **A stale
+> or overstated row beside a competitor's logo is the thing that turns a defensible comparison into a
+> disparagement claim** — so the comparison table's factual accuracy is now a shipping requirement,
+> not a copy-quality nicety. Re-verify each row against the competitor's current public pricing and
+> feature pages before shipping a change to it.
+
 - Layout, composition, information architecture and copy PATTERNS may be studied and adapted freely —
   that is what §35 Borrow already permits, and what this subsection is a record of.
 - The line: a pattern is an idea about arrangement; a logo or a UI screenshot is someone else's

@@ -70,6 +70,10 @@
   font-size: 1.04em;
   line-height: 0.9;
   letter-spacing: -0.045em;
+  /* §3.6: --orange-700 #B83D10 is 5.41:1 on paper — the ONE legal orange text colour
+     on a light canvas. Not --orange (3.13:1) and never lime (1.25:1, fills only).
+     Matches the design bundle, where every headline's italic phrase is rust. */
+  color: var(--v3-spend-text);
 }
 
 /* ── Prose ───────────────────────────────────────────────────────────────── */
