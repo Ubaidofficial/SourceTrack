@@ -143,6 +143,20 @@ export const V3_PAGE_PAIRS = {
     { id: 'model percentage', sel: '.v3-ms-pct', fg: '#586161', bg: '#F7FAFA', level: 'AA' },
     { id: 'model amount', sel: '.v3-ms-amt', fg: '#1F2323', bg: '#F7FAFA', level: 'AA' },
     { id: 'model footer', sel: '.v3-ms-foot', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    // "The same lead, twice" (§12). Two surfaces: the untagged card sits on
+    // --v3-gray-50, the attributed one on --v3-paper-card, so they score separately.
+    { id: 'two-leads name', sel: '.v3-two-id strong', fg: '#1F2323', bg: '#F7FAFA', level: 'AA' },
+    { id: 'two-leads email', sel: '.v3-two-mail', fg: '#647070', bg: '#F7FAFA', level: 'AA' },
+    { id: 'two-leads row label', sel: '.v3-two-row dt', fg: '#647070', bg: '#F7FAFA', level: 'AA' },
+    // "Unknown" is the LEFT card's whole argument, so it must stay readable —
+    // gray-600 (4.58:1 on gray-50), never gray-400 (2.36:1).
+    { id: 'two-leads unknown value', sel: '.v3-two-row dd.is-unknown', fg: '#647070', bg: '#F7FAFA', level: 'AA' },
+    { id: 'two-leads untagged flag', sel: '.v3-two-flag', fg: '#586161', bg: '#DDE4E4', level: 'AA' },
+    { id: 'two-leads attributed flag', sel: '.v3-two-flag--on', fg: '#1F2323', bg: '#CCF03F', level: 'AA' },
+    { id: 'two-leads empty state', sel: '.v3-two-empty', fg: '#647070', bg: '#F7FAFA', level: 'AA' },
+    { id: 'two-leads touch chip', sel: '.v3-two-touch', fg: '#1F2323', bg: '#FFFFFF', level: 'AA' },
+    { id: 'two-leads converting touch', sel: '.v3-two-touch--won', fg: '#1F2323', bg: '#CCF03F', level: 'AA' },
+    { id: 'two-leads question chip', sel: '.v3-two-quote', fg: '#586161', bg: '#FFFFFF', level: 'AA' },
 
     // Hero orbit — a dark panel (--v3-black-900) with a lighter card on it
     // (--v3-black-700). Scored separately because they are two surfaces, and a pair

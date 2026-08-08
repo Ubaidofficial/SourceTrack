@@ -26,9 +26,19 @@ interface Props {
   size?: number
   /** Show the name beside the tile (Coverage grid, marquee) vs tile alone (orbit, chips). */
   showName?: boolean
+  /**
+   * The CALLER already renders this mark's name in its own visible text.
+   *
+   * Without this, a mark whose name is also written beside it is announced TWICE —
+   * "ChatGPT ChatGPT" — because the default `showName: false` branch adds a visually
+   * hidden name for assistive tech. That is correct when the tile stands alone (the
+   * hero orbit) and wrong when it is decoration next to a label (TwoLeads' journey
+   * chips), which is where it was caught.
+   */
+  decorative?: boolean
   class?: string
 }
-const { slug, size = 22, showName = false, class: cls } = Astro.props
+const { slug, size = 22, showName = false, decorative = false, class: cls } = Astro.props
 const mark = getMark(slug)
 const sourced = mark.status === "sourced"
 // Monogram for the label state: first letter of each of the first two words, so
@@ -42,9 +52,8 @@ const monogram = mark.name.split(/[\s.]+/).filter(Boolean).slice(0, 2).map(w => 
       ? <img src={`/brand/${slug}.svg`} alt="" width={size} height={size} loading="lazy" decoding="async" />
       : <span class="bm-mono">{monogram}</span>}
   </span>
-  {showName
-    ? <span class="bm-name">{mark.name}</span>
-    : <span class="sr-only">{mark.name}</span>}
+  {showName && <span class="bm-name">{mark.name}</span>}
+  {!showName && !decorative && <span class="sr-only">{mark.name}</span>}
 </span>
 
 <style>

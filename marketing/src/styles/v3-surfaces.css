@@ -1160,3 +1160,149 @@
   .v3 .v3-ms:has(#v3-ms-time-decay:checked)      .v3-ms-panel[data-for="time-decay"],
   .v3 .v3-ms:has(#v3-ms-ai-platforms:checked)    .v3-ms-panel[data-for="ai-platforms"] { display: block; }
 }
+
+/* ── The same lead, twice (home §12) ───────────────────────────────────────
+   Two cards of one person: the reader's reality on the left, the difference on
+   the right. The asymmetry is deliberate and must survive edits — the left card
+   is intentionally flat and grey, the right one raised and white with a lime
+   flag. Levelling them up would delete the argument. */
+
+.v3 .v3-two-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.v3 .v3-two-card {
+  min-width: 0;
+  padding: 18px;
+  border-radius: var(--v3-radius-lg);
+  border: 1px solid var(--v3-border);
+}
+/* Today: flat, on the page's own fill. No shadow — it is not an object, it is a gap. */
+.v3 .v3-two-card--off { background: var(--v3-gray-50); }
+/* After: a raised white card. */
+.v3 .v3-two-card--on {
+  background: var(--v3-paper-card);
+  box-shadow: var(--v3-shadow-card);
+}
+
+.v3 .v3-two-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-block-end: 14px;
+  border-block-end: 1px solid var(--v3-border);
+}
+.v3 .v3-two-avatar {
+  flex: none;
+  display: grid; place-items: center;
+  inline-size: 38px; block-size: 38px;
+  border-radius: 999px;
+  background: var(--v3-gray-100);
+  font-size: 19px; line-height: 1;
+}
+.v3 .v3-two-id { display: grid; min-width: 0; }
+.v3 .v3-two-id strong { font-size: 14.5px; font-weight: 800; color: var(--v3-ink); }
+.v3 .v3-two-mail {
+  font-size: 12px; font-weight: 500; color: var(--v3-gray-600);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.v3 .v3-two-flag {
+  flex: none;
+  margin-inline-start: auto;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--v3-gray-200);
+  color: var(--v3-gray-700);
+  font-size: 10px; font-style: normal; font-weight: 900;
+  letter-spacing: 0.07em; text-transform: uppercase;
+}
+.v3 .v3-two-flag--on { background: var(--v3-accent); color: var(--v3-ink); }
+
+.v3 .v3-two-rows { margin: 0; padding: 4px 0 0; }
+.v3 .v3-two-row {
+  display: flex; align-items: baseline; gap: 12px;
+  padding-block: 10px;
+  border-block-end: 1px solid var(--v3-divider, var(--v3-gray-100));
+}
+.v3 .v3-two-row dt {
+  font-size: 12.5px; font-weight: 700; color: var(--v3-gray-600);
+}
+.v3 .v3-two-row dd {
+  margin: 0 0 0 auto;
+  font-size: 12.5px; font-weight: 800; color: var(--v3-ink);
+  text-align: right; min-width: 0;
+}
+/* Unknown is quiet but must stay READABLE — gray-600 (4.58:1 on gray-50), never
+   gray-400 (2.36:1). The point is that the reader can see it says Unknown. */
+.v3 .v3-two-row dd.is-unknown { color: var(--v3-gray-600); font-weight: 600; }
+/* Revenue credit. §3.4: lime names the subject, so the FIGURE is ink and the credit
+   reads as fact — an orange or green number here would imply a delta, which it isn't. */
+.v3 .v3-two-row dd.is-credit { color: var(--v3-ink); }
+
+.v3 .v3-two-jlabel {
+  margin: 16px 0 8px;
+  font-size: 10px; font-weight: 900;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--v3-gray-600);
+}
+
+.v3 .v3-two-empty {
+  display: grid; place-items: center;
+  padding: 22px 14px;
+  border: 1px dashed var(--v3-gray-300, var(--v3-border));
+  border-radius: var(--v3-radius-md);
+  background: transparent;
+  font-size: 12.5px; font-weight: 600; color: var(--v3-gray-600);
+  text-align: center;
+}
+
+.v3 .v3-two-journey {
+  display: flex; flex-wrap: wrap; gap: 7px;
+  margin: 0; padding: 0; list-style: none;
+}
+.v3 .v3-two-touch {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px 5px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--v3-border);
+  background: var(--v3-paper-card);
+  font-size: 11.5px; font-weight: 800; color: var(--v3-ink);
+  white-space: nowrap;
+}
+/* The converting touch, and the only lime in the card — §3.7: "only the converting
+   touchpoint takes lime; earlier touchpoints keep their channel identity." */
+.v3 .v3-two-touch--won {
+  padding-inline-start: 10px;
+  background: var(--v3-accent);
+  border-color: transparent;
+}
+
+.v3 .v3-two-quotes {
+  display: flex; flex-wrap: wrap; gap: 9px;
+  margin-block-start: 22px;
+}
+.v3 .v3-two-quote {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--v3-border);
+  background: var(--v3-paper-card);
+  font-size: 12.5px; font-weight: 600; color: var(--v3-gray-700);
+}
+.v3 .v3-two-qav { font-size: 13px; line-height: 1; }
+.v3 .v3-two-close {
+  margin-block-start: 14px;
+  font-size: 13.5px; font-weight: 800; color: var(--v3-ink);
+}
+
+@media (max-width: 820px) {
+  .v3 .v3-two-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  .v3 .v3-two-card { padding: 14px; }
+  .v3 .v3-two-row { flex-wrap: wrap; gap: 2px; }
+  .v3 .v3-two-row dd { margin-inline-start: 0; text-align: left; }
+}
