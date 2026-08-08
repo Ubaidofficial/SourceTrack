@@ -2,33 +2,39 @@
   "colors": {
     "default": {
       "theme_color": {
-        "primary": "#D2EC2A",
-        "secondary": "#BCD41C",
-        "accent-warm": "#F2A93B",
-        "primary-dark": "#1B1811",
-        "body": "#F7F4ED",
-        "border": "#E7E0D2",
-        "light": "#FFFDF8",
-        "gray": "#6E675C",
-        "dark": "#12100C",
-        "dark_gray": "#302B22",
-        "card": "#FFFDF8"
+        "primary": "#CCF03F",
+        "secondary": "#D9FA64",
+        "accent-warm": "#FF8552",
+        "primary-dark": "#1B1F1F",
+        "body": "#FAFAF7",
+        "border": "#DDE4E4",
+        "light": "#FFFFFF",
+        "gray": "#647070",
+        "dark": "#1F2323",
+        "dark_gray": "#303636",
+        "card": "#FFFFFF",
+        "spend": "#F0602A",
+        "spend-text": "#B83D10",
+        "positive": "#00AA57",
+        "danger": "#E54545"
       },
       "text_color": {
-        "text": "#161310",
-        "text_dark": "#161310",
-        "text_light": "#6E675C"
+        "text": "#1F2323",
+        "text_dark": "#1F2323",
+        "text_light": "#647070"
       }
     }
   },
   "fonts": {
     "font_family": {
-      "primary": "Geist:wght@300;400;500;600;700;800;900",
+      "primary": "Schibsted Grotesk:wght@400;500;600;700;800;900",
       "primary_type": "sans-serif",
-      "mono": "Geist Mono",
+      "serif": "Instrument Serif:wght@400",
+      "serif_type": "serif",
+      "mono": "JetBrains Mono:wght@400;500;700",
       "mono_type": "monospace"
     },
-    "self_hosted": ["mono"],
+    "self_hosted": [],
     "font_size": {
       "base": "16",
       "scale": "1.2"

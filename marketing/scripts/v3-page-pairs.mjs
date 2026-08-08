@@ -10,6 +10,24 @@
 // So: every v3 page registers here IN THE SAME PR THAT BUILDS IT. A page present in the
 // build but absent from this registry FAILS — silence is not consent.
 //
+// ── ⚠️ KNOWN BLIND SPOT: DECLARED ≠ COMPUTED. Read before trusting a green run. ────────
+// This harness verifies two things per row: that the SELECTOR matches something in the built
+// page, and that the DECLARED fg/bg pair scores above its level. It does NOT verify that the
+// declared fg/bg are the colours that selector actually computes to. Nothing here reads the
+// cascade.
+//
+// That gap was demonstrated, not theorised, by the v1.5 repaint (2026-08-08). design.md §3
+// replaced the entire palette; every one of the 219 hexes in this registry still named a v1.4
+// value; and the run stayed GREEN across all 9 routes — because #12100C on #D2EC2A and
+// #1F2323 on #CCF03F both clear AA. The registry was certifying colours that were on no page.
+// The literals were repointed in that same change, but the mechanism that hid it is still here.
+//
+// WHAT THAT MEANS IN PRACTICE: a green run proves the pairs we CLAIM are legible and the
+// selectors exist. It does not prove the page renders those pairs. Whenever a token value
+// moves, these literals must move with it IN THE SAME CHANGE — nothing here will tell you
+// they did not. Closing this properly needs a real cascade resolution (or a browser), which
+// is a larger change than the repaint it was found during.
+//
 // Usage:  node scripts/v3-page-pairs.mjs        (after an astro build)
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
@@ -107,14 +125,14 @@ export const V3_PAGE_PAIRS = {
   // below is computed against that surface, not inherited from a light one.
   '/': [
     // dark band — section 4, the new surface
-    { id: 'dark band title', sel: '.v3-section--dark .v3-section-title', fg: '#f6f3eb', bg: '#0B0A07', level: 'AA-large' },
-    { id: 'dark band lede', sel: '.v3-section--dark .v3-section-lede', fg: '#a79e8c', bg: '#0B0A07', level: 'AA' },
-    { id: 'dark band eyebrow', sel: '.v3-section--dark .v3-eyebrow', fg: '#a79e8c', bg: '#0B0A07', level: 'AA' },
+    { id: 'dark band title', sel: '.v3-section--dark .v3-section-title', fg: '#F2F4F3', bg: '#141818', level: 'AA-large' },
+    { id: 'dark band lede', sel: '.v3-section--dark .v3-section-lede', fg: '#A8AFAF', bg: '#141818', level: 'AA' },
+    { id: 'dark band eyebrow', sel: '.v3-section--dark .v3-eyebrow', fg: '#A8AFAF', bg: '#141818', level: 'AA' },
     // bento cells — a second, lighter dark surface (--v3-black-700), scored separately
-    { id: 'bento dark h3', sel: '.v3-bento-cell-dark', fg: '#f6f3eb', bg: '#2A251E', level: 'AA' },
-    { id: 'bento dark body', sel: '.v3-bento-cell-dark', fg: '#a79e8c', bg: '#2A251E', level: 'AA' },
+    { id: 'bento dark h3', sel: '.v3-bento-cell-dark', fg: '#F2F4F3', bg: '#303636', level: 'AA' },
+    { id: 'bento dark body', sel: '.v3-bento-cell-dark', fg: '#A8AFAF', bg: '#303636', level: 'AA' },
     // accent cell — ink on a lime tint. §3.6: lime is a SURFACE you put dark text on.
-    { id: 'bento accent h3', sel: '.v3-bento-cell-accent', fg: '#161310', bg: '#E9F58A', level: 'AA' },
+    { id: 'bento accent h3', sel: '.v3-bento-cell-accent', fg: '#1F2323', bg: '#E8FF9A', level: 'AA' },
     // ⚠️ SECTION 18 PAIRS RE-SCORED, NOT CARRIED FORWARD. The full-bleed lime band
     // was replaced with a paper close (§2.6's "never a full-bleed wash behind primary
     // content"), so every ratio measured against the lime surface is VOID — a
@@ -144,160 +162,160 @@ export const V3_PAGE_PAIRS = {
     // The lede also stopped using opacity .82 and takes --v3-gray-600 instead: a token
     // has a fixed value, an opacity has to be composited before it can be scored.
     { id: 'CTA close heading on paper', sel: '.v3-cta-close h2', fg: 'var(--v3-ink)', bg: 'var(--v3-paper)', level: 'AA-large' },
-    { id: 'CTA close lede on paper', sel: '.v3-cta-close p', fg: '#665F50', bg: '#F7F4ED', level: 'AA' },
+    { id: 'CTA close lede on paper', sel: '.v3-cta-close p', fg: '#647070', bg: '#FAFAF7', level: 'AA' },
     // The button is now the ENTIRE accent presence in section 18 — and lime as a button
     // is on §2.6's own acceptable-uses list, not a workaround around it.
-    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' },
+    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#1F2323', bg: '#CCF03F', level: 'AA' },
     // light surfaces
-    { id: 'frame chrome url', sel: '.v3-frame-url', fg: '#8a9494', bg: '#12100C', level: 'AA' },
-    { id: 'card body on paper-card', sel: '.v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'eyebrow on paper', sel: '.v3-eyebrow', fg: '#5B5548', bg: '#F7F4ED', level: 'AA' },
+    { id: 'frame chrome url', sel: '.v3-frame-url', fg: '#9DA7A7', bg: '#1F2323', level: 'AA' },
+    { id: 'card body on paper-card', sel: '.v3-card p', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'eyebrow on paper', sel: '.v3-eyebrow', fg: '#586161', bg: '#FAFAF7', level: 'AA' },
     // Was an inline style attribute — undetectable by every check here until it
     // became a class. See the INLINE STYLE GUARD below.
-    { id: 'plan blurb on card', sel: '.v3-plan-blurb', fg: '#665F50', bg: '#FFFDF8', level: 'AA' }
+    { id: 'plan blurb on card', sel: '.v3-plan-blurb', fg: '#647070', bg: '#FFFFFF', level: 'AA' }
   ],
   // ── /pricing ───────────────────────────────────────────────────────────
   '/pricing': [
-    { id: 'plan name on card', sel: '.v3-plan h3', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
-    { id: 'plan feature li', sel: '.v3-plan li', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
-    { id: 'plan-alt small', sel: '.v3-plan-alt', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'plan name on card', sel: '.v3-plan h3', fg: '#1F2323', bg: '#FFFFFF', level: 'AA' },
+    { id: 'plan feature li', sel: '.v3-plan li', fg: '#586161', bg: '#FFFFFF', level: 'AA' },
+    { id: 'plan-alt small', sel: '.v3-plan-alt', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
     // Was an inline style attribute (see the INLINE STYLE GUARD below): a colour
     // in style="" has no selector, so no pair could be registered against it and
     // the zero-match guard had nothing to orphan. Now a class, now scored.
-    { id: 'plan blurb on card', sel: '.v3-plan-blurb', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'plan blurb on card', sel: '.v3-plan-blurb', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
     // The featured plan uses a 2px accent BORDER and a small badge, never a lime
     // fill: §2.6's acceptable uses are a badge, a button, a highlighted line. A
     // filled card would be lime behind primary content, the clause with no budget.
-    { id: 'plan badge ink on lime', sel: '.v3-plan-badge', fg: '#12100C', bg: '#D2EC2A', level: 'AA' },
-    { id: 'toggle active', sel: '.v3-billing-toggle span[data-active]', fg: '#12100C', bg: '#FFFDF8', level: 'AA' },
-    { id: 'toggle inactive', sel: '.v3-billing-toggle span', fg: '#5B5548', bg: '#EFEADC', level: 'AA' },
-    { id: 'table cell', sel: '.v3-table-card td', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
-    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
+    { id: 'plan badge ink on lime', sel: '.v3-plan-badge', fg: '#1F2323', bg: '#CCF03F', level: 'AA' },
+    { id: 'toggle active', sel: '.v3-billing-toggle span[data-active]', fg: '#1F2323', bg: '#FFFFFF', level: 'AA' },
+    { id: 'toggle inactive', sel: '.v3-billing-toggle span', fg: '#586161', bg: '#EEF3F3', level: 'AA' },
+    { id: 'table cell', sel: '.v3-table-card td', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#1F2323', bg: '#FAFAF7', level: 'AA-large' },
+    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#1F2323', bg: '#CCF03F', level: 'AA' }
   ],
   // ── /compare/ga4 ───────────────────────────────────────────────────────
   '/compare/ga4': [
-    { id: 'compare panel label', sel: '.v3-compare-panel h3', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
-    { id: 'compare value', sel: '.v3-compare-value', fg: '#12100C', bg: '#FFFDF8', level: 'AA-large' },
-    { id: 'compare panel body', sel: '.v3-compare-panel p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'compare panel label', sel: '.v3-compare-panel h3', fg: '#586161', bg: '#FFFFFF', level: 'AA' },
+    { id: 'compare value', sel: '.v3-compare-value', fg: '#1F2323', bg: '#FFFFFF', level: 'AA-large' },
+    { id: 'compare panel body', sel: '.v3-compare-panel p', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
     // Dark band pairs are scored against THIS page's dark surface, not carried
     // over from the homepage — same tokens, but a carried-forward ratio across a
     // surface is the habit that produced TrustBar 10.54 -> 1.22.
-    { id: 'dark band title', sel: '.v3-section--dark .v3-section-title', fg: '#f6f3eb', bg: '#0B0A07', level: 'AA-large' },
-    { id: 'dark band lede', sel: '.v3-section--dark .v3-section-lede', fg: '#a79e8c', bg: '#0B0A07', level: 'AA' },
-    { id: 'stat label', sel: '.v3-stat-label', fg: '#5B5548', bg: '#F7F4ED', level: 'AA' },
-    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
-    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
+    { id: 'dark band title', sel: '.v3-section--dark .v3-section-title', fg: '#F2F4F3', bg: '#141818', level: 'AA-large' },
+    { id: 'dark band lede', sel: '.v3-section--dark .v3-section-lede', fg: '#A8AFAF', bg: '#141818', level: 'AA' },
+    { id: 'stat label', sel: '.v3-stat-label', fg: '#586161', bg: '#FAFAF7', level: 'AA' },
+    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#1F2323', bg: '#FAFAF7', level: 'AA-large' },
+    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#1F2323', bg: '#CCF03F', level: 'AA' }
   ],
   // ── /product ───────────────────────────────────────────────────────────
   '/product': [
     // Steps sit DIRECTLY on the soft band with no card between them, so the
-    // surface is --v3-gray-50 (#FAF8F1) and not the paper-card every other card
+    // surface is --v3-gray-50 (#F7FAFA) and not the paper-card every other card
     // pair on this page is scored against.
-    { id: 'step number', sel: '.v3-step-num', fg: '#5B5548', bg: '#FAF8F1', level: 'AA' },
-    { id: 'step title', sel: '.v3-step h3', fg: '#12100C', bg: '#FAF8F1', level: 'AA' },
-    { id: 'step body', sel: '.v3-step p', fg: '#665F50', bg: '#FAF8F1', level: 'AA' },
+    { id: 'step number', sel: '.v3-step-num', fg: '#586161', bg: '#F7FAFA', level: 'AA' },
+    { id: 'step title', sel: '.v3-step h3', fg: '#1F2323', bg: '#F7FAFA', level: 'AA' },
+    { id: 'step body', sel: '.v3-step p', fg: '#647070', bg: '#F7FAFA', level: 'AA' },
     // Journey rows sit inside .v3-frame-body, so the surface is paper-card, NOT
     // the page paper. Scored against the surface they are actually on.
-    { id: 'journey timestamp', sel: '.v3-journey-when', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
-    { id: 'journey body', sel: '.v3-journey-what', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
-    { id: 'journey sub', sel: '.v3-journey-what em', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'journey value', sel: '.v3-journey-val', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
+    { id: 'journey timestamp', sel: '.v3-journey-when', fg: '#586161', bg: '#FFFFFF', level: 'AA' },
+    { id: 'journey body', sel: '.v3-journey-what', fg: '#1F2323', bg: '#FFFFFF', level: 'AA' },
+    { id: 'journey sub', sel: '.v3-journey-what em', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'journey value', sel: '.v3-journey-val', fg: '#586161', bg: '#FFFFFF', level: 'AA' },
     // The converting row is the page's single accent data point (§2.6, fourth
     // acceptable use). Ink on lime, same pair as the button — scored anyway.
-    { id: 'journey won chip', sel: '.v3-journey-row--won .v3-journey-val', fg: '#12100C', bg: '#D2EC2A', level: 'AA' },
-    { id: 'card body on paper-card', sel: '.v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'stat label', sel: '.v3-stat-label', fg: '#5B5548', bg: '#F7F4ED', level: 'AA' },
-    { id: 'frame chrome url', sel: '.v3-frame-url', fg: '#8a9494', bg: '#12100C', level: 'AA' },
-    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
-    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
+    { id: 'journey won chip', sel: '.v3-journey-row--won .v3-journey-val', fg: '#1F2323', bg: '#CCF03F', level: 'AA' },
+    { id: 'card body on paper-card', sel: '.v3-card p', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'stat label', sel: '.v3-stat-label', fg: '#586161', bg: '#FAFAF7', level: 'AA' },
+    { id: 'frame chrome url', sel: '.v3-frame-url', fg: '#9DA7A7', bg: '#1F2323', level: 'AA' },
+    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#1F2323', bg: '#FAFAF7', level: 'AA-large' },
+    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#1F2323', bg: '#CCF03F', level: 'AA' }
   ],
   // ── /attribution ───────────────────────────────────────────────────────
   '/attribution': [
-    { id: 'family kicker', sel: '.v3-group > h3', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
-    { id: 'family lede', sel: '.v3-group > p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'model name', sel: '.v3-group li b', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
-    { id: 'model weighting', sel: '.v3-group li span', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'divided band h3', sel: '.v3-divided h3', fg: '#12100C', bg: '#FFFDF8', level: 'AA' },
-    { id: 'divided band body', sel: '.v3-divided p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
+    { id: 'family kicker', sel: '.v3-group > h3', fg: '#586161', bg: '#FFFFFF', level: 'AA' },
+    { id: 'family lede', sel: '.v3-group > p', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'model name', sel: '.v3-group li b', fg: '#1F2323', bg: '#FFFFFF', level: 'AA' },
+    { id: 'model weighting', sel: '.v3-group li span', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'divided band h3', sel: '.v3-divided h3', fg: '#1F2323', bg: '#FFFFFF', level: 'AA' },
+    { id: 'divided band body', sel: '.v3-divided p', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
     // ⚠️ THIS PAGE PUTS .v3-cards ON THE DARK BAND — a combination the homepage
     // never shipped. The cards keep their paper-card fill, so the card INTERIOR
     // pairs are light-on-light and unchanged. Registered explicitly rather than
     // assumed: assuming a carried-forward ratio survives a surface flip is the
     // TrustBar 10.54 -> 1.22 failure, and "the card didn't change" is exactly the
     // reasoning that produced it.
-    { id: 'dark band title', sel: '.v3-section--dark .v3-section-title', fg: '#f6f3eb', bg: '#0B0A07', level: 'AA-large' },
-    { id: 'dark band lede', sel: '.v3-section--dark .v3-section-lede', fg: '#a79e8c', bg: '#0B0A07', level: 'AA' },
-    { id: 'dark band eyebrow', sel: '.v3-section--dark .v3-eyebrow', fg: '#a79e8c', bg: '#0B0A07', level: 'AA' },
-    { id: 'card h3 on dark band', sel: '.v3-section--dark .v3-card h3', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
-    { id: 'card body on dark band', sel: '.v3-section--dark .v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'quiet link on paper', sel: '.v3-link-quiet', fg: '#161310', bg: '#F7F4ED', level: 'AA' },
-    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
-    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
+    { id: 'dark band title', sel: '.v3-section--dark .v3-section-title', fg: '#F2F4F3', bg: '#141818', level: 'AA-large' },
+    { id: 'dark band lede', sel: '.v3-section--dark .v3-section-lede', fg: '#A8AFAF', bg: '#141818', level: 'AA' },
+    { id: 'dark band eyebrow', sel: '.v3-section--dark .v3-eyebrow', fg: '#A8AFAF', bg: '#141818', level: 'AA' },
+    { id: 'card h3 on dark band', sel: '.v3-section--dark .v3-card h3', fg: '#1F2323', bg: '#FFFFFF', level: 'AA' },
+    { id: 'card body on dark band', sel: '.v3-section--dark .v3-card p', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'quiet link on paper', sel: '.v3-link-quiet', fg: '#1F2323', bg: '#FAFAF7', level: 'AA' },
+    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#1F2323', bg: '#FAFAF7', level: 'AA-large' },
+    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#1F2323', bg: '#CCF03F', level: 'AA' }
   ],
   // ── /v3/ai-referral-tracking ──────────────────────────────────────────────
   '/ai-referral-tracking': [
-    { id: 'stat number', sel: '.v3-stat-num', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
-    { id: 'stat label', sel: '.v3-stat-label', fg: '#5B5548', bg: '#F7F4ED', level: 'AA' },
-    { id: 'card body on paper-card', sel: '.v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'journey timestamp', sel: '.v3-journey-when', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
-    { id: 'journey body', sel: '.v3-journey-what', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
-    { id: 'journey sub', sel: '.v3-journey-what em', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'journey won chip', sel: '.v3-journey-row--won .v3-journey-val', fg: '#12100C', bg: '#D2EC2A', level: 'AA' },
-    { id: 'bento dark h3', sel: '.v3-bento-cell-dark', fg: '#f6f3eb', bg: '#2A251E', level: 'AA' },
-    { id: 'bento dark body', sel: '.v3-bento-cell-dark', fg: '#a79e8c', bg: '#2A251E', level: 'AA' },
-    { id: 'frame chrome url', sel: '.v3-frame-url', fg: '#8a9494', bg: '#12100C', level: 'AA' },
-    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
-    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
+    { id: 'stat number', sel: '.v3-stat-num', fg: '#1F2323', bg: '#FAFAF7', level: 'AA-large' },
+    { id: 'stat label', sel: '.v3-stat-label', fg: '#586161', bg: '#FAFAF7', level: 'AA' },
+    { id: 'card body on paper-card', sel: '.v3-card p', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'journey timestamp', sel: '.v3-journey-when', fg: '#586161', bg: '#FFFFFF', level: 'AA' },
+    { id: 'journey body', sel: '.v3-journey-what', fg: '#1F2323', bg: '#FFFFFF', level: 'AA' },
+    { id: 'journey sub', sel: '.v3-journey-what em', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'journey won chip', sel: '.v3-journey-row--won .v3-journey-val', fg: '#1F2323', bg: '#CCF03F', level: 'AA' },
+    { id: 'bento dark h3', sel: '.v3-bento-cell-dark', fg: '#F2F4F3', bg: '#303636', level: 'AA' },
+    { id: 'bento dark body', sel: '.v3-bento-cell-dark', fg: '#A8AFAF', bg: '#303636', level: 'AA' },
+    { id: 'frame chrome url', sel: '.v3-frame-url', fg: '#9DA7A7', bg: '#1F2323', level: 'AA' },
+    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#1F2323', bg: '#FAFAF7', level: 'AA-large' },
+    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#1F2323', bg: '#CCF03F', level: 'AA' }
   ],
   // ── /v3/use-cases-saas ────────────────────────────────────────────────────
   '/use-cases-saas': [
-    { id: 'stat number', sel: '.v3-stat-num', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
-    { id: 'stat label', sel: '.v3-stat-label', fg: '#5B5548', bg: '#F7F4ED', level: 'AA' },
-    { id: 'card body on paper-card', sel: '.v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'journey timestamp', sel: '.v3-journey-when', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
-    { id: 'journey body', sel: '.v3-journey-what', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
-    { id: 'journey sub', sel: '.v3-journey-what em', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'journey won chip', sel: '.v3-journey-row--won .v3-journey-val', fg: '#12100C', bg: '#D2EC2A', level: 'AA' },
-    { id: 'divided band h3', sel: '.v3-divided h3', fg: '#12100C', bg: '#FFFDF8', level: 'AA' },
-    { id: 'divided band body', sel: '.v3-divided p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'frame chrome url', sel: '.v3-frame-url', fg: '#8a9494', bg: '#12100C', level: 'AA' },
-    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
-    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
+    { id: 'stat number', sel: '.v3-stat-num', fg: '#1F2323', bg: '#FAFAF7', level: 'AA-large' },
+    { id: 'stat label', sel: '.v3-stat-label', fg: '#586161', bg: '#FAFAF7', level: 'AA' },
+    { id: 'card body on paper-card', sel: '.v3-card p', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'journey timestamp', sel: '.v3-journey-when', fg: '#586161', bg: '#FFFFFF', level: 'AA' },
+    { id: 'journey body', sel: '.v3-journey-what', fg: '#1F2323', bg: '#FFFFFF', level: 'AA' },
+    { id: 'journey sub', sel: '.v3-journey-what em', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'journey won chip', sel: '.v3-journey-row--won .v3-journey-val', fg: '#1F2323', bg: '#CCF03F', level: 'AA' },
+    { id: 'divided band h3', sel: '.v3-divided h3', fg: '#1F2323', bg: '#FFFFFF', level: 'AA' },
+    { id: 'divided band body', sel: '.v3-divided p', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'frame chrome url', sel: '.v3-frame-url', fg: '#9DA7A7', bg: '#1F2323', level: 'AA' },
+    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#1F2323', bg: '#FAFAF7', level: 'AA-large' },
+    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#1F2323', bg: '#CCF03F', level: 'AA' }
   ],
   // ── /v3/use-cases-ecommerce ───────────────────────────────────────────────
   '/use-cases-ecommerce': [
-    { id: 'stat number', sel: '.v3-stat-num', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
-    { id: 'stat label', sel: '.v3-stat-label', fg: '#5B5548', bg: '#F7F4ED', level: 'AA' },
-    { id: 'table cell', sel: '.v3-table-card td', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'table row header', sel: '.v3-table-card th', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
-    { id: 'card body on paper-card', sel: '.v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'compare panel label', sel: '.v3-compare-panel h3', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
-    { id: 'compare value', sel: '.v3-compare-value', fg: '#12100C', bg: '#FFFDF8', level: 'AA-large' },
-    { id: 'compare panel body', sel: '.v3-compare-panel p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
-    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
+    { id: 'stat number', sel: '.v3-stat-num', fg: '#1F2323', bg: '#FAFAF7', level: 'AA-large' },
+    { id: 'stat label', sel: '.v3-stat-label', fg: '#586161', bg: '#FAFAF7', level: 'AA' },
+    { id: 'table cell', sel: '.v3-table-card td', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'table row header', sel: '.v3-table-card th', fg: '#1F2323', bg: '#FFFFFF', level: 'AA' },
+    { id: 'card body on paper-card', sel: '.v3-card p', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'compare panel label', sel: '.v3-compare-panel h3', fg: '#586161', bg: '#FFFFFF', level: 'AA' },
+    { id: 'compare value', sel: '.v3-compare-value', fg: '#1F2323', bg: '#FFFFFF', level: 'AA-large' },
+    { id: 'compare panel body', sel: '.v3-compare-panel p', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#1F2323', bg: '#FAFAF7', level: 'AA-large' },
+    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#1F2323', bg: '#CCF03F', level: 'AA' }
   ],
   // ── /v3/report-builder ────────────────────────────────────────────────────
   '/report-builder': [
     // The grouped list is the same frame attribution §2 uses, on the same soft
     // band, so the surfaces match — scored here anyway rather than carried over.
-    { id: 'group kicker', sel: '.v3-group > h3', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
-    { id: 'group lede', sel: '.v3-group > p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'template name', sel: '.v3-group li b', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
-    { id: 'template note', sel: '.v3-group li span', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'journey timestamp', sel: '.v3-journey-when', fg: '#5B5548', bg: '#FFFDF8', level: 'AA' },
-    { id: 'journey body', sel: '.v3-journey-what', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
-    { id: 'journey sub', sel: '.v3-journey-what em', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'journey won chip', sel: '.v3-journey-row--won .v3-journey-val', fg: '#12100C', bg: '#D2EC2A', level: 'AA' },
+    { id: 'group kicker', sel: '.v3-group > h3', fg: '#586161', bg: '#FFFFFF', level: 'AA' },
+    { id: 'group lede', sel: '.v3-group > p', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'template name', sel: '.v3-group li b', fg: '#1F2323', bg: '#FFFFFF', level: 'AA' },
+    { id: 'template note', sel: '.v3-group li span', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'journey timestamp', sel: '.v3-journey-when', fg: '#586161', bg: '#FFFFFF', level: 'AA' },
+    { id: 'journey body', sel: '.v3-journey-what', fg: '#1F2323', bg: '#FFFFFF', level: 'AA' },
+    { id: 'journey sub', sel: '.v3-journey-what em', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'journey won chip', sel: '.v3-journey-row--won .v3-journey-val', fg: '#1F2323', bg: '#CCF03F', level: 'AA' },
     // Dark band — cards keep their paper-card fill, band text is its own pair.
-    { id: 'dark band title', sel: '.v3-section--dark .v3-section-title', fg: '#f6f3eb', bg: '#0B0A07', level: 'AA-large' },
-    { id: 'dark band lede', sel: '.v3-section--dark .v3-section-lede', fg: '#a79e8c', bg: '#0B0A07', level: 'AA' },
-    { id: 'card h3 on dark band', sel: '.v3-section--dark .v3-card h3', fg: '#161310', bg: '#FFFDF8', level: 'AA' },
-    { id: 'card body on dark band', sel: '.v3-section--dark .v3-card p', fg: '#665F50', bg: '#FFFDF8', level: 'AA' },
-    { id: 'quiet link on paper', sel: '.v3-link-quiet', fg: '#161310', bg: '#F7F4ED', level: 'AA' },
-    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#12100C', bg: '#F7F4ED', level: 'AA-large' },
-    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#12100C', bg: '#D2EC2A', level: 'AA' }
+    { id: 'dark band title', sel: '.v3-section--dark .v3-section-title', fg: '#F2F4F3', bg: '#141818', level: 'AA-large' },
+    { id: 'dark band lede', sel: '.v3-section--dark .v3-section-lede', fg: '#A8AFAF', bg: '#141818', level: 'AA' },
+    { id: 'card h3 on dark band', sel: '.v3-section--dark .v3-card h3', fg: '#1F2323', bg: '#FFFFFF', level: 'AA' },
+    { id: 'card body on dark band', sel: '.v3-section--dark .v3-card p', fg: '#647070', bg: '#FFFFFF', level: 'AA' },
+    { id: 'quiet link on paper', sel: '.v3-link-quiet', fg: '#1F2323', bg: '#FAFAF7', level: 'AA' },
+    { id: 'CTA close heading', sel: '.v3-cta-close h2', fg: '#1F2323', bg: '#FAFAF7', level: 'AA-large' },
+    { id: 'CTA button ink on lime', sel: '.v3-btn-accent', fg: '#1F2323', bg: '#CCF03F', level: 'AA' }
   ],
 }
 
@@ -334,7 +352,7 @@ let fails = 0
 //
 // ⚠️ KNOWN LIMIT OF THE PAIR SCORER — READ BEFORE TRUSTING A GREEN RUN.
 // This scorer only computes what a pair DECLARES. A pair written with literal
-// hexes — { fg: '#12100C', bg: '#D2EC2A' } — scores green whether or not the
+// hexes — { fg: '#1F2323', bg: '#CCF03F' } — scores green whether or not the
 // element's real CSS token is alive, because the scorer never looks at the rule
 // that styles the element. It checks that the SELECTOR exists and that the
 // DECLARED colours contrast; it does not check that the declared colours are
@@ -525,7 +543,7 @@ if (!V3_ROUTES.length) {
 // do. Without them the scorer could return a constant and the run would look
 // identical to a real pass.
 {
-  const lime = ratio(hexToRgb('#d2ec2a'), hexToRgb('#ffffff'))
+  const lime = ratio(hexToRgb('#CCF03F'), hexToRgb('#ffffff'))
   const bw = ratio(hexToRgb('#000000'), hexToRgb('#ffffff'))
   console.log(`\n  scorer positive control: lime on white = ${lime.toFixed(2)} vs 4.5 -> ${lime < 4.5 ? 'FAILS correctly ✓' : 'PASSES ✗ (scorer broken)'}`)
   if (lime >= 4.5) fails++
