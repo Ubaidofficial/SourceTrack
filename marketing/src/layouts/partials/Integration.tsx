@@ -280,8 +280,8 @@ const Integration = ({ data }: { data: PageData }) => {
               y2="749"
               gradientUnits="userSpaceOnUse"
             >
-              <stop stopColor="#BCD41C" />
-              <stop offset="1" stopColor="#D2EC2A" />
+              <stop stopColor="#D9FA64" />
+              <stop offset="1" stopColor="#CCF03F" />
             </linearGradient>
           </defs>
         </svg>

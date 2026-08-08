@@ -125,28 +125,28 @@ export default function MarketingBeforeAfter({
           Both replaced with explicit colours. All three call sites are dark sections, so
           light-on-dark is the whole contract, not a guess. */}
       <div className="text-center max-w-[760px] mx-auto mb-10 sm:mb-14">
-        <span className="inline-block px-3 py-1 text-xs font-black uppercase tracking-widest text-[#12100C] bg-[#F7F4ED] rounded-full mb-3 border border-[#E7E0D2]">
+        <span className="inline-block px-3 py-1 text-xs font-black uppercase tracking-widest text-[#1F2323] bg-[#FAFAF7] rounded-full mb-3 border border-[#DDE4E4]">
           Attribution comparison
         </span>
         <div style={fadeStyle}>
           <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-[-0.05em] leading-[1.05]">
             {displayTitle}
           </h2>
-          <p className="mt-3 text-sm sm:text-base text-[#6E6656] font-medium leading-relaxed">
+          <p className="mt-3 text-sm sm:text-base text-[#7D8090] font-medium leading-relaxed">
             {displaySubtitle}
           </p>
         </div>
 
         {/* Mode selector pills (if enabled and no custom data passed) */}
         {showToggle && !customData && (
-          <div className="inline-flex p-1 mt-6 rounded-xl bg-[#12100C] border border-[#302B22] text-xs font-extrabold gap-1">
+          <div className="inline-flex p-1 mt-6 rounded-xl bg-[#1F2323] border border-[#303636] text-xs font-extrabold gap-1">
             <button
               type="button"
               aria-pressed={selectedMode === 'default'}
               onClick={() => pickMode('default')}
               className={`px-4 py-2 rounded-lg transition-colors ${
                 selectedMode === 'default'
-                  ? 'bg-[#D2EC2A] text-[#12100C] font-black'
+                  ? 'bg-[#CCF03F] text-[#1F2323] font-black'
                   : 'text-gray-400 hover:text-white'
               }`}
             >
@@ -158,7 +158,7 @@ export default function MarketingBeforeAfter({
               onClick={() => pickMode('ecommerce')}
               className={`px-4 py-2 rounded-lg transition-colors ${
                 selectedMode === 'ecommerce'
-                  ? 'bg-[#D2EC2A] text-[#12100C] font-black'
+                  ? 'bg-[#CCF03F] text-[#1F2323] font-black'
                   : 'text-gray-400 hover:text-white'
               }`}
             >
@@ -171,10 +171,10 @@ export default function MarketingBeforeAfter({
       {/* 2-column Before vs After comparison grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 max-w-[1240px] mx-auto" style={fadeStyle}>
         {/* BEFORE CARD */}
-        <div className="rounded-2xl bg-[#12100C] border border-[#302B22] p-6 sm:p-8 flex flex-col justify-between shadow-md">
+        <div className="rounded-2xl bg-[#1F2323] border border-[#303636] p-6 sm:p-8 flex flex-col justify-between shadow-md">
           <div className="space-y-6">
             {/* Header Badge & Warning */}
-            <div className="flex items-center justify-between gap-2 border-b border-[#241F17] pb-4">
+            <div className="flex items-center justify-between gap-2 border-b border-[#282C2C] pb-4">
               <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black tracking-wide bg-rose-500/10 text-rose-400 border border-rose-500/20">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                 {before.badge}
@@ -185,7 +185,7 @@ export default function MarketingBeforeAfter({
             </div>
 
             {/* Source & Channel Summary */}
-            <div className="bg-[#1B1811] rounded-xl p-4 sm:p-5 border border-[#302B22] space-y-2">
+            <div className="bg-[#1B1F1F] rounded-xl p-4 sm:p-5 border border-[#303636] space-y-2">
               <div className="flex items-center justify-between text-xs text-gray-400 font-medium">
                 <span>Attributed Source:</span>
                 <span className="text-gray-400 font-mono">{before.channel}</span>
@@ -200,7 +200,7 @@ export default function MarketingBeforeAfter({
               <span className="text-xs font-extrabold uppercase tracking-wider text-gray-400 block">
                 Captured Journey Touchpoints
               </span>
-              <div className="rounded-xl border border-dashed border-[#302B22] bg-[#1B1811] p-6 text-center space-y-2">
+              <div className="rounded-xl border border-dashed border-[#303636] bg-[#1B1F1F] p-6 text-center space-y-2">
                 <div className="text-2xl">🚫</div>
                 <strong className="block text-xs font-extrabold text-gray-300">
                   No touchpoints captured
@@ -212,7 +212,7 @@ export default function MarketingBeforeAfter({
             </div>
 
             {/* UTM Metadata Grid */}
-            <div className="grid grid-cols-3 gap-2 text-center bg-[#1B1811] p-3 rounded-xl border border-[#302B22]">
+            <div className="grid grid-cols-3 gap-2 text-center bg-[#1B1F1F] p-3 rounded-xl border border-[#303636]">
               <div>
                 <span className="block text-[10px] font-bold uppercase text-gray-400">utm_source</span>
                 <span className="text-xs font-mono text-gray-400">{before.utmSource}</span>
@@ -229,7 +229,7 @@ export default function MarketingBeforeAfter({
           </div>
 
           {/* Outcome Footer */}
-          <div className="mt-8 pt-4 border-t border-[#241F17] flex items-center justify-between gap-4">
+          <div className="mt-8 pt-4 border-t border-[#282C2C] flex items-center justify-between gap-4">
             <div>
               <span className="block text-[11px] font-bold uppercase tracking-wider text-gray-400">Status</span>
               <span className="text-xs font-extrabold text-rose-400">{before.attributionStatus}</span>
@@ -242,26 +242,26 @@ export default function MarketingBeforeAfter({
         </div>
 
         {/* AFTER CARD */}
-        <div className="rounded-2xl bg-[#12100C] border border-[#D2EC2A]/40 p-6 sm:p-8 flex flex-col justify-between shadow-md">
+        <div className="rounded-2xl bg-[#1F2323] border border-[#CCF03F]/40 p-6 sm:p-8 flex flex-col justify-between shadow-md">
           <div className="space-y-6">
             {/* Header Badge & Signal Marker */}
-            <div className="flex items-center justify-between gap-2 border-b border-[#241F17] pb-4">
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black tracking-wide bg-[#D2EC2A]/10 text-[#D2EC2A] border border-[#D2EC2A]/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#D2EC2A]"></span>
+            <div className="flex items-center justify-between gap-2 border-b border-[#282C2C] pb-4">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black tracking-wide bg-[#CCF03F]/10 text-[#CCF03F] border border-[#CCF03F]/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#CCF03F]"></span>
                 {after.badge}
               </span>
-              <span className="text-[11px] font-mono text-[#D2EC2A] uppercase tracking-wider">
+              <span className="text-[11px] font-mono text-[#CCF03F] uppercase tracking-wider">
                 Stitched
               </span>
             </div>
 
             {/* Source & Channel Summary */}
-            <div className="bg-[#1B1811] rounded-xl p-4 sm:p-5 border border-[#302B22] space-y-2">
+            <div className="bg-[#1B1F1F] rounded-xl p-4 sm:p-5 border border-[#303636] space-y-2">
               <div className="flex items-center justify-between text-xs text-gray-400 font-medium">
                 <span>Attributed Source:</span>
-                <span className="text-[#D2EC2A] font-bold">{after.channel}</span>
+                <span className="text-[#CCF03F] font-bold">{after.channel}</span>
               </div>
-              <div className="flex items-center gap-3 text-lg font-black text-[#D2EC2A] font-mono">
+              <div className="flex items-center gap-3 text-lg font-black text-[#CCF03F] font-mono">
                 <span>{after.source}</span>
               </div>
             </div>
@@ -273,12 +273,12 @@ export default function MarketingBeforeAfter({
               </span>
               <div className="space-y-2">
                 {after.touchpoints.map((tp, idx) => (
-                  <div key={idx} className="flex items-center gap-3 bg-[#1B1811] p-3 rounded-xl border border-[#302B22]">
+                  <div key={idx} className="flex items-center gap-3 bg-[#1B1F1F] p-3 rounded-xl border border-[#303636]">
                     <span className="text-base">{tp.icon}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between text-xs font-bold text-white">
                         <span>{tp.name}</span>
-                        <span className="text-[10px] text-[#D2EC2A] font-mono">{tp.time}</span>
+                        <span className="text-[10px] text-[#CCF03F] font-mono">{tp.time}</span>
                       </div>
                       <p className="text-[11px] text-gray-400 truncate">{tp.detail}</p>
                     </div>
@@ -288,14 +288,14 @@ export default function MarketingBeforeAfter({
             </div>
 
             {/* UTM Metadata Grid */}
-            <div className="grid grid-cols-3 gap-2 text-center bg-[#1B1811] p-3 rounded-xl border border-[#302B22]">
+            <div className="grid grid-cols-3 gap-2 text-center bg-[#1B1F1F] p-3 rounded-xl border border-[#303636]">
               <div>
                 <span className="block text-[10px] font-bold uppercase text-gray-400">utm_source</span>
-                <span className="text-xs font-mono font-bold text-[#D2EC2A]">{after.utmSource}</span>
+                <span className="text-xs font-mono font-bold text-[#CCF03F]">{after.utmSource}</span>
               </div>
               <div>
                 <span className="block text-[10px] font-bold uppercase text-gray-400">utm_medium</span>
-                <span className="text-xs font-mono font-bold text-[#D2EC2A]">{after.utmMedium}</span>
+                <span className="text-xs font-mono font-bold text-[#CCF03F]">{after.utmMedium}</span>
               </div>
               <div>
                 <span className="block text-[10px] font-bold uppercase text-gray-400">utm_campaign</span>
@@ -305,14 +305,14 @@ export default function MarketingBeforeAfter({
           </div>
 
           {/* Outcome Footer */}
-          <div className="mt-8 pt-4 border-t border-[#241F17] flex items-center justify-between gap-4">
+          <div className="mt-8 pt-4 border-t border-[#282C2C] flex items-center justify-between gap-4">
             <div>
               <span className="block text-[11px] font-bold uppercase tracking-wider text-gray-400">Status</span>
-              <span className="text-xs font-extrabold text-[#D2EC2A]">{after.attributionStatus}</span>
+              <span className="text-xs font-extrabold text-[#CCF03F]">{after.attributionStatus}</span>
             </div>
             <div className="text-right">
               <span className="block text-[11px] font-bold uppercase tracking-wider text-gray-400">Order Value</span>
-              <span className="text-sm font-black text-[#D2EC2A] font-mono">{after.customerRevenue}</span>
+              <span className="text-sm font-black text-[#CCF03F] font-mono">{after.customerRevenue}</span>
             </div>
           </div>
         </div>

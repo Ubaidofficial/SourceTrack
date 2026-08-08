@@ -41,7 +41,7 @@ const SNIPPET = `<script async src="https://api.srctk.com/tracker.min.js" data-s
   <section class="py-16 bg-[#0E1111] text-white">
     <div class="max-w-[800px] mx-auto px-4 space-y-8">
       <div class="space-y-4">
-        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#D2EC2A]">&larr; Back to Docs</a>
+        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#CCF03F]">&larr; Back to Docs</a>
         <h1 class="text-4xl font-black text-white tracking-tight">WordPress Setup Recipe</h1>
         <p class="text-gray-400 text-lg leading-relaxed">
           Integrate the tracking pixel into your WordPress site to capture visitors site-wide.
@@ -60,7 +60,7 @@ const SNIPPET = `<script async src="https://api.srctk.com/tracker.min.js" data-s
         <h4 class="font-extrabold text-[#7CC4FF] mb-2 text-sm">Key Terms Defined:</h4>
         <ul class="list-disc pl-5 space-y-1 text-xs text-[#A8CFF0] leading-relaxed">
           <li><strong>WP Admin</strong> &mdash; the backend dashboard where you manage plugins, write pages, and configure your site settings.</li>
-          <li><strong>Theme header (header.php)</strong> &mdash; the PHP template file that defines the top section of your site, including code placed inside the HTML <code class="text-[#D2EC2A]">&lt;head&gt;</code> tags.</li>
+          <li><strong>Theme header (header.php)</strong> &mdash; the PHP template file that defines the top section of your site, including code placed inside the HTML <code class="text-[#CCF03F]">&lt;head&gt;</code> tags.</li>
           <li><strong>Caching</strong> &mdash; storing static versions of your pages to speed up load times. When you edit code, you must clear the cache to show updates.</li>
         </ul>
       </div>
@@ -93,9 +93,9 @@ const SNIPPET = `<script async src="https://api.srctk.com/tracker.min.js" data-s
         <div class="space-y-4 pt-4 border-t border-[#2A2C30]">
           <h3 class="text-sm font-extrabold text-white">Option 2: Direct Theme Edit</h3>
           <ol class="list-decimal pl-5 space-y-2 text-sm text-gray-300 leading-relaxed">
-            <li>Log in to your file manager or theme editor and open <code class="text-[#D2EC2A]">wp-content/themes/your-active-theme/header.php</code>.</li>
+            <li>Log in to your file manager or theme editor and open <code class="text-[#CCF03F]">wp-content/themes/your-active-theme/header.php</code>.</li>
             <li>
-              Paste the script directly before the closing <code class="text-[#D2EC2A]">&lt;/head&gt;</code> tag:
+              Paste the script directly before the closing <code class="text-[#CCF03F]">&lt;/head&gt;</code> tag:
               <pre class="mt-2 bg-[#0F1012] p-4 rounded-xl text-xs text-gray-300 overflow-x-auto border border-[#2A2C30]"><code>{SNIPPET}</code></pre>
             </li>
             <li>Save the file.</li>
@@ -111,8 +111,8 @@ const SNIPPET = `<script async src="https://api.srctk.com/tracker.min.js" data-s
         <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">How to Verify It Worked</h2>
         <ol class="list-decimal pl-5 space-y-3 text-sm text-gray-300 leading-relaxed">
           <li>Visit your WordPress website.</li>
-          <li>Open Developer Tools (right-click &rarr; Inspect), click <strong>Network</strong>, and filter by <code class="text-[#D2EC2A]">track</code>.</li>
-          <li>Refresh the page. Verify a call to <code class="text-[#D2EC2A]">POST /api/track</code> completes successfully.</li>
+          <li>Open Developer Tools (right-click &rarr; Inspect), click <strong>Network</strong>, and filter by <code class="text-[#CCF03F]">track</code>.</li>
+          <li>Refresh the page. Verify a call to <code class="text-[#CCF03F]">POST /api/track</code> completes successfully.</li>
           <li>Confirm your browser visits appear in the SourceTrack dashboard <strong>Event Debugger</strong>.</li>
         </ol>
       </section>
@@ -127,7 +127,7 @@ const SNIPPET = `<script async src="https://api.srctk.com/tracker.min.js" data-s
           </li>
           <li>
             <strong>Minification Exclusions:</strong> If your caching plugin bundles JavaScript, it may
-            break script loading. Exclude <code class="text-[#D2EC2A]">tracker.min.js</code> from
+            break script loading. Exclude <code class="text-[#CCF03F]">tracker.min.js</code> from
             minification / defer lists if errors occur in your browser console.
           </li>
         </ul>
@@ -138,7 +138,7 @@ const SNIPPET = `<script async src="https://api.srctk.com/tracker.min.js" data-s
         <p class="text-sm text-gray-300 leading-relaxed">
           Setup is complete! You can now track custom conversion goals (like contact form submits or
           checkout buy clicks) by reviewing the
-          <a href="/developers/conversions" class="text-[#D2EC2A] font-bold hover:underline">Browser Conversions guide</a>.
+          <a href="/developers/conversions" class="text-[#CCF03F] font-bold hover:underline">Browser Conversions guide</a>.
         </p>
       </section>
     </div>

@@ -94,7 +94,7 @@ const TROUBLESHOOTING_ITEMS = [
   <section class="py-16 bg-[#0E1111] text-white">
     <div class="max-w-[800px] mx-auto px-4 space-y-8">
       <div class="space-y-4">
-        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#D2EC2A]">&larr; Back to Docs</a>
+        <a href="/docs" class="text-xs uppercase tracking-widest font-extrabold text-[#CCF03F]">&larr; Back to Docs</a>
         <h1 class="text-4xl font-black text-white tracking-tight">Troubleshooting Guide</h1>
         <p class="text-gray-400 text-lg leading-relaxed">
           Resolve common pageview, conversion, and stitching issues.
@@ -131,7 +131,7 @@ const TROUBLESHOOTING_ITEMS = [
 
         <div class="space-y-6">
           {TROUBLESHOOTING_ITEMS.map((item) => (
-            <div class="p-5 bg-[#1B1811] border border-[#2A2C30] rounded-xl space-y-3">
+            <div class="p-5 bg-[#1B1F1F] border border-[#2A2C30] rounded-xl space-y-3">
               <h3 class="text-sm font-extrabold text-[#FF6B6B] flex items-start gap-1.5">
                 <span class="mt-0.5 shrink-0">Symptom:</span>
                 <span>{item.symptom}</span>
@@ -152,7 +152,7 @@ const TROUBLESHOOTING_ITEMS = [
         <ol class="list-decimal pl-5 space-y-3 text-sm text-gray-300 leading-relaxed">
           <li>Make your target changes (updating theme files, clearing caching systems, or adjusting metadata configurations).</li>
           <li>Clear your browser data or load the site inside an incognito/private tab to bypass local caches.</li>
-          <li>Open your browser Developer Tools (Network Tab) and filter for <code class="text-[#D2EC2A]">track</code>.</li>
+          <li>Open your browser Developer Tools (Network Tab) and filter for <code class="text-[#CCF03F]">track</code>.</li>
           <li>Perform the action (loading a page, clicking a button) and verify the request exits successfully.</li>
         </ol>
       </section>
@@ -182,10 +182,10 @@ const TROUBLESHOOTING_ITEMS = [
         <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300 leading-relaxed">
           <li>
             <strong>Visitor ID request can be blocked.</strong> The cookieless tracker fetches its visitor
-            id from <code class="text-[#D2EC2A]">/api/tracker/id</code> on every page load. If an
+            id from <code class="text-[#CCF03F]">/api/tracker/id</code> on every page load. If an
             ad-blocker, corporate proxy, or transient network failure blocks that request, the tracker
             falls back to a session-only random id and writes a one-line warning to the browser DevTools
-            console: <code class="text-[#D2EC2A]">[SourceTrack] Cookieless visitor ID &hellip; using a session-only fallback id</code>.
+            console: <code class="text-[#CCF03F]">[SourceTrack] Cookieless visitor ID &hellip; using a session-only fallback id</code>.
           </li>
           <li>
             <strong>Same-session only when the fallback fires.</strong> A visitor whose id resets cannot be
@@ -200,8 +200,8 @@ const TROUBLESHOOTING_ITEMS = [
         </ul>
         <p class="text-sm text-gray-300 leading-relaxed">
           If you need full multi-session attribution, switch off cookieless mode in
-          <a href="https://app.sourcetrack.ai/settings" class="text-[#D2EC2A] font-bold hover:underline">Settings</a>
-          and use the standard tracker, which stores a stable id in <code class="text-[#D2EC2A]">localStorage</code>.
+          <a href="https://app.sourcetrack.ai/settings" class="text-[#CCF03F] font-bold hover:underline">Settings</a>
+          and use the standard tracker, which stores a stable id in <code class="text-[#CCF03F]">localStorage</code>.
         </p>
       </section>
 
@@ -221,7 +221,7 @@ const TROUBLESHOOTING_ITEMS = [
           <li>
             <strong>Live Pageview Verification:</strong> For production sites, use the "Verify a live
             pageview" test link generation. This adds a temporary
-            <code class="text-[#D2EC2A]">st_verify</code> token to the URL and checks whether SourceTrack
+            <code class="text-[#CCF03F]">st_verify</code> token to the URL and checks whether SourceTrack
             receives a live pageview from your production domain. Note: Test links are blocked for
             unsafe/local test domains.
           </li>
@@ -244,7 +244,7 @@ const TROUBLESHOOTING_ITEMS = [
         <h2 class="text-lg font-extrabold text-white border-b border-[#2A2C30] pb-2">Next Step</h2>
         <p class="text-sm text-gray-300 leading-relaxed">
           Troubleshooting resolved? Return to the
-          <a href="/docs" class="text-[#D2EC2A] font-bold hover:underline">User Docs hub</a>
+          <a href="/docs" class="text-[#CCF03F] font-bold hover:underline">User Docs hub</a>
           to configure additional platform integrations.
         </p>
       </section>
