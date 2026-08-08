@@ -100,7 +100,7 @@ import MarkRow from "@/layouts/v3/surfaces/MarkRow.astro";
 import SyncList from "@/layouts/v3/surfaces/SyncList.astro";
 import ChannelMiniTable from "@/layouts/v3/surfaces/ChannelMiniTable.astro";
 import CompareSlider from "@/components/v3/CompareSlider.jsx";
-import MarketingInteractiveDemo from "@/components/MarketingInteractiveDemo";
+import RealDemoApp from "@/components/v3/demo/RealDemoApp";
 import JourneyMockup from "@/components/JourneyMockup.astro";
 import HeroStatCallout from "@/components/HeroStatCallout.astro";
 import HowItWorksShowcase from "@/partials/HowItWorksShowcase.astro";
@@ -242,7 +242,7 @@ const comparison = [
                 journey. Fixture-only and §29.5-clean (0 fetch/fetchApi/supabase/axios).
                 JourneyMockup moved to §3, whose heading already promises a six-touchpoint
                 journey and which rendered as a shell until now. */}
-            <MarketingInteractiveDemo client:visible />
+            <RealDemoApp client:visible start="dashboard" full={false} />
           </div>
         </div>
       </Wrap>

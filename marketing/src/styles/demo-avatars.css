@@ -1,0 +1,92 @@
+/* ===================================================================
+   Person avatars — the emoji IS the portrait, so it gets a real frame and
+   a little life instead of sitting flat in a grey circle.
+
+   · crisp: a dedicated colour-emoji stack, no filters, no text-shadow
+   · pop: scales in with a small overshoot the first time it paints
+   · idle: a slow breath + drift, phase-shifted per avatar so a list of
+     people never bobs in lockstep
+   · hover: lifts, tilts, and the ring warms up
+   · .is-live: a pulsing ring for a session that is happening now
+   =================================================================== */
+.eav,
+.ww-av, .ww-q b, .d-av, .fx-face, .orb-av, .j-av {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", "EmojiOne Color", sans-serif;
+  font-variant-emoji: emoji;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeSpeed;
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  flex: none;
+  background:
+    radial-gradient(118% 118% at 30% 18%, #FFFFFF 0%, var(--eav-bg, #F2F4EE) 78%);
+  box-shadow:
+    inset 0 0 0 1px rgba(31, 35, 35, .09),
+    inset 0 -2px 4px -2px rgba(31, 35, 35, .12),
+    0 2px 7px -3px rgba(31, 35, 35, .3);
+  transition: transform .28s cubic-bezier(.22, 1, .36, 1), box-shadow .28s ease;
+  will-change: transform;
+}
+/* a hairline halo that warms on hover — cheap, and it makes the frame read */
+.eav::after,
+.ww-av::after, .ww-q b::after, .d-av::after, .fx-face::after, .orb-av::after, .j-av::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  border: 1.5px solid transparent;
+  transition: border-color .28s ease;
+  pointer-events: none;
+}
+.eav:hover, .ww-av:hover, .d-av:hover, .fx-face:hover, .orb-av:hover, .j-av:hover { transform: translateY(-2px) scale(1.08) }
+.eav:hover::after, .ww-av:hover::after, .d-av:hover::after,
+.fx-face:hover::after, .orb-av:hover::after, .j-av:hover::after { border-color: rgba(240, 96, 42, .45) }
+
+/* tone variants — a person tied to revenue gets the lime frame */
+.eav.tone-lime, .fx-face { --eav-bg: #E6F5AF }
+.eav.tone-orange { --eav-bg: #FFE1D2 }
+
+@media (prefers-reduced-motion: no-preference) {
+  .eav, .ww-av, .ww-q b, .d-av, .orb-av, .j-av {
+    animation: eavPop .62s cubic-bezier(.34, 1.56, .64, 1) both,
+               eavBreathe 5.4s ease-in-out var(--eav-delay, 0s) infinite;
+  }
+  .fx-face { animation: eavBreathe 5.4s ease-in-out infinite }
+  .eav:hover, .ww-av:hover, .d-av:hover, .fx-face:hover, .orb-av:hover, .j-av:hover {
+    animation: eavWave .55s ease-in-out;
+  }
+  /* phase-shift siblings so a row of people breathes out of step */
+  tr:nth-child(2n) .d-av, .ww-q:nth-child(2n) b, .fx-row:nth-child(2n) .eav { --eav-delay: -1.3s }
+  tr:nth-child(3n) .d-av, .ww-q:nth-child(3n) b, .fx-row:nth-child(3n) .eav { --eav-delay: -2.6s }
+  tr:nth-child(4n) .d-av, .ww-q:nth-child(4n) b, .fx-row:nth-child(4n) .eav { --eav-delay: -3.9s }
+  .ww-card.on .ww-av { --eav-delay: -2.1s }
+}
+
+/* live session — the ring keeps time with the pulse used elsewhere */
+.eav.is-live::after, .orb-av::after { border-color: rgba(204, 240, 63, .8) }
+@media (prefers-reduced-motion: no-preference) {
+  .eav.is-live::after, .orb-av::after { animation: eavRing 2.3s ease-out infinite }
+}
+
+@keyframes eavPop {
+  from { opacity: 0; transform: scale(.4) rotate(-14deg) }
+  to   { opacity: 1; transform: none }
+}
+@keyframes eavBreathe {
+  0%, 100% { transform: translateY(0) scale(1) }
+  50%      { transform: translateY(-1.6px) scale(1.035) }
+}
+@keyframes eavWave {
+  0%   { transform: translateY(-2px) scale(1.08) rotate(0deg) }
+  30%  { transform: translateY(-3px) scale(1.1) rotate(-9deg) }
+  62%  { transform: translateY(-3px) scale(1.1) rotate(7deg) }
+  100% { transform: translateY(-2px) scale(1.08) rotate(0deg) }
+}
+@keyframes eavRing {
+  0%   { transform: scale(1);    opacity: .85 }
+  70%  { transform: scale(1.28); opacity: 0 }
+  100% { transform: scale(1.28); opacity: 0 }
+}
