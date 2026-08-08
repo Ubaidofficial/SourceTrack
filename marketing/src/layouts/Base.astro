@@ -17,7 +17,12 @@ const gtmId = config.google_tag_manager?.gtm_id;
 // public/fonts with their own @font-face in src/styles/fonts.css, and astro.config
 // already omits them from `fonts`, so asking <Font> for one would look up a family
 // the pipeline never registered.
-const selfHostedFonts = new Set(theme.fonts.self_hosted || []);
+// `new Set<string>` explicitly, NOT inferred. theme.json's self_hosted array is EMPTY as of
+// v1.5 (all three families are OFL and go through the provider), and TypeScript infers an
+// empty JSON array as `never[]` — so an inferred Set is `Set<never>` and `.has(key: string)`
+// fails to compile. It type-checked while the array had an entry and broke the moment it was
+// emptied, which is why this annotation has to stay even if a family is self-hosted again.
+const selfHostedFonts = new Set<string>(theme.fonts.self_hosted || []);
 const fontEntries = Object.entries(theme.fonts.font_family).filter(
   ([key]) => !key.includes("_type") && !selfHostedFonts.has(key),
 );
